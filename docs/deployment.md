@@ -20,7 +20,7 @@ The current deployment model targets a single production host running clustered 
 The development environment requires:
 
 - Node.js 22 or newer; Node.js 24 is the pinned deployment and CI version
-- pnpm 9 or newer
+- pnpm 9.15.9, matching the root `packageManager` field exactly
 - PostgreSQL with `pgcrypto` and `pg_trgm`
 - Redis
 
@@ -28,11 +28,23 @@ The checked-in baseline intentionally excludes source-version-only `pg_dump`
 session settings, so a clean deployment does not require the same PostgreSQL
 major version that generated the baseline.
 
-Install dependencies:
+Install dependencies from the repository root using the committed lockfile:
 
 ```bash
-pnpm install
+pnpm --version
+pnpm install --frozen-lockfile
 ```
+
+The version command must print `9.15.9`. The project rejects other pnpm
+versions because dependency-override configuration moved between pnpm major
+versions; allowing a different major can install both Nest's Fastify copy and
+another copy for plugins.
+
+Do not install the backend workspace independently. Nest's Fastify adapter,
+Fastify, and the Fastify plugins are pinned and resolved together by the root
+workspace override. A non-frozen or workspace-local production install can
+produce two Fastify type/runtime copies and must be treated as an invalid
+deployment.
 
 Create the root `.env` file (see `docs/backend.md`), start PostgreSQL and Redis, then apply the database schema:
 
@@ -246,7 +258,8 @@ Before deploying:
 2. Back up PostgreSQL.
 3. Back up `UPLOAD_DIR` (default: `<repository>/.runtime/uploads`).
 4. Deploy the new application version.
-5. Install dependencies.
+5. From the repository root, install the exact locked dependencies with
+   `pnpm install --frozen-lockfile`.
 6. Run:
 
 ```bash
