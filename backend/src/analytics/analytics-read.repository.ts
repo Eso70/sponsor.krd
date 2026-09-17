@@ -73,6 +73,7 @@ export class AnalyticsReadRepository {
            JOIN analytics_events event
              ON event.public_page_id = page.id
             AND event.event_name = 'page_view'
+            AND event.is_bot = false
           GROUP BY page.source_linktree_id
        ),
        unique_clicks AS (
@@ -82,6 +83,7 @@ export class AnalyticsReadRepository {
            JOIN analytics_events event
              ON event.public_page_id = page.id
             AND event.event_name = ANY($2::varchar[])
+            AND event.is_bot = false
           GROUP BY page.source_linktree_id
        )
        SELECT lt.id AS linktree_id,
@@ -120,6 +122,7 @@ export class AnalyticsReadRepository {
                 COUNT(DISTINCT event.visitor_id)::bigint AS unique_visitors
          FROM analytics_events event
          WHERE event.business_id = $1 AND event.event_name = 'page_view'
+           AND event.is_bot = false
            AND ($3::date IS NULL OR event.occurred_at >= $3::date)
            AND ($4::date IS NULL OR event.occurred_at < $4::date + interval '1 day')
          GROUP BY event.public_page_id
@@ -128,6 +131,7 @@ export class AnalyticsReadRepository {
                 COUNT(DISTINCT event.visitor_id)::bigint AS unique_clickers
          FROM analytics_events event
          WHERE event.business_id = $1
+           AND event.is_bot = false
            AND event.event_name = ANY($2::varchar[])
            AND ($3::date IS NULL OR event.occurred_at >= $3::date)
            AND ($4::date IS NULL OR event.occurred_at < $4::date + interval '1 day')

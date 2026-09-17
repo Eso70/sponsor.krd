@@ -76,7 +76,9 @@ supports Google OAuth or an invitation-checked email code. No password login
 endpoint exists on any surface. Platform Google login begins at
 `GET /api/platform/auth/google/start` on the root domain and returns through
 the fixed Google callback shared by business authentication. OAuth state is
-PKCE-protected, Redis-backed, single-use, and expires after ten minutes.
+PKCE-protected, Redis-backed, single-use, and expires after ten minutes. The
+Google redirect is issued only after Redis confirms that state was stored; a
+failed write returns service unavailable before leaving the site.
 
 Platform access requires a verified Google email that exactly matches
 `PLATFORM_ADMIN_EMAIL` and resolves to the seeded `platform_admins` row, or an

@@ -82,6 +82,7 @@ export class AnalyticsReadService {
       conversion_value: string;
       page_views: string;
       page_name: string;
+      record_state: 'current' | 'historical' | 'unattributed';
     }>(
       `WITH selected_pages AS (
          SELECT id
@@ -117,6 +118,7 @@ export class AnalyticsReadService {
                 COALESCE(SUM(event.conversion_value) FILTER (WHERE event.is_conversion), 0)::numeric AS conversion_value
          FROM analytics_events event
          WHERE event.public_page_action_id IS NOT NULL
+           AND event.is_bot = false
            AND event.public_page_id IN (SELECT id FROM selected_pages)
            AND event.event_name = ANY($6::varchar[])
            AND ($3::date IS NULL OR event.occurred_at >= $3::date)
@@ -132,26 +134,94 @@ export class AnalyticsReadService {
            AND ($3::date IS NULL OR daily.day >= $3::date)
            AND ($4::date IS NULL OR daily.day <= $4::date)
          GROUP BY daily.public_page_id
+       ),
+       -- A valid page click can be recorded without an action when an old
+       -- browser tab clicks a button that no longer resolves, or when an
+       -- unknown/cross-page action id is rejected. Keep those clicks visible
+       -- instead of making the headline and its breakdown silently disagree.
+       unattributed_totals AS (
+         SELECT event.public_page_id,
+                COUNT(*)::bigint AS total_clicks,
+                COUNT(DISTINCT event.visitor_id)::bigint AS unique_clickers,
+                COUNT(*) FILTER (WHERE event.is_conversion)::bigint AS conversions,
+                COALESCE(SUM(event.conversion_value) FILTER (WHERE event.is_conversion), 0)::numeric AS conversion_value
+         FROM analytics_events event
+         WHERE event.public_page_action_id IS NULL
+           AND event.is_bot = false
+           AND event.public_page_id IN (SELECT id FROM selected_pages)
+           AND event.event_name = ANY($6::varchar[])
+           AND ($3::date IS NULL OR event.occurred_at >= $3::date)
+           AND ($4::date IS NULL OR event.occurred_at < $4::date + interval '1 day')
+         GROUP BY event.public_page_id
+       ),
+       action_rows AS (
+         SELECT action.id::text AS id,
+                action.action_key,
+                action.metadata,
+                action.label,
+                action.action_type,
+                action.destination,
+                GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0))::bigint AS total_clicks,
+                COALESCE(unique_totals.unique_clickers, 0)::bigint AS unique_clickers,
+                GREATEST(COALESCE(totals.conversions, 0), COALESCE(unique_totals.conversions, 0))::bigint AS conversions,
+                GREATEST(COALESCE(totals.conversion_value, 0), COALESCE(unique_totals.conversion_value, 0))::numeric AS conversion_value,
+                COALESCE(page_total.views, 0)::bigint AS page_views,
+                page.name AS page_name,
+                CASE
+                  WHEN action.status = 'archived'
+                    OR (action.source_link_id IS NULL AND action.action_key LIKE 'link:%')
+                  THEN 'historical'
+                  ELSE 'current'
+                END::text AS record_state,
+                CASE
+                  WHEN action.status = 'archived'
+                    OR (action.source_link_id IS NULL AND action.action_key LIKE 'link:%')
+                  THEN 1
+                  ELSE 0
+                END AS state_order,
+                action.display_order
+         FROM public_page_actions action
+         JOIN public_pages page ON page.id = action.public_page_id
+         LEFT JOIN page_total ON page_total.public_page_id = action.public_page_id
+         LEFT JOIN totals ON totals.public_page_action_id = action.id
+         LEFT JOIN unique_totals ON unique_totals.public_page_action_id = action.id
+         WHERE action.public_page_id IN (SELECT id FROM selected_pages)
+           AND (
+             (action.status <> 'archived' AND (
+               action.source_link_id IS NOT NULL
+               OR action.action_key NOT LIKE 'link:%'
+             ))
+             OR GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0)) > 0
+             OR GREATEST(COALESCE(totals.conversions, 0), COALESCE(unique_totals.conversions, 0)) > 0
+           )
+       ),
+       report_rows AS (
+         SELECT * FROM action_rows
+         UNION ALL
+         SELECT ('unattributed:' || page.id::text) AS id,
+                'unattributed' AS action_key,
+                '{}'::jsonb AS metadata,
+                'Unattributed interactions' AS label,
+                'custom' AS action_type,
+                NULL::text AS destination,
+                unattributed.total_clicks,
+                unattributed.unique_clickers,
+                unattributed.conversions,
+                unattributed.conversion_value,
+                COALESCE(page_total.views, 0)::bigint AS page_views,
+                page.name AS page_name,
+                'unattributed'::text AS record_state,
+                2 AS state_order,
+                32767 AS display_order
+         FROM unattributed_totals unattributed
+         JOIN public_pages page ON page.id = unattributed.public_page_id
+         LEFT JOIN page_total ON page_total.public_page_id = unattributed.public_page_id
        )
-       SELECT action.id, action.action_key, action.metadata, action.label, action.action_type, action.destination,
-              GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0))::bigint AS total_clicks,
-              COALESCE(unique_totals.unique_clickers, 0)::bigint AS unique_clickers,
-              GREATEST(COALESCE(totals.conversions, 0), COALESCE(unique_totals.conversions, 0))::bigint AS conversions,
-              GREATEST(COALESCE(totals.conversion_value, 0), COALESCE(unique_totals.conversion_value, 0))::numeric AS conversion_value,
-              COALESCE(page_total.views, 0)::bigint AS page_views,
-              page.name AS page_name
-       FROM public_page_actions action
-       JOIN public_pages page ON page.id = action.public_page_id
-       LEFT JOIN page_total ON page_total.public_page_id = action.public_page_id
-       LEFT JOIN totals ON totals.public_page_action_id = action.id
-       LEFT JOIN unique_totals ON unique_totals.public_page_action_id = action.id
-       WHERE action.public_page_id IN (SELECT id FROM selected_pages)
-         AND action.status <> 'archived'
-         AND (
-           action.source_link_id IS NOT NULL
-           OR action.action_key NOT LIKE 'link:%'
-         )
-       ORDER BY total_clicks DESC, action.display_order ASC`,
+       SELECT id, action_key, metadata, label, action_type, destination,
+              total_clicks, unique_clickers, conversions, conversion_value,
+              page_views, page_name, record_state
+       FROM report_rows
+       ORDER BY state_order ASC, total_clicks DESC, display_order ASC`,
       [
         businessId,
         filters.pageId || null,
@@ -174,6 +244,7 @@ export class AnalyticsReadService {
       actionType: row.action_type,
       destination: row.destination,
       pageName: row.page_name,
+      recordState: row.record_state,
       totalClicks: Number(row.total_clicks),
       uniqueClickers: Number(row.unique_clickers),
       conversions: Number(row.conversions),
@@ -207,6 +278,7 @@ export class AnalyticsReadService {
              SELECT COUNT(DISTINCT event.visitor_id)
              FROM analytics_events event
              WHERE event.public_page_id = (SELECT id FROM resolved_page)
+               AND event.is_bot = false
                AND event.event_name = 'page_view'
            ), 0)::bigint AS unique_views,
            COALESCE(SUM(daily.total_clicks),0)::bigint AS clicks,
@@ -214,6 +286,7 @@ export class AnalyticsReadService {
              SELECT COUNT(DISTINCT event.visitor_id)
              FROM analytics_events event
              WHERE event.public_page_id = (SELECT id FROM resolved_page)
+               AND event.is_bot = false
                AND event.event_name = ANY($3::varchar[])
            ), 0)::bigint AS unique_clicks
          FROM analytics_page_daily daily

@@ -678,11 +678,16 @@ export class BusinessOnboardingService {
     const nonce = this.randomToken();
     const verifier = this.randomToken();
     const challenge = createHash('sha256').update(verifier).digest('base64url');
-    await this.redis.set(
+    const stored = await this.redis.set(
       `oauth:state:${this.hash(state)}`,
       { ...input, nonce, verifier } satisfies OAuthState,
       10 * 60,
     );
+    if (!stored) {
+      throw new ServiceUnavailableException(
+        'Authentication is temporarily unavailable',
+      );
+    }
     return this.google.authorizationUrl({
       state,
       nonce,

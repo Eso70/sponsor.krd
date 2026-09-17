@@ -78,6 +78,13 @@ events create transactional `marketing_event_outbox` rows for active,
 entitled business destinations. The outbox worker performs delivery, retry,
 backoff, error recording, and permanent-failure notification.
 
+Analytics reporting is read-only with respect to marketing delivery. Showing
+an archived/replaced action as a historical row, or grouping an unresolved
+event as unattributed, never replays it to the Pixel or creates a new Events
+API outbox item. Already-rendered pages may still resolve an archived action;
+that original event keeps its shared browser/server event ID and event name so
+TikTok deduplication remains intact.
+
 Engagement-only events without registered actions do not enter the TikTok
 outbox. Examples include section opens, form views, and engaged-view
 milestones. They remain available to Sponsor.krd analytics.

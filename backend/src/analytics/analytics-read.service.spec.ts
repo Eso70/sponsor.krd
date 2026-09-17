@@ -2,7 +2,7 @@ import { DatabaseService } from '../database/database.service';
 import { AnalyticsReadService } from './analytics-read.service';
 
 describe('AnalyticsReadService', () => {
-  it('excludes orphaned Linktree actions from button analytics', async () => {
+  it('keeps clicked historical and unattributed actions visible in button analytics', async () => {
     let capturedSql = '';
     const query = jest.fn((sql: string) => {
       capturedSql = sql;
@@ -15,8 +15,14 @@ describe('AnalyticsReadService', () => {
       pageId: '17fdf0e8-d6b4-449a-b3cf-c760160c3f21',
     });
 
-    expect(capturedSql).toContain('action.source_link_id IS NOT NULL');
-    expect(capturedSql).toContain("action.action_key NOT LIKE 'link:%'");
+    expect(capturedSql).toContain("THEN 'historical'");
+    expect(capturedSql).toContain('unattributed_totals AS');
+    expect(capturedSql).toContain('event.public_page_action_id IS NULL');
+    expect(capturedSql).toContain('event.is_bot = false');
+    expect(capturedSql).toContain("'unattributed'::text AS record_state");
+    expect(capturedSql).toContain(
+      'OR GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0)) > 0',
+    );
   });
 
   /**
@@ -46,6 +52,7 @@ describe('AnalyticsReadService', () => {
     expect(capturedSql).not.toContain('SUM(daily.unique_clickers)');
     expect(capturedSql).toContain('unique_totals AS');
     expect(capturedSql).toContain('COUNT(DISTINCT event.visitor_id)');
+    expect(capturedSql).toContain('event.is_bot = false');
     expect(capturedSql).toContain('COUNT(*)::bigint AS total_clicks');
     expect(capturedSql).toContain(
       'GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0))',

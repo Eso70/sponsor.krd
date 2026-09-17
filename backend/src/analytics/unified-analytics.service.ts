@@ -910,6 +910,7 @@ export class UnifiedAnalyticsService {
        FROM analytics_events event
        JOIN public_pages page ON page.id = event.public_page_id
        WHERE page.business_id = $1
+         AND event.is_bot = false
          AND ($2::uuid IS NULL OR page.id = $2 OR page.source_linktree_id = $2)
          AND ($3::varchar IS NULL OR page.page_type = $3)
          AND ($4::date IS NULL OR event.occurred_at >= $4::date)
@@ -977,7 +978,8 @@ export class UnifiedAnalyticsService {
          FROM analytics_events event
          JOIN public_pages page ON page.id = event.public_page_id
          JOIN target_page target ON target.id = page.id
-         WHERE (event.occurred_at AT TIME ZONE page.timezone)::date >= target.local_today - ($3::integer - 1)
+         WHERE event.is_bot = false
+           AND (event.occurred_at AT TIME ZONE page.timezone)::date >= target.local_today - ($3::integer - 1)
          GROUP BY 1
        )
        SELECT daily.day, daily.total_views, daily.total_clicks, daily.conversions,

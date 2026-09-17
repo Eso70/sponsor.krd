@@ -65,6 +65,7 @@ interface ActionRow {
   conversions: number;
   conversionValue: number;
   ctr: number;
+  recordState?: "current" | "historical" | "unattributed";
 }
 
 /**
@@ -75,9 +76,7 @@ interface ActionRow {
  */
 export type AnalyticsPageKind = "linktree";
 
-export type PageAnalyticsDataSource =
-  | "business"
-  | "platform-linktree";
+export type PageAnalyticsDataSource = "business" | "platform-linktree";
 
 interface BusinessPageAnalyticsModalProps {
   isOpen: boolean;
@@ -489,6 +488,15 @@ export function BusinessPageAnalyticsModal({
     () => actions.filter((a) => a.totalClicks > 0 || a.conversions > 0),
     [actions],
   );
+  const hasHistoricalActions = useMemo(
+    () =>
+      filteredActions.some(
+        (action) =>
+          action.recordState === "historical" ||
+          action.recordState === "unattributed",
+      ),
+    [filteredActions],
+  );
 
   // Clicks count too: a page can be reached from a QR code or a shared button
   // and record clicks without a single recorded view.
@@ -557,9 +565,7 @@ export function BusinessPageAnalyticsModal({
                 </div>
                 {lastUpdated && (
                   <div className="flex items-center gap-2 mt-2 text-xs text-slate-400 dark:text-gray-500">
-                    <MotionPulse
-                      className="theme-fill h-1.5 w-1.5 rounded-full shadow-sm"
-                    />
+                    <MotionPulse className="theme-fill h-1.5 w-1.5 rounded-full shadow-sm" />
                     <span className="font-kurdish">
                       دواین نوێکردنەوە:{" "}
                       {new Intl.DateTimeFormat("ku", {
@@ -781,6 +787,13 @@ export function BusinessPageAnalyticsModal({
                       </h3>
                     </div>
 
+                    {hasHistoricalActions && (
+                      <p className="mb-3 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-[11px] leading-5 text-amber-800 dark:border-amber-400/15 dark:bg-amber-400/8 dark:text-amber-200 font-kurdish">
+                        کۆی سەرەوە هەموو کلیکە تۆمارکراوەکان دەگرێتەوە؛ دوگمە
+                        سڕاوە یان گۆڕاوەکان لێرە وەک مێژوویی نیشان دەدرێن.
+                      </p>
+                    )}
+
                     {filteredActions.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
                         <Eye className="h-10 w-10 text-slate-300 dark:text-gray-600" />
@@ -795,6 +808,13 @@ export function BusinessPageAnalyticsModal({
                           const colors = getPlatformColors(platform);
                           const icon = getPlatformIcon(platform, "h-4 w-4");
                           const rowCaption = getPlatformName(platform);
+                          const isHistorical =
+                            action.recordState === "historical";
+                          const isUnattributed =
+                            action.recordState === "unattributed";
+                          const displayLabel = isUnattributed
+                            ? "کلیکە دیارینەکراوەکان"
+                            : action.label;
                           const isExpanded = expandedActionId === action.id;
                           return (
                             <div key={action.id}>
@@ -819,11 +839,22 @@ export function BusinessPageAnalyticsModal({
                                 <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4 items-center">
                                   <div className="col-span-2 sm:col-span-2 min-w-0">
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                                      {action.label}
+                                      {displayLabel}
                                     </p>
-                                    <p className="text-[10px] text-slate-400 dark:text-gray-500 truncate mt-0.5">
-                                      {rowCaption}
-                                    </p>
+                                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                                      <p className="truncate text-[10px] text-slate-400 dark:text-gray-500">
+                                        {isUnattributed
+                                          ? "کردارێک کە بە دوگمەیەکی دیاریکراو نەبەستراوەتەوە"
+                                          : rowCaption}
+                                      </p>
+                                      {(isHistorical || isUnattributed) && (
+                                        <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300 font-kurdish">
+                                          {isHistorical
+                                            ? "مێژوویی"
+                                            : "دیارینەکراو"}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                   <div className="text-center">
                                     <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -915,6 +946,13 @@ export function BusinessPageAnalyticsModal({
                           );
                         })}
                       </div>
+                    )}
+                    {filteredActions.length > 1 && (
+                      <p className="mt-2 text-[10px] leading-5 text-slate-400 dark:text-gray-500 font-kurdish">
+                        ژمارەی «تاک» بۆ هەر دوگمەیەک بە جیاوازی هەژمار دەکرێت؛
+                        یەک کەس دەتوانێت زیاتر لە دوگمەیەک کلیک بکات، بۆیە ئەو
+                        ژمارانە کۆ ناکرێنەوە.
+                      </p>
                     )}
                   </div>
                 )}

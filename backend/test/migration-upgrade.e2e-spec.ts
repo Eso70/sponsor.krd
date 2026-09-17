@@ -143,8 +143,7 @@ describe('consolidated database schema commands (e2e)', () => {
           env: {
             ...process.env,
             DB_NAME: fixtureDatabase,
-            DB_MAINTENANCE_NAME:
-              process.env.DB_MAINTENANCE_NAME || 'postgres',
+            DB_MAINTENANCE_NAME: process.env.DB_MAINTENANCE_NAME || 'postgres',
             DB_RESET_REQUIRE_STOPPED_BACKEND: '',
             PLATFORM_ADMIN_USERNAME: '',
           },

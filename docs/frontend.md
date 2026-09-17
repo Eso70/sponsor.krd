@@ -763,7 +763,10 @@ summaries use `pageType=linktree`; clearing analytics remains page-scoped.
 - active-session listing and revocation;
 - per-page analytics in the Linktree analytics modal,
   including views, unique visitors, clicks, unique clickers, conversions,
-  date filtering, and action performance;
+  date filtering, and action performance. Clicked buttons that were later
+  removed or replaced remain visible as historical rows, while unresolved
+  clicks use a clearly labelled unattributed row so the breakdown does not
+  silently omit recorded traffic;
 - TikTok delivery health and retry controls;
 - analytics deletion for one public page or the complete business;
 - business notifications, announcement banners, and conversations with the

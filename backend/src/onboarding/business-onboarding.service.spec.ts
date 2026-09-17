@@ -180,6 +180,35 @@ describe('BusinessOnboardingService invitations', () => {
     );
   });
 
+  it('does not redirect to Google when the one-time OAuth state was not stored', async () => {
+    const redis = {
+      isAvailable: jest.fn().mockReturnValue(true),
+      set: jest.fn().mockResolvedValue(false),
+    };
+    const google = {
+      isConfigured: jest.fn().mockReturnValue(true),
+      authorizationUrl: jest.fn(),
+    };
+    const service = new BusinessOnboardingService(
+      {} as never,
+      redis as never,
+      google as never,
+      {} as never,
+      {} as never,
+      {
+        get: jest.fn((key: string) =>
+          key === 'PLATFORM_ADMIN_EMAIL' ? 'admin@example.com' : undefined,
+        ),
+        getOrThrow: jest.fn().mockReturnValue('test-session-secret'),
+      } as never,
+    );
+
+    await expect(service.beginPlatformAdminSignin()).rejects.toThrow(
+      'Authentication is temporarily unavailable',
+    );
+    expect(google.authorizationUrl).not.toHaveBeenCalled();
+  });
+
   it('rejects every Google email outside the platform allowlist', async () => {
     const redis = {
       isAvailable: jest.fn().mockReturnValue(true),

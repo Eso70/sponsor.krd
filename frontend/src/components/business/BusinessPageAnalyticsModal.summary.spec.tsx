@@ -111,6 +111,19 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
                     conversions: 1,
                     conversionValue: 2,
                     ctr: 25,
+                    recordState: "historical",
+                  },
+                  {
+                    id: "unattributed:platform-page-id",
+                    label: "Unattributed interactions",
+                    actionType: "custom",
+                    destination: null,
+                    totalClicks: 3,
+                    uniqueClickers: 2,
+                    conversions: 0,
+                    conversionValue: 0,
+                    ctr: 15,
+                    recordState: "unattributed",
                   },
                 ]
               : {
@@ -147,6 +160,12 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
       );
     });
     expect(await screen.findByText("Website")).toBeInTheDocument();
+    expect(screen.getByText("مێژوویی")).toBeInTheDocument();
+    expect(screen.getByText("کلیکە دیارینەکراوەکان")).toBeInTheDocument();
+    expect(screen.getByText("دیارینەکراو")).toBeInTheDocument();
+    expect(
+      screen.getByText(/هەموو کلیکە تۆمارکراوەکان دەگرێتەوە/),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /٧ ڕۆژ/ }));
     await waitFor(() =>

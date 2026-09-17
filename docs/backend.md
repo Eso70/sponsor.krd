@@ -147,6 +147,16 @@ only additive view, click, and conversion totals. `total_clicks` comes from the
 rollup, while exact unique counts come from distinct visitor IDs in the event
 log.
 
+Per-action reports keep clicked archived/replaced actions as historical rows
+and group click events that could not resolve a registered action into an
+unattributed row. Zero-activity tombstones remain hidden. This keeps page-level
+totals and the visible breakdown auditable without relabelling old traffic as
+traffic for a newly created button. Unique clickers are distinct per scope and
+must not be added across action rows because one visitor may click more than
+one button. Bot-marked events remain stored for diagnosis but are excluded
+from rollups and every visitor/clicker unique read so additive and unique
+metrics describe the same human traffic population.
+
 `getAllLinktrees` attaches the totals with one aggregate for the whole list
 rather than a query per card, and defaults a page with no traffic to zeroes so
 the card never has to tell "no data" apart from "not loaded". A failure there
@@ -434,16 +444,16 @@ loads afterwards and which would silently override the generated values.
 
 ### Database and Redis
 
-| Variable                                                  | Current use                                                      |
-| --------------------------------------------------------- | ---------------------------------------------------------------- |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL application connection                                |
-| `DB_MAINTENANCE_NAME`                                     | Maintenance database used by migration and reset commands        |
+| Variable                                                  | Current use                                                                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL application connection                                                                             |
+| `DB_MAINTENANCE_NAME`                                     | Maintenance database used by migration and reset commands                                                     |
 | `DB_RESET_REQUIRE_STOPPED_BACKEND`                        | Refuse reset while the backend is connected; default `true`; set `false` only for an intentional forced reset |
-| `DB_POOL_MAX`                                             | Maximum PostgreSQL connections per backend process; default `20` |
-| `DB_IDLE_TIMEOUT_MS`                                      | Idle connection timeout; default `30000`                         |
-| `DB_CONNECTION_TIMEOUT_MS`                                | Connection timeout; default `10000`                              |
-| `DB_QUERY_TIMEOUT_MS`                                     | Query timeout; default `30000`                                   |
-| `REDIS_HOST`, `REDIS_PORT`                                | Redis connection                                                 |
+| `DB_POOL_MAX`                                             | Maximum PostgreSQL connections per backend process; default `20`                                              |
+| `DB_IDLE_TIMEOUT_MS`                                      | Idle connection timeout; default `30000`                                                                      |
+| `DB_CONNECTION_TIMEOUT_MS`                                | Connection timeout; default `10000`                                                                           |
+| `DB_QUERY_TIMEOUT_MS`                                     | Query timeout; default `30000`                                                                                |
+| `REDIS_HOST`, `REDIS_PORT`                                | Redis connection                                                                                              |
 
 See [docs/database.md](database.md) for how these are used by `db:migrate`
 and `db:reset`.
