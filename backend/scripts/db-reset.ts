@@ -74,13 +74,15 @@ async function reset() {
         activeBackendConnections.rows[0]?.count || 0,
       );
       if (backendConnectionCount > 0) {
-        if (process.env.DB_RESET_REQUIRE_STOPPED_BACKEND === 'true') {
+        const requireStoppedBackend =
+          process.env.DB_RESET_REQUIRE_STOPPED_BACKEND !== 'false';
+        if (requireStoppedBackend) {
           throw new Error(
-            `Refusing to reset ${dbName} while ${backendConnectionCount} backend connection(s) are active because DB_RESET_REQUIRE_STOPPED_BACKEND is enabled.`,
+            `Refusing to reset ${dbName} while ${backendConnectionCount} Sponsor.krd backend connection(s) are active. Stop the backend first. Set DB_RESET_REQUIRE_STOPPED_BACKEND=false only for an intentional forced reset.`,
           );
         }
         console.warn(
-          `  WARNING Terminating ${backendConnectionCount} active backend database connection(s) for this reset.`,
+          `  WARNING Forced reset is terminating ${backendConnectionCount} active Sponsor.krd backend database connection(s).`,
         );
       }
 

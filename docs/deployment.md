@@ -234,7 +234,7 @@ pnpm build
 4. Recreate PostgreSQL and Redis from the consolidated baseline:
 
 ```bash
-DB_RESET_REQUIRE_STOPPED_BACKEND=true pnpm db:reset
+pnpm db:reset
 ```
 
 5. Start the applications with the current environment:

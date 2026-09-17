@@ -324,16 +324,17 @@ Archived communication history has administrator-configurable retention.
 pnpm db:reset
 ```
 
-`db:reset` force-terminates connections to `DB_NAME`, drops the entire
+`db:reset` refuses to run while Sponsor.krd backend connections to `DB_NAME`
+are active, then drops the entire
 database (thereby removing every table, function, view, extension, and row),
 recreates it from `template0`, applies only the numbered baseline, verifies the
 result and its one-row `full_schema.sql` schema ledger, reruns the seed helpers,
 and executes
 `FLUSHALL` on the configured Redis instance. **It
 permanently destroys the configured application database and all data in the
-configured Redis instance.** Set `DB_RESET_REQUIRE_STOPPED_BACKEND=true` when
-an environment must refuse resets while Sponsor.krd backend connections are
-active.
+configured Redis instance.** Stopping the backend is mandatory by default.
+`DB_RESET_REQUIRE_STOPPED_BACKEND=false` is an explicit emergency override
+that allows the reset to terminate active Sponsor.krd backend connections.
 
 Use `db:reset` only when complete data loss is intended.
 

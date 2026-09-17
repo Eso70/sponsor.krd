@@ -438,7 +438,7 @@ loads afterwards and which would silently override the generated values.
 | --------------------------------------------------------- | ---------------------------------------------------------------- |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL application connection                                |
 | `DB_MAINTENANCE_NAME`                                     | Maintenance database used by migration and reset commands        |
-| `DB_RESET_REQUIRE_STOPPED_BACKEND`                        | Require the backend to be stopped before reset; default `false`  |
+| `DB_RESET_REQUIRE_STOPPED_BACKEND`                        | Refuse reset while the backend is connected; default `true`; set `false` only for an intentional forced reset |
 | `DB_POOL_MAX`                                             | Maximum PostgreSQL connections per backend process; default `20` |
 | `DB_IDLE_TIMEOUT_MS`                                      | Idle connection timeout; default `30000`                         |
 | `DB_CONNECTION_TIMEOUT_MS`                                | Connection timeout; default `10000`                              |

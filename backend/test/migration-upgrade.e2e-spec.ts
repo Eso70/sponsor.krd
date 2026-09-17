@@ -126,6 +126,46 @@ describe('consolidated database schema commands (e2e)', () => {
     });
   });
 
+  it('refuses a reset by default while the backend is connected', async () => {
+    const backendConnection = new Pool({
+      ...connection(fixtureDatabase),
+      application_name: 'sponsor-krd-backend',
+    });
+    await backendConnection.query('SELECT 1');
+
+    try {
+      const runner = join(__dirname, '../node_modules/ts-node/dist/bin.js');
+      const result = spawnSync(
+        process.execPath,
+        [runner, 'scripts/db-reset.ts'],
+        {
+          cwd: join(__dirname, '..'),
+          env: {
+            ...process.env,
+            DB_NAME: fixtureDatabase,
+            DB_MAINTENANCE_NAME:
+              process.env.DB_MAINTENANCE_NAME || 'postgres',
+            DB_RESET_REQUIRE_STOPPED_BACKEND: '',
+            PLATFORM_ADMIN_USERNAME: '',
+          },
+          encoding: 'utf8',
+          timeout: 90_000,
+        },
+      );
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        'Stop the backend first',
+      );
+      const retainedSchema = await fixture.query<{ exists: boolean }>(
+        `SELECT to_regclass('public.businesses') IS NOT NULL AS exists`,
+      );
+      expect(retainedSchema.rows[0].exists).toBe(true);
+    } finally {
+      await backendConnection.end();
+    }
+  });
+
   it('drops the entire database and recreates only the consolidated schema', async () => {
     await fixture.query('CREATE TABLE reset_sentinel (id integer PRIMARY KEY)');
     await fixture.query('INSERT INTO reset_sentinel (id) VALUES (1)');
