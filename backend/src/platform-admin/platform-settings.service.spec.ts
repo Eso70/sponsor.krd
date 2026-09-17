@@ -20,7 +20,7 @@ describe('PlatformSettingsService', () => {
       logo: '/images/upload/sponsor-krd/logo.png',
       avatar: '/images/upload/sponsor-krd/avatar.png',
       favicon: '/images/upload/sponsor-krd/favicon.ico',
-      accent_color: '#25f4ee',
+      accent_color: 'gradient:to-br:#123456:#654321',
       accent_ink_color: '#ffffff',
       app_url: 'https://sponsor-krd.example',
     };

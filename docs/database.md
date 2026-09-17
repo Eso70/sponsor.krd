@@ -45,6 +45,11 @@ It is recorded in `schema_migrations` under the compatibility ledger name
 
 It requires the PostgreSQL `pg_trgm` and `pgcrypto` extensions.
 
+The baseline must contain only session settings understood across supported
+deployment PostgreSQL versions. In particular, do not copy
+`SET transaction_timeout` from a PostgreSQL 17+ `pg_dump` preamble: it is not
+part of the schema and makes fresh installs fail on older servers.
+
 Dated forward-migration SQL files must not include their own `BEGIN`, `COMMIT`,
 or `ROLLBACK` wrapper. The migration runner owns that transaction and records
 the migration in the same commit, ensuring a failed migration leaves both the

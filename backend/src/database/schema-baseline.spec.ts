@@ -24,6 +24,7 @@ const readPart = (name: string) =>
 
 /** Catalog rows the application cannot boot without. */
 const DATA = readPart('99_data.sql');
+const SETTINGS = readPart('00_settings_and_extensions.sql');
 /** Every structural part concatenated: tables, constraints, indexes, triggers. */
 const SCHEMA = PARTS.filter((name) => name !== '99_data.sql')
   .map(readPart)
@@ -40,6 +41,11 @@ function tableBlock(name: string): string {
 }
 
 describe('full_schema.sql baseline', () => {
+  it('does not require the PostgreSQL 17+ transaction_timeout setting', () => {
+    expect(SETTINGS).not.toContain('SET transaction_timeout');
+    expect(SETTINGS).toContain('SET statement_timeout = 0;');
+  });
+
   describe('2026-08-13_remove_password_authentication', () => {
     it('creates no password columns anywhere', () => {
       expect(SCHEMA).not.toMatch(/\bpassword_hash\b/);

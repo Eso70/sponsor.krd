@@ -49,13 +49,10 @@ describe('consolidated database schema commands (e2e)', () => {
     );
     fixture = new Pool(connection(fixtureDatabase));
 
-    // Build a complete unledgered schema from every baseline part, the same way
-    // the migration scripts do. Removing this optional setting keeps the
-    // fixture usable with older disposable developer databases too.
-    const baseline = readBaselineSql(migrationsDirectory)
-      .split('\n')
-      .filter((line) => line.trim() !== 'SET transaction_timeout = 0;')
-      .join('\n');
+    // Build a complete unledgered schema from the exact baseline used by the
+    // real migration scripts. The baseline itself must stay portable rather
+    // than relying on a test-only rewrite of version-specific dump settings.
+    const baseline = readBaselineSql(migrationsDirectory);
     await fixture.query(baseline);
     await fixture.query('TRUNCATE schema_migrations');
   });

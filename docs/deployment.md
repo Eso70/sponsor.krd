@@ -24,6 +24,10 @@ The development environment requires:
 - PostgreSQL with `pgcrypto` and `pg_trgm`
 - Redis
 
+The checked-in baseline intentionally excludes source-version-only `pg_dump`
+session settings, so a clean deployment does not require the same PostgreSQL
+major version that generated the baseline.
+
 Install dependencies:
 
 ```bash
