@@ -1,0 +1,124 @@
+// @vitest-environment node
+
+import { describe, it, expect, afterEach, vi } from "vitest";
+
+/**
+ * Absolute URLs generated on the server must use the scheme the site is
+ * actually served over. Local development runs on plain http, so a hardcoded
+ * https link is unreachable there; production runs behind TLS and must not
+ * emit http. The scheme is therefore derived from the configured application
+ * URL, and this file pins that behavior for both environments.
+ *
+ * This runs in the node environment on purpose: these functions branch on
+ * whether `window` exists, and the behavior under test is the server branch.
+ * The default jsdom environment would exercise the browser branch instead,
+ * which reads the real location rather than the configuration.
+ */
+
+const ORIGINAL_ENV = { ...process.env };
+
+/**
+ * `app-url` reads `process.env` at call time, but Next.js inlines
+ * `NEXT_PUBLIC_*` at build time in application code. The module is re-imported
+ * per case so each one observes its own environment.
+ */
+const loadAppUrl = async (env: Record<string, string | undefined>) => {
+  for (const [key, value] of Object.entries(env)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+  vi.resetModules();
+  return import("./app-url");
+};
+
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
+  vi.resetModules();
+});
+
+describe("getBusinessWorkspaceEntryUrl on the server", () => {
+  it("uses http for local development", async () => {
+    const { getBusinessWorkspaceEntryUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "http://lvh.me:3011",
+      NEXT_PUBLIC_ROOT_DOMAIN: "lvh.me:3011",
+      NODE_ENV: "development",
+    });
+
+    expect(getBusinessWorkspaceEntryUrl("acme")).toBe(
+      "http://acme.lvh.me:3011/business/workspace-entry",
+    );
+  });
+
+  it("uses https for the live server", async () => {
+    const { getBusinessWorkspaceEntryUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "https://sponsor.krd",
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+      NODE_ENV: "production",
+    });
+
+    expect(getBusinessWorkspaceEntryUrl("acme")).toBe(
+      "https://acme.sponsor.krd/business/workspace-entry",
+    );
+  });
+
+  it("falls back to https in production when the app URL is unset", async () => {
+    const { getBusinessWorkspaceEntryUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: undefined,
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+      NODE_ENV: "production",
+    });
+
+    expect(getBusinessWorkspaceEntryUrl("acme")).toBe(
+      "https://acme.sponsor.krd/business/workspace-entry",
+    );
+  });
+});
+
+describe("getSubdomainPageUrl on the server", () => {
+  it("builds a subdomain path with the served scheme", async () => {
+    const { getSubdomainPageUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "http://lvh.me:3011",
+      NEXT_PUBLIC_ROOT_DOMAIN: "lvh.me:3011",
+      NODE_ENV: "development",
+    });
+
+    expect(getSubdomainPageUrl("acme", "/advertising")).toBe(
+      "http://acme.lvh.me:3011/advertising",
+    );
+  });
+
+  it("normalizes a path without a leading slash", async () => {
+    const { getSubdomainPageUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "https://sponsor.krd",
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+      NODE_ENV: "production",
+    });
+
+    expect(getSubdomainPageUrl("acme", "advertising/video-code")).toBe(
+      "https://acme.sponsor.krd/advertising/video-code",
+    );
+  });
+});
+
+describe("getAppBaseUrl", () => {
+  it("returns the configured local application URL", async () => {
+    const { getAppBaseUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "http://lvh.me:3011",
+      NODE_ENV: "development",
+    });
+
+    expect(getAppBaseUrl()).toBe("http://lvh.me:3011");
+  });
+
+  it("returns the configured production application URL", async () => {
+    const { getAppBaseUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "https://sponsor.krd",
+      NODE_ENV: "production",
+    });
+
+    expect(getAppBaseUrl()).toBe("https://sponsor.krd");
+  });
+});

@@ -1,0 +1,928 @@
+# Frontend
+
+The Campaigns navigation entry uses the same management composition as the
+Platform business directory: a shared six-card performance summary, page
+header actions, search and status filters, a two-column grid, the shared
+management table with mobile cards, and create/details/delete dialogs. Business
+Management and Campaigns both render card collections through the shared
+`ManagementGrid`, while their domain-specific card bodies remain separate.
+Campaign
+cards and rows include a
+mock video creative preview plus objective, destination, audience, budget,
+spend, impressions, clicks, CTR, conversions, and derived cost per conversion.
+All campaign mutations remain
+browser-local mock state until the backend campaign domain is implemented. The
+campaign-specific UI places its shared grid or table directly in the main
+management surface without another surrounding card. Each campaign uses simple
+dividers instead of nested metric cards, restrained creative colors, and quiet
+interaction states while retaining the shared Platform dashboard
+header, statistics, table, modal, and navigation patterns. The cards derive
+their totals from that current mock collection. The campaign analytics detail
+modal keeps the shared management-modal shell but
+uses a campaign-specific, flat layout: the creative and campaign identity lead,
+six outcome and cost metrics are separated by dividers, conversion rate is
+derived from clicks and conversions, and configuration remains a compact
+description list. It does not introduce nested metric cards.
+Campaign creation reuses the Linktree editor's `ManagementModal`, numbered
+`ModalWizardProgress`, wizard actions, `EditorField`, and modal input styles.
+Its frontend-only three-step flow uses one unified name for the campaign, ad
+group, and ad, then covers the Reach, Video Views, Website Lead, and Sales
+objectives; optimization and maximize-delivery bidding; budget and schedule;
+audience and placement; destination, video code, ad text, and call to action;
+and optional interactive add-ons with create-new and choose-existing modes.
+The optimization goal uses the shared `CustomSelect`. Website Lead and Sales
+also show a website-only data-connection panel whose connection and event fields
+reuse `CustomSelect`; that panel is absent for Reach and Video Views.
+TikTok Ads account
+configuration remains available in Platform
+Settings. Business dashboards expose neither
+feature; `/business/campaigns` and the former `/business/campains` alias are
+removed. Business TikTok Pixel, Events API, and delivery settings remain in
+place. The shared TikTok Pixel editor disables group deletion when only one
+group remains. The Ads OAuth callback requires a verified platform-admin session and
+returns to the configured platform console's Settings > TikTok Ads tab.
+
+## Public marketing tracking
+
+`components/analytics/PublicRouteTracking.tsx` is the central positive
+allowlist for fixed public routes. It resolves the canonical server identity,
+reports through `createPageTracker`, and mounts the shared TikTok loader.
+Tracking starts automatically on allowlisted public pages. Linktree renderers
+keep their specialized action tracking but use the same
+dispatch primitives. Individual landing, join, and advertising components
+must not call TikTok directly.
+
+## Private business onboarding
+
+`/join?token=...` validates an administrator-issued, one-time 24-hour invitation before showing
+Google authentication. `/join/application` additionally requires HttpOnly
+signup-session cookie and is blocked by proxy otherwise. Both routes use
+private no-store caching and `noindex, nofollow, noarchive`. The invitation's
+expiry timestamp is not displayed on the signup screen, but an expired token
+still resolves to the dedicated expired-invitation error state. The compact,
+single-page application requires only business name, phone, and an available
+editable subdomain. Submission records the current terms/privacy versions and
+acceptance time on the server after the user follows the legal notice. Country,
+city, social-profile URLs, and brand uploads are not part of the application.
+Validation appears beside the affected field and
+entered values remain available after recoverable failures. Signup request
+payloads are built explicitly from backend DTO fields; never spread UI-only
+form state into a strict API request. Platform administrator selects plan during
+review. Tenant `/business/workspace-entry` is the sole business sign-in route
+and offers Google and a six-digit email code for
+approved active business members. The root-domain platform login and the
+invite signup page offer the same Google or email-code choice, with the email
+option verifying identity before it creates a platform/application session.
+`/business/auth/consume` exchanges the single-use handoff while rendering only
+a loading state; invalid or expired handoffs return automatically to the tenant
+login without exposing a stale retry screen. Tenant login loads the public business name, logo, favicon, and website color before
+applying the shared authentication design; the tenant color reaches the page's text selection and window scrollbar through the
+same document-level theme variables used by the public pages. Tenant-free shells (platform admin login, invite signup, signup
+wizard) mark their surface with `data-sponsor-krd-theme` instead, so text selection, scrollbars, and brand utilities resolve to the
+Sponsor.krd cyan-to-red brand treatment everywhere on the auth sheet. Handoff consumption is guarded against duplicate React
+effects, uses an eight-second client/proxy deadline, and performs a hard
+dashboard navigation after the session cookie is stored. Initial dashboard
+session, access-manifest, and page requests run concurrently.
+Newly approved businesses enter the real dashboard with its entire surface
+marked inert behind a non-dismissible required form. The single setup screen
+uses the same
+stacked brand asset control and grouped fields as business management: optional
+brand assets and Sponsor.krd default color, editable name and phone, read-only
+assigned subdomain, and plan-limited TikTok Pixel/Events API configuration.
+System page defaults are applied automatically rather than presented as a
+separate step. It also shows the verified owner account name and email as
+read-only identity fields. The legacy `/business/getting-started` URL only
+redirects to `/business`; onboarding never uses a separate authentication page.
+
+## Platform-administrator impersonation
+
+The platform business directory exposes an "open dashboard" action on every
+active business that has a subdomain, in both the table and grid views. It is a
+button, not a link: it posts to the impersonation endpoint and navigates to the
+single-use URL that comes back. `PlatformAdminDashboard` opens the target tab
+synchronously on the click and assigns its location once the response lands,
+because a `window.open` issued after an `await` is treated as an unrequested
+popup and blocked. The returned URL is single-use and short-lived; it must
+never be stored, logged, or shared.
+
+While such a session is active, the business dashboard layout renders
+`BusinessImpersonationBanner` above `BusinessDashboard`. The banner is
+deliberately non-dismissible, names both the business and the administrator,
+and owns the exit action, which performs a full navigation rather than a router
+push because the session cookie is cleared server-side. Its presence is driven
+by the `impersonation` object on `GET /api/auth/session` — never by a client
+flag. See
+[docs/security.md](security.md#platform-administrator-impersonation).
+
+## Large feature composition
+
+Business and platform dashboard route transitions use the shared
+`SkeletonDashboardShell`. It reserves the desktop sidebar, responsive header,
+and initial content surface while server data or a route bundle resolves. Keep
+route-level dashboard loading states on this shared shell so they never fall
+back to the unrelated public landing-page skeleton.
+
+Authentication routes use the shared `SkeletonAuthenticationPage` boundary so
+navigation reserves the real split-screen authentication layout in both light
+and dark mode. Link validation and secure handoff exchange use the shared
+compact `LoadingState`; predictable forms and data surfaces continue to use
+layout-matched skeletons. Platform-impersonated business sessions keep a
+permanent amber security banner whose dark surface and exit action have explicit
+contrast rather than inheriting a tenant or platform accent.
+
+The loaded dashboards also share `DashboardSidebar` and `DashboardHeader`.
+Each permission domain supplies its own navigation, notification inbox, refresh
+operation, branding, and account actions, while the shared components own the
+responsive sidebar, collapse behavior, global header controls, active states,
+and profile-menu presentation. Do not recreate dashboard chrome inside a
+feature entry point.
+
+The Business dashboard publishes the tenant's effective website color at the
+document boundary. Text selection, the custom cursor, native page scrollbars,
+nested scroll surfaces, portalled dialogs, and shared accent controls therefore
+use the tenant color on every Business route. The Templates catalogue is the
+deliberate exception: it establishes a Sponsor.krd theme boundary so template
+artwork and catalogue controls are not repainted by the current tenant.
+
+Both dashboards render notifications through the communications feature's
+shared inbox hook and `NotificationBell`. The unread badge, responsive
+dropdown, loading and empty states, read/delete/read-all/delete-all behavior,
+keyboard dismissal, and notification detail modal are one implementation.
+Selecting a notification marks it read and opens the modal before any optional
+navigation. Business and platform adapters provide only their authenticated
+endpoint and safe action-route resolver. Platform pending-approval cards are a
+permission-specific extension inside the same dropdown and are never exposed
+to business users.
+
+Google profile images continue through `next/image`; the optimizer allowlist is
+restricted to HTTPS `lh3.googleusercontent.com` OpenID avatar paths (`/a/**`
+and `/a-/**`) rather than permitting arbitrary remote Google content.
+
+Large pages and templates compose focused modules rather than owning every
+data lifecycle and renderer inline.
+Business dashboard analytics totals are loaded and normalized by
+`useBusinessAnalyticsTotals`; the dashboard consumes the hook and remains
+responsible for page composition and cross-feature coordination. Cached
+domain responses are validated before feature hooks consume them. A legacy
+or malformed Linktree-list cache entry is discarded and refetched instead of
+reaching dashboard sorting or rendering code.
+
+Add new dashboard network lifecycles as feature hooks. Do not place new
+independent persistence,
+fetching, or rendering systems directly in the large entry components.
+
+## Request and state boundaries
+
+JSON API transport is owned by `frontend/src/lib/api/request.ts`. It applies
+same-origin credentials and no-store defaults, serializes explicit `json`
+bodies, unwraps the standard backend envelope, converts normalized failures to
+`ApiRequestError`, and preserves `AbortError` for effect cleanup. Safe GET and
+HEAD requests retry short-lived network, 502, 503, and 504 failures with a
+small bounded backoff; mutations are never retried automatically. Feature code
+must not duplicate response parsing or error-envelope extraction.
+
+Domain endpoints belong in feature API modules such as `features/business/api`,
+`features/communications/api`, and `features/platform-admin/api`. React hooks
+own loading, refresh, cancellation, and local presentation state; components
+compose those hooks and domain operations. The local-storage cache delegates
+network transport to the same request primitive and caches the unwrapped domain
+value. Direct `fetch` remains appropriate only where the `Response` itself is
+required, such as streamed downloads, upload progress/raw multipart handling,
+the Next.js proxy, or calls to third-party services.
+
+Do not introduce a global state library without a concrete state lifecycle
+that cannot be represented by server rendering, a feature hook, or a focused
+context.
+
+## Motion architecture
+
+The frontend uses the current Motion for React package through `motion/react`
+as its single authored-motion runtime. `AppMotionProvider` owns the application
+default easing, duration, and operating-system reduced-motion preference. Do
+not add the legacy `framer-motion` package alongside `motion`, nest another
+page-level `MotionConfig`, or create project-owned CSS keyframes.
+
+Prefer the shared primitives in `components/motion/MotionPrimitives.tsx` for
+spinners, pulses, status pings, shines, fades, and reveals. Use the shared
+`components/ui/marquee.tsx` for measured continuous rails. A feature may use
+`motion` directly when it owns a distinct interaction or visual sequence, but
+it must still inherit the application provider and honor reduced motion.
+
+CSS transitions remain appropriate for immediate visual state feedback such
+as color, border, shadow, filter, and focus changes. Entrance and exit
+sequences, continuous movement, loading motion, measured movement, and
+multi-step transforms belong to Motion. Do not use Tailwind `animate-*`
+utilities, inline `animation` declarations, injected keyframe styles, or
+manual DOM animation loops for these behaviors.
+
+Next.js 16 (App Router) / React 19. See
+[docs/architecture.md](architecture.md#frontend-boundaries) for feature and
+component ownership and the enforced ESLint boundaries between business and
+platform-administration UI. This file covers the implemented product surface,
+routing, and frontend commands.
+
+## Public platform and business pages
+
+### Advertising-service frontend preview
+
+The business dashboard exposes `/business/advertising` as the frontend preview
+of a reusable tenant advertising-service feature. It composes the shared
+dashboard header, statistic cards, segmented tabs, skeletons, tenant theme, and
+public navigation/footer rather than creating a parallel dashboard shell. The
+editor covers public copy, availability, contact, currency, payment labels,
+packages, estimated outcomes, durations, and FAQs. Its public counterpart is
+served at `/advertising` on a business subdomain and uses the current tenant's
+public branding.
+
+Until the backend domain is implemented, configuration is browser-local mock
+state stored under a versioned key. The dashboard labels this limitation and
+must not claim that edits are published across devices. This temporary frontend
+state must not collect payments, TikTok credentials, authorization codes, or
+customer orders. A future backend implementation must persist configuration per
+business, calculate prices server-side, enforce tenant ownership, encrypt and
+redact authorization codes, verify payment webhooks idempotently, and expose
+only enabled public configuration.
+
+The business homepage navigation links to the public advertising route. The
+advertising surface follows the public site's left-to-right page structure and
+reuses `BusinessPublicFooter`, the same tenant footer composition used by the
+business homepage, including published Linktree and configured
+contact columns. Public-route loading uses the current full-width 60px navbar
+footprint rather than the retired floating-header skeleton.
+
+The advertising surface also installs the tenant accent as the public cursor,
+text-selection, native/custom scrollbar, and theme color, restoring Sponsor.krd
+defaults when it unmounts. Its metadata uses the tenant favicon plus logo or
+default-avatar fallback for browser and social-preview imagery. Authenticated
+business routes use short English browser-tab suffixes, and public content
+titles are whitespace-normalized and bounded so user-entered names cannot
+create excessively long browser tabs.
+
+`BusinessPublicSiteShell` is the single visual and behavioral frame for both
+the tenant homepage and tenant advertising page. It owns the public navbar,
+continuous `BusinessGridBackdrop`, light/dark page surfaces, tenant theme
+variables, custom scrollbar and cursor lifecycle, selection color, and shared
+business footer. Public business features must compose this shell rather than
+copying those concerns. Advertising sections use the same transparent section
+surfaces, responsive spacing, heading scale, soft cards, and
+`BusinessSectionDecorations` pattern as the homepage, so future shell-level
+style changes propagate to both routes. Public business landing sections have
+no separators on either route; only the shared footer retains its top boundary.
+
+Both public hero sections render `BusinessHeroAccentBackdrop`. It provides the
+same tenant-colored radial atmosphere and restrained top highlight while
+leaving the shared grid visible beneath it. The component is decorative,
+non-interactive, theme-aware, and is the single place to tune this effect for
+the homepage and advertising page together.
+
+The advertising route uses a compact introductory title instead of a second
+marketing hero. It contains no badge, CTA, preparation note, floating label,
+or secondary action. A concise Kurdish description sits below the title;
+public advertising copy uses `تیکتۆک` and omits sentence-ending periods for a
+consistent editorial style.
+
+Its sponsorship journey is a dedicated interactive tutorial rather than a
+generic card row. Five keyboard-operable steps explain sponsor type, package
+selection, payment, receipt/video-code submission, and activation. The visual
+examples use the established landing-section surfaces and Motion transitions,
+show the bundled FIB, QiCard, FastPay, and Korek marks, and clearly identify
+receipt and training media as examples. The public tutorial never collects
+payment credentials, account passwords, receipts, authorization codes, or
+orders; submission continues through the configured contact channel until a
+tenant-scoped backend workflow exists.
+The sponsor type, price rows, and payment-provider choices are local selection
+controls rather than decorative options. A stable mockup frame owns
+the guide header, content stage, and bottom navigation bar. Desktop uses a
+descriptive step rail; mobile uses five compact English-number controls and
+keeps the active Kurdish title immediately above them without horizontal
+scrolling. Visible step descriptions and redundant `Step` labels are omitted.
+English Back and Next controls and a progress indicator move through the
+journey while preserving all illustrative selections.
+The second tutorial stage uses one compact responsive semantic pricing table.
+It shows only the sponsor type selected in the first stage, lets visitors
+select an individual price row, and displays the complete English-number IQD
+price and estimated-view schedule for that type. This tutorial state remains
+illustrative and browser-local.
+The changing stage is visually flat inside that frame: it does not wrap option
+groups in another bordered card. Blue, violet, amber, rose, and emerald tones
+differentiate the five steps, while individual sponsor, package, and provider
+choices use distinct restrained tints and a consistent selected-state control.
+The mockup header uses the shared full-color TikTok mark on its native dark
+surface. Its full-width footer progress track uses five softly differentiated
+segments matching the tutorial's blue, violet, amber, rose, and emerald steps;
+future segments remain visible at reduced opacity.
+
+- The root domain renders the Sponsor.krd landing page.
+- Published platform announcements can appear as root-domain banners or
+  feature cards.
+- Each active business owns one unique subdomain.
+- A business subdomain homepage shows that business's published linktrees
+  Linktrees.
+- The business homepage uses one concise customer-facing composition in both
+  light and dark themes: the same shared floating navigation used by the
+  Sponsor.krd homepage, a centered grid-backed hero, a responsive public
+  workspace, and the shared public footer. The workspace intentionally has no
+  separate heading or description; the hero action leads directly to its
+  compact `max-w-6xl` preview. The preview keeps page-edge gutters and a bounded
+  internal content area rather than becoming full-width or full-viewport. It
+  uses the same dark-ink/light-surface CTA palette in light mode and inverted
+  white/dark-surface palette in dark mode across its shell, AI controls, focus
+  treatment, and fallback cards. The shell and all structural panels inherit
+  one solid surface per theme; neutral borders provide their separation. Tabs
+  retain that shared surface and distinguish selection only through semantic
+  state, stronger type, and a neutral inset edge rather than another fill
+  color. The public helper uses the Sponsor.krd logo and Sponsor.krd AI label. It contains no tenant
+  accent glow or colored blur. Its top rail owns the public content tabs,
+  while a compact
+  sidebar offers a deterministic public helper on larger screens. The helper
+  handles a simple greeting locally and directs Linktree
+  requests to the business owner; it performs no network request, collects no
+  visitor data, and must not claim access to private business information. The
+  main panel renders the real destinations as a dense responsive visual gallery. It uses
+  accessible, keyboard-operable tabs only for published Linktrees and published
+  Linktrees; the workspace is omitted
+  when neither content type is published. Every
+  destination opens its real published route. Public contact remains outside
+  the workspace in the configured navigation action and footer. Additional
+  homepage sections must remain separate instead of being embedded as workspace
+  tabs. The navigation receives tenant branding and the standard persisted
+  theme toggle.
+  A finished, fully bordered workspace may be followed by a full trusted-by
+  section using the same heading scale, responsive section spacing, and content
+  width as the other landing sections. Its larger logo rail is populated only
+  from enabled partner items belonging
+  to approved tenant content, deduplicates repeated logos,
+  and is omitted when no real partner logos are configured. Its visual base
+  sequence and visible rail are measured at runtime by the shared
+  `components/ui/marquee.tsx` primitive. The business-specific component only
+  supplies the heading, tenant partner content, and visual treatment. The
+  sequence is repeated only enough to exceed 1.4 times the visible width,
+  duplicated once, and translated by exactly half its combined width. Duration
+  is derived from the measured travel distance and configured viewport-crossing
+  time. The trusted-by adapter uses a slower mobile crossing time without
+  changing desktop motion, so screen size and logo count cannot unexpectedly change
+  perceived speed. Repeated visual fillers are hidden from assistive technology
+  and cannot create duplicate keyboard stops. The hidden measurement unit uses
+  `width: max-content`, no wrapping, and non-shrinking children so its observed
+  box changes when natural logo dimensions resolve.
+  The preview is a functional Sponsor.krd composition built from real published
+  tenant content, not a copied third-party interface. It never presents an
+  internal dashboard mockup,
+  management or login actions, plan information, analytics, drafts, or other
+  operational data. Sections with no public data are omitted, and published
+  page content is referenced from its real source rather than copied into
+  homepage-only mock content.
+  The digital-presence showcase uses the reusable Motion-based
+  `BusinessCardStack`. Its three stacked cards are the visible and accessible
+  selection targets and automatically cycle when reduced motion is not
+  requested. The stable right-side container updates only its changing detail
+  and preview regions through Motion. `BusinessCardPreview` remains front-only,
+  uses the standard physical card aspect ratio, and sizes its internal spacing,
+  typography, icon, and decoration from its own container rather than the page
+  viewport so the complete card remains visible at every responsive width.
+  Neither component requests,
+  validates, stores, or submits payment-card numbers, expiry values, or CVV.
+  All project-owned phone previews use the shared `PhoneMockup`; feature code
+  must not draw another device frame inline. The component owns the same dark
+  metal hardware, side controls, Dynamic Island, status indicators, home
+  indicator, and strict screen clipping used by the Templates catalog. Its
+  content surface is always a 390 x 858 logical mobile viewport, scaled as one
+  unit into the chosen device width. This keeps template layout, safe-area
+  spacing, and overflow behavior consistent in the Templates catalog, the
+  Sponsor.krd homepage, and business public pages while allowing each consumer
+  to provide its own screen content and theme. The
+  registry-driven stack keeps three straight phones visible on mobile and five
+  from the small-tablet breakpoint upward, with one focused device and an equal
+  number of overlapping phones on either side. The centered device is the
+  tallest and occupies the top layer, its immediate neighbors are slightly
+  shorter beneath it, and the outer devices form the shortest rear layer. It
+  preserves this hierarchy and the common footer baseline after every carousel
+  move by keeping layout movement and scale emphasis on separate Motion layers.
+  It cycles through every
+  registered template one at a time. Each device is cropped by ten percent at
+  the bottom to keep the composition compact. All five cropped devices share a
+  single bottom baseline that meets the following footer boundary without an
+  empty trailing gap. Dedicated previous and next buttons own navigation;
+  preview phones are deliberately non-interactive. The stage reserves
+  width-derived responsive headroom above the enlarged center device throughout
+  the complete mobile range, then switches to fixed tablet and desktop stage
+  heights. Device and control sizing is slightly reduced below 381px so no
+  phone clips into the preceding content on narrow screens. A
+  standard landing-section heading and description
+  introduce the stack, while the device stage itself has no decorative surface,
+  controls, or canvas background: template surfaces render directly inside
+  transparent device hosts. Strict paint containment prevents template UI from
+  escaping the device screen. Linktree
+  phones reuse `DynamicTemplate`
+  and the same shared preview fixtures as the dashboard Templates page, with the
+  same Sponsor.krd fixture data and standardized WhatsApp, Viber, and phone
+  actions shown in the Templates catalog. Public-page
+  phones use the real registered template component and published tenant
+  content. Heavy template trees are isolated behind a memoized phone-content
+  boundary, while the five-device composition uses Motion position-only layout
+  transitions and transform-based spring emphasis. Navigation controls use
+  Motion hover and press feedback rather than authored CSS animation. Reduced
+  motion is honored, and the previews remain non-interactive so they cannot
+  trigger contact actions or expose dashboard or private data.
+  The public homepage route renders the shared `SkeletonPublicLandingPage`
+  composition while server-side business and Linktree requests
+  are pending. It preserves the navbar, hero, workspace, and following-section
+  footprints using the existing theme-aware `Skeleton` primitive. Registered
+  phone-template content is synchronous and does not introduce a second local
+  skeleton or artificial loading flash.
+  Business landing sections share one page-level `BusinessGridBackdrop` rather
+  than rendering independent section grids. Hero, workspace, trusted partners,
+  about, digital presence, and device previews sit above the same continuous
+  pattern, which begins at the first page pixel behind the transparent business
+  navbar, fades only at the lower landing-content boundary, and retains the
+  established light and dark palettes. The footer keeps its solid landing
+  surface and is intentionally excluded from the grid.
+  Each landing section reuses `BusinessSectionDecorations` for small floating
+  compact floating chips inspired by the hero reference treatment. They use
+  short section-related text and
+  distinct softly tinted surfaces, borders, shadows, and dots. They remain
+  non-interactive and assistive-technology hidden and appear only at spacious
+  desktop widths. Each section uses a different deterministic placement, dot
+  direction, and professional secondary color while retaining one
+  tenant-colored treatment. This creates a random visual rhythm without
+  hydration instability or position changes between renders. Section surfaces
+  remain neutral and no page-level accent blur is introduced.
+  The unique Kurdish phrase pairs are centralized with the landing section IDs;
+  no decoration name or phrase is reused between sections. A centralized
+  twelve-color palette also assigns two distinct treatments to each of the six
+  sections; the tenant color is used once in the hero and no authored color is
+  repeated elsewhere.
+  The floating business navbar exposes Kurdish anchor links for the workspace,
+  about, digital-presence, and device-preview sections. The business logo and
+  name return to the homepage-root `سەرەتا` anchor instead of duplicating it as
+  a text item or reloading the page. Stable
+  section IDs, smooth document scrolling, and shared scroll margins keep
+  headings clear of the fixed navbar; compact viewports use the existing
+  dismissing navigation menu. Its contact action opens the tenant's configured
+  WhatsApp destination in a new tab only when WhatsApp is enabled and the
+  normalized number is valid.
+  All business landing fragment IDs and matching hrefs come from
+  `business-landing-sections.ts`; components must not repeat literal section
+  hashes. `PublicSiteNavbar` uses a native anchor for same-document fragments and
+  retains Next.js `Link` for route navigation, preventing fragment routing from
+  mixing with application routes.
+  The shared `components/public/PublicSiteNavbar.tsx` replaces the former
+  floating navbar on both Sponsor.krd and tenant pages. It uses a full-width,
+  fixed 60px header with a centered inner container, square page edges, and the
+  stable Sponsor.krd page surface and a transparent business surface at the top.
+  After scrolling, the business appearance adds a restrained glass version of
+  its background in both themes with no visible border, lower surface opacity,
+  stronger backdrop blur and saturation, and a compact shadow. Its mobile menu
+  spans the full header width, supports Escape dismissal and `aria-expanded`,
+  and preserves tenant branding, actions, anchors, and persisted theme behavior.
+  The business-only glass state begins at the first non-zero scroll position and uses explicit
+  theme-aware RGBA surfaces so it does not depend on generated opacity classes;
+  returning to scroll position zero restores a fully transparent background.
+  Motion animates the business background opacity, backdrop blur, saturation,
+  and shadow in both directions with a soft easing curve; reduced-motion users
+  receive the same state change immediately without animation.
+  Trusted Partners remains a conditional landing section and responsive
+  marquee when tenant partner data exists, but is intentionally omitted from
+  navbar navigation to keep the primary section list concise.
+  About Us follows the same centered heading scale, responsive spacing, content
+  width, neutral bordered surface, and light/dark palette as the surrounding
+  sections. Its Kurdish descriptions remain centered in one non-nested content
+  surface, with only a compact divider and the existing service identity labels
+  retained as section-specific details.
+  The business hero redistributes a fixed total vertical padding toward its top
+  edge so the text group sits slightly lower and reads as visually centered,
+  without changing the hero height or moving the workspace below it.
+  Its public-pages action uses the tenant's configured business color and the
+  shared contrast-aware ink calculation so its label remains readable.
+- Public linktrees render at `/linktree/:uid`. The same route also resolves a
+  linktree by its SEO name.
+- On the configured root domain (including `www`), `/linktree/:uid` resolves
+  only a Sponsor.krd-owned platform Linktree. On a business subdomain the same
+  path remains strictly tenant-scoped. Host resolution chooses two explicit
+  backend endpoints; an empty subdomain is never treated as an implicit
+  business lookup. Root-owned pages keep first-party analytics but mount no
+  TikTok base code or client pixel.
+- Linktrees support branding, an avatar, a subtitle tagline under the name, a
+  longer description helper text, configurable footer, WhatsApp questions,
+  ordered links, TikTok tracking, and six selectable Linktree templates.
+- A custom colour is stored as `gradient:<direction>:<from>:<to>` and rendered
+  only through `parseWebsiteColor`, which owns the nine-direction table and
+  emits explicit `0%`/`100%` stops so the two colours split the surface evenly.
+  Surfaces must not keep a local direction map: one in `BackgroundColorPicker`
+  covered four of the nine and emitted invalid CSS for the rest. A template's
+  own `from`/`via`/`to` recipe cannot express a direction, so
+  `getBackgroundGradient` also returns the parsed `backgroundCss` and
+  `templateBackgroundStyle` prefers it — without that, every custom gradient
+  rendered as the template's hardcoded diagonal and changing the direction
+  repainted nothing.
+- The hex field in `ColorGradientModal` holds an uncommitted draft string and
+  commits to the colour only once the draft is a whole hex. Parsing every
+  keystroke instead made the field unusable: `#`, `#0`, and `#00` all fail to
+  parse, so each one reverted to the previous colour and a colour could only be
+  replaced by pasting it complete. Any control that sets a whole colour —
+  presets, sliders, eyedropper, switching between the two gradient stops —
+  clears the draft, and blurring restores the committed value.
+- A linktree background is either a colour or an uploaded image. The image tile
+  sits beside the custom-colour swatch in `BackgroundColorPicker`, and the two
+  are exclusive: uploading replaces the colour surface, and picking any colour
+  clears the image. The URL lives in `template_config.background_image` because
+  `linktrees.background_color` is `varchar(50)` and cannot hold an upload path;
+  the colour stays stored so text, accents, and borders keep deriving from it.
+  Only same-origin `/images/upload/` paths are painted:
+  `lib/templates/background-image.ts` validates on read, and both the linktree
+  and public services strip anything else, so an owner cannot point public
+  visitors at a third-party host. Templates receive it as
+  `TemplateTheme.backgroundImage` and apply it through the shared
+  `templateBackgroundStyle`, since each template paints its own full-bleed
+  surface over the page background. That helper also veils the photo in the
+  direction `deriveTextColor` already chose, so an arbitrary image cannot leave
+  the page's text unreadable.
+- A background pattern can be drawn over that surface, whichever surface it
+  turned out to be — gradient, solid colour or uploaded image. The catalogue and
+  the SVG renderer live in `lib/templates/background-pattern.tsx`, and the
+  picker in `components/shared/BackgroundPatternModal`; the linktree editor and
+  all Linktree editing surfaces open the same modal. The
+  choice lives in `template_config.background_pattern`, validated on read by
+  `readBackgroundPattern` and stripped server-side by
+  `common/linktree-background-pattern.ts` when it is outside the catalogue.
+  Templates receive it as `TemplateTheme.backgroundPattern`;
+  `TemplateViewportLayout` paints it once under the content, so all five
+  templates inherit it without each drawing its own. It is `fixed` on a public
+  page and `absolute` in a preview, so the texture stays put while the page
+  scrolls.
+- Each Linktree card and table row shows its own lifetime unique viewers and
+  unique clickers, served by `GET /linktrees`. The table's traffic column is
+  gated on one table-level flag rather than per row, so a row without totals
+  cannot shear the column out of line with its header.
+- Approved public marketing routes load a business's TikTok pixel and report
+  through `createPageTracker`
+  (`features/analytics/page-tracking.ts`). Adding tracking to anything on
+  either page follows [docs/tracking.md](tracking.md); mounting the pixel on a
+  third surface fails `components/analytics/pixel-placement.spec.ts`.
+- Why-choose-us items use a rotating accessible color palette for their icon
+  badges, with translucent fills that remain visible in light and dark modes.
+- The public services/products section uses prominent two-column showcase
+  cards with large imagery, numbered overlays, stronger depth, and larger
+  content/actions. Each card keeps the shared neutral surface while its text,
+  icons, number, and price use a distinct content accent; action buttons retain
+  their configured platform/brand color. Service images open in the shared
+  keyboard- and touch-friendly image viewer; compact dashboard previews retain
+  their horizontal rail.
+- `branch-signal` is the Ultra-only premium Branch Signal Linktree template. It
+  supports the complete shared solid, gradient, custom-gradient, uploaded-image,
+  and pattern background system. Text contrast follows that background, while
+  signal paths, avatar rings, nodes, borders, hover light, and the footer accent
+  derive from the tenant website color. Its asymmetric dark cards use only the
+  stored link title, description, platform icon, URL, and default message;
+  share/theme/header controls are not invented inside the template. The shared
+  phone supplies preview-only device chrome.
+- The templates page catalogues Linktree templates only and carries no category
+  tabs; the business subdomain landing page lists Linktrees alone.
+- Appointment cards can open a business's public Calendly, Cal.com, Google
+  Calendar, or custom HTTPS booking page, or start a WhatsApp conversation.
+  Sponsor.krd stores the appointment details and click analytics; availability,
+  confirmation, cancellation, and reminders remain with the selected
+  provider.
+- Team members can include a photo, role, experience, biography, and an
+  optional link, phone, or WhatsApp action.
+- Certificates can include an image, issuer, year, description, and optional
+  HTTPS verification link.
+- Videos play inline through public YouTube, TikTok, Instagram, Facebook,
+  Vimeo, Dailymotion, Streamable, and Loom embeds, or through direct HTTPS
+  MP4, WebM, and Ogg files. Unknown HTTPS pages remain external links.
+  Partner logos can link to their brands and render in a continuously
+  looping, pause-on-hover marquee.
+- Before-and-after sections support up to 12 titled image pairs, optional
+  descriptions and custom labels, and a comparison slider controlled by
+  touch, mouse, or keyboard.
+- Languages support up to 30 entries, each with an optional supporting
+  detail.
+- Payment methods support up to 32 entries with built-in neutral icons for
+  common Iraqi providers and general methods, optional account instructions,
+  and an optional uploaded provider logo.
+- Special offers support up to 20 promotions with prices, coupon codes,
+  expiry dates, images, and optional HTTPS destinations.
+- Events and workshops support up to 20 dated entries with a location,
+  image, description, and optional HTTPS registration link.
+- Audio and podcasts support up to 20 direct audio files or public Spotify,
+  SoundCloud, Apple, YouTube, and other HTTPS episode links.
+- Why Choose Us supports up to 20 short advantages with selectable built-in
+  icons and supporting descriptions.
+- Impact stats support up to 20 entries, each with a value, an optional
+  suffix, a label, and a selectable built-in icon.
+- The process/how-it-works timeline supports up to 20 steps, each with a
+  title, description, selectable built-in icon, and an optional action link.
+- Documents and Downloads supports up to 24 externally hosted HTTPS files
+  with titles, descriptions, file types, and display sizes.
+- Owned Brands & Pages supports up to 20 properties with an ownership or
+  leadership relationship, type, logo, description, official HTTPS link,
+  optional founding year, and optional featured public content. Facebook
+  Pages, public Facebook posts, public Instagram posts and reels, YouTube
+  videos, playlists, and channel uploads use official embeds when their
+  platforms allow them; every entry retains a reliable official-link card as
+  a fallback.
+- Education supports up to 20 résumé-style entries with an institution,
+  degree or qualification, field of study, location, current or completed
+  status, start and end years, grade, description, institution logo, and
+  optional HTTPS verification link. Current study automatically displays
+  `Present`.
+- Work experience supports up to 20 entries with a title, organization,
+  employment type, location, start and end dates, current/completed status,
+  description, image, and optional HTTPS verification link.
+- Pricing supports up to 6 plans with up to 20 features each, a price,
+  billing period, one featured/recommended tier, and a call-to-action;
+  missing features are automatically shown as gaps relative to the richest
+  plan.
+- Locations support exact pins or approximate-radius display, multiple
+  branches, contact details, images, and map links.
+  - Public pages are server rendered with business-scoped metadata and return
+    a themed not-found page when the business or page cannot be resolved.
+  - All error-page markup and styling lives in the single shared
+    `components/error-pages/ErrorPage.tsx` component. Page-level 403, 404, 410,
+    500, 502, 503, and 504 states replace the homepage content while retaining the
+    real public navbar and footer. The error-content region fills the small viewport,
+    keeping the footer below the initial fold until the visitor scrolls. All
+    three scopes — Sponsor.krd root, business subdomain, and platform console —
+    render through one `PublicMarketingSiteShell`, so the page frame, the
+    32-pixel grid backdrop, the hero accent atmosphere, spacing, typography,
+    buttons, and light/dark surfaces are identical everywhere. Scope differences
+    are branding only, supplied through the typed `ErrorPageTheme` adapter:
+    business pages pass the current business color, favicon, logo, and name;
+    root and console pages pass Sponsor.krd's own accent and logo. Navigation and
+    footer content follow the same adapter — business errors keep the tenant
+    navigation and footer, root errors keep the Sponsor.krd marketing footer with
+    signup and login actions, and console errors keep Sponsor.krd branding without
+    account actions. `ErrorPage.tsx` must not grow a second layout branch per
+    scope. The platform route-level 403, 404, 500, 502, 503, and 504 states all use
+    this shared presentation. Every error-page home action points
+    to `/` on the current host; error pages never link to a dashboard or login.
+    Authorization failures use 403 only when the authenticated user may safely
+    know the page exists. Concealed private routes and cross-tenant resources
+    continue to use 404. Public Linktree URLs return 410 only
+    when a tenant-scoped deletion tombstone proves that the content previously
+    existed and was permanently removed; unknown URLs remain 404. A 429 response
+    uses the same large presentation as 500
+    inside the active page region; on login it replaces the full right-side
+    form panel while preserving the left branding panel rather than replacing
+    the whole page. A 502 response means a critical upstream service returned an
+    invalid response. It replaces public tenant or dashboard content, and on
+    login it replaces the form-side panel; optional integrations keep a local
+    error. A 503 response represents a temporary maintenance or
+    upstream-service outage and includes a retry action that reloads the current
+    page. Critical 503 and network failures replace public tenant content and
+    business or platform dashboard content with that shared page. On business
+    and platform-administrator login screens, the 503 state replaces the full
+    form-side panel while retaining the branding panel. Optional requests such
+    as branding, analytics, and secondary feature data keep a local fallback and
+    must not turn the whole screen into a 503 page. A 504 response means a
+    critical upstream request exceeded its deadline and uses the same placement
+    rules and retry behavior as 502. The frontend API proxy returns 504 when its
+    30-second backend deadline aborts a request; other connection failures remain 503.
+    Recoverable request failures (400, 409, 413, 415, and 422) do not replace
+    the page. They render through the shared
+    `components/shared/InlineRequestError.tsx` alert inside the affected form,
+    dialog, or upload area so entered data remains available for correction.
+    Upload selectors validate size and declared media type before sending, while
+    the backend remains authoritative and validates the actual file signature.
+    Next.js `error.tsx`, `global-error.tsx`, and `not-found.tsx` files remain
+    thin required route boundaries with no visual implementation. Platform
+    administration owns `error.tsx` and `not-found.tsx` under its console
+    segment so a console failure keeps platform branding instead of falling
+    through to the root marketing pages; both delegate to the same shared
+    component.
+
+## Business dashboard
+
+The authenticated business dashboard is available at `/business` on the
+business's own subdomain. It provides:
+
+There is no separate overview screen. `/business` is the address the login
+handoff and the onboarding flow send people to, and it redirects to
+`/business/pages`, the Linktree management screen and the first sidebar entry.
+Every console section therefore keeps exactly one canonical URL. An
+unrecognised `/business/*` segment also resolves to Linktree management rather
+than to a placeholder screen.
+
+Its sidebar footer uses the tenant's effective subscription as its source of
+truth, shows an upgrade action only below the highest plan, and keeps support
+available in both expanded and collapsed layouts. The navigation region scrolls
+independently on shorter screens so the account controls remain reachable.
+
+Dashboard metrics use the shared `components/shared/StatCard.tsx` component.
+Its `standard`, `funnel`, `live`, `comparison`, and `story` variants preserve
+the visual requirements of each context without duplicating metric markup.
+Color, icon, compact sizing, descriptions, actions, and loading state remain
+configurable. The component's loading state selects the matching
+`SkeletonStatCard` shape so data arrival does not change the card's footprint.
+Linktree initial data, lazy page bundles, grids, tables, edit
+forms, and analytics content use the matching shared skeleton composition.
+Per-page analytics, Event Tracking, TikTok configuration, Settings,
+sessions, business messages, and communication inboxes follow the same rule:
+their initial placeholders preserve metrics, tabs, headers, and the expected
+chart, table, form, or list body instead of showing only a spinner or leaving
+the rest of the page blank.
+The business Templates route uses a catalog-specific skeleton while template
+permissions load, including its metrics, header actions, catalog cards, and
+phone preview footprints. The shared skeleton contract covers responsive
+management tables and cards, page management, settings, advertising, TikTok,
+business directories, analytics modals, editor
+forms, and communication lists. A route shell and an embedded content fallback
+are kept distinct when the surrounding header or dashboard chrome is already
+mounted. Linktree previews render lazily.
+Public-page cards use the stable Sponsor.krd fixture and the real public mobile
+composition inside a scrollable shared phone. Preview interactions are
+disabled, and the preview canvas forces mobile grids even when the surrounding
+dashboard is wide enough to match desktop media queries.
+Background refreshes preserve the existing content, while saves, uploads,
+destructive actions, and other explicit operations retain compact progress
+feedback instead of hiding their surrounding context.
+The business dashboard header refresh control coordinates one in-place refresh
+of shared business identity/access data, the notification inbox, and loaders
+registered by the currently mounted page. It deduplicates overlapping clicks,
+keeps the current route, filters, tabs, pagination, dialogs, and visible
+content in place, and reports partial failures without performing a browser
+reload. Editors and settings forms must not register a loader that replaces
+unsaved local input; they may refresh only independent read-only data.
+The platform header refresh also invokes the shared notification adapter, so
+its communication inbox and permission-specific pending approvals refresh with
+the rest of the platform dashboard rather than waiting for the next poll.
+The shared Linktree manager exposes six metrics—owned page count, views,
+unique visitors, interactions, interaction rate, and conversions. Linktree
+summaries use `pageType=linktree`; clearing analytics remains page-scoped.
+
+- linktree creation, editing, deletion, publication status, default-page
+  selection, campaign activation, slug checks, link ordering, link batch
+  synchronization, image uploads, template selection, footer settings, and
+  WhatsApp modal settings. Campaign-active pages are promoted directly below
+  the default page in both grid and table views;
+- template browsing subject to the business's plan;
+- profile and branding management, including logo, favicon, default avatar,
+  website color, business name, username, phone, and email;
+- default linktree template, background, footer, and WhatsApp settings;
+- TikTok Pixel and Events API configuration;
+- active-session listing and revocation;
+- per-page analytics in the Linktree analytics modal,
+  including views, unique visitors, clicks, unique clickers, conversions,
+  date filtering, and action performance;
+- TikTok delivery health and retry controls;
+- analytics deletion for one public page or the complete business;
+- business notifications, announcement banners, and conversations with the
+  platform administrator.
+
+Dashboard navigation and backend actions are controlled by the business's
+effective access manifest. Effective access combines capability rules,
+subscription entitlements, field rules, approval requirements, and quotas —
+see [docs/security.md](security.md#authorization).
+
+Routes: `/business/pages`, `/business/tiktok-config`, `/business/templates`,
+`/business/profile`, `/business/settings`. `/business` redirects to
+`/business/pages`.
+
+## Shared business and platform UI
+
+Every component or workflow used by both the business and platform dashboards
+has one shared implementation. Updating shared UI or behavior must update and
+be verified on both surfaces. The route-level business and platform components
+only adapt typed configuration such as API endpoints, ownership, public paths,
+branding, analytics scope, and capabilities.
+
+Platform Business Management and platform Linktree management share the same
+dashboard surface, management-grid frame, card surface, table frame, responsive
+breakpoints, pagination, and Sponsor.krd toolbar accents. Their record fields
+and domain actions remain feature-specific.
+
+Platform-admin-specific controls may differ only when an operation is
+platform-exclusive or requires a platform-admin permission. Those controls are
+injected or gated through an explicit capability boundary; permission-specific
+actions must not fork the shared editor, manager, modal, table, loading state,
+or public renderer around them.
+
+## Platform-administration console
+
+The platform-administrator console is exposed only on the root domain through
+the configured `PLATFORM_ADMIN_PATH`. A dynamic route validates that configured
+segment directly; there is no physical public implementation route.
+
+The console provides:
+
+- platform-owned Linktree creation, editing, duplication, uploads, availability
+  checks, campaign/archive/status controls, deletion, and root-domain previews.
+  Business and Platform render one role-configured Linktree manager, including
+  the same six summary cards, archive filter, grid/table views, search, editor,
+  and analytics modal. Platform analytics include date ranges, conversions,
+  and per-button click rows through platform-guarded endpoints; platform role
+  configuration keeps root-domain URLs and excludes business-only client
+  invitations and default-page behavior;
+- business editing, deletion, session revocation, profile-change request review,
+  asset uploads, TikTok configuration, Linktree import/export, and full-business
+  backup import/export. Business Management exposes icon-only import and export
+  controls together in its header. Export creates one portable collection for
+  every business, while import accepts either that collection or an individual
+  business backup; both use the same transfer helper and feedback behavior as
+  the analytics modal's Linktree backup;
+- global linktree template availability and configuration;
+- a permission catalog, permission profiles, field-level rules, approval
+  rules, explicit denies, and access simulation;
+- typed entitlements, subscription products, plan configuration, template
+  access, permission assignment, business subscriptions, usage counters, and
+  approval review;
+- announcements for all businesses, selected plans, or selected businesses,
+  with business-bell, dashboard-banner, and public-homepage channels;
+- encrypted administrator/business support conversations and notifications;
+- administrator profile, branding, sessions, platform statistics,
+  Redis cache clearing, upload policy, unused-media cleanup, data-retention
+  policy, and manual retention runs.
+
+The billing implementation is an internal access, plan, subscription, and
+quota system. It does not collect money. There is no payment-provider
+checkout, payment-method management, invoice generation, refund processing,
+or payment reconciliation.
+
+Routes (mounted beneath the private console path): `/`, `/businesses`,
+`/linktrees`, `/templates`, `/campaigns`, `/access-control`, `/billing`,
+`/communication-center`, `/settings`.
+
+## Routing and tenancy
+
+Assume `ROOT_DOMAIN=example.com` and a business subdomain of `acme`.
+
+| URL                                                 | Result                                       |
+| --------------------------------------------------- | -------------------------------------------- |
+| `https://example.com/`                              | Platform landing page                        |
+| `https://example.com/<PLATFORM_ADMIN_PATH>`         | Platform console                             |
+| `https://www.example.com/`                          | Treated as root domain                       |
+| `https://example.com/linktree/:uid`                 | Platform-owned Linktree                      |
+| `https://acme.example.com/`                         | Business public landing page                 |
+| `https://acme.example.com/linktree/:uid`            | Public linktree                              |
+| `https://acme.example.com/login`                    | Tenant 404                                   |
+| `https://acme.example.com/business/workspace-entry` | Business sign-in                             |
+| `https://acme.example.com/business`                 | Dashboard with session; otherwise tenant 404 |
+
+There are no compatibility redirects for the former tenant login paths.
+Only the workspace-entry route and the single-use handoff consumer are public
+under `/business`; every dashboard route without a business session is
+rewritten to the tenant 404 page.
+
+### Root marketing website
+
+The root-domain marketing website uses the same public design system as the
+business website through `PublicMarketingSiteShell`, `PublicSiteNavbar`, and
+the shared marketing primitives. Sponsor.krd provides only branding,
+navigation, authentication actions, and marketing content; it must not fork
+those shared primitives.
+
+The `/` homepage is deliberately limited to the shared Sponsor.krd navbar, one
+viewport-height hero, and the shared Sponsor.krd footer. The hero positions
+Sponsor.krd as the secure SaaS
+connection layer for TikTok advertising accounts, states that the platform
+administrator connection is isolated, and describes direct business-account
+connections as a future capability. The homepage renders no communications,
+product preview, or secondary content sections.
+
+The root homepage is the only public marketing route. Its shared navbar is
+brand-only; Business authentication remains a tenant subdomain concern and is
+not linked from the root-domain website. The terms and privacy routes remain
+as compliance documents required by active onboarding flows; they are not
+marketing pages.
+
+Homepage content is authored in the dedicated root hero. Do not invent prices,
+customer counts, testimonials, endorsements, or other claims.
+
+The frontend proxy:
+
+- derives the subdomain from the `Host` header;
+- checks business subdomains against the backend;
+- attaches `x-subdomain` to internal requests;
+- blocks `/business` on the root domain;
+- blocks the private platform path on business subdomains;
+- checks the platform-administrator session before serving the configured
+  private console path;
+- submits non-API page telemetry in the background;
+- generates a fresh CSP nonce per rendered request, supplies the policy to
+  Next.js through the request headers, and returns the identical policy to the
+  browser so framework scripts receive the nonce automatically;
+- rejects authenticated browser mutations whose `Origin`/`Referer` does not
+  match the effective request origin (see
+  [docs/security.md](security.md#csrf--origin-protection)).
+
+Caddy removes inbound client `x-subdomain` headers before proxying. Business
+services still scope owned records by the authenticated business ID.
+
+## Commands
+
+| Command                             | Action                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev:fe`                       | Start the frontend development server on port `3011` with Webpack (the stable fallback for local route compilation) |
+| `pnpm build:fe`                     | Generate `frontend/.env` from allowlisted root/process values, then build                                           |
+| `pnpm --filter frontend dev`        | Sync frontend environment values and run Next.js on port `3011`                                                     |
+| `pnpm --filter frontend build`      | Sync frontend environment values and create a production build                                                      |
+| `pnpm --filter frontend start`      | Run the production build on port `3011`                                                                             |
+| `pnpm --filter frontend lint`       | Run ESLint                                                                                                          |
+| `pnpm --filter frontend lint:fix`   | Run ESLint and apply fixes                                                                                          |
+| `pnpm --filter frontend type-check` | Run TypeScript without emitting files                                                                               |
+| `pnpm --filter frontend test`       | Run the Vitest suite once                                                                                           |
+
+Default local address: `http://localhost:3011`. For subdomain routing in
+development, use a wildcard localhost domain such as `http://acme.lvh.me:3011`
+and include every browser origin, including its port, in `CORS_ORIGIN`. Add
+local hostnames used for device testing to `ALLOWED_DEV_ORIGINS`.

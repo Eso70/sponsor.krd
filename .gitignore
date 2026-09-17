@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+.runtime/
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+.env.*.local
+**/.env
+!.env.example
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+.pnpm-debug.log*
+
+# Local overrides
+*.local
+
+# Generated repository dumps
+repomix-output.xml

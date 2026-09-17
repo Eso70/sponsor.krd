@@ -1,0 +1,100 @@
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsIn,
+  IsObject,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import {
+  SOLID_HEX_COLOR_MAX_LENGTH,
+  SOLID_HEX_COLOR_PATTERN,
+  WEBSITE_COLOR_MAX_LENGTH,
+  WEBSITE_COLOR_PATTERN,
+} from '../../common/website-color';
+
+export class UpdateLinktreeDto {
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  subtitle?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(SOLID_HEX_COLOR_MAX_LENGTH)
+  @Matches(SOLID_HEX_COLOR_PATTERN)
+  subtitle_color?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
+  seo_name?: string;
+
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
+  slug?: string;
+
+  @IsString()
+  @IsOptional()
+  image?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(WEBSITE_COLOR_MAX_LENGTH)
+  @Matches(WEBSITE_COLOR_PATTERN)
+  background_color?: string;
+
+  @IsObject()
+  @IsOptional()
+  template_config?: Record<string, unknown>;
+
+  @IsString()
+  @IsOptional()
+  footer_text?: string;
+
+  @IsString()
+  @IsOptional()
+  footer_phone?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  footer_hidden?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  is_campaign_active?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  is_archived?: boolean;
+
+  @IsIn(['active', 'inactive'])
+  @IsOptional()
+  status?: 'active' | 'inactive';
+}
+
+export class ToggleLinktreeCampaignDto {
+  @IsBoolean()
+  is_campaign_active!: boolean;
+}
+
+export class ToggleLinktreeArchiveDto {
+  @IsBoolean()
+  is_archived!: boolean;
+}
+
+export class ToggleLinktreeStatusDto {
+  @IsIn(['active', 'inactive'])
+  status!: 'active' | 'inactive';
+}
