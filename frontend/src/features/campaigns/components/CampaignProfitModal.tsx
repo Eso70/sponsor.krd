@@ -87,9 +87,10 @@ export function CampaignProfitModal({
   pageName,
   sponsorKrdTheme = false,
 }: CampaignProfitModalProps) {
+  const today = formatDateOnly(new Date());
   const [advertisementPriceIqd, setAdvertisementPriceIqd] = useState(0);
   const [durationDays, setDurationDays] = useState(0);
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState("");
   const [campaignSpendUsd, setCampaignSpendUsd] = useState(0);
   const [usdToIqdRate, setUsdToIqdRate] = useState(0);
@@ -134,12 +135,16 @@ export function CampaignProfitModal({
   const updateDuration = (days: number) => {
     const normalizedDays = Math.max(0, Math.round(days));
     setDurationDays(normalizedDays);
-    setEndDate(addDays(startDate, normalizedDays));
+    setEndDate(
+      startDate && normalizedDays > 0 ? addDays(startDate, normalizedDays) : "",
+    );
   };
 
   const updateStartDate = (value: string) => {
     setStartDate(value);
-    if (value) setEndDate(addDays(value, durationDays));
+    setEndDate(
+      value && durationDays > 0 ? addDays(value, durationDays) : "",
+    );
   };
 
   const updateEndDate = (value: string) => {
@@ -152,7 +157,7 @@ export function CampaignProfitModal({
     setCampaignSpendUsd(0);
     setUsdToIqdRate(0);
     setDurationDays(0);
-    setStartDate("");
+    setStartDate(formatDateOnly(new Date()));
     setEndDate("");
     setEditingRecordId(null);
     setFormRevision((current) => current + 1);

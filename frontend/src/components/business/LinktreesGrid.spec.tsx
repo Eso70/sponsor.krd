@@ -175,7 +175,7 @@ describe("LinktreesGrid shared public-page presentation", () => {
     const startDate = screen.getByLabelText("بەرواری دەستپێک");
     const initialEndDate = screen.getByLabelText("بەرواری کۆتایی");
     expect(duration).toHaveValue(0);
-    expect(startDate).toHaveValue("");
+    expect(startDate).not.toHaveValue("");
     expect(initialEndDate).toHaveValue("");
     expect(screen.getByLabelText("خەرجی کەمپەین بە دۆلار")).toHaveValue(0);
     expect(
@@ -204,8 +204,6 @@ describe("LinktreesGrid shared public-page presentation", () => {
     ].join("/");
 
     fireEvent.change(advertisementPrice, { target: { value: "25000" } });
-    fireEvent.change(startDate, { target: { value: typedStartDate } });
-    fireEvent.blur(startDate);
     fireEvent.change(duration, { target: { value: "8" } });
     fireEvent.change(screen.getByLabelText("خەرجی کەمپەین بە دۆلار"), {
       target: { value: "10" },
@@ -242,16 +240,15 @@ describe("LinktreesGrid shared public-page presentation", () => {
       screen.getByLabelText("نرخی ڕیکلام بە دیناری عێراقی"),
     ).toHaveValue(0);
     expect(screen.getByLabelText("ژمارەی ڕۆژەکانی کەمپەین")).toHaveValue(0);
-    expect(screen.getByLabelText("بەرواری دەستپێک")).toHaveValue("");
+    expect(screen.getByLabelText("بەرواری دەستپێک")).toHaveValue(
+      typedStartDate,
+    );
     expect(screen.getByLabelText("بەرواری کۆتایی")).toHaveValue("");
 
     fireEvent.change(
       screen.getByLabelText("نرخی ڕیکلام بە دیناری عێراقی"),
       { target: { value: "30000" } },
     );
-    const secondStartDate = screen.getByLabelText("بەرواری دەستپێک");
-    fireEvent.change(secondStartDate, { target: { value: typedStartDate } });
-    fireEvent.blur(secondStartDate);
     fireEvent.change(screen.getByLabelText("ژمارەی ڕۆژەکانی کەمپەین"), {
       target: { value: "8" },
     });
