@@ -1,13 +1,20 @@
 "use client";
 
-import { Languages, Menu, Moon, RefreshCw, Sun } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { House, Languages, Menu, Moon, RefreshCw, Sun } from "lucide-react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  ReactNode,
+} from "react";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import {
   AvatarMenu,
   type AvatarMenuItem,
 } from "@/components/shared/AvatarMenu";
 import { Tooltip } from "@/components/shared/Tooltip";
+
+const actionClassName =
+  "group relative flex items-center justify-center rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 p-2 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:text-gray-300 dark:hover:from-white/10 dark:hover:to-white/10 sm:p-2.5 md:p-3";
 
 export function DashboardHeaderActionButton({
   className = "",
@@ -17,11 +24,23 @@ export function DashboardHeaderActionButton({
   return (
     <button
       type="button"
-      className={`group relative flex items-center justify-center rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 p-2 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:text-gray-300 dark:hover:from-white/10 dark:hover:to-white/10 sm:p-2.5 md:p-3 ${className}`}
+      className={`${actionClassName} ${className}`}
       {...props}
     >
       {children}
     </button>
+  );
+}
+
+function DashboardHeaderActionLink({
+  className = "",
+  children,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return (
+    <a className={`${actionClassName} ${className}`} {...props}>
+      {children}
+    </a>
   );
 }
 
@@ -93,6 +112,17 @@ export function DashboardHeader({
               </DashboardHeaderActionButton>
             </Tooltip>
           ) : null}
+
+          <Tooltip content="کردنەوەی ماڵپەڕ لە تابێکی نوێ" side="bottom">
+            <DashboardHeaderActionLink
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open home page in new tab"
+            >
+              <House className={iconClassName} aria-hidden="true" />
+            </DashboardHeaderActionLink>
+          </Tooltip>
 
           {notifications}
 

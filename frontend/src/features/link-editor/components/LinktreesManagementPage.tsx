@@ -151,12 +151,16 @@ export function LinktreesManagementPage({
     onToggleArchive,
     onToggleStatus,
     publicPathPrefix,
+    apiBasePath: usesPlatformAccent
+      ? "/api/platform/linktrees"
+      : "/api/linktrees",
     showLinktreeMeta: true,
     viewActionLabel: "ئامار",
     emptyTitle: archived ? "هیچ پەڕەیەکی ئەرشیفکراو نییە" : emptyTitle,
     emptyDescription: archived
       ? "ئەو پەڕانەی بە دەستی ئەرشیفیان دەکەیت لێرەدا دەردەکەون."
       : emptyDescription,
+    sponsorKrdTheme: usesPlatformAccent,
   };
 
   return (

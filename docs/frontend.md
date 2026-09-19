@@ -554,6 +554,11 @@ future segments remain visible at reduced opacity.
   unique clickers, served by `GET /linktrees`. The table's traffic column is
   gated on one table-level flag rather than per row, so a row without totals
   cannot shear the column out of line with its header.
+- The grid's campaign-revenue action opens one shared modal in business and
+  platform management. It loads, creates, edits, and deletes durable records
+  through the surface-specific Linktree API base path. The modal derives live
+  previews for immediate feedback, while persisted converted spend, duration,
+  net revenue, and the summed total come from server responses.
 - Approved public marketing routes load a business's TikTok pixel and report
   through `createPageTracker`
   (`features/analytics/page-tracking.ts`). Adding tracking to anything on

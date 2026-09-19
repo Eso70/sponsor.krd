@@ -186,6 +186,20 @@ slugs — so the editor shows the answer and still allows the save. Both compare
 case-insensitively against the trimmed value and accept an `excludeId` so
 editing a page does not collide with itself.
 
+## Linktree campaign revenue
+
+Campaign revenue entries are durable Linktree-owned records. Business routes
+under `/api/linktrees/:linktreeId/revenue-records` derive the tenant from the
+authenticated business session; platform routes under
+`/api/platform/linktrees/:linktreeId/revenue-records` derive it from the fixed
+platform content workspace. Neither route accepts an owner identifier.
+
+Create and update payloads contain only the advertisement price, date range,
+USD spend, and USD-to-IQD rate. `CampaignRevenueService` derives duration,
+converted IQD spend, and net revenue instead of trusting browser-calculated
+totals. Every operation is scoped by both `business_id` and `linktree_id`; the
+database enforces the same ownership with the composite Linktree foreign key.
+
 ## Platform-owned root-domain content
 
 Platform administrators manage reusable Sponsor.krd-owned pages through

@@ -128,6 +128,31 @@ export interface LinktreeListItem {
   };
 }
 
+/** A persisted campaign revenue entry attached to one Linktree page. */
+export interface CampaignRevenueRecord {
+  id: string;
+  linktreeId: string;
+  advertisementPriceIqd: number;
+  durationDays: number;
+  startDate: string;
+  endDate: string;
+  campaignSpendUsd: number;
+  usdToIqdRate: number;
+  campaignSpendIqd: number;
+  netRevenueIqd: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** User-entered values; converted spend and revenue are calculated server-side. */
+export interface CampaignRevenueInput {
+  advertisementPriceIqd: number;
+  startDate: string;
+  endDate: string;
+  campaignSpendUsd: number;
+  usdToIqdRate: number;
+}
+
 /** A Linktree returned by GET /linktrees for the business dashboard. */
 export interface BusinessLinktreeSummary extends LinktreeListItem {
   subtitle: string | null;

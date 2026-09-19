@@ -17,6 +17,8 @@ interface NumberInputProps {
    * value is restored on blur if nothing is typed.
    */
   clearOnFocus?: boolean;
+  /** Hides the browser's native increment/decrement controls. */
+  hideSteppers?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export function NumberInput({
   className,
   placeholder,
   clearOnFocus = false,
+  hideSteppers = false,
   "aria-label": ariaLabel,
 }: NumberInputProps) {
   // While focused the raw text is authoritative, so a half-typed or empty
@@ -47,13 +50,17 @@ export function NumberInput({
   return (
     <input
       type="number"
-      inputMode="numeric"
+      inputMode={step && !Number.isInteger(step) ? "decimal" : "numeric"}
       min={min}
       step={step}
       value={draft ?? String(value)}
       aria-label={ariaLabel}
       placeholder={placeholder}
-      className={className}
+      className={`${className || ""} ${
+        hideSteppers
+          ? "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          : ""
+      }`.trim()}
       dir="ltr"
       onFocus={() => {
         if (clearOnFocus) setDraft("");

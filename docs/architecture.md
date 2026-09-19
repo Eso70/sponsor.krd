@@ -208,6 +208,8 @@ NestJS modules own their HTTP controllers and application services
 - `billing`: effective entitlements, quota checks, and template access.
 - `platform-admin`: platform business administration and platform settings.
 - `linktrees` and `links`: tenant-owned linktree behavior.
+- `campaign-revenue`: tenant-scoped Linktree revenue records shared by the
+  business and platform controllers.
 - `analytics`: ingestion, rollups, reporting, and the TikTok delivery
   outbox.
 - `communications`: announcements, notifications, and conversations.

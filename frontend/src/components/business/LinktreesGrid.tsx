@@ -17,6 +17,8 @@ import {
   Eye,
   Copy,
   CopyPlus,
+  DollarSign,
+  Ellipsis,
   Check,
   Edit,
   ExternalLink,
@@ -40,10 +42,12 @@ import { Tooltip } from "@/components/shared/Tooltip";
 import type { ManagementTablePagination } from "@/components/shared/ManagementTable";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
+import { CampaignProfitModal } from "@/features/campaigns/components/CampaignProfitModal";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
 
 interface LinktreesGridProps {
   publicPathPrefix?: string;
+  apiBasePath?: string;
   data?: Linktree[];
   isLoading?: boolean;
   onEdit?: (id: string) => void;
@@ -70,6 +74,7 @@ interface LinktreesGridProps {
   onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
   onToggleArchive?: (id: string, isArchived: boolean) => void;
   onToggleStatus?: (id: string, status: "active" | "inactive") => void;
+  sponsorKrdTheme?: boolean;
 }
 
 function getPublicIdentifier(item: Linktree): string {
@@ -83,6 +88,7 @@ const LinktreeCard = memo(function LinktreeCard({
   onDuplicate,
   onDelete,
   onViewAnalytics,
+  onViewProfit,
   onToggleCampaign,
   onToggleArchive,
   onToggleStatus,
@@ -99,6 +105,7 @@ const LinktreeCard = memo(function LinktreeCard({
   onDuplicate?: (item: Linktree) => void;
   onDelete?: (id: string, uid: string, name: string) => void;
   onViewAnalytics?: (id: string, name: string) => void;
+  onViewProfit: (item: Linktree) => void;
   onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
   onToggleArchive?: (id: string, isArchived: boolean) => void;
   onToggleStatus?: (id: string, status: "active" | "inactive") => void;
@@ -111,6 +118,7 @@ const LinktreeCard = memo(function LinktreeCard({
   trafficLabels: PageListTrafficLabels;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
+  const [showAllActions, setShowAllActions] = useState(false);
   const url = useMemo(
     () => getAbsoluteUrl(publicIdentifier, publicPathPrefix),
     [publicIdentifier, publicPathPrefix],
@@ -120,6 +128,22 @@ const LinktreeCard = memo(function LinktreeCard({
   }, [url]);
 
   const isCampaignActive = !!item.is_campaign_active;
+  const expandedActionCount =
+    3 +
+    Number(Boolean(onViewAnalytics)) +
+    Number(Boolean(onEdit)) +
+    Number(Boolean(onDuplicate)) +
+    Number(Boolean(onToggleArchive) && !item.is_default) +
+    Number(Boolean(onToggleStatus) && !item.is_default) +
+    Number(Boolean(onDelete) && item.uid !== "id" && !item.is_default);
+  const showPrimaryActionLabels = !showAllActions || expandedActionCount <= 6;
+  const primaryActionLayout = showPrimaryActionLabels
+    ? "min-w-0 flex-1 gap-1.5 px-2"
+    : "min-w-0 flex-1";
+  const expandedActionLayout =
+    expandedActionCount <= 6
+      ? "w-8 shrink-0 sm:w-9"
+      : "min-w-0 flex-1";
 
   return (
     <ManagementCard intrinsicHeight={320}>
@@ -263,119 +287,167 @@ const LinktreeCard = memo(function LinktreeCard({
       )}
 
       {/* Actions Section */}
-      <div className="mt-auto flex items-center gap-1 sm:gap-1.5 pt-2 sm:pt-2.5 border-t border-gray-200 dark:border-white/10">
+      <div className="mt-auto flex flex-nowrap items-center gap-1 sm:gap-1.5 pt-2 sm:pt-2.5 border-t border-gray-200 dark:border-white/10">
         {onViewAnalytics && (
-          <Tooltip
-            content={viewActionLabel}
-            side="top"
-            className="flex-1 min-w-0"
-          >
+          <Tooltip content={viewActionLabel} side="top">
             <button
               onClick={() => onViewAnalytics(item.id, item.name)}
-              className="flex w-full min-w-0 items-center justify-center gap-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-1.5 py-1.5 text-[10px] font-medium text-sky-700 transition-all duration-200 hover:bg-sky-500/20 hover:text-sky-800 active:scale-95 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs dark:text-sky-300"
+              className={`flex h-8 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 transition-all duration-200 hover:bg-sky-500/20 hover:text-sky-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-sky-300 ${primaryActionLayout}`}
               aria-label={viewActionLabel}
             >
-              <Eye className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
-              <span className="truncate">{viewActionLabel}</span>
+              <Eye className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+              {showPrimaryActionLabels ? (
+                <span className="truncate text-xs font-medium">
+                  {viewActionLabel}
+                </span>
+              ) : null}
             </button>
           </Tooltip>
         )}
         {onEdit && (
-          <Tooltip content="دەستکاری" side="top" className="flex-1 min-w-0">
+          <Tooltip content="دەستکاری" side="top">
             <button
               onClick={() => onEdit(item.id)}
-              className="flex w-full min-w-0 items-center justify-center gap-1 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-1.5 py-1.5 text-[10px] font-medium text-yellow-700 transition-all duration-200 hover:bg-yellow-500/20 hover:text-yellow-800 active:scale-95 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs dark:text-yellow-300"
+              className={`flex h-8 items-center justify-center rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-yellow-700 transition-all duration-200 hover:bg-yellow-500/20 hover:text-yellow-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-yellow-300 ${primaryActionLayout}`}
               aria-label="دەستکاری"
             >
-              <Edit className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span className="truncate">دەستکاری</span>
+              <Edit className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              {showPrimaryActionLabels ? (
+                <span className="truncate text-xs font-medium">دەستکاری</span>
+              ) : null}
             </button>
           </Tooltip>
         )}
-        {onDuplicate && (
+
+        {onDuplicate ? (
           <Tooltip content="لەبەرگرتنەوە" side="top">
             <button
               onClick={() => onDuplicate(item)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 transition-all duration-200 hover:bg-indigo-500/20 hover:text-indigo-800 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl dark:text-indigo-300"
+              className={`flex h-8 items-center justify-center rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 transition-all duration-200 hover:bg-indigo-500/20 hover:text-indigo-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-indigo-300 ${primaryActionLayout}`}
               aria-label="لەبەرگرتنەوە"
             >
               <CopyPlus className="h-3.5 w-3.5" />
+              {showPrimaryActionLabels ? (
+                <span className="truncate text-xs font-medium">
+                  لەبەرگرتنەوە
+                </span>
+              ) : null}
             </button>
           </Tooltip>
-        )}
-        {onToggleArchive && !item.is_default && (
-          <Tooltip
-            content={item.is_archived ? "گەڕاندنەوە لە ئەرشیف" : "ئەرشیفکردن"}
-            side="top"
-          >
-            <button
-              onClick={() => onToggleArchive(item.id, !item.is_archived)}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl ${
-                item.is_archived
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
-                  : "border-purple-500/30 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 hover:text-purple-800 dark:text-purple-300"
-              }`}
-              aria-label={item.is_archived ? "Restore from archive" : "Archive"}
-            >
-              {item.is_archived ? (
-                <ArchiveRestore className="h-3.5 w-3.5" />
-              ) : (
-                <Archive className="h-3.5 w-3.5" />
-              )}
-            </button>
-          </Tooltip>
-        )}
-        {onToggleStatus && !item.is_default && (
-          <Tooltip
-            content={
-              item.status === "inactive"
-                ? "چالاککردنی پەڕە"
-                : "ناچالاککردنی پەڕە"
-            }
-            side="top"
-          >
-            <button
-              onClick={() =>
-                onToggleStatus(
-                  item.id,
-                  item.status === "inactive" ? "active" : "inactive",
-                )
-              }
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl ${
-                item.status === "inactive"
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
-                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 hover:text-rose-800 dark:text-rose-300"
-              }`}
-              aria-label={
-                item.status === "inactive" ? "Activate page" : "Deactivate page"
-              }
-            >
-              {item.status === "inactive" ? (
-                <CirclePlay className="h-3.5 w-3.5" />
-              ) : (
-                <CirclePause className="h-3.5 w-3.5" />
-              )}
-            </button>
-          </Tooltip>
-        )}
-        {onDelete && item.uid !== "id" && !item.is_default && (
+        ) : null}
+
+        {showAllActions ? (
+          <>
+            <Tooltip content="قازانج" side="top">
+              <button
+                onClick={() => onViewProfit(item)}
+                className={`flex h-8 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 transition-all duration-200 hover:bg-emerald-500/20 hover:text-emerald-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-emerald-300 ${expandedActionLayout}`}
+                aria-label="قازانج"
+              >
+                <DollarSign className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+
+            {onToggleArchive && !item.is_default ? (
+              <Tooltip
+                content={
+                  item.is_archived ? "گەڕاندنەوە لە ئەرشیف" : "ئەرشیفکردن"
+                }
+                side="top"
+              >
+                <button
+                  onClick={() => onToggleArchive(item.id, !item.is_archived)}
+                  className={`flex h-8 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 sm:h-9 sm:rounded-xl ${expandedActionLayout} ${
+                    item.is_archived
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
+                      : "border-purple-500/30 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 hover:text-purple-800 dark:text-purple-300"
+                  }`}
+                  aria-label={
+                    item.is_archived ? "Restore from archive" : "Archive"
+                  }
+                >
+                  {item.is_archived ? (
+                    <ArchiveRestore className="h-3.5 w-3.5" />
+                  ) : (
+                    <Archive className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </Tooltip>
+            ) : null}
+
+            {onToggleStatus && !item.is_default ? (
+              <Tooltip
+                content={
+                  item.status === "inactive"
+                    ? "چالاککردنی پەڕە"
+                    : "ناچالاککردنی پەڕە"
+                }
+                side="top"
+              >
+                <button
+                  onClick={() =>
+                    onToggleStatus(
+                      item.id,
+                      item.status === "inactive" ? "active" : "inactive",
+                    )
+                  }
+                  className={`flex h-8 items-center justify-center rounded-lg border transition-all duration-200 active:scale-95 sm:h-9 sm:rounded-xl ${expandedActionLayout} ${
+                    item.status === "inactive"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 dark:text-emerald-300"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 hover:text-rose-800 dark:text-rose-300"
+                  }`}
+                  aria-label={
+                    item.status === "inactive"
+                      ? "Activate page"
+                      : "Deactivate page"
+                  }
+                >
+                  {item.status === "inactive" ? (
+                    <CirclePlay className="h-3.5 w-3.5" />
+                  ) : (
+                    <CirclePause className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </Tooltip>
+            ) : null}
+
+          </>
+        ) : null}
+
+        {onDelete && item.uid !== "id" && !item.is_default ? (
           <Tooltip content="سڕینەوە" side="top">
             <button
               onClick={() => onDelete(item.id, item.uid, item.name)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 transition-all duration-200 hover:bg-red-500/20 hover:text-red-800 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl dark:text-red-300"
+              className={`flex h-8 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 transition-all duration-200 hover:bg-red-500/20 hover:text-red-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-red-300 ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
               aria-label="سڕینەوە"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
-        )}
+        ) : null}
+
         <Tooltip content="بینینی پەڕە" side="top">
           <button
             onClick={handleView}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-300/70 bg-slate-100/80 text-slate-700 transition-all duration-200 hover:bg-slate-200 hover:text-slate-900 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl dark:border-white/15 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 dark:hover:text-white"
+            className={`flex h-8 items-center justify-center rounded-lg border border-slate-300/70 bg-slate-100/80 text-slate-700 transition-all duration-200 hover:bg-slate-200 hover:text-slate-900 active:scale-95 sm:h-9 sm:rounded-xl dark:border-white/15 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 dark:hover:text-white ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
             aria-label="بینین"
           >
             <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+
+        <Tooltip
+          content={showAllActions ? "شاردنەوەی کردارەکان" : "کردارە زیاترەکان"}
+          side="top"
+        >
+          <button
+            type="button"
+            onClick={() => setShowAllActions((current) => !current)}
+            aria-label="کردارە زیاترەکان"
+            aria-expanded={showAllActions}
+            className={`flex h-8 items-center justify-center rounded-lg border border-slate-300/70 bg-slate-100/80 text-slate-700 transition-all duration-200 hover:bg-slate-200 hover:text-slate-900 active:scale-95 sm:h-9 sm:rounded-xl dark:border-white/15 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 dark:hover:text-white ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
+          >
+            <Ellipsis className="h-4 w-4" />
           </button>
         </Tooltip>
       </div>
@@ -385,6 +457,7 @@ const LinktreeCard = memo(function LinktreeCard({
 
 export const LinktreesGrid = memo(function LinktreesGrid({
   publicPathPrefix = "/linktree",
+  apiBasePath = "/api/linktrees",
   data = [],
   isLoading = false,
   onEdit,
@@ -402,8 +475,10 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   onToggleCampaign,
   onToggleArchive,
   onToggleStatus,
+  sponsorKrdTheme = false,
 }: LinktreesGridProps) {
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+  const [profitTarget, setProfitTarget] = useState<Linktree | null>(null);
   const displaysPageMeta = showPageMeta ?? showLinktreeMeta;
   const handleCopyUrl = useCallback(
     async (uid: string, e: React.MouseEvent) => {
@@ -451,30 +526,42 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   }
 
   return (
-    <ManagementGrid
-      data={data}
-      getItemKey={(item) => item.id}
-      pagination={pagination}
-      desktopColumns={3}
-      renderItem={(item) => (
-        <LinktreeCard
-          item={item}
-          onEdit={onEdit}
-          onDuplicate={onDuplicate}
-          onDelete={handleDelete}
-          onViewAnalytics={onViewAnalytics}
-          onToggleCampaign={onToggleCampaign}
-          onToggleArchive={onToggleArchive}
-          onToggleStatus={onToggleStatus}
-          viewActionLabel={viewActionLabel}
-          copiedUid={copiedUid}
-          onCopy={handleCopyUrl}
-          publicPathPrefix={publicPathPrefix}
-          showPageMeta={displaysPageMeta}
-          MetaBadgesComponent={MetaBadgesComponent}
-          trafficLabels={trafficLabels}
-        />
-      )}
-    />
+    <>
+      <ManagementGrid
+        data={data}
+        getItemKey={(item) => item.id}
+        pagination={pagination}
+        desktopColumns={3}
+        renderItem={(item) => (
+          <LinktreeCard
+            item={item}
+            onEdit={onEdit}
+            onDuplicate={onDuplicate}
+            onDelete={handleDelete}
+            onViewAnalytics={onViewAnalytics}
+            onViewProfit={setProfitTarget}
+            onToggleCampaign={onToggleCampaign}
+            onToggleArchive={onToggleArchive}
+            onToggleStatus={onToggleStatus}
+            viewActionLabel={viewActionLabel}
+            copiedUid={copiedUid}
+            onCopy={handleCopyUrl}
+            publicPathPrefix={publicPathPrefix}
+            showPageMeta={displaysPageMeta}
+            MetaBadgesComponent={MetaBadgesComponent}
+            trafficLabels={trafficLabels}
+          />
+        )}
+      />
+      <CampaignProfitModal
+        key={profitTarget?.id || "closed"}
+        isOpen={Boolean(profitTarget)}
+        onClose={() => setProfitTarget(null)}
+        linktreeId={profitTarget?.id || ""}
+        apiBasePath={apiBasePath}
+        pageName={profitTarget?.name || ""}
+        sponsorKrdTheme={sponsorKrdTheme}
+      />
+    </>
   );
 });

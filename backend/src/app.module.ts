@@ -15,6 +15,7 @@ import { CommunicationModule } from './communications/communication.module';
 import { AdvertisingModule } from './advertising/advertising.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     StorageModule,
     PlatformAdminModule,
     OnboardingModule,
+    CampaignRevenueModule,
   ],
   controllers: [AppController],
   providers: [AppService],

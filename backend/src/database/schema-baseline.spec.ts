@@ -232,11 +232,17 @@ describe('full_schema.sql baseline', () => {
   });
 
   /**
-   * The reset-only release has no dated upgrade scripts. Listing the directory
-   * prevents an obsolete migration from silently re-entering deployment.
+   * The baseline remains isolated in its directory while additive live-schema
+   * changes use the dated files consumed by the forward migration runner.
    */
-  it('contains only the consolidated baseline', () => {
-    expect(readdirSync(MIGRATIONS_DIR).sort()).toEqual(['baseline']);
+  it('contains the consolidated baseline and only dated forward migrations', () => {
+    const entries = readdirSync(MIGRATIONS_DIR).sort();
+    expect(entries).toContain('baseline');
+    expect(entries.filter((entry) => entry !== 'baseline')).toEqual(
+      entries
+        .filter((entry) => entry !== 'baseline')
+        .filter((entry) => /^\d{4}-\d{2}-\d{2}_.+\.sql$/.test(entry)),
+    );
   });
 
   /**
