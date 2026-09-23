@@ -268,6 +268,9 @@ surfaces, responsive spacing, heading scale, soft cards, and
 `BusinessSectionDecorations` pattern as the homepage, so future shell-level
 style changes propagate to both routes. Public business landing sections have
 no separators on either route; only the shared footer retains its top boundary.
+The tenant homepage has one hero, with mobile template mockups inside it, and,
+when public Linktrees exist, one gallery section. Former About Us and
+digital-presence sections and their navigation anchors are removed.
 
 Both public hero sections render `BusinessHeroAccentBackdrop`. It provides the
 same tenant-colored radial atmosphere and restrained top highlight while
@@ -316,184 +319,23 @@ future segments remain visible at reduced opacity.
 - Published platform announcements can appear as root-domain banners or
   feature cards.
 - Each active business owns one unique subdomain.
-- A business subdomain homepage shows that business's published linktrees
-  Linktrees.
-- The business homepage uses one concise customer-facing composition in both
-  light and dark themes: the same shared floating navigation used by the
-  Sponsor.krd homepage, a centered grid-backed hero, a responsive public
-  workspace, and the shared public footer. The workspace intentionally has no
-  separate heading or description; the hero action leads directly to its
-  compact `max-w-6xl` preview. The preview keeps page-edge gutters and a bounded
-  internal content area rather than becoming full-width or full-viewport. It
-  uses the same dark-ink/light-surface CTA palette in light mode and inverted
-  white/dark-surface palette in dark mode across its shell, AI controls, focus
-  treatment, and fallback cards. The shell and all structural panels inherit
-  one solid surface per theme; neutral borders provide their separation. Tabs
-  retain that shared surface and distinguish selection only through semantic
-  state, stronger type, and a neutral inset edge rather than another fill
-  color. The public helper uses the Sponsor.krd logo and Sponsor.krd AI label. It contains no tenant
-  accent glow or colored blur. Its top rail owns the public content tabs,
-  while a compact
-  sidebar offers a deterministic public helper on larger screens. The helper
-  handles a simple greeting locally and directs Linktree
-  requests to the business owner; it performs no network request, collects no
-  visitor data, and must not claim access to private business information. The
-  main panel renders the real destinations as a dense responsive visual gallery. It uses
-  accessible, keyboard-operable tabs only for published Linktrees and published
-  Linktrees; the workspace is omitted
-  when neither content type is published. Every
-  destination opens its real published route. Public contact remains outside
-  the workspace in the configured navigation action and footer. Additional
-  homepage sections must remain separate instead of being embedded as workspace
-  tabs. The navigation receives tenant branding and the standard persisted
-  theme toggle.
-  A finished, fully bordered workspace may be followed by a full trusted-by
-  section using the same heading scale, responsive section spacing, and content
-  width as the other landing sections. Its larger logo rail is populated only
-  from enabled partner items belonging
-  to approved tenant content, deduplicates repeated logos,
-  and is omitted when no real partner logos are configured. Its visual base
-  sequence and visible rail are measured at runtime by the shared
-  `components/ui/marquee.tsx` primitive. The business-specific component only
-  supplies the heading, tenant partner content, and visual treatment. The
-  sequence is repeated only enough to exceed 1.4 times the visible width,
-  duplicated once, and translated by exactly half its combined width. Duration
-  is derived from the measured travel distance and configured viewport-crossing
-  time. The trusted-by adapter uses a slower mobile crossing time without
-  changing desktop motion, so screen size and logo count cannot unexpectedly change
-  perceived speed. Repeated visual fillers are hidden from assistive technology
-  and cannot create duplicate keyboard stops. The hidden measurement unit uses
-  `width: max-content`, no wrapping, and non-shrinking children so its observed
-  box changes when natural logo dimensions resolve.
-  The preview is a functional Sponsor.krd composition built from real published
-  tenant content, not a copied third-party interface. It never presents an
-  internal dashboard mockup,
-  management or login actions, plan information, analytics, drafts, or other
-  operational data. Sections with no public data are omitted, and published
-  page content is referenced from its real source rather than copied into
-  homepage-only mock content.
-  The digital-presence showcase uses the reusable Motion-based
-  `BusinessCardStack`. Its three stacked cards are the visible and accessible
-  selection targets and automatically cycle when reduced motion is not
-  requested. The stable right-side container updates only its changing detail
-  and preview regions through Motion. `BusinessCardPreview` remains front-only,
-  uses the standard physical card aspect ratio, and sizes its internal spacing,
-  typography, icon, and decoration from its own container rather than the page
-  viewport so the complete card remains visible at every responsive width.
-  Neither component requests,
-  validates, stores, or submits payment-card numbers, expiry values, or CVV.
-  All project-owned phone previews use the shared `PhoneMockup`; feature code
-  must not draw another device frame inline. The component owns the same dark
-  metal hardware, side controls, Dynamic Island, status indicators, home
-  indicator, and strict screen clipping used by the Templates catalog. Its
-  content surface is always a 390 x 858 logical mobile viewport, scaled as one
-  unit into the chosen device width. This keeps template layout, safe-area
-  spacing, and overflow behavior consistent in the Templates catalog, the
-  Sponsor.krd homepage, and business public pages while allowing each consumer
-  to provide its own screen content and theme. The
-  registry-driven stack keeps three straight phones visible on mobile and five
-  from the small-tablet breakpoint upward, with one focused device and an equal
-  number of overlapping phones on either side. The centered device is the
-  tallest and occupies the top layer, its immediate neighbors are slightly
-  shorter beneath it, and the outer devices form the shortest rear layer. It
-  preserves this hierarchy and the common footer baseline after every carousel
-  move by keeping layout movement and scale emphasis on separate Motion layers.
-  It cycles through every
-  registered template one at a time. Each device is cropped by ten percent at
-  the bottom to keep the composition compact. All five cropped devices share a
-  single bottom baseline that meets the following footer boundary without an
-  empty trailing gap. Dedicated previous and next buttons own navigation;
-  preview phones are deliberately non-interactive. The stage reserves
-  width-derived responsive headroom above the enlarged center device throughout
-  the complete mobile range, then switches to fixed tablet and desktop stage
-  heights. Device and control sizing is slightly reduced below 381px so no
-  phone clips into the preceding content on narrow screens. A
-  standard landing-section heading and description
-  introduce the stack, while the device stage itself has no decorative surface,
-  controls, or canvas background: template surfaces render directly inside
-  transparent device hosts. Strict paint containment prevents template UI from
-  escaping the device screen. Linktree
-  phones reuse `DynamicTemplate`
-  and the same shared preview fixtures as the dashboard Templates page, with the
-  same Sponsor.krd fixture data and standardized WhatsApp, Viber, and phone
-  actions shown in the Templates catalog. Public-page
-  phones use the real registered template component and published tenant
-  content. Heavy template trees are isolated behind a memoized phone-content
-  boundary, while the five-device composition uses Motion position-only layout
-  transitions and transform-based spring emphasis. Navigation controls use
-  Motion hover and press feedback rather than authored CSS animation. Reduced
-  motion is honored, and the previews remain non-interactive so they cannot
-  trigger contact actions or expose dashboard or private data.
-  The public homepage route renders the shared `SkeletonPublicLandingPage`
-  composition while server-side business and Linktree requests
-  are pending. It preserves the navbar, hero, workspace, and following-section
-  footprints using the existing theme-aware `Skeleton` primitive. Registered
-  phone-template content is synchronous and does not introduce a second local
-  skeleton or artificial loading flash.
-  Business landing sections share one page-level `BusinessGridBackdrop` rather
-  than rendering independent section grids. Hero, workspace, trusted partners,
-  about, digital presence, and device previews sit above the same continuous
-  pattern, which begins at the first page pixel behind the transparent business
-  navbar, fades only at the lower landing-content boundary, and retains the
-  established light and dark palettes. The footer keeps its solid landing
-  surface and is intentionally excluded from the grid.
-  Each landing section reuses `BusinessSectionDecorations` for small floating
-  compact floating chips inspired by the hero reference treatment. They use
-  short section-related text and
-  distinct softly tinted surfaces, borders, shadows, and dots. They remain
-  non-interactive and assistive-technology hidden and appear only at spacious
-  desktop widths. Each section uses a different deterministic placement, dot
-  direction, and professional secondary color while retaining one
-  tenant-colored treatment. This creates a random visual rhythm without
-  hydration instability or position changes between renders. Section surfaces
-  remain neutral and no page-level accent blur is introduced.
-  The unique Kurdish phrase pairs are centralized with the landing section IDs;
-  no decoration name or phrase is reused between sections. A centralized
-  twelve-color palette also assigns two distinct treatments to each of the six
-  sections; the tenant color is used once in the hero and no authored color is
-  repeated elsewhere.
-  The floating business navbar exposes Kurdish anchor links for the workspace,
-  about, digital-presence, and device-preview sections. The business logo and
-  name return to the homepage-root `سەرەتا` anchor instead of duplicating it as
-  a text item or reloading the page. Stable
-  section IDs, smooth document scrolling, and shared scroll margins keep
-  headings clear of the fixed navbar; compact viewports use the existing
-  dismissing navigation menu. Its contact action opens the tenant's configured
-  WhatsApp destination in a new tab only when WhatsApp is enabled and the
-  normalized number is valid.
-  All business landing fragment IDs and matching hrefs come from
-  `business-landing-sections.ts`; components must not repeat literal section
-  hashes. `PublicSiteNavbar` uses a native anchor for same-document fragments and
-  retains Next.js `Link` for route navigation, preventing fragment routing from
-  mixing with application routes.
-  The shared `components/public/PublicSiteNavbar.tsx` replaces the former
-  floating navbar on both Sponsor.krd and tenant pages. It uses a full-width,
-  fixed 60px header with a centered inner container, square page edges, and the
-  stable Sponsor.krd page surface and a transparent business surface at the top.
-  After scrolling, the business appearance adds a restrained glass version of
-  its background in both themes with no visible border, lower surface opacity,
-  stronger backdrop blur and saturation, and a compact shadow. Its mobile menu
-  spans the full header width, supports Escape dismissal and `aria-expanded`,
-  and preserves tenant branding, actions, anchors, and persisted theme behavior.
-  The business-only glass state begins at the first non-zero scroll position and uses explicit
-  theme-aware RGBA surfaces so it does not depend on generated opacity classes;
-  returning to scroll position zero restores a fully transparent background.
-  Motion animates the business background opacity, backdrop blur, saturation,
-  and shadow in both directions with a soft easing curve; reduced-motion users
-  receive the same state change immediately without animation.
-  Trusted Partners remains a conditional landing section and responsive
-  marquee when tenant partner data exists, but is intentionally omitted from
-  navbar navigation to keep the primary section list concise.
-  About Us follows the same centered heading scale, responsive spacing, content
-  width, neutral bordered surface, and light/dark palette as the surrounding
-  sections. Its Kurdish descriptions remain centered in one non-nested content
-  surface, with only a compact divider and the existing service identity labels
-  retained as section-specific details.
-  The business hero redistributes a fixed total vertical padding toward its top
-  edge so the text group sits slightly lower and reads as visually centered,
-  without changing the hero height or moving the workspace below it.
-  Its public-pages action uses the tenant's configured business color and the
-  shared contrast-aware ink calculation so its label remains readable.
+- A business subdomain homepage has a Sorani Kurdish project-focused hero with mobile template
+  mockups and no action button. When public Linktrees exist, one section lists those
+  published pages. The navbar link leads to that section only when it is
+  present. Each card opens the published
+  Linktree route by SEO name or UID and uses its stored image and subtitle.
+  The mockups preview template designs; only the gallery represents published
+  tenant pages. No helper workspace or tabs appear on the homepage. The shared
+  tenant navbar, contact action, theme behavior,
+  public footer, and advertising route link remain available.
+- The public homepage loading state reserves the hero mockups and Linktree gallery
+  footprints. The gallery is omitted when the business has no published pages.
+- Business and root pages share `PublicSiteNavbar`. The business variant keeps
+  tenant branding, theme control, its configured contact action, and the
+  published-page anchor. Compact viewports use its dismissible menu; the
+  business navbar gains a restrained glass surface after scrolling.
+- Template previews elsewhere in the product use the shared `PhoneMockup`
+  instead of drawing device frames inside feature components.
 - Public linktrees render at `/linktree/:uid`. The same route also resolves a
   linktree by its SEO name.
 - On the configured root domain (including `www`), `/linktree/:uid` resolves
@@ -554,6 +396,14 @@ future segments remain visible at reduced opacity.
   unique clickers, served by `GET /linktrees`. The table's traffic column is
   gated on one table-level flag rather than per row, so a row without totals
   cannot shear the column out of line with its header.
+- Public Linktree buttons use the shared `TemplateLinkLabel` in every template:
+  the editable title stays primary, the English platform name stays secondary,
+  and a quieter separate label follows it on the same secondary row with the
+  saved phone number, account username, or email address when available. Phone
+  identities use local display form without the country code and normalize to
+  one leading zero.
+  Older links fall back to extracting the same identity from their destination
+  URL.
 - The grid's campaign-revenue action opens one shared modal in business and
   platform management. It loads, creates, edits, and deletes durable records
   through the surface-specific Linktree API base path. The modal derives live
@@ -698,6 +548,42 @@ future segments remain visible at reduced opacity.
 
 ## Business dashboard
 
+### Business dashboard language
+
+The authenticated business dashboard has a member-owned `ckb`/`ar` language
+preference. The dashboard layout reads it from the business session response and
+mounts `BusinessLocaleProvider` around business content only. The header uses a
+single toggle button that shows the destination language code (AR or KU) and
+remains available on mobile; the platform console
+does not display a nonfunctional selector. A change updates client text at once,
+persists through `PATCH /api/auth/preferred-locale`, and rolls back with feedback
+if the request fails. The control is hidden for impersonated or legacy sessions
+without a member identity. The Business dashboard stays LTR in both languages; the
+Business subtree carries the selected `lang` for assistive technology.
+
+Translation messages live in `features/business/i18n/messages.ts`. Dashboard
+chrome, sidebar plan/support controls, dashboard-owned dialogs and action
+feedback, and the Linktree management summary/actions use the Business locale.
+The shared Linktree management page receives typed copy from its Business
+adapter while Platform retains its Kurdish defaults. The Business adapter also
+supplies localized copy to the shared Linktree grid, table, and status badges,
+including action tooltips, accessibility labels, and copy-link feedback. The
+Business page search, duplicate, campaign-profit, and analytics dialogs also
+receive localized copy. The Business TikTok route now translates its delivery
+history, Pixel configuration, and Pixel-group controls; shared configuration
+components receive Business-only copy and keep their Platform defaults. The
+Business Settings profile, defaults, security, and message tabs translate their
+page labels, account identity, save control, sessions, conversations, template
+selector, and color picker.
+The Linktree editor and advertising route still contain hard-coded Kurdish
+copy, so Arabic is not yet complete. Shared business/platform UI should
+receive translated labels or use an explicitly business-scoped provider, not
+be forked.
+
+The Business Templates catalogue uses the same typed-copy boundary: summary,
+search, preview captions, sample contact links, and locked-template labels
+switch with the Business locale. Platform template views retain their defaults.
+
 The authenticated business dashboard is available at `/business` on the
 business's own subdomain. It provides:
 
@@ -776,6 +662,12 @@ summaries use `pageType=linktree`; clearing analytics remains page-scoped.
 - analytics deletion for one public page or the complete business;
 - business notifications, announcement banners, and conversations with the
   platform administrator.
+
+The shared Linktree editor accepts either a Telegram username or a private
+channel invite (`https://t.me/+hash`, `t.me/+hash`, or `+hash`). Private invite
+hashes retain their `+` and hyphens when saved and edited. Public link cards
+do not present invite hashes as `@username`, and message-prefill parameters
+are not appended to private invite URLs.
 
 Dashboard navigation and backend actions are controlled by the business's
 effective access manifest. Effective access combines capability rules,

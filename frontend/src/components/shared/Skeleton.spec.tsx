@@ -161,7 +161,11 @@ describe("loading skeletons", () => {
       expect(
         screen.getByRole("status", { name: "Loading homepage" }),
       ).toBeInTheDocument();
-      expect(container.querySelectorAll("section").length).toBeGreaterThan(3);
+      if (variant === "business") {
+        expect(container.querySelectorAll("section")).toHaveLength(2);
+      } else {
+        expect(container.querySelectorAll("section").length).toBeGreaterThan(3);
+      }
     },
   );
 

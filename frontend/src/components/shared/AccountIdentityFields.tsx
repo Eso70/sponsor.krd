@@ -9,6 +9,7 @@ interface AccountIdentityFieldsProps {
   email?: string | null;
   avatarSrc?: string | null;
   emailVerified?: boolean;
+  copy?: Partial<Record<"accountImage" | "imageOf" | "accountName" | "fromVerified" | "email" | "verified" | "unverified" | "unavailable" | "verifiedEmail", string>>;
 }
 
 /**
@@ -21,6 +22,7 @@ export function AccountIdentityFields({
   email,
   avatarSrc,
   emailVerified = true,
+  copy,
 }: AccountIdentityFieldsProps) {
   // A stored photo `next/image` cannot load draws the placeholder instead of
   // throwing the settings page away.
@@ -33,7 +35,7 @@ export function AccountIdentityFields({
             {avatarImage ? (
               <Image
                 src={avatarImage}
-                alt={name ? `وێنەی ${name}` : "وێنەی هەژمار"}
+                alt={name ? `${copy?.imageOf ?? "وێنەی"} ${name}` : copy?.accountImage ?? "وێنەی هەژمار"}
                 fill
                 sizes="96px"
                 className="object-cover"
@@ -46,21 +48,21 @@ export function AccountIdentityFields({
             )}
           </div>
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-            وێنەی هەژمار
+            {copy?.accountImage ?? "وێنەی هەژمار"}
           </span>
         </div>
       ) : null}
 
-      <EditorField label="ناوی هەژمار" hint="لە هەژماری پشتڕاستکراوەوە">
+      <EditorField label={copy?.accountName ?? "ناوی هەژمار"} hint={copy?.fromVerified ?? "لە هەژماری پشتڕاستکراوەوە"}>
         <input
           disabled
           className={`${modalInputClass()} cursor-not-allowed opacity-60`}
-          value={name || "بەردەست نییە"}
+          value={name || copy?.unavailable || "بەردەست نییە"}
         />
       </EditorField>
       <EditorField
-        label="ئیمەیڵ"
-        hint={emailVerified ? "پشتڕاستکراوە" : "پشتڕاستنەکراوە"}
+        label={copy?.email ?? "ئیمەیڵ"}
+        hint={emailVerified ? copy?.verified ?? "پشتڕاستکراوە" : copy?.unverified ?? "پشتڕاستنەکراوە"}
       >
         <div className="relative">
           <input
@@ -68,11 +70,11 @@ export function AccountIdentityFields({
             type="email"
             dir="ltr"
             className={`${modalInputClass()} cursor-not-allowed pe-10 opacity-60`}
-            value={email || "بەردەست نییە"}
+            value={email || copy?.unavailable || "بەردەست نییە"}
           />
           {emailVerified ? (
             <ShieldCheck
-              aria-label="ئیمەیڵ پشتڕاستکراوە"
+              aria-label={copy?.verifiedEmail ?? "ئیمەیڵ پشتڕاستکراوە"}
               className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500"
             />
           ) : null}

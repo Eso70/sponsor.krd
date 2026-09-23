@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { businessMessages } from "@/features/business/i18n/messages";
 import Image from "next/image";
 import {
   Building2,
@@ -108,6 +110,8 @@ const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:ring-2 dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500 dark:[color-scheme:dark]";
 
 export function BusinessSettingsPage() {
+  const t = useTranslations("SettingsPage");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() =>
@@ -184,9 +188,9 @@ export function BusinessSettingsPage() {
       }
     } catch (error) {
       if (rethrow) throw error;
-      toast.error("بارکردنی ڕێکخستنەکان سەرکەوتوو نەبوو");
+      toast.error(t("loadFailed"));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -268,12 +272,12 @@ export function BusinessSettingsPage() {
       }
       toast.info(
         activeTab === "profile"
-          ? "داواکارییەکەت بۆ بەڕێوەبەری پلاتفۆرم نێردرا"
-          : "ڕێکخستنەکان بە سەرکەوتوویی نوێکرانەوە",
+          ? t("profileSubmitted")
+          : t("saved"),
       );
     } catch (error) {
-      toast.error("پاشەکەوتکردنی ڕێکخستنەکان سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : undefined,
+      toast.error(t("saveFailed"), {
+        description: locale === "ar" ? undefined : error instanceof Error ? error.message : undefined,
       });
     } finally {
       setSaving(false);
@@ -305,12 +309,12 @@ export function BusinessSettingsPage() {
       // without this the new default page is missing there until it expires.
       const { clearCachedData } = await import("@/lib/utils/cache");
       clearCachedData("/api/linktrees");
-      toast.success("پەیجی بنەڕەت دروستکرا", {
-        description: "دوگمەی واتساپ و تەلەفۆن بە ژمارەی بزنسەکەت زیادکران",
+      toast.success(t("defaultCreated"), {
+        description: t("defaultCreatedHint"),
       });
     } catch (error) {
-      toast.error("دروستکردنی پەیجی بنەڕەت سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : undefined,
+      toast.error(t("defaultCreateFailed"), {
+        description: locale === "ar" ? undefined : error instanceof Error ? error.message : undefined,
       });
     } finally {
       setCreatingDefault(false);
@@ -319,24 +323,24 @@ export function BusinessSettingsPage() {
 
   const tabs = useMemo(
     () => [
-      { id: "profile" as const, label: "پڕۆفایلی بزنس", icon: UserRound },
+      { id: "profile" as const, label: t("profileTab"), icon: UserRound },
       {
         id: "defaults" as const,
-        label: "پەڕە بنەڕەتییەکان",
+        label: t("defaultsTab"),
         icon: SlidersHorizontal,
       },
       {
         id: "security" as const,
-        label: "چوونەژوورەوە و دانیشتنەکان",
+        label: t("securityTab"),
         icon: ShieldCheck,
       },
       {
         id: "messages" as const,
-        label: "پەیامەکان",
+        label: t("messagesTab"),
         icon: MessageSquare,
       },
     ],
-    [],
+    [t],
   );
   const activeTab = tabs.some((item) => item.id === tab) ? tab : "profile";
   const tabLocked = isBusinessSettingsTabLocked(activeTab, effectiveAccess);
@@ -447,26 +451,26 @@ export function BusinessSettingsPage() {
       <StatCardGrid className="mb-5">
         <StatCard
           icon={SlidersHorizontal}
-          label="تابەکان"
+          label={t("tabsCount")}
           value="4"
           color="blue"
         />
         <StatCard
           icon={Building2}
-          label="ناوی بزنس"
+          label={t("businessName")}
           value={data.name || "—"}
           color="green"
         />
         <StatCard
           icon={Palette}
-          label="قالبی بنەڕەتی"
+          label={t("defaultTemplate")}
           value={data.default_template || "—"}
           color="purple"
         />
         <StatCard
           icon={ShieldCheck}
-          label="دۆخی هەژمار"
-          value={cooldown ? "قوفڵکراو" : "چالاک"}
+          label={t("accountStatus")}
+          value={cooldown ? t("locked") : t("active")}
           color={cooldown ? "orange" : "green"}
         />
       </StatCardGrid>
@@ -478,16 +482,17 @@ export function BusinessSettingsPage() {
         <LockedContent
           locked={tabLocked}
           icon={ShieldCheck}
-          description="بۆ بەکارهێنانی ئەم بەشە پێویستە پلانی بەشداربوونت بەرزبکەیتەوە"
+          description={t("upgradeRequired")}
         >
           <DashboardSurface>
             {activeTab === "profile" && (
               <PageHeaderSection
                 icon={Building2}
-                title="پڕۆفایلی بزنس"
-                description="گۆڕانکارییەکانی ناسنامە دوای پەسەندکردنی بەڕێوەبەری پلاتفۆرم بڵاودەبنەوە"
+                title={t("profileTab")}
+                description={t("profileDescription")}
                 action={
                   <TabSaveButton
+                    copy={{ savingTooltip: t("savingTooltip"), saveTooltip: t("saveTooltip"), unchangedTooltip: t("unchangedTooltip"), saving: t("saving"), save: t("save"), saved: t("savedButton") }}
                     dirty={dirty}
                     saving={saving}
                     disabled={tabLocked}
@@ -500,9 +505,9 @@ export function BusinessSettingsPage() {
                   <div className="col-span-full flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                     <Clock3 className="h-4 w-4" />
                     <span>
-                      وێنەکانی براند گۆڕدران. دەتوانیت دووبارە بیانگۆڕیت لە{" "}
+                      {t("brandCooldownBefore")}{" "}
                       {cooldown.until.toLocaleDateString()} (
-                      {cooldown.daysLeft} ڕۆژی ماوە)
+                      {t("daysRemaining", { count: cooldown.daysLeft })})
                     </span>
                   </div>
                 )}
@@ -519,7 +524,7 @@ export function BusinessSettingsPage() {
                     />
                   )}
                   <div className="mt-3 flex justify-center">
-                    <Tooltip content="گۆڕینی ڕەنگی سەرەکی وێبسایت" side="bottom">
+                    <Tooltip content={t("changeWebsiteColor")} side="bottom">
                       <button
                         type="button"
                         onClick={() => setShowColorPicker(true)}
@@ -534,7 +539,7 @@ export function BusinessSettingsPage() {
                         >
                           <Palette className="h-3.5 w-3.5" />
                         </span>
-                        <span>ڕەنگی وێبسایت</span>
+                        <span>{t("websiteColor")}</span>
                       </button>
                     </Tooltip>
                   </div>
@@ -543,18 +548,19 @@ export function BusinessSettingsPage() {
                   <BusinessOwnerIdentityFields
                     ownerName={data.ownerName}
                     ownerEmail={data.email}
+                    copy={{ accountName: t("accountName"), fromVerified: t("fromVerified"), email: t("email"), verified: t("verified"), unverified: t("unverified"), unavailable: t("unavailable"), verifiedEmail: t("verifiedEmail") }}
                   />
                 </div>
-                <Field label="ناوی بزنس">
+                <Field label={t("businessName")}>
                   <input
                     className={inputClass}
                     value={data.name}
                     onChange={(e) => setData({ ...data, name: e.target.value })}
-                    placeholder="ناوی بزنس"
+                    placeholder={t("businessName")}
                     disabled={!profileEditingAllowed || Boolean(cooldown)}
                   />
                 </Field>
-                <Field label="ژمارەی مۆبایل">
+                <Field label={t("mobileNumber")}>
                   <input
                     className={inputClass}
                     value={data.phone || ""}
@@ -565,7 +571,7 @@ export function BusinessSettingsPage() {
                     disabled={!profileEditingAllowed || Boolean(cooldown)}
                   />
                 </Field>
-                <Field label="ناوی بەکارهێنەر">
+                <Field label={t("username")}>
                   <input
                     className={`${inputClass} ${usernameEditingAllowed ? "" : "opacity-70"}`}
                     value={data.username}
@@ -573,15 +579,15 @@ export function BusinessSettingsPage() {
                       setData({ ...data, username: e.target.value })
                     }
                     readOnly={!usernameEditingAllowed}
-                    placeholder="ناوی بەکارهێنەر"
+                    placeholder={t("username")}
                   />
                 </Field>
-                <Field label="سەبدۆمەین">
+                <Field label={t("subdomain")}>
                   <input
                     className={`${inputClass} opacity-70`}
                     value={data.subdomain}
                     readOnly
-                    placeholder="سەبدۆمەین"
+                    placeholder={t("subdomain")}
                   />
                 </Field>
               </PageHeaderSection>
@@ -591,10 +597,11 @@ export function BusinessSettingsPage() {
               <>
                 <PageHeaderSection
                   icon={Palette}
-                  title="پەڕە بنەڕەتییەکان"
-                  description="ڕووکار و ناوەڕۆکی سەرەتایی پەڕە نوێیەکان دیاری بکە"
+                  title={t("defaultsTab")}
+                  description={t("defaultsDescription")}
                   action={
                     <TabSaveButton
+                      copy={{ savingTooltip: t("savingTooltip"), saveTooltip: t("saveTooltip"), unchangedTooltip: t("unchangedTooltip"), saving: t("saving"), save: t("save"), saved: t("savedButton") }}
                       dirty={dirty}
                       saving={saving}
                       disabled={tabLocked}
@@ -605,23 +612,24 @@ export function BusinessSettingsPage() {
                 >
                   <div className="col-span-full rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
                     <div className="grid gap-5 sm:grid-cols-2">
-                      <Field label="قالبی بنەڕەتی">
+                      <Field label={t("defaultTemplate")}>
                         <TemplateCombobox
+                          copy={locale === "ar" ? businessMessages.ar.SettingsTemplates : undefined}
                           value={data.default_template}
                           onChange={(value) =>
                             setData({ ...data, default_template: value })
                           }
                         />
                       </Field>
-                      <Field label="ڕەنگی پاشبنەما">
-                        <Tooltip content="دیاریکردنی ڕەنگی پاشبنەمای بنەڕەتی" side="top">
+                      <Field label={t("backgroundColor")}>
+                        <Tooltip content={t("chooseBackgroundColor")} side="top">
                           <button
                             type="button"
                             onClick={() => setShowDefaultColorPicker(true)}
                             className={`${inputClass} flex items-center justify-between gap-3 cursor-pointer`}
                           >
                             <span className="truncate text-xs text-slate-500 dark:text-slate-400">
-                              {data.default_background_color || "ڕەنگی پاشبنەما"}
+                              {data.default_background_color || t("backgroundColor")}
                             </span>
                             <span
                               className="h-5 w-5 shrink-0 rounded border-2 border-white shadow-sm ring-1 ring-slate-200 dark:border-[#161B22] dark:ring-white/10"
@@ -634,7 +642,7 @@ export function BusinessSettingsPage() {
                           </button>
                         </Tooltip>
                       </Field>
-                      <Field label="دەقی فوتر">
+                      <Field label={t("footerText")}>
                         <input
                           className={inputClass}
                           value={data.default_footer_text || ""}
@@ -644,10 +652,10 @@ export function BusinessSettingsPage() {
                               default_footer_text: e.target.value,
                             })
                           }
-                          placeholder="دەقی بنەڕەتی فوتر"
+                          placeholder={t("defaultFooterText")}
                         />
                       </Field>
-                      <Field label="ژمارەی فوتر">
+                      <Field label={t("footerPhone")}>
                         <input
                           className={inputClass}
                           value={data.default_footer_phone || ""}
@@ -661,14 +669,14 @@ export function BusinessSettingsPage() {
                         />
                       </Field>
                       <Toggle
-                        label="شاردنەوەی فوتر"
+                        label={t("hideFooter")}
                         checked={data.default_footer_hidden}
                         onChange={(value) =>
                           setData({ ...data, default_footer_hidden: value })
                         }
                       />
                       <Toggle
-                        label="چالاککردنی مۆداڵی واتساپ"
+                        label={t("enableWhatsapp")}
                         checked={data.default_whatsapp_enabled}
                         onChange={(value) =>
                           setData({ ...data, default_whatsapp_enabled: value })
@@ -734,7 +742,7 @@ export function BusinessSettingsPage() {
                               color: "var(--theme-primary, #64748b)",
                             }}
                           >
-                            بنەڕەت
+                            {t("defaultBadge")}
                           </span>
                         </div>
                         <p className="mt-1 truncate font-mono text-xs text-slate-400 dark:text-slate-500">
@@ -759,13 +767,12 @@ export function BusinessSettingsPage() {
                         />
                       </div>
                       <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        هیچ پەیجی بنەڕەتێک نییە
+                        {t("noDefaultPage")}
                       </p>
                       <p className="mx-auto mt-1 mb-4 max-w-sm text-xs text-slate-400 dark:text-slate-500">
-                        یەکەم پەڕەت دروست بکە تا وەک پەیجی بنەڕەتی بزنسەکەت
-                        کاربکات
+                        {t("noDefaultHint")}
                       </p>
-                      <Tooltip content="دروستکردنی پەیجی بنەڕەت بۆ بزنس" side="bottom">
+                      <Tooltip content={t("createDefaultTooltip")} side="bottom">
                         <button
                           type="button"
                           onClick={() => void handleCreateDefaultPage()}
@@ -780,8 +787,8 @@ export function BusinessSettingsPage() {
                             <Plus className="h-4 w-4" />
                           )}
                           {creatingDefault
-                            ? "دروستکردن..."
-                            : "دروستکردنی پەیجی بنەڕەت"}
+                            ? t("creating")
+                            : t("createDefault")}
                         </button>
                       </Tooltip>
                     </div>
@@ -793,22 +800,24 @@ export function BusinessSettingsPage() {
             {activeTab === "security" && (
               <PageHeaderSection
                 icon={ShieldCheck}
-                title="Google و دانیشتنەکان"
-                description="چوونەژوورەوە تەنها بە هەژماری Googleـی پشتڕاستکراو دەکرێت. پاسۆردی بزنس بوونی نییە."
+                title={t("securityTitle")}
+                description={t("securityDescription")}
               >
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">
-                  ئیمەیڵی خاوەن: <strong>{data.email}</strong>. چوونەژوورەوەی
-                  نوێ دانیشتنی پێشوو دادەخات.
+                  {t("ownerEmail")}: <strong>{data.email}</strong>. {t("newLoginClosesSession")}
                 </div>
-                <SessionManagementPanel endpoint="/api/auth/sessions" />
+                <SessionManagementPanel
+                  endpoint="/api/auth/sessions"
+                  copy={locale === "ar" ? businessMessages.ar.SettingsSessions : undefined}
+                />
               </PageHeaderSection>
             )}
 
             {activeTab === "messages" && (
               <PageHeaderSection
                 icon={MessageSquare}
-                title="پەیامەکان"
-                description="پەیام بنێرە بۆ بەڕێوەبەری پلاتفۆرم و وەڵامەکانی ببینە"
+                title={t("messagesTab")}
+                description={t("messagesDescription")}
               >
                 <div className="col-span-full">
                   <BusinessMessagesPanel
@@ -821,6 +830,7 @@ export function BusinessSettingsPage() {
         </LockedContent>
         <ColorGradientModal
           isOpen={showColorPicker}
+          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : undefined}
           value={data.website_color}
           onChange={(value) =>
             setData((current) => ({ ...current, website_color: value }))
@@ -831,6 +841,7 @@ export function BusinessSettingsPage() {
         />
         <ColorGradientModal
           isOpen={showDefaultColorPicker}
+          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : undefined}
           value={data.default_background_color}
           onChange={(value) =>
             setData((current) => ({
@@ -885,6 +896,7 @@ function BrandImageStack({
   onUpload: (file: File, type: "logo" | "favicon" | "default-avatar") => void;
   enabled: boolean;
 }) {
+  const t = useTranslations("SettingsPage");
   return (
     <div
       className={`flex flex-col items-center gap-1 py-1 ${
@@ -892,7 +904,7 @@ function BrandImageStack({
       }`}
     >
       <div className="relative h-44 w-72 sm:h-48 sm:w-80">
-        <Tooltip content="گۆڕینی ئەڤاتاری بنەڕەتی" side="top">
+        <Tooltip content={t("changeAvatar")} side="top">
           <label className="group absolute left-5 top-7 z-30 h-24 w-24 rotate-[-8deg] cursor-pointer overflow-hidden rounded-full border-4 border-white bg-white shadow-xl ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.default_avatar || DEFAULT_AVATAR}
@@ -901,7 +913,7 @@ function BrandImageStack({
               height={112}
               className="h-full w-full object-cover"
             />
-            <UploadOverlay label="ئەڤاتار" />
+            <UploadOverlay label={t("avatar")} />
             <input
               type="file"
               accept={AVATAR_ACCEPT}
@@ -913,7 +925,7 @@ function BrandImageStack({
             />
           </label>
         </Tooltip>
-        <Tooltip content="گۆڕینی وێنۆچکەی ماڵپەڕ (Favicon)" side="top">
+        <Tooltip content={t("changeFavicon")} side="top">
           <label className="group absolute right-6 top-4 z-30 h-20 w-20 rotate-[10deg] cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-lg ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.favicon || BUSINESS_FAVICON_PLACEHOLDER}
@@ -922,7 +934,7 @@ function BrandImageStack({
               height={96}
               className="h-full w-full object-contain"
             />
-            <UploadOverlay label="فایڤ" />
+            <UploadOverlay label={t("favicon")} />
             <input
               type="file"
               accept={FAVICON_ACCEPT}
@@ -933,7 +945,7 @@ function BrandImageStack({
             />
           </label>
         </Tooltip>
-        <Tooltip content="گۆڕینی لۆگۆی سەرەکی بزنس" side="top">
+        <Tooltip content={t("changeLogo")} side="top">
           <label className="group absolute left-1/2 top-12 z-20 h-32 w-32 -translate-x-1/2 cursor-pointer overflow-hidden rounded-3xl border-4 border-white bg-white p-3 shadow-2xl ring-1 ring-gray-200 transition hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.logo || BUSINESS_LOGO_PLACEHOLDER}
@@ -942,7 +954,7 @@ function BrandImageStack({
               height={144}
               className="h-full w-full object-contain"
             />
-            <UploadOverlay label="لۆگۆ" />
+            <UploadOverlay label={t("logo")} />
             <input
               type="file"
               accept={LOGO_ACCEPT}

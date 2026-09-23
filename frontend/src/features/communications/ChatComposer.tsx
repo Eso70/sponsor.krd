@@ -23,9 +23,10 @@ export const ChatComposer = forwardRef<
     placeholder: string;
     sending: boolean;
     disabled?: boolean;
+    sendLabel?: string;
   }
 >(function ChatComposer(
-  { value, onChange, onSubmit, placeholder, sending, disabled },
+  { value, onChange, onSubmit, placeholder, sending, disabled, sendLabel },
   ref,
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -62,12 +63,12 @@ export const ChatComposer = forwardRef<
         placeholder={placeholder}
         className="max-h-[200px] min-h-[24px] flex-1 resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-sm leading-6 text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed dark:text-slate-200 dark:placeholder:text-slate-500"
       />
-      <Tooltip content="ناردن (Enter)" side="top">
+      <Tooltip content={`${sendLabel ?? "ناردن"} (Enter)`} side="top">
         <button
           type="button"
           onClick={onSubmit}
           disabled={!canSend}
-          aria-label="ناردن"
+          aria-label={sendLabel ?? "ناردن"}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm transition disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none dark:disabled:bg-white/5 dark:disabled:text-slate-600 cursor-pointer"
           style={canSend ? { background: "var(--theme-css)", color: "var(--theme-ink)" } : undefined}
         >

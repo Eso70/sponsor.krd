@@ -168,20 +168,8 @@ export function ErrorPage(props: ErrorPageProps) {
   const navigationItems = isBusiness
     ? [
         {
-          label: "پەڕەکان",
+          label: "لینکترییەکان",
           href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.workspace}`,
-        },
-        {
-          label: "دەربارەی ئێمە",
-          href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.about}`,
-        },
-        {
-          label: "خزمەتگوزارییەکان",
-          href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.digitalPresence}`,
-        },
-        {
-          label: "دیزاینەکان",
-          href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.mobileShowcase}`,
         },
         ...(footer?.advertisingEnabled
           ? [{ label: "ڕیکلام", href: "/advertising" }]

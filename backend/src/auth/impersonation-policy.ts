@@ -38,6 +38,12 @@ export const IMPERSONATION_RESTRICTED_ROUTES: readonly ImpersonationRestrictedRo
       reason:
         'Business sessions cannot be revoked during impersonation. Use the platform console session controls instead.',
     },
+    {
+      methods: ['PATCH'],
+      pattern: /^\/api\/auth\/preferred-locale\/?$/,
+      reason:
+        'A platform administrator cannot change a business member preference.',
+    },
   ];
 
 /**

@@ -44,15 +44,49 @@ interface TikTokPixelGroupCardProps {
   onUpdate: (updates: Partial<PixelConfigRow>) => void;
   canDelete?: boolean;
   onDelete: () => void;
+  copy?: Partial<TikTokPixelGroupCopy>;
 }
 
-type TikTokTestEventName = "ViewContent" | "Contact" | "ClickButton";
+export interface TikTokPixelGroupCopy {
+  viewContent: string; contact: string; clickButton: string;
+  noPixel: string; pixelCopied: string; pixelCopyFailed: string;
+  revealFailed: string; tokenCopyFailed: string; noToken: string;
+  tokenCopied: string; tokenCopyError: string; connectionFailed: string;
+  group: string; apiActive: string; deleteGroup: string; keepOne: string;
+  copyPixel: string; optional: string; removeToken: string; copying: string;
+  copyToken: string; loading: string; hideToken: string; showToken: string;
+  testCode: string; fromTikTok: string; eventAndTest: string; eventType: string;
+  enterToken: string; enterTestCode: string; pixelRequired: string;
+  testTooltip: string; test: string; testSuccess: string; testFailed: string;
+  resultBefore: string; resultAfter: string; resultCode: string; resultSaved: string;
+}
 
-const TIKTOK_TEST_EVENTS: CustomSelectOption<TikTokTestEventName>[] = [
-  { value: "ViewContent", label: "ViewContent (بینینی پەڕە)" },
-  { value: "Contact", label: "Contact (پەیوەندی)" },
-  { value: "ClickButton", label: "ClickButton (کلیک لە بەستەر)" },
-];
+const KURDISH_COPY: TikTokPixelGroupCopy = {
+  viewContent: "ViewContent (بینینی پەڕە)", contact: "Contact (پەیوەندی)",
+  clickButton: "ClickButton (کلیک لە بەستەر)",
+  noPixel: "هیچ Pixel IDێک بۆ کۆپیکردن نییە", pixelCopied: "Pixel ID کۆپی کرا",
+  pixelCopyFailed: "کۆپیکردنی Pixel ID سەرکەوتوو نەبوو",
+  revealFailed: "نەتوانرا نهێنیی Events API پیشان بدرێت",
+  tokenCopyFailed: "نەتوانرا Token کۆپی بکرێت", noToken: "هیچ Tokenێک بۆ کۆپیکردن نییە",
+  tokenCopied: "Events API Token کۆپی کرا", tokenCopyError: "کۆپیکردنی Events API Token سەرکەوتوو نەبوو",
+  connectionFailed: "نەتوانرا پەیوەندی بە ڕاژەکارەوە بکرێت",
+  group: "گرووپی TikTok", apiActive: "Events API چالاکە",
+  deleteGroup: "سڕینەوەی ئەم گرووپە", keepOne: "دەبێت لانیکەم یەک گرووپ بمێنێتەوە",
+  copyPixel: "کۆپیکردنی Pixel ID", optional: "ئارەزوومەندانە",
+  removeToken: "لابردنی Token", copying: "لە کۆپیکردندایە...",
+  copyToken: "کۆپیکردنی Events API Token", loading: "باردەکرێت...",
+  hideToken: "شاردنەوەی Token", showToken: "پیشاندانی Token",
+  testCode: "کۆدی Test Event", fromTikTok: "لە TikTok وەریگرە",
+  eventAndTest: "ڕووداو و تاقیکردنەوە", eventType: "جۆری ڕووداو",
+  enterToken: "Events API Token دابنێ", enterTestCode: "Test Event Code بنووسە",
+  pixelRequired: "Pixel ID پێویستە", testTooltip: "تاقیکردنەوەی ئەم Pixelە لەگەڵ TikTok",
+  test: "تاقیکردنەوە", testSuccess: "ڕووداوەکە بە سەرکەوتوویی گەیشتە TikTok!",
+  testFailed: "نەتوانرا ڕووداوەکە بنێردرێت",
+  resultBefore: "ئێستا لە", resultAfter: "سەیری بکە، ڕووداوەکە بە جۆری",
+  resultCode: "و کۆدی", resultSaved: "تۆمار کراوە.",
+};
+
+type TikTokTestEventName = "ViewContent" | "Contact" | "ClickButton";
 
 export function TikTokPixelGroupCard({
   index,
@@ -62,7 +96,14 @@ export function TikTokPixelGroupCard({
   onUpdate,
   canDelete = true,
   onDelete,
+  copy,
 }: TikTokPixelGroupCardProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
+  const testEvents: CustomSelectOption<TikTokTestEventName>[] = [
+    { value: "ViewContent", label: labels.viewContent },
+    { value: "Contact", label: labels.contact },
+    { value: "ClickButton", label: labels.clickButton },
+  ];
   const [showToken, setShowToken] = useState(false);
   const [revealingToken, setRevealingToken] = useState(false);
   const [copyingToken, setCopyingToken] = useState(false);
@@ -85,17 +126,17 @@ export function TikTokPixelGroupCard({
   const handleCopyPixel = async () => {
     const pixelId = config.pixel_id.trim();
     if (!pixelId) {
-      toast.error("هیچ Pixel IDێک بۆ کۆپیکردن نییە");
+      toast.error(labels.noPixel);
       return;
     }
 
     const success = await copyToClipboard(pixelId);
     if (success) {
       setCopiedPixel(true);
-      toast.success("Pixel ID کۆپی کرا");
+      toast.success(labels.pixelCopied);
       setTimeout(() => setCopiedPixel(false), 2000);
     } else {
-      toast.error("کۆپیکردنی Pixel ID سەرکەوتوو نەبوو");
+      toast.error(labels.pixelCopyFailed);
     }
   };
 
@@ -123,16 +164,14 @@ export function TikTokPixelGroupCard({
         const payload = await res.json().catch(() => null);
         if (!res.ok || !payload?.data?.events_token) {
           throw new Error(
-            payload?.message || "نەتوانرا نهێنیی Events API پیشان بدرێت",
+            copy ? labels.revealFailed : payload?.message || labels.revealFailed,
           );
         }
         onUpdate({ events_token: payload.data.events_token });
         setShowToken(true);
       } catch (err) {
         toast.error(
-          err instanceof Error
-            ? err.message
-            : "نەتوانرا نهێنیی Events API پیشان بدرێت",
+          copy ? labels.revealFailed : err instanceof Error ? err.message : labels.revealFailed,
         );
       } finally {
         setRevealingToken(false);
@@ -157,13 +196,13 @@ export function TikTokPixelGroupCard({
         });
         const payload = await res.json().catch(() => null);
         if (!res.ok || !payload?.data?.events_token) {
-          throw new Error(payload?.message || "نەتوانرا Token کۆپی بکرێت");
+          throw new Error(copy ? labels.tokenCopyFailed : payload?.message || labels.tokenCopyFailed);
         }
         token = payload.data.events_token;
         onUpdate({ events_token: token });
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "نەتوانرا Token کۆپی بکرێت",
+          copy ? labels.tokenCopyFailed : err instanceof Error ? err.message : labels.tokenCopyFailed,
         );
         setCopyingToken(false);
         return;
@@ -173,17 +212,17 @@ export function TikTokPixelGroupCard({
     }
 
     if (!token) {
-      toast.error("هیچ Tokenێک بۆ کۆپیکردن نییە");
+      toast.error(labels.noToken);
       return;
     }
 
     const success = await copyToClipboard(token);
     if (success) {
       setCopiedToken(true);
-      toast.success("Events API Token کۆپی کرا");
+      toast.success(labels.tokenCopied);
       setTimeout(() => setCopiedToken(false), 2000);
     } else {
-      toast.error("کۆپیکردنی Events API Token سەرکەوتوو نەبوو");
+      toast.error(labels.tokenCopyError);
     }
   };
 
@@ -207,9 +246,7 @@ export function TikTokPixelGroupCard({
         statusCode: 500,
         tiktokCode: null,
         message:
-          err instanceof Error
-            ? err.message
-            : "نەتوانرا پەیوەندی بە ڕاژەکارەوە بکرێت",
+          copy ? labels.connectionFailed : err instanceof Error ? err.message : labels.connectionFailed,
         requestId: null,
         pixelId: config.pixel_id,
         testEventCode: cleanCode,
@@ -238,7 +275,7 @@ export function TikTokPixelGroupCard({
           </span>
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-              گرووپی TikTok #{index + 1}
+              {labels.group} #{index + 1}
             </span>
             {config.pixel_id.trim() && (
               <span className="font-mono text-xs text-slate-400">
@@ -248,7 +285,7 @@ export function TikTokPixelGroupCard({
             {hasEventsToken && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                 <Sparkles className="h-2.5 w-2.5" />
-                Events API چالاکە
+                {labels.apiActive}
               </span>
             )}
           </div>
@@ -257,8 +294,8 @@ export function TikTokPixelGroupCard({
         <IconActionButton
           label={
             canDelete
-              ? "سڕینەوەی ئەم گرووپە"
-              : "دەبێت لانیکەم یەک گرووپ بمێنێتەوە"
+              ? labels.deleteGroup
+              : labels.keepOne
           }
           tone="danger"
           disabled={!canDelete}
@@ -286,8 +323,8 @@ export function TikTokPixelGroupCard({
               <IconActionButton
                 label={
                   copiedPixel
-                    ? "Pixel ID کۆپی کرا"
-                    : "کۆپیکردنی Pixel ID"
+                    ? labels.pixelCopied
+                    : labels.copyPixel
                 }
                 disabled={!config.pixel_id.trim()}
                 onClick={() => void handleCopyPixel()}
@@ -305,7 +342,7 @@ export function TikTokPixelGroupCard({
         {/* Col 2: Events API Token */}
         <EditorField
           label="Events API Token"
-          hint={config.has_events_token ? undefined : "ئارەزوومەندانە"}
+          hint={config.has_events_token ? undefined : labels.optional}
         >
           <div className="relative">
             <input
@@ -332,7 +369,7 @@ export function TikTokPixelGroupCard({
             <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
               {config.has_events_token && (
                 <IconActionButton
-                  label="لابردنی Token"
+                  label={labels.removeToken}
                   tone="danger"
                   onClick={() => {
                     onUpdate({
@@ -351,10 +388,10 @@ export function TikTokPixelGroupCard({
                 <IconActionButton
                   label={
                     copyingToken
-                      ? "لە کۆپیکردندایە..."
+                      ? labels.copying
                       : copiedToken
-                        ? "Events API Token کۆپی کرا"
-                        : "کۆپیکردنی Events API Token"
+                        ? labels.tokenCopied
+                        : labels.copyToken
                   }
                   disabled={copyingToken || revealingToken}
                   onClick={() => void handleCopyToken()}
@@ -373,10 +410,10 @@ export function TikTokPixelGroupCard({
               <IconActionButton
                 label={
                   revealingToken
-                    ? "باردەکرێت..."
+                    ? labels.loading
                     : showToken
-                      ? "شاردنەوەی Token"
-                      : "پیشاندانی Token"
+                      ? labels.hideToken
+                      : labels.showToken
                 }
                 disabled={revealingToken || copyingToken}
                 onClick={() => void handleToggleShowToken()}
@@ -396,7 +433,7 @@ export function TikTokPixelGroupCard({
         </EditorField>
 
         {/* Col 3: Test Event Code */}
-        <EditorField label="کۆدی Test Event" hint="لە TikTok وەریگرە">
+        <EditorField label={labels.testCode} hint={labels.fromTikTok}>
           <input
             type="text"
             value={testCode}
@@ -407,14 +444,14 @@ export function TikTokPixelGroupCard({
         </EditorField>
 
         {/* Col 4: Event Selector + Test Action */}
-        <EditorField label="ڕووداو و تاقیکردنەوە">
+        <EditorField label={labels.eventAndTest}>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <CustomSelect<TikTokTestEventName>
-                label="جۆری ڕووداو"
+                label={labels.eventType}
                 hideLabel
                 value={selectedEvent}
-                options={TIKTOK_TEST_EVENTS}
+                options={testEvents}
                 onChange={setSelectedEvent}
                 triggerClassName="h-10 text-xs rounded-xl"
               />
@@ -422,12 +459,12 @@ export function TikTokPixelGroupCard({
             <Tooltip
               content={
                 !hasEventsToken
-                  ? "Events API Token دابنێ"
+                  ? labels.enterToken
                   : !testCode.trim()
-                    ? "Test Event Code بنووسە"
+                    ? labels.enterTestCode
                     : !config.pixel_id.trim()
-                      ? "Pixel ID پێویستە"
-                      : "تاقیکردنەوەی ئەم Pixelە لەگەڵ TikTok"
+                      ? labels.pixelRequired
+                      : labels.testTooltip
               }
               side="top"
             >
@@ -449,7 +486,7 @@ export function TikTokPixelGroupCard({
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                <span>تاقیکردنەوە</span>
+                <span>{labels.test}</span>
               </button>
             </Tooltip>
           </div>
@@ -481,8 +518,8 @@ export function TikTokPixelGroupCard({
                   }`}
                 >
                   {testResult.success
-                    ? "ڕووداوەکە بە سەرکەوتوویی گەیشتە TikTok!"
-                    : "نەتوانرا ڕووداوەکە بنێردرێت"}
+                    ? labels.testSuccess
+                    : labels.testFailed}
                 </span>
                 <span className="rounded bg-white/80 px-1.5 py-0.5 font-mono text-[10px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
                   HTTP {testResult.statusCode}
@@ -495,7 +532,7 @@ export function TikTokPixelGroupCard({
 
               {testResult.success && (
                 <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                  ئێستا لە <strong>TikTok Events Manager &gt; Test Events</strong> سەیری بکە، ڕووداوەکە بە جۆری <strong>{testResult.eventName}</strong> و کۆدی <strong>{testResult.testEventCode}</strong> تۆمار کراوە.
+                  {labels.resultBefore} <strong>TikTok Events Manager &gt; Test Events</strong> {labels.resultAfter} <strong>{testResult.eventName}</strong> {labels.resultCode} <strong>{testResult.testEventCode}</strong> {labels.resultSaved}
                 </p>
               )}
 

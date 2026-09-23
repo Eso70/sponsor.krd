@@ -25,6 +25,12 @@ describe('impersonation restriction policy', () => {
     ).toMatch(/cannot be revoked/i);
   });
 
+  it('blocks changing a real member preference during impersonation', () => {
+    expect(
+      impersonationDenialReason('PATCH', '/api/auth/preferred-locale'),
+    ).toMatch(/cannot change/i);
+  });
+
   it('matches on the path only, so a query string cannot evade a rule', () => {
     expect(
       impersonationDenialReason('GET', '/api/auth/tiktok/abc/secret?reveal=1'),

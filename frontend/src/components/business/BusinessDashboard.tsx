@@ -37,11 +37,14 @@ import type { EffectiveAccessManifest } from "@linktree/types";
 import { BusinessCommunicationBell } from "@/features/communications/BusinessCommunicationBell";
 import { BusinessAnnouncementBanners } from "@/features/communications/BusinessAnnouncementBanners";
 import { DashboardHeader } from "@/components/shared/DashboardHeader";
+import { useTranslations } from "next-intl";
+import { BusinessLanguageSelector } from "@/features/business/components/BusinessLanguageSelector";
+import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
+import { businessMessages } from "@/features/business/i18n/messages";
 import {
   DashboardSidebar,
   type DashboardSidebarItem,
 } from "@/components/shared/DashboardSidebar";
-import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
 import {
   isBusinessPageLocked,
   type BusinessDashboardPage,
@@ -177,15 +180,6 @@ interface BusinessDashboardProps {
 }
 
 type BusinessTheme = "light" | "dark";
-const BUSINESS_PAGE_TITLES: Record<BusinessDashboardPage, string> = {
-  linktrees: DASHBOARD_PAGE_LABELS.linktrees,
-  "tiktok-config": DASHBOARD_PAGE_LABELS.tiktokSettings,
-  advertising: "خزمەتگوزاری ڕیکلام",
-  templates: DASHBOARD_PAGE_LABELS.templates,
-  profile: "پڕۆفایل",
-  settings: DASHBOARD_PAGE_LABELS.settings,
-};
-
 function getBusinessPage(pathname: string): BusinessDashboardPage {
   const segment = pathname.split("/").filter(Boolean)[1];
   if (!segment) return "linktrees";
@@ -233,6 +227,12 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   onboardingStep = 1,
 }: BusinessDashboardProps) {
   const router = useRouter();
+  const t = useTranslations("Dashboard");
+  const headerT = useTranslations("Header");
+  const sidebarT = useTranslations("Sidebar");
+  const actionT = useTranslations("DashboardActions");
+  const searchT = useTranslations("LinktreeSearch");
+  const { locale } = useBusinessLocale();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // All hooks must be called before any conditional returns
@@ -272,41 +272,41 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     () => [
       {
         id: "linktrees",
-        label: DASHBOARD_PAGE_LABELS.linktrees,
+        label: t("linktrees"),
         icon: <FileText className="h-4 w-4" />,
         active: activeTab === "linktrees",
         onClick: () => router.push("/business/pages"),
       },
       {
         id: "tiktok-config",
-        label: DASHBOARD_PAGE_LABELS.tiktokSettings,
+        label: t("tiktokSettings"),
         icon: <TbBrandTiktok className="h-4 w-4" />,
         active: activeTab === "tiktok-config",
         onClick: () => router.push("/business/tiktok-config"),
       },
       {
         id: "templates",
-        label: DASHBOARD_PAGE_LABELS.templates,
+        label: t("templates"),
         icon: <LayoutTemplate className="h-4 w-4" />,
         active: activeTab === "templates",
         onClick: () => router.push("/business/templates"),
       },
       {
         id: "advertising",
-        label: "خزمەتگوزاری ڕیکلام",
+        label: t("advertising"),
         icon: <Megaphone className="h-4 w-4" />,
         active: activeTab === "advertising",
         onClick: () => router.push("/business/advertising"),
       },
       {
         id: "settings",
-        label: DASHBOARD_PAGE_LABELS.settings,
+        label: t("settings"),
         icon: <Settings className="h-4 w-4" />,
         active: activeTab === "settings",
         onClick: () => router.push("/business/settings"),
       },
     ],
-    [activeTab, router],
+    [activeTab, router, t],
   );
   const [mounted, setMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -338,8 +338,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   const liveEffectiveAccess =
     refreshedEffectiveAccess ?? effectiveAccess ?? null;
   const pageLocked = isBusinessPageLocked(activeTab, liveEffectiveAccess);
-  const pageLockReason =
-    "بۆ بەکارهێنانی ئەم بەشە پێویستە پلانی بەشداربوونت بەرزبکەیتەوە";
+  const pageLockReason = actionT("upgradeRequired");
 
   // Set browser tab title and favicon dynamically for this business
   useEffect(() => {
@@ -608,12 +607,12 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         ]);
       } catch (error) {
         if (rethrow) throw error;
-        toast.error("نوێکردنەوەی پەڕەکانی لینکتری سەرکەوتوو نەبوو");
+        toast.error(actionT("pagesRefreshFailed"));
       } finally {
         setIsRefreshing(false);
       }
     },
-    [fetchLinktrees, fetchAnalyticsTotals, setIsRefreshing],
+    [fetchLinktrees, fetchAnalyticsTotals, setIsRefreshing, actionT],
   );
 
   const refreshSharedDashboardData = useCallback(
@@ -626,11 +625,11 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   const handleGlobalDashboardRefresh = useCallback(async () => {
     const result = await dashboardRefresh.refresh();
     if (result.failed > 0) {
-      toast.error("هەندێک لە داتاکانی داشبۆرد نوێ نەکرانەوە");
+      toast.error(actionT("refreshPartial"));
       return;
     }
-    toast.success("داتاکانی داشبۆرد نوێکرانەوە");
-  }, [dashboardRefresh]);
+    toast.success(actionT("refreshSuccess"));
+  }, [dashboardRefresh, actionT]);
 
   const handleClearAllAnalytics = async () => {
     if (isClearingAnalytics || !hasAnalyticsData) return;
@@ -721,7 +720,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       // If unauthorized, suggest re-login and keep the modal open otherwise.
       if (isApiRequestError(error, 401)) {
         const shouldReload = window.confirm(
-          "دەستپێکردنەوەت بەسەرهاتووە. دەتەوێت دووبارە لۆگین بکەیت؟",
+          actionT("sessionExpired"),
         );
         if (shouldReload) {
           window.location.href = "/business/workspace-entry";
@@ -737,7 +736,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     } finally {
       setIsLoadingEditData(false);
     }
-  }, []);
+  }, [actionT]);
 
   const handleViewAnalytics = (id: string, name: string) => {
     setAnalyticsModalLinktree({ id, name });
@@ -794,14 +793,14 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       }
 
       // Success - no need to fetch again, optimistic update already applied
-      toast.success("پەڕەکە بە سەرکەوتوویی سڕایەوە");
+      toast.success(actionT("deleteSuccess"));
     } catch (error) {
       console.error("Error deleting linktree:", error);
-      toast.error("سڕینەوەی پەڕەکە سەرکەوتوو نەبوو");
+      toast.error(actionT("deleteFailed"));
     } finally {
       setIsDeleting(false);
     }
-  }, [linktreeToDelete, isDeleting, fetchLinktrees, removeLinktree]);
+  }, [linktreeToDelete, isDeleting, fetchLinktrees, removeLinktree, actionT]);
 
   const handleDeleteModalClose = useCallback(() => {
     if (!isDeleting) {
@@ -830,8 +829,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
         if (!response.ok) {
           await fetchLinktrees(false, true);
-          const errData = await response.json().catch(() => ({}));
-          toast.error(errData.message || "گۆڕینی دۆخی ئەرشیف سەرکەوتوو نەبوو");
+          toast.error(actionT("archiveFailed"));
           return;
         }
 
@@ -840,16 +838,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         clearCachedData(`/api/linktrees/${id}`);
 
         if (nextStatus) {
-          toast.success("پەڕەکە ئەرشیفکرا");
+          toast.success(actionT("archived"));
         } else {
-          toast.success("پەڕەکە لە ئەرشیف دەرهێنرا و چالاککرایەوە");
+          toast.success(actionT("restored"));
         }
       } catch {
         await fetchLinktrees(false, true);
-        toast.error("گۆڕینی دۆخی ئەرشیف سەرکەوتوو نەبوو");
+        toast.error(actionT("archiveFailed"));
       }
     },
-    [mergeLinktree, fetchLinktrees],
+    [mergeLinktree, fetchLinktrees, actionT],
   );
 
   const handleToggleCampaign = useCallback(
@@ -865,19 +863,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
         toast.success(
           isCampaignActive
-            ? "پەڕەکە بۆ کەمپەین چالاککرا"
-            : "پەڕەکە لە کەمپەین لابرا",
+            ? actionT("campaignActivated")
+            : actionT("campaignRemoved"),
         );
       } catch (error) {
         await fetchLinktrees(false, true);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "گۆڕینی دۆخی کەمپەین سەرکەوتوو نەبوو",
-        );
+        console.error("Error changing campaign status:", error);
+        toast.error(actionT("campaignFailed"));
       }
     },
-    [mergeLinktree, fetchLinktrees],
+    [mergeLinktree, fetchLinktrees, actionT],
   );
 
   const handleToggleStatus = useCallback(
@@ -899,8 +894,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
         if (!response.ok) {
           await fetchLinktrees(false, true);
-          const errData = await response.json().catch(() => ({}));
-          toast.error(errData.message || "گۆڕینی دۆخی پەڕە سەرکەوتوو نەبوو");
+          toast.error(actionT("statusFailed"));
           return;
         }
 
@@ -909,16 +903,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         clearCachedData(`/api/linktrees/${id}`);
 
         if (nextStatus === "active") {
-          toast.success("پەڕەکە چالاککرایەوە");
+          toast.success(actionT("pageActivated"));
         } else {
-          toast.success("پەڕەکە ناچالاککرا");
+          toast.success(actionT("pageDeactivated"));
         }
       } catch {
         await fetchLinktrees(false, true);
-        toast.error("گۆڕینی دۆخی پەڕە سەرکەوتوو نەبوو");
+        toast.error(actionT("statusFailed"));
       }
     },
-    [mergeLinktree, fetchLinktrees],
+    [mergeLinktree, fetchLinktrees, actionT],
   );
 
   // Left unmemoised on purpose: React Compiler handles the memoisation here, and
@@ -1354,7 +1348,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
           // Step 5: Show success notification
           if (!errorShown) {
-            toast.info("پەڕەکە بە سەرکەوتوویی نوێکرایەوە");
+            toast.info(actionT("updated"));
             errorShown = true;
           }
 
@@ -1437,7 +1431,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             // Optimistic update - add to UI immediately
             prependLinktree(result.data);
 
-            toast.success("پەڕەکە بە سەرکەوتوویی دروستکرا");
+            toast.success(actionT("created"));
             handleModalClose();
 
             // Background refresh disabled to reduce server load on free hosting
@@ -1465,7 +1459,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         isSubmittingRef.current = false;
       }
     },
-    [handleModalClose, mergeLinktree, prependLinktree],
+    [handleModalClose, mergeLinktree, prependLinktree, actionT],
   );
 
   // Don't render anything if not authenticated (after all hooks)
@@ -1561,13 +1555,15 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         >
           <DashboardSidebar
             brandName="Sponsor.krd"
-            brandSubtitle="داشبۆردی بزنس"
+            brandSubtitle={t("subtitle")}
             brandImage={SPONSOR_KRD_LOGO}
             brandImageAlt="Sponsor.krd"
             items={sidebarItems}
             collapsed={isSidebarCollapsed}
             mobileOpen={isMobileSidebarOpen}
             onCloseMobile={() => setIsMobileSidebarOpen(false)}
+            closeLabel={sidebarT("closeLabel")}
+            closeTooltip={sidebarT("close")}
             footer={
               <BusinessSidebarFooter
                 collapsed={isSidebarCollapsed}
@@ -1582,7 +1578,21 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
             <DashboardHeader
-              title={BUSINESS_PAGE_TITLES[activeTab]}
+              title={t(activeTab === "tiktok-config" ? "tiktokSettings" : activeTab)}
+              languageControl={<BusinessLanguageSelector />}
+              labels={{
+                menu: headerT("menu"),
+                menuLabel: headerT("menuLabel"),
+                refresh: headerT("refresh"),
+                refreshLabel: headerT("refreshLabel"),
+                home: headerT("home"),
+                homeLabel: headerT("homeLabel"),
+                theme: headerT("theme"),
+                darkTheme: headerT("darkTheme"),
+                lightTheme: headerT("lightTheme"),
+                themeLabel: headerT("themeLabel"),
+                accountMenu: headerT("accountMenu"),
+              }}
               theme={theme}
               mounted={mounted}
               refreshing={dashboardRefresh.isRefreshing}
@@ -1604,7 +1614,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 items: [
                   {
                     id: "settings",
-                    label: DASHBOARD_PAGE_LABELS.settings,
+                    label: t("settings"),
                     icon: <Settings className="h-4 w-4" />,
                     onClick: () => router.push("/business/settings"),
                   },
@@ -1617,7 +1627,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                   },
                   {
                     id: "logout",
-                    label: "چوونەدەرەوە",
+                    label: t("logout"),
                     icon: <LogOut className="h-4 w-4" />,
                     danger: true,
                     onClick: () => void handleLogout(),
@@ -1686,9 +1696,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                       onToggleStatus={handleToggleStatus}
                     />
                   ) : activeTab === "tiktok-config" ? (
-                    <BusinessTikTokConfigPage />
+                    <BusinessTikTokConfigPage pixelCopy={locale === "ar" ? businessMessages.ar.TikTokPixel : undefined} />
                   ) : activeTab === "templates" ? (
-                    <TemplatesPage accessMode="entitlement" />
+                    <TemplatesPage accessMode="entitlement" copy={businessMessages[locale].TemplatesPage} />
                   ) : activeTab === "advertising" ? (
                     <AdvertisingServicePage
                       name={name || currentUsername || "Business"}
@@ -1708,12 +1718,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                           <Settings className="h-16 w-16 mx-auto mb-6 text-slate-300 dark:text-gray-600" />
                         )}
                         <h2 className="text-2xl font-bold text-slate-600 dark:text-gray-300 mb-2">
-                          {activeTab === "profile"
-                            ? "پڕۆفایل"
-                            : DASHBOARD_PAGE_LABELS.settings}
+                          {t(activeTab === "profile" ? "profile" : "settings")}
                         </h2>
                         <p className="text-slate-400 dark:text-gray-500">
-                          Coming Soon
+                          {t("comingSoon")}
                         </p>
                       </div>
                     </div>
@@ -1729,21 +1737,15 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               isOpen={isDeleteModalOpen}
               onClose={handleDeleteModalClose}
               onConfirm={handleDeleteConfirm}
-              title={
-                "\u0633\u0695\u06cc\u0646\u06d5\u0648\u06d5\u06cc \u0644\u0627\u067e\u06d5\u0695\u06d5"
-              }
+              title={t("deletePage")}
               isDeleting={isDeleting}
               message={
                 <p>
-                  {
-                    "\u0626\u0627\u06cc\u0627 \u062f\u06b5\u0646\u06cc\u0627\u06cc\u062a \u0644\u06d5 \u0633\u0695\u06cc\u0646\u06d5\u0648\u06d5\u06cc \u0644\u0627\u067e\u06d5\u0695\u06d5\u06cc"
-                  }{" "}
+                  {t("deletePageQuestion")}{" "}
                   <span className="font-bold text-slate-900 dark:text-white">
                     &quot;{linktreeToDelete.name}&quot;
                   </span>
-                  {
-                    "\u061f \u0626\u06d5\u0645 \u06a9\u0631\u062f\u0627\u0631\u06d5 \u0646\u0627\u06af\u06d5\u0695\u06ce\u0646\u0631\u06ce\u062a\u06d5\u0648\u06d5."
-                  }
+                  {t("irreversible")}
                 </p>
               }
             />
@@ -1756,13 +1758,13 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               if (!isClearingAnalytics) setIsClearAnalyticsModalOpen(false);
             }}
             onConfirm={handleClearAllAnalytics}
-            title="پاککردنەوەی ئاماری لینکتری"
-            confirmLabel="بەڵێ، پاکی بکەوە"
-            loadingLabel="پاکدەکرێتەوە..."
-            cancelLabel="هەڵوەشاندنەوە"
+            title={t("clearAnalytics")}
+            confirmLabel={t("confirmClear")}
+            loadingLabel={t("clearing")}
+            cancelLabel={t("cancel")}
             isDeleting={isClearingAnalytics}
             message={
-              <p>دڵنیایت لە پاککردنەوەی هەموو ئامارەکانی پەڕەکانی لینکتری؟</p>
+              <p>{t("clearAnalyticsQuestion")}</p>
             }
           />
 
@@ -1786,6 +1788,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               onClose={() => setAnalyticsModalLinktree(null)}
               linktreeId={analyticsModalLinktree.id}
               linktreeName={analyticsModalLinktree.name}
+              copy={locale === "ar" ? businessMessages.ar.PageAnalytics : undefined}
               canClearAnalytics={
                 liveEffectiveAccess?.permissions[
                   "business:analytics:clear-linktree"
@@ -1799,6 +1802,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               isOpen={Boolean(duplicateTargetLinktree)}
               onClose={() => setDuplicateTargetLinktree(null)}
               targetLinktree={duplicateTargetLinktree}
+              copy={businessMessages[locale].DuplicateLinktree}
               onSuccess={() => {
                 void handleRefresh();
               }}
@@ -1814,6 +1818,13 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             items={linktreesData}
             onSelect={(item) => handleEdit(item.id)}
             publicPathPrefix="/linktree"
+            copy={{
+              action: searchT("action"),
+              placeholder: searchT("placeholder"),
+              close: searchT("close"),
+              prompt: searchT("prompt"),
+              noResults: searchT("noResults"),
+            }}
           />
         </div>
         {onboardingRequired ? (

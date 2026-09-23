@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BusinessPageAnalyticsModal } from "@/components/business/BusinessPageAnalyticsModal";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -9,6 +10,31 @@ vi.mock("next/navigation", () => ({
 describe("BusinessPageAnalyticsModal summary mode", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("uses Arabic Business copy without changing the shared Platform default", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: {
+        total_views: 20, unique_views: 12, total_clicks: 8,
+        unique_clicks: 3, conversions: 0, conversion_value: 0,
+      } }),
+    })));
+
+    render(
+      <BusinessPageAnalyticsModal
+        isOpen
+        onClose={vi.fn()}
+        pageId="business-page-id"
+        pageName="Example"
+        summaryOnly
+        copy={businessMessages.ar.PageAnalytics}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "إحصاءات Example" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تحديث" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("الزوار الفريدون")).toBeInTheDocument());
   });
 
   it("reuses loading, refresh, and clear controls for a platform summary", async () => {

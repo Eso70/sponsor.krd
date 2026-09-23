@@ -1,40 +1,14 @@
-import {
-  BUSINESS_LANDING_DECORATION_COLORS,
-  BUSINESS_LANDING_DECORATION_LABELS,
-  BUSINESS_LANDING_SECTION_HREFS,
-} from "@/components/business/business-landing-sections";
-import { BusinessSectionDecorations } from "@/components/business/BusinessSectionDecorations";
+import { BusinessMobileShowcase } from "@/components/business/BusinessMobileShowcase";
 import { PublicMarketingHero } from "@/components/public/PublicMarketingHero";
 
-interface BusinessHeroProps {
-  accentColor: string;
-  title?: string;
-  description?: string;
-  actionLabel?: string;
-  actionHref?: string;
-}
-
-export function BusinessHero({
-  accentColor,
-  title = "هەموو زانیارییەکانت لەناو یەک پەڕەی دیجیتاڵی",
-  description =
-    "لە یەک شوێنی متمانەپێکراوەوە پەڕە فەرمییەکان، ماڵپەڕەکان و ڕێگاکانی پەیوەندیی ببینە",
-  actionLabel = "پەڕەی ئەو کەسانە ببینە کە بەشدارییان کردووە",
-  actionHref = BUSINESS_LANDING_SECTION_HREFS.workspace,
-}: BusinessHeroProps) {
+export function BusinessHero({ accentColor }: { accentColor: string }) {
   return (
     <PublicMarketingHero
       accentColor={accentColor}
-      title={title}
-      description={description}
-      primaryAction={{ label: actionLabel, href: actionHref }}
-      decorations={
-        <BusinessSectionDecorations
-          colors={BUSINESS_LANDING_DECORATION_COLORS.hero}
-          labels={BUSINESS_LANDING_DECORATION_LABELS.hero}
-          variant={0}
-        />
-      }
-    />
+      title="لینکترییەکانت بە ئاسانی دروست بکە و بەڕێوەیان ببە"
+      description="پەڕەیەکی گشتی بۆ لینکەکانت دروست بکە و هەموویان لە یەک شوێندا ڕێک بخە."
+    >
+      <BusinessMobileShowcase accentColor={accentColor} />
+    </PublicMarketingHero>
   );
 }

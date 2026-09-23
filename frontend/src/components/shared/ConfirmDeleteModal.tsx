@@ -17,6 +17,7 @@ interface ConfirmDeleteModalProps {
   confirmLabel?: string;
   loadingLabel?: string;
   cancelLabel?: string;
+  closeLabel?: string;
   isDeleting?: boolean;
   zIndexClassName?: string;
   tone?: "danger" | "accent";
@@ -31,6 +32,7 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
   confirmLabel = "\u0633\u0695\u06cc\u0646\u06d5\u0648\u06d5",
   loadingLabel = "\u062f\u06d5\u0633\u0695\u06ce\u062a\u06d5\u0648\u06d5...",
   cancelLabel = "\u067e\u0627\u0634\u06af\u06d5\u0632\u0628\u0648\u0648\u0646\u06d5\u0648\u06d5",
+  closeLabel = "داخستن",
   isDeleting = false,
   zIndexClassName = "z-50",
   tone = "danger",
@@ -76,12 +78,12 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
           <h3 className="text-lg font-bold text-slate-850 dark:text-gray-100 font-kurdish">
             {title}
           </h3>
-          <Tooltip content="داخستن" side="bottom">
+          <Tooltip content={closeLabel} side="bottom">
             <button
               onClick={onClose}
               disabled={isDeleting}
               className="p-2 rounded-lg text-slate-400 hover:text-slate-655 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer disabled:opacity-50"
-              aria-label="داخستن"
+              aria-label={closeLabel}
             >
               <X className="h-5 w-5" />
             </button>

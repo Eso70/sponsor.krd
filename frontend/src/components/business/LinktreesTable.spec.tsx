@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { LinktreesTable } from "@/components/business/LinktreesTable";
 import { LinktreePill } from "@/components/business/LinktreeMeta";
+import { businessMessages } from "@/features/business/i18n/messages";
 import type { LinktreeListItem } from "@linktree/types";
 
 function item(overrides: Partial<LinktreeListItem> = {}): LinktreeListItem {
@@ -26,6 +27,16 @@ function columnCounts() {
 }
 
 describe("LinktreesTable column alignment", () => {
+  it("localizes Business headers and keeps Kurdish Platform defaults", () => {
+    const { rerender } = render(
+      <LinktreesTable data={[item()]} listCopy={businessMessages.ar.LinktreeList} />,
+    );
+    expect(within(screen.getByRole("table")).getByRole("columnheader", { name: "الصورة" })).toBeInTheDocument();
+
+    rerender(<LinktreesTable data={[item()]} />);
+    expect(within(screen.getByRole("table")).getByRole("columnheader", { name: "وێنە" })).toBeInTheDocument();
+  });
+
   /**
    * The traffic column is gated on a table-level flag rather than per row.
    * Gating the cell on `item.analytics` while the header asked "does any row

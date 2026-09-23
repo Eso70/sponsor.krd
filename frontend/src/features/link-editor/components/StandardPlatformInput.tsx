@@ -29,7 +29,7 @@ export function platformInputPlaceholder(platform: string): string {
   if (isPhonePlatform(platform)) return "0750 123 4567";
   const placeholders: Record<string, string> = {
     gps: "36.191, 44.009",
-    telegram: "@username یان t.me/username",
+    telegram: "@username یان t.me/+کۆدی بانگهێشت یان +کۆد",
     instagram: "@username یان instagram.com/username",
     tiktok: "@username یان tiktok.com/@username",
     snapchat: "username یان snapchat.com/add/username",

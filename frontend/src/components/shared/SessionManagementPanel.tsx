@@ -19,12 +19,23 @@ type Session = {
   remembered: boolean;
 };
 
+export type SessionManagementCopy = Partial<Record<
+  "loadFailed" | "revokeFailed" | "revoked" | "activeSessions" | "description" |
+  "refresh" | "empty" | "current" | "remembered" | "unknownIp" | "expires" |
+  "revokeSession" | "revokeAllTooltip" | "signOutOthers" | "revokeAll" |
+  "dialogTitle" | "dialogConfirm" | "dialogLoading" | "dialogMessage" |
+  "unknownDevice" | "unknownTime" | "browserOn",
+  string
+>>;
+
 export function SessionManagementPanel({
   endpoint,
   administratorMode = false,
+  copy,
 }: {
   endpoint: string;
   administratorMode?: boolean;
+  copy?: SessionManagementCopy;
 }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +57,12 @@ export function SessionManagementPanel({
       setSessions(payload.data?.sessions || []);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to load sessions",
+        copy ? copy.loadFailed ?? "Unable to load sessions" : error instanceof Error ? error.message : "Unable to load sessions",
       );
     } finally {
       setLoading(false);
     }
-  }, [endpoint]);
+  }, [endpoint, copy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +80,7 @@ export function SessionManagementPanel({
       .catch((error: unknown) => {
         if (!cancelled)
           toast.error(
-            error instanceof Error ? error.message : "Unable to load sessions",
+            copy ? copy.loadFailed ?? "Unable to load sessions" : error instanceof Error ? error.message : "Unable to load sessions",
           );
       })
       .finally(() => {
@@ -78,7 +89,7 @@ export function SessionManagementPanel({
     return () => {
       cancelled = true;
     };
-  }, [endpoint]);
+  }, [endpoint, copy]);
 
   const confirmRevoke = async () => {
     if (!pendingRevoke) return;
@@ -104,10 +115,10 @@ export function SessionManagementPanel({
           current.filter((session) => session.id !== pendingRevoke.id),
         );
       }
-      toast.success("Session access revoked");
+      toast.success(copy?.revoked ?? "Session access revoked");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to revoke session",
+        copy ? copy.revokeFailed ?? "Unable to revoke session" : error instanceof Error ? error.message : "Unable to revoke session",
       );
       throw error;
     } finally {
@@ -132,21 +143,21 @@ export function SessionManagementPanel({
             />
             <div>
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                Active sessions
+                {copy?.activeSessions ?? "Active sessions"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Review devices with access to this business.
+                {copy?.description ?? "Review devices with access to this business."}
               </p>
             </div>
           </div>
-          <Tooltip content="نوێکردنەوەی دانیشتنەکان" side="bottom">
+          <Tooltip content={copy?.refresh ?? "نوێکردنەوەی دانیشتنەکان"} side="bottom">
             <button
               type="button"
               onClick={() => void load()}
               aria-busy={loading}
               disabled={loading}
               className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-white disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/5"
-              aria-label="Refresh sessions"
+              aria-label={copy?.refresh ?? "Refresh sessions"}
             >
               <MotionSpinner active={loading}>
                 <RefreshCw className="h-4 w-4" />
@@ -160,7 +171,7 @@ export function SessionManagementPanel({
             <SkeletonSessionList rows={3} />
           ) : sessions.length === 0 ? (
             <p className="py-8 text-center text-xs text-slate-400">
-              No active sessions found.
+              {copy?.empty ?? "No active sessions found."}
             </p>
           ) : (
             sessions.map((session) => (
@@ -172,35 +183,35 @@ export function SessionManagementPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {describeUserAgent(session.user_agent)}
+                      {describeUserAgent(session.user_agent, copy)}
                     </p>
                     {session.is_current && (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-                        Current
+                        {copy?.current ?? "Current"}
                       </span>
                     )}
                     {session.remembered && (
                       <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
-                        Remembered
+                        {copy?.remembered ?? "Remembered"}
                       </span>
                     )}
                   </div>
                   <p className="mt-1 truncate text-[11px] text-slate-400">
-                    {session.ip_address || "Unknown IP"} ·{" "}
-                    {formatDate(session.created_at)} · expires{" "}
-                    {formatDate(session.session_expires_at)}
+                    {session.ip_address || copy?.unknownIp || "Unknown IP"} ·{" "}
+                    {formatDate(session.created_at, copy)} · {copy?.expires ?? "expires"}{" "}
+                    {formatDate(session.session_expires_at, copy)}
                   </p>
                 </div>
                 {(administratorMode || !session.is_current) && (
                   <Tooltip
-                    content="لابردنی دەستگەیشتنی ئەم دانیشتنە"
+                    content={copy?.revokeSession ?? "لابردنی دەستگەیشتنی ئەم دانیشتنە"}
                     side="top"
                   >
                     <button
                       type="button"
                       onClick={() => setPendingRevoke(session)}
                       className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 dark:hover:bg-rose-500/10"
-                      aria-label="Revoke session"
+                      aria-label={copy?.revokeSession ?? "Revoke session"}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -215,8 +226,8 @@ export function SessionManagementPanel({
           <Tooltip
             content={
               administratorMode
-                ? "لابردنی دەستگەیشتنی هەموو دانیشتنەکان"
-                : "چوونەدەرەوە لە هەموو ئامێرەکانی تر"
+                ? copy?.revokeAllTooltip ?? "لابردنی دەستگەیشتنی هەموو دانیشتنەکان"
+                : copy?.signOutOthers ?? "چوونەدەرەوە لە هەموو ئامێرەکانی تر"
             }
             side="top"
           >
@@ -226,8 +237,8 @@ export function SessionManagementPanel({
               className="mt-4 w-full cursor-pointer rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
             >
               {administratorMode
-                ? "Revoke all business sessions"
-                : "Sign out all other sessions"}
+                ? copy?.revokeAll ?? "Revoke all business sessions"
+                : copy?.signOutOthers ?? "Sign out all other sessions"}
             </button>
           </Tooltip>
         )}
@@ -238,18 +249,18 @@ export function SessionManagementPanel({
         onClose={() => setPendingRevoke(null)}
         onConfirm={confirmRevoke}
         isDeleting={revoking}
-        title="Revoke session access"
-        confirmLabel="Revoke access"
-        loadingLabel="Revoking…"
-        message="This device will immediately lose access."
+        title={copy?.dialogTitle ?? "Revoke session access"}
+        confirmLabel={copy?.dialogConfirm ?? "Revoke access"}
+        loadingLabel={copy?.dialogLoading ?? "Revoking…"}
+        message={copy?.dialogMessage ?? "This device will immediately lose access."}
         zIndexClassName="z-[80]"
       />
     </div>
   );
 }
 
-function describeUserAgent(userAgent: string | null): string {
-  if (!userAgent) return "Unknown device";
+function describeUserAgent(userAgent: string | null, copy?: SessionManagementCopy): string {
+  if (!userAgent) return copy?.unknownDevice ?? "Unknown device";
   const browser = userAgent.includes("Edg/")
     ? "Edge"
     : userAgent.includes("Chrome/")
@@ -269,11 +280,11 @@ function describeUserAgent(userAgent: string | null): string {
           ? "macOS"
           : userAgent.includes("Linux")
             ? "Linux"
-            : "Unknown device";
-  return `${browser} on ${platform}`;
+            : copy?.unknownDevice ?? "Unknown device";
+  return `${browser} ${copy?.browserOn ?? "on"} ${platform}`;
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, copy?: SessionManagementCopy): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Unknown time" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? copy?.unknownTime ?? "Unknown time" : date.toLocaleString();
 }

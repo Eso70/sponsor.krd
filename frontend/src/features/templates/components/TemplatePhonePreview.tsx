@@ -11,6 +11,7 @@ export function TemplatePhonePreview({
   ariaLabel,
   darkTheme = false,
   locked = false,
+  lockedLabel = "ئەم قالبە لە پلانی ئێستاتدا بەردەست نییە",
   scrollable = true,
   children,
 }: {
@@ -18,6 +19,7 @@ export function TemplatePhonePreview({
   ariaLabel: string;
   darkTheme?: boolean;
   locked?: boolean;
+  lockedLabel?: string;
   scrollable?: boolean;
   children: (isNear: boolean) => ReactNode;
 }) {
@@ -40,7 +42,7 @@ export function TemplatePhonePreview({
         overlay={
           locked ? (
             <LockedItemOverlay
-              label="ئەم قالبە لە پلانی ئێستاتدا بەردەست نییە"
+              label={lockedLabel}
               roundedClassName="rounded-[2.5rem] sm:rounded-[3rem]"
             />
           ) : null

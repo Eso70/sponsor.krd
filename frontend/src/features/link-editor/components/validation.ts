@@ -1,4 +1,5 @@
 import { isGpsInputValid } from "../modal-utils";
+import { normalizeTelegramLink } from "../telegram-link";
 
 /**
  * Product ceiling for a page name. The column holds 255, but a name longer
@@ -129,18 +130,9 @@ export function validateSingleLink(
     }
 
     case "telegram": {
-      if (isUrl(trimmed)) {
-        const pattern = /^(https?:\/\/)?(www\.)?(t\.me|telegram\.me)\/[a-zA-Z0-9_]{5,32}\/?(\?.*)?$/i;
-        if (!pattern.test(trimmed)) {
-          return "لینکی تێلیگرام نادروستە (پێویستە t.me/username بێت)";
-        }
-      } else {
-        const username = trimmed.replace(/^@/, "");
-        if (!/^[a-zA-Z0-9_]{5,32}$/.test(username)) {
-          return "ناوی بەکارهێنەری تێلیگرام نادروستە (دەبێت لانیکەم ٥ پیت بێت و تەنها پیت، ژمارە و _ تێدابێت)";
-        }
-      }
-      return undefined;
+      return normalizeTelegramLink(trimmed)
+        ? undefined
+        : "لینکی تێلیگرام نادروستە (ناوی بەکارهێنەر یان t.me/+کۆدی بانگهێشت بنووسە)";
     }
 
     case "instagram": {

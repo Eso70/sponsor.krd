@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Crown, LifeBuoy } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { useTranslations } from "next-intl";
 
 interface BusinessSidebarFooterProps {
   collapsed: boolean;
@@ -18,18 +19,19 @@ export function BusinessSidebarFooter({
   onSupport,
   onUpgrade,
 }: BusinessSidebarFooterProps) {
+  const t = useTranslations("Sidebar");
   const displayPlanName = planName?.trim() || "Plan";
   const canUpgrade = Boolean(planCode && planCode.toLowerCase() !== "ultra");
 
   return (
     <div
       className="shrink-0 border-t border-slate-200 p-3 dark:border-white/10"
-      aria-label="پلان و پشتیوانی"
+      aria-label={t("planAndSupport")}
     >
       <div
         className={`rounded-2xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.035] ${collapsed ? "md:flex md:flex-col md:items-center md:gap-2 md:border-transparent md:bg-transparent md:p-0 md:dark:bg-transparent" : "p-3"}`}
       >
-        <Tooltip content={`پلانی ئێستا: ${displayPlanName}`} side="right" disabled={!collapsed}>
+        <Tooltip content={t("currentPlan") + ": " + displayPlanName} side="right" disabled={!collapsed}>
           <div
             className={`flex items-center ${collapsed ? "md:justify-center" : "gap-3"}`}
           >
@@ -47,7 +49,7 @@ export function BusinessSidebarFooter({
               className={`min-w-0 flex-1 transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
             >
               <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                پلانی ئێستا
+                {t("currentPlan")}
               </p>
               <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">
                 {displayPlanName}
@@ -57,7 +59,7 @@ export function BusinessSidebarFooter({
         </Tooltip>
 
         {canUpgrade && (
-          <Tooltip content="پلانەکەت بەرز بکەرەوە" side="right" disabled={!collapsed}>
+          <Tooltip content={t("upgrade")} side="right" disabled={!collapsed}>
             <button
               type="button"
               onClick={onUpgrade}
@@ -67,14 +69,14 @@ export function BusinessSidebarFooter({
               <span
                 className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
               >
-                پلانەکەت بەرز بکەرەوە
+                {t("upgrade")}
               </span>
             </button>
           </Tooltip>
         )}
       </div>
 
-      <Tooltip content="یارمەتی و پشتیوانی" side="right" disabled={!collapsed}>
+      <Tooltip content={t("support")} side="right" disabled={!collapsed}>
         <button
           type="button"
           onClick={onSupport}
@@ -84,7 +86,7 @@ export function BusinessSidebarFooter({
           <span
             className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
           >
-            یارمەتی و پشتیوانی
+            {t("support")}
           </span>
         </button>
       </Tooltip>

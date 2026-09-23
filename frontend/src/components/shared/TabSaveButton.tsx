@@ -19,12 +19,14 @@ export function TabSaveButton({
   onSave,
   disabled,
   accent,
+  copy,
 }: {
   dirty: boolean;
   saving: boolean;
   onSave: () => void;
   disabled?: boolean;
   accent?: boolean;
+  copy?: Partial<Record<"savingTooltip" | "saveTooltip" | "unchangedTooltip" | "saving" | "save" | "saved", string>>;
 }) {
   const active =
     dirty && !disabled
@@ -34,10 +36,10 @@ export function TabSaveButton({
       : "border-dashed border-slate-200 text-slate-400 dark:border-white/10 dark:text-slate-500";
 
   const tooltipLabel = saving
-    ? "پاشەکەوت دەکرێت..."
+    ? copy?.savingTooltip ?? "پاشەکەوت دەکرێت..."
     : dirty && !disabled
-      ? "پاشەکەوتکردنی گۆڕانکارییەکان"
-      : "هیچ گۆڕانکارییەک نەکراوە";
+      ? copy?.saveTooltip ?? "پاشەکەوتکردنی گۆڕانکارییەکان"
+      : copy?.unchangedTooltip ?? "هیچ گۆڕانکارییەک نەکراوە";
 
   return (
     <Tooltip content={tooltipLabel} side="bottom">
@@ -52,7 +54,7 @@ export function TabSaveButton({
         )}
       >
         <Save className="h-4 w-4" />
-        {saving ? "پاشەکەوتکردن..." : dirty && !disabled ? "پاشەکەوتکردن" : "پاشەکەوت کرا"}
+        {saving ? copy?.saving ?? "پاشەکەوتکردن..." : dirty && !disabled ? copy?.save ?? "پاشەکەوتکردن" : copy?.saved ?? "پاشەکەوت کرا"}
       </button>
     </Tooltip>
   );

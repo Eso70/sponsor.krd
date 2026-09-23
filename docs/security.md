@@ -203,6 +203,11 @@ for a submitted one and block an unrelated branding edit.
 
 ## Platform-administrator impersonation
 
+An impersonated business session reads the default dashboard language and
+cannot update a real member's `preferred_locale`. The preference endpoint
+uses the tenant-bound BusinessGuard, DTO validation, and a membership-scoped
+database update keyed by the session's `userId`, never a client-provided ID.
+
 A platform administrator holding `platform:businesses:impersonate` can open a
 business dashboard as that business without the owner's credentials and
 without resetting anything. The capability is separate from

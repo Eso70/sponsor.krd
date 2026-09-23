@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DuplicateLinktreeModal } from "./DuplicateLinktreeModal";
 import type { LinktreeListItem } from "@linktree/types";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -71,6 +72,22 @@ describe("DuplicateLinktreeModal", () => {
     expect(screen.getByText("فروشگای کوردی")).toBeInTheDocument();
     expect(screen.getByDisplayValue("فروشگای کوردی")).toBeInTheDocument();
     expect(screen.getByDisplayValue("kurd-store-copy")).toBeInTheDocument();
+  });
+
+  it("uses Arabic copy for the Business duplicate workflow", () => {
+    render(
+      <DuplicateLinktreeModal
+        isOpen
+        onClose={mockOnClose}
+        targetLinktree={sampleTarget}
+        onSuccess={mockOnSuccess}
+        copy={businessMessages.ar.DuplicateLinktree}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "نسخ الصفحة" })).toBeInTheDocument();
+    expect(screen.getByText("اسم الصفحة الجديدة")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إغلاق" })).toBeInTheDocument();
   });
 
   it("marks its portal as platform-themed when used by platform administration", () => {

@@ -50,53 +50,15 @@ Never duplicate UI simply because it belongs to a different permission domain.
 
 ## Public business homepages
 
-Public business homepages are customer-facing product-style sites, never
-authenticated dashboards. Use strong typography, real business branding and
-published media, restrained color, purposeful whitespace, and a product-style
-public-content preview when it materially helps visitors discover published
-destinations. Reuse the Sponsor.krd homepage's shared floating navigation and
-theme behavior, supplying tenant branding and public business links through
-its configuration instead of creating a parallel navbar. Reference sites may inform hierarchy, spacing, contrast, and
-interaction rhythm, but their proprietary code, assets, copy, branding, and
-exact trade dress must not be reproduced. Once a reference-led homepage
-direction is selected, keep the public business homepage concise: shared
-navigation, one hero whose lower area contains a compact real-content workspace,
-and the shared footer. Keep that workspace centered at `max-w-5xl` with page
-gutters; it is not a full-width or standalone full-viewport section. Its visual
-language may resemble a polished creative editor: a project-tab rail, a small
-public helper sidebar on larger screens, a restrained secondary toolbar, and a
-dense image-led gallery. The helper must remain deterministic and local: greet
-visitors briefly and direct Linktree requests to the business
-owner without persisting input, calling a backend, or implying access to
-private data. Light mode must provide an equally intentional
-neutral counterpart instead of forcing the entire mockup dark.
-Its tabs must be keyboard-operable, omit unavailable categories, and remain
-limited to published Linktrees. Do not add a
-workspace overview tab or a separate brand/status header inside the mockup.
-Use the reusable visual-card treatment so navigation does not alter the
-workspace's density or interaction language. Subtle
-window framing, layered surfaces, and tenant-accent details may make the
-preview feel tangible, but must remain decorative, accessible in light and
-dark themes, and secondary to real published content.
-The workspace tab rail must fit its available width without horizontal
-scrolling. Every scrollable surface on a public business homepage, including
-the workspace's internal content area, inherits the tenant accent for its
-scrollbar. The custom cursor and text-selection highlight inherit that same
-accent and restore the Sponsor.krd default when the visitor leaves the page.
-Business homepage hero and workspace copy may be written in Sorani Kurdish
-while the page and workspace layout remain left-to-right. The shared footer
-keeps its established content contract. Dynamic tenant content keeps automatic
-text direction. Workspace content must explicitly hide horizontal overflow and
-expose only its right-side vertical scrollbar.
-Contact and any future homepage sections remain outside the workspace in their
-appropriate page locations. Avoid unrelated secondary
-marketing sections, decorative dashboard mockups, fake metrics or testimonials, repeated
-generic card grids, glass panels, glowing gradients, floating shapes, and
-unnecessary icons. Never expose login, management, subscription, analytics,
-draft, notification, or platform-operation details to anonymous visitors.
-Render only explicitly public contact fields and published tenant content;
-omit unavailable sections instead of inventing content or displaying empty
-placeholders.
+Public business homepages are customer-facing. Use the shared tenant navbar,
+public shell, theme behavior, and footer. The content consists of a concise
+hero with mobile template mockups and a grid of published Linktrees. The hero
+presents the project without an action button; the navbar links to the gallery
+only when pages exist. The mockups are previews, while each gallery card uses
+real published page data, with automatic direction for tenant text, and opens
+its public route. Omit the gallery when no pages are published. Keep contact
+in the shared navigation action and footer. Do not show dashboard controls,
+private data, sample gallery pages, or empty placeholders to anonymous visitors.
 
 ---
 

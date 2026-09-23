@@ -25,6 +25,8 @@ interface DashboardSidebarProps {
   collapsed: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  closeLabel?: string;
+  closeTooltip?: string;
   footer?: ReactNode;
 }
 
@@ -37,6 +39,8 @@ export function DashboardSidebar({
   collapsed,
   mobileOpen,
   onCloseMobile,
+  closeLabel = "Close sidebar",
+  closeTooltip = "داخستن",
   footer,
 }: DashboardSidebarProps) {
   return (
@@ -46,7 +50,7 @@ export function DashboardSidebar({
           type="button"
           className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition-all duration-300 md:hidden"
           onClick={onCloseMobile}
-          aria-label="Close sidebar"
+          aria-label={closeLabel}
         />
       ) : null}
 
@@ -84,12 +88,12 @@ export function DashboardSidebar({
             </div>
           </div>
 
-          <Tooltip content="داخستن" side="left">
+          <Tooltip content={closeTooltip} side="left">
             <button
               type="button"
               onClick={onCloseMobile}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] duration-200 hover:bg-slate-50 hover:text-slate-600 active:scale-95 dark:hover:bg-white/5 dark:hover:text-gray-300 md:hidden cursor-pointer"
-              aria-label="Close sidebar"
+              aria-label={closeLabel}
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>

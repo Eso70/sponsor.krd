@@ -34,6 +34,7 @@ import {
 } from "@/components/business/LinktreeMeta";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { KURDISH_LINKTREE_LIST_COPY, type LinktreeListCopy } from "@/features/link-editor/components/linktree-list-copy";
 
 interface LinktreesTableProps {
   publicPathPrefix?: string;
@@ -59,6 +60,7 @@ interface LinktreesTableProps {
   onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
   onToggleArchive?: (id: string, isArchived: boolean) => void;
   onToggleStatus?: (id: string, status: "active" | "inactive") => void;
+  listCopy?: Partial<LinktreeListCopy>;
 }
 
 /**
@@ -73,13 +75,14 @@ function buildColumns(
   displaysPageMeta: boolean,
   showTraffic: boolean,
   trafficLabels: PageListTrafficLabels,
+  labels: LinktreeListCopy,
 ): ManagementTableColumn[] {
   return [
-    { key: "image", header: "وێنە", width: "w-16 sm:w-20" },
-    { key: "name", header: "ناو", width: "w-32 sm:w-40" },
+    { key: "image", header: labels.image, width: "w-16 sm:w-20" },
+    { key: "name", header: labels.name, width: "w-32 sm:w-40" },
     {
       key: "subtitle",
-      header: "ناونیشانی کورت",
+      header: labels.subtitle,
       width: "w-32 lg:w-40",
       hideBelow: "md",
     },
@@ -88,7 +91,7 @@ function buildColumns(
       : ([
           { key: "slug", header: "Slug", width: "w-24", hideBelow: "lg" },
         ] as ManagementTableColumn[])),
-    { key: "link", header: "بەستەر", width: "w-32 sm:w-40 lg:w-48" },
+    { key: "link", header: labels.link, width: "w-32 sm:w-40 lg:w-48" },
     ...(showTraffic
       ? ([
           {
@@ -98,9 +101,9 @@ function buildColumns(
           },
         ] as ManagementTableColumn[])
       : []),
-    { key: "created", header: "دروستکراوە", width: "w-28", hideBelow: "xl" },
-    { key: "updated", header: "نوێکراوە", width: "w-28", hideBelow: "xl" },
-    { key: "actions", header: "کارەکان", width: "w-28 sm:w-32" },
+    { key: "created", header: labels.created, width: "w-28", hideBelow: "xl" },
+    { key: "updated", header: labels.updated, width: "w-28", hideBelow: "xl" },
+    { key: "actions", header: labels.actions, width: "w-28 sm:w-32" },
   ];
 }
 
@@ -128,6 +131,8 @@ const TableRow = memo(function TableRow({
   showTraffic,
   MetaBadgesComponent,
   trafficLabels,
+  labels,
+  metaCopy,
 }: {
   item: Linktree;
   onEdit?: (id: string) => void;
@@ -146,6 +151,8 @@ const TableRow = memo(function TableRow({
   showTraffic: boolean;
   MetaBadgesComponent: ComponentType<LinktreeMetaBadgesProps>;
   trafficLabels: PageListTrafficLabels;
+  labels: LinktreeListCopy;
+  metaCopy?: Partial<LinktreeListCopy>;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
   const getLinktreeUrl = useCallback(
@@ -197,7 +204,7 @@ const TableRow = memo(function TableRow({
           {isCampaignActive && (
             <span
               className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
-              title="کەمپەین چالاکە"
+              title={labels.campaignActive}
             />
           )}
         </div>
@@ -211,6 +218,7 @@ const TableRow = memo(function TableRow({
           showAgeBadge={showPageMeta}
           showTemplate={showPageMeta}
           onToggleCampaign={onToggleCampaign}
+          listCopy={metaCopy}
         />
       </td>
       <td className="px-2 sm:px-3 py-3 hidden md:table-cell">
@@ -242,11 +250,11 @@ const TableRow = memo(function TableRow({
           >
             {publicPathPrefix}/{publicIdentifier}
           </a>
-          <Tooltip content={copiedUid === publicIdentifier ? "کۆپیکرا" : "کۆپیکردنی بەستەر"} side="top">
+          <Tooltip content={copiedUid === publicIdentifier ? labels.copied : labels.copyLink} side="top">
             <button
               onClick={(e) => onCopy(publicIdentifier, e)}
               className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-              aria-label="کۆپیکردنی بەستەر"
+              aria-label={labels.copyLink}
             >
               {copiedUid === publicIdentifier ? (
                 <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
@@ -303,22 +311,22 @@ const TableRow = memo(function TableRow({
             </Tooltip>
           )}
           {onEdit && (
-            <Tooltip content="دەستکاریکردن" side="top">
+            <Tooltip content={labels.editTable} side="top">
               <button
                 onClick={() => onEdit(item.id)}
                 className="p-1.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label="دەستکاریکردن"
+                aria-label={labels.editTable}
               >
                 <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
             </Tooltip>
           )}
           {onDuplicate && (
-            <Tooltip content="لەبەرگرتنەوە" side="top">
+            <Tooltip content={labels.duplicate} side="top">
               <button
                 onClick={() => onDuplicate(item)}
                 className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label="لەبەرگرتنەوە"
+                aria-label={labels.duplicate}
               >
                 <CopyPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -326,7 +334,7 @@ const TableRow = memo(function TableRow({
           )}
           {onToggleArchive && !item.is_default && (
             <Tooltip
-              content={item.is_archived ? "گەڕاندنەوە لە ئەرشیف" : "ئەرشیفکردن"}
+              content={item.is_archived ? labels.restore : labels.archive}
               side="top"
             >
               <button
@@ -336,7 +344,7 @@ const TableRow = memo(function TableRow({
                     ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
                     : "text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
                 }`}
-                aria-label={item.is_archived ? "Restore from archive" : "Archive"}
+                aria-label={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "Restore from archive" : "Archive")}
               >
                 {item.is_archived ? (
                   <ArchiveRestore className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -350,8 +358,8 @@ const TableRow = memo(function TableRow({
             <Tooltip
               content={
                 item.status === "inactive"
-                  ? "چالاککردنی پەڕە"
-                  : "ناچالاککردنی پەڕە"
+                  ? labels.activate
+                  : labels.deactivate
               }
               side="top"
             >
@@ -368,7 +376,7 @@ const TableRow = memo(function TableRow({
                     : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
                 }`}
                 aria-label={
-                  item.status === "inactive" ? "Activate page" : "Deactivate page"
+                  metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "Activate page" : "Deactivate page")
                 }
               >
                 {item.status === "inactive" ? (
@@ -380,11 +388,11 @@ const TableRow = memo(function TableRow({
             </Tooltip>
           )}
           {onDelete && item.uid !== "id" && !item.is_default && (
-            <Tooltip content="سڕینەوە" side="top">
+            <Tooltip content={labels.delete} side="top">
               <button
                 onClick={() => onDelete(item.id, item.uid, item.name)}
                 className="p-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label="سڕینەوە"
+                aria-label={labels.delete}
               >
                 <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -416,6 +424,8 @@ const MobileCard = memo(function MobileCard({
   showPageMeta,
   MetaBadgesComponent,
   trafficLabels,
+  labels,
+  metaCopy,
 }: {
   item: Linktree;
   onEdit?: (id: string) => void;
@@ -434,6 +444,8 @@ const MobileCard = memo(function MobileCard({
   showPageMeta: boolean;
   MetaBadgesComponent: ComponentType<LinktreeMetaBadgesProps>;
   trafficLabels: PageListTrafficLabels;
+  labels: LinktreeListCopy;
+  metaCopy?: Partial<LinktreeListCopy>;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
   const isCampaignActive = !!item.is_campaign_active;
@@ -470,7 +482,7 @@ const MobileCard = memo(function MobileCard({
         {isCampaignActive && (
           <span
             className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
-            title="کەمپەین چالاکە"
+            title={labels.campaignActive}
           />
         )}
       </div>
@@ -488,6 +500,7 @@ const MobileCard = memo(function MobileCard({
               showAgeBadge={showPageMeta}
               showTemplate={showPageMeta}
               onToggleCampaign={onToggleCampaign}
+              listCopy={metaCopy}
               className="mt-1.5"
             />
           </div>
@@ -507,35 +520,35 @@ const MobileCard = memo(function MobileCard({
               </Tooltip>
             )}
             {onEdit && (
-              <Tooltip content="دەستکاریکردن" side="top">
+              <Tooltip content={labels.editTable} side="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(item.id);
                   }}
                   className="flex items-center justify-center p-2 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label="دەستکاریکردن"
+                  aria-label={labels.editTable}
                 >
                   <Edit className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
             {onDuplicate && (
-              <Tooltip content="لەبەرگرتنەوە" side="top">
+              <Tooltip content={labels.duplicate} side="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDuplicate(item);
                   }}
                   className="flex items-center justify-center p-2 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label="لەبەرگرتنەوە"
+                  aria-label={labels.duplicate}
                 >
                   <CopyPlus className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
             {onToggleArchive && !item.is_default && (
-              <Tooltip content={item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : "ئەرشیفکردن"} side="top">
+              <Tooltip content={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : labels.archive)} side="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -546,7 +559,7 @@ const MobileCard = memo(function MobileCard({
                       ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
                       : "hover:bg-purple-50 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
                   }`}
-                  aria-label={item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : "ئەرشیفکردن"}
+                  aria-label={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : labels.archive)}
                 >
                   {item.is_archived ? (
                     <ArchiveRestore className="h-4 w-4" />
@@ -560,8 +573,8 @@ const MobileCard = memo(function MobileCard({
               <Tooltip
                 content={
                   item.status === "inactive"
-                    ? "چالاککردنی پەڕە"
-                    : "ناچالاککردنی پەڕە"
+                    ? labels.activate
+                    : labels.deactivate
                 }
                 side="top"
               >
@@ -579,7 +592,7 @@ const MobileCard = memo(function MobileCard({
                       : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
                   }`}
                   aria-label={
-                    item.status === "inactive" ? "چالاککردن" : "ناچالاککردن"
+                    metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "چالاککردن" : "ناچالاککردن")
                   }
                 >
                   {item.status === "inactive" ? (
@@ -591,14 +604,14 @@ const MobileCard = memo(function MobileCard({
               </Tooltip>
             )}
             {onDelete && item.uid !== "id" && !item.is_default && (
-              <Tooltip content="سڕینەوە" side="top">
+              <Tooltip content={labels.delete} side="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(item.id, item.uid, item.name);
                   }}
                   className="flex items-center justify-center p-2 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label="سڕینەوە"
+                  aria-label={labels.delete}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -608,11 +621,11 @@ const MobileCard = memo(function MobileCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
-          <Tooltip content={copiedUid === publicIdentifier ? "کۆپیکرا" : "کۆپیکردنی بەستەر"} side="top">
+          <Tooltip content={copiedUid === publicIdentifier ? labels.copied : labels.copyLink} side="top">
             <button
               onClick={(e) => onCopy(publicIdentifier, e)}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
-              aria-label="کۆپیکردنی بەستەر"
+              aria-label={labels.copyLink}
             >
               {copiedUid === publicIdentifier ? (
                 <Check className="h-3.5 w-3.5 text-green-600" />
@@ -625,10 +638,10 @@ const MobileCard = memo(function MobileCard({
             </button>
           </Tooltip>
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-gray-600 bg-gray-50">
-            دروستکراوە {formatDate(item.created_at)}
+            {labels.created} {formatDate(item.created_at)}
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-gray-600 bg-gray-50">
-            نوێکراوە {formatDate(item.updated_at)}
+            {labels.updated} {formatDate(item.updated_at)}
           </span>
           {showPageMeta && item.analytics && (
             <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
@@ -671,14 +684,16 @@ export const LinktreesTable = memo(function LinktreesTable({
   onToggleCampaign,
   onToggleArchive,
   onToggleStatus,
+  listCopy,
 }: LinktreesTableProps) {
+  const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
   const displaysPageMeta = showPageMeta ?? showLinktreeMeta;
 
   // The optional slug and traffic columns are table-level decisions so every
   // body row remains aligned with the header, even when one row has no totals.
   const showTraffic = displaysPageMeta && data.some((item) => item.analytics);
-  const columns = buildColumns(displaysPageMeta, showTraffic, trafficLabels);
+  const columns = buildColumns(displaysPageMeta, showTraffic, trafficLabels, labels);
 
   const formatDateString = useCallback((dateString: string) => {
     return formatDate(dateString);
@@ -694,12 +709,12 @@ export const LinktreesTable = memo(function LinktreesTable({
         setTimeout(() => {
           setCopiedUid(null);
         }, 2000);
-        toast.success("بەستەرەکە کۆپی کرا");
+        toast.success(labels.linkCopied);
       } else {
-        toast.error("کۆپیکردنی بەستەر سەرکەوتوو نەبوو");
+        toast.error(labels.linkCopyFailed);
       }
     },
-    [publicPathPrefix],
+    [publicPathPrefix, labels.linkCopied, labels.linkCopyFailed],
   );
 
   const handleView = useCallback(
@@ -754,6 +769,8 @@ export const LinktreesTable = memo(function LinktreesTable({
           showTraffic={showTraffic}
           MetaBadgesComponent={MetaBadgesComponent}
           trafficLabels={trafficLabels}
+          labels={labels}
+          metaCopy={listCopy}
         />
       )}
       renderCard={(item) => (
@@ -775,6 +792,8 @@ export const LinktreesTable = memo(function LinktreesTable({
           showPageMeta={displaysPageMeta}
           MetaBadgesComponent={MetaBadgesComponent}
           trafficLabels={trafficLabels}
+          labels={labels}
+          metaCopy={listCopy}
         />
       )}
     />

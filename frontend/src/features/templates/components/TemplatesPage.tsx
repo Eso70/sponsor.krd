@@ -25,21 +25,51 @@ import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
 import { Tooltip } from "@/components/shared/Tooltip";
 
-const SAMPLE_LINKS = createBusinessContactPreviewLinks();
+export interface TemplatesPageCopy {
+  totalTemplates: string; available: string; linktreeTemplates: string;
+  title: string; description: string; clearSearch: string; searchTooltip: string;
+  searchLabel: string; search: string; noTemplates: string; tryAnother: string;
+  searchPlaceholder: string; searchPrompt: string; noResults: string; view: string;
+  locked: string; mobilePreview: string; previewDescription: string;
+  previewWhatsapp: string; previewViber: string; previewPhone: string;
+  previewSubtitle: string;
+  applySearch: string;
+}
+
+const KURDISH_COPY: TemplatesPageCopy = {
+  totalTemplates: "کۆی قالبەکان", available: "بەردەستەکان",
+  linktreeTemplates: "قالبی لینک تری", title: DASHBOARD_PAGE_LABELS.templates,
+  description: "قالبەکانی لینک تری ببینە و دیزاینەکان پێشبینی بکە.",
+  clearSearch: "پاککردنەوەی گەڕان", searchTooltip: "گەڕان لە قالبەکان (Ctrl+K)",
+  searchLabel: "گەڕان (Ctrl+K)", search: "گەڕان...",
+  noTemplates: "هیچ قالبێک نەدۆزرایەوە", tryAnother: "دووبارە گەڕان بکەرەوە بە وشەیەکی تر",
+  searchPlaceholder: "ناوی قالبی لینک تری بنووسە...",
+  searchPrompt: "گەڕان بۆ قالبەکان بکە...", noResults: "هیچ ئەنجامێک نەدۆزرایەوە بۆ",
+  view: "پیشاندان ←", locked: "ئەم قالبە لە پلانی ئێستاتدا بەردەست نییە",
+  mobilePreview: "mobile preview", previewDescription: "بۆ پەیوەندی کردن، کلیک لەم لینکانی خوارەوە بکە",
+  previewWhatsapp: "واتساپ", previewViber: "ڤایبەر", previewPhone: "ژمارەی مۆبایل",
+  previewSubtitle: "Digital Presence Platform",
+  applySearch: "جێبەجێکردن و داخستن",
+};
 
 const LinktreeTemplatePreview = memo(function LinktreeTemplatePreview({
   templateId,
   templateName,
   locked,
+  copy,
 }: {
   templateId: TemplateKey;
   templateName: string;
   locked?: boolean;
+  copy: TemplatesPageCopy;
 }) {
   const linktree = useMemo<Linktree>(
-    () => createLinktreeTemplatePreview({ templateId }),
-    [templateId],
+    () => createLinktreeTemplatePreview({ templateId, description: copy.previewDescription, subtitle: copy.previewSubtitle }),
+    [templateId, copy.previewDescription, copy.previewSubtitle],
   );
+  const sampleLinks = useMemo(() => createBusinessContactPreviewLinks(undefined, {
+    whatsapp: copy.previewWhatsapp, viber: copy.previewViber, phone: copy.previewPhone,
+  }), [copy.previewWhatsapp, copy.previewViber, copy.previewPhone]);
 
   const darkTheme = useMemo(() => {
     return LINKTREE_TEMPLATE_PREVIEW_THEMES[templateId].from !== "#ffffff";
@@ -48,9 +78,10 @@ const LinktreeTemplatePreview = memo(function LinktreeTemplatePreview({
   return (
     <TemplatePhonePreview
       name={templateName}
-      ariaLabel={`${templateName} mobile preview`}
+      ariaLabel={`${templateName} ${copy.mobilePreview}`}
       darkTheme={darkTheme}
       locked={locked}
+      lockedLabel={copy.locked}
     >
       {(isNear) =>
         isNear ? (
@@ -64,7 +95,7 @@ const LinktreeTemplatePreview = memo(function LinktreeTemplatePreview({
           >
             <DynamicTemplate
               linktree={linktree}
-              links={SAMPLE_LINKS}
+              links={sampleLinks}
               theme={LINKTREE_TEMPLATE_PREVIEW_THEMES[templateId]}
               onLinkClick={(_linkId: string, url: string) => {
                 window.open(url, "_blank", "noopener,noreferrer");
@@ -81,9 +112,11 @@ const LinktreeTemplatePreview = memo(function LinktreeTemplatePreview({
 
 export interface TemplatesPageProps {
   accessMode?: "all" | "entitlement";
+  copy?: Partial<TemplatesPageCopy>;
 }
 
-export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
+export function TemplatesPage({ accessMode = "all", copy }: TemplatesPageProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const enforceTemplateAccess = accessMode === "entitlement";
   const {
     isLoading: isEntitlementLoading,
@@ -158,19 +191,19 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
       <StatCardGrid>
         <StatCard
           icon={LayoutTemplate}
-          label="کۆی قالبەکان"
+          label={labels.totalTemplates}
           value={activeTemplates.length}
           color="blue"
         />
         <StatCard
           icon={CheckCircle}
-          label="بەردەستەکان"
+          label={labels.available}
           value={availableTemplateCount}
           color="green"
         />
         <StatCard
           icon={Link2}
-          label="قالبی لینک تری"
+          label={labels.linktreeTemplates}
           value={TEMPLATE_OPTIONS.length}
           color="purple"
         />
@@ -181,12 +214,12 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
         className="min-w-0 space-y-4 overflow-hidden sm:space-y-6"
       >
         <PageHeader
-          title={DASHBOARD_PAGE_LABELS.templates}
-          description="قالبەکانی لینک تری ببینە و دیزاینەکان پێشبینی بکە."
+          title={labels.title}
+          description={labels.description}
           icon={LayoutTemplate}
           action={
             <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-              <Tooltip content={searchQuery.trim() ? "پاککردنەوەی گەڕان" : "گەڕان لە قالبەکان (Ctrl+K)"} side="bottom">
+              <Tooltip content={searchQuery.trim() ? labels.clearSearch : labels.searchTooltip} side="bottom">
                 <button
                   type="button"
                   onClick={() =>
@@ -203,7 +236,7 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
                       ? "sa-soft sa-soft-border"
                       : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                   }`}
-                  aria-label={searchQuery.trim() ? "پاککردنەوەی گەڕان" : "گەڕان (Ctrl+K)"}
+                  aria-label={searchQuery.trim() ? labels.clearSearch : labels.searchLabel}
                 >
                   {searchQuery.trim() ? (
                     <X className="h-4 w-4 text-slate-500 transition-transform group-hover:scale-110 dark:text-gray-400" />
@@ -212,7 +245,7 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
                       <div className="flex min-w-0 items-center gap-2">
                         <Search className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:scale-110 dark:text-gray-500" />
                         <span className="hidden truncate text-xs font-semibold text-slate-400 transition-colors group-hover:text-slate-600 dark:text-gray-500 dark:group-hover:text-gray-300 sm:inline">
-                          گەڕان...
+                          {labels.search}
                         </span>
                       </div>
                       <kbd className="hidden items-center gap-0.5 rounded bg-slate-100 px-1 py-0.5 font-sans text-[8px] font-bold text-slate-400 dark:bg-white/10 dark:text-gray-500 sm:inline-flex">
@@ -234,9 +267,9 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
           {filteredTemplates.length === 0 ? (
             <div className="rounded-2xl border border-slate-100 bg-slate-50/20 py-12 text-center text-slate-400 shadow-sm dark:border-white/5 dark:bg-white/5 dark:text-gray-500">
               <Search className="mx-auto mb-3 h-12 w-12 opacity-30" />
-              <p>هیچ قالبێک نەدۆزرایەوە</p>
+              <p>{labels.noTemplates}</p>
               <p className="mt-1 text-xs">
-                دووبارە گەڕان بکەرەوە بە وشەیەکی تر
+                {labels.tryAnother}
               </p>
             </div>
           ) : (
@@ -250,6 +283,7 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
                   <LinktreeTemplatePreview
                     templateId={template.id as TemplateKey}
                     templateName={template.name}
+                    copy={labels}
                     locked={
                       shouldShowLockedTemplates &&
                       !isTemplateAllowed(template.id)
@@ -265,18 +299,22 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
       <SearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
-        placeholder="ناوی قالبی لینک تری بنووسە..."
+        placeholder={labels.searchPlaceholder}
+        clearLabel={labels.clearSearch}
+        applyLabel={labels.applySearch}
+        clearAriaLabel={labels.clearSearch}
+        applyAriaLabel={labels.applySearch}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
       >
         {!searchQuery.trim() ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-xs text-slate-400 select-none dark:text-gray-500 sm:text-sm">
             <Search className="sa-accent-text h-5 w-5 opacity-40" />
-            <span>گەڕان بۆ قالبەکان بکە...</span>
+            <span>{labels.searchPrompt}</span>
           </div>
         ) : filteredTemplates.length === 0 ? (
           <div className="py-8 text-center text-sm text-slate-400 dark:text-gray-500">
-            هیچ ئەنجامێک نەدۆزرایەوە بۆ &quot;{searchQuery}&quot;
+            {labels.noResults} &quot;{searchQuery}&quot;
           </div>
         ) : (
           <div className="flex flex-col gap-0.5">
@@ -304,7 +342,7 @@ export function TemplatesPage({ accessMode = "all" }: TemplatesPageProps) {
                     </div>
                   </div>
                   <span className="translate-x-1 pl-2 text-xs font-semibold text-indigo-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
-                    پیشاندان ←
+                    {labels.view}
                   </span>
                 </button>
               );

@@ -812,15 +812,28 @@ export function SkeletonPublicLandingPage({
             <div className="mx-auto mt-8 max-w-2xl">
               <SkeletonText lines={2} />
             </div>
-            <div className="mt-8 flex justify-center gap-3">
-              <Skeleton className="h-12 w-36" rounded="rounded-full" />
-              {variant === "platform" && (
+            {variant === "platform" && (
+              <div className="mt-8 flex justify-center gap-3">
                 <Skeleton className="h-12 w-36" rounded="rounded-full" />
-              )}
-            </div>
+                <Skeleton className="h-12 w-36" rounded="rounded-full" />
+              </div>
+            )}
           </div>
 
-          <div className="mx-auto mt-20 max-w-6xl rounded-[2rem] border border-black/5 bg-white/55 p-4 shadow-2xl shadow-black/5 dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
+          {variant === "business" && (
+            <div className="mx-auto mt-16 flex max-w-5xl items-end justify-center gap-4 overflow-hidden">
+              {[0, 1, 2].map((phone) => (
+                <Skeleton
+                  key={phone}
+                  className="h-72 w-40 shrink-0 sm:h-96 sm:w-52"
+                  rounded="rounded-[2rem]"
+                />
+              ))}
+            </div>
+          )}
+
+          {variant === "platform" && (
+            <div className="mx-auto mt-20 max-w-6xl rounded-[2rem] border border-black/5 bg-white/55 p-4 shadow-2xl shadow-black/5 dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
             <div className="flex gap-2 border-b border-black/5 pb-4 dark:border-white/10">
               <Skeleton className="h-9 w-24" rounded="rounded-lg" />
               <Skeleton className="h-9 w-28" rounded="rounded-lg" />
@@ -845,9 +858,11 @@ export function SkeletonPublicLandingPage({
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
-          <div className="mx-auto mt-16 flex max-w-4xl items-center justify-center gap-8 overflow-hidden sm:gap-14">
+          {variant === "platform" && (
+            <div className="mx-auto mt-16 flex max-w-4xl items-center justify-center gap-8 overflow-hidden sm:gap-14">
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton
                 key={index}
@@ -855,40 +870,43 @@ export function SkeletonPublicLandingPage({
                 rounded="rounded-lg"
               />
             ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8">
-        <div className="mx-auto max-w-5xl text-center">
-          <Skeleton
-            className="mx-auto h-12 w-64 max-w-full sm:h-14"
-            rounded="rounded-xl"
-          />
-          <div className="mx-auto mt-8 max-w-3xl">
-            <SkeletonText lines={3} />
+      {variant === "platform" && (
+        <section className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8">
+          <div className="mx-auto max-w-5xl text-center">
+            <Skeleton
+              className="mx-auto h-12 w-64 max-w-full sm:h-14"
+              rounded="rounded-xl"
+            />
+            <div className="mx-auto mt-8 max-w-3xl">
+              <SkeletonText lines={3} />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {variant === "business" ? (
-        <>
-          {[0, 1].map((section) => (
-            <section
-              key={section}
-              className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8"
-            >
-              <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-                <div className={section % 2 ? "lg:order-2" : ""}>
-                  <Skeleton className="mb-6 h-10 w-3/4" rounded="rounded-xl" />
-                  <SkeletonText lines={4} />
-                  <Skeleton className="mt-8 h-11 w-36" rounded="rounded-full" />
-                </div>
-                <Skeleton className="h-80 w-full" rounded="rounded-[2rem]" />
-              </div>
-            </section>
-          ))}
-        </>
+        <section className="px-5 py-24 sm:px-8">
+          <div className="mx-auto max-w-6xl">
+            <Skeleton
+              className="mx-auto h-12 w-72 max-w-full"
+              rounded="rounded-xl"
+            />
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((card) => (
+                <Skeleton
+                  key={card}
+                  className="h-64 w-full"
+                  rounded="rounded-2xl"
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       ) : (
         <>
           {[3, 3, 6, 4, 6, 3].map((cards, section) => (

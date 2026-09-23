@@ -13,6 +13,10 @@ interface SearchModalProps {
   children?: React.ReactNode;
   wide?: boolean;
   businessTheme?: boolean;
+  clearLabel?: string;
+  applyLabel?: string;
+  clearAriaLabel?: string;
+  applyAriaLabel?: string;
 }
 
 export function SearchModal({
@@ -24,6 +28,10 @@ export function SearchModal({
   children,
   wide = false,
   businessTheme = false,
+  clearLabel = "پاککردنەوەی گەڕان",
+  applyLabel = "جێبەجێکردن و داخستن",
+  clearAriaLabel = "Clear search",
+  applyAriaLabel = "Apply and close",
 }: SearchModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -88,23 +96,23 @@ export function SearchModal({
           />
           <div className="absolute left-4 flex items-center gap-1.5">
             {searchQuery && (
-              <Tooltip content="پاککردنەوەی گەڕان" side="bottom">
+              <Tooltip content={clearLabel} side="bottom">
                 <button
                   type="button"
                   onClick={() => onSearchQueryChange("")}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer"
-                  aria-label="Clear search"
+                  aria-label={clearAriaLabel}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </Tooltip>
             )}
-            <Tooltip content="جێبەجێکردن و داخستن" side="bottom">
+            <Tooltip content={applyLabel} side="bottom">
               <button
                 type="button"
                 onClick={onClose}
                 className="rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer"
-                aria-label="Apply and close"
+                aria-label={applyAriaLabel}
               >
                 <kbd className="block rounded border border-slate-200 px-2 py-1 font-sans text-[9px] font-bold text-slate-400 dark:border-white/10 dark:text-slate-400 dark:bg-white/5">
                   Enter

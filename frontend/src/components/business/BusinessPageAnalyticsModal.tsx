@@ -90,7 +90,54 @@ interface BusinessPageAnalyticsModalProps {
   dataSource?: PageAnalyticsDataSource;
   onAnalyticsCleared?: () => void | Promise<void>;
   platformTheme?: boolean;
+  copy?: Partial<PageAnalyticsCopy>;
 }
+
+export interface PageAnalyticsCopy {
+  loadFailed: string; cleared: string; clearFailed: string; title: string;
+  summary: string; allData: string; lastUpdated: string; clearAll: string;
+  nothingToClear: string; clearData: string; refresh: string; close: string;
+  totalViews: string; uniqueViewer: string; totalClicks: string;
+  uniqueClicker: string; clickRate: string; conversions: string;
+  conversionValue: string; conversionRate: string; fromDate: string; toDate: string;
+  buttons: string; historyHint: string; noData: string;
+  unattributedClicks: string; unattributedHint: string; historical: string;
+  unattributed: string; clicks: string; unique: string; actualConversions: string;
+  openDestination: string; uniqueHint: string; clearTitle: string;
+  confirmClear: string; clearing: string; cancel: string; clearQuestion: string;
+  today: string; todayHint: string; last24h: string; last24hHint: string;
+  last7d: string; last7dHint: string; all: string; allHint: string;
+  custom: string; customHint: string;
+}
+
+const KURDISH_COPY: PageAnalyticsCopy = {
+  loadFailed: "داتاکانی ئامار بارنەکران", cleared: "داتاکانی ئامار پاککرانەوە",
+  clearFailed: "پاککردنەوەی داتاکان سەرکەوتوو نەبوو", title: "ئاماری",
+  summary: "کورتەی ئاماری هەموو ماوە", allData: "هەموو داتاکان",
+  lastUpdated: "دواین نوێکردنەوە:", clearAll: "پاککردنەوەی هەموو داتاکانی ئامار",
+  nothingToClear: "هیچ داتایەک نییە بۆ پاککردنەوە", clearData: "پاککردنەوەی داتاکان",
+  refresh: "نوێکردنەوە", close: "داخستن",
+  totalViews: ANALYTICS_TERMS.totalViews, uniqueViewer: ANALYTICS_TERMS.uniqueViewer,
+  totalClicks: ANALYTICS_TERMS.totalClicks, uniqueClicker: ANALYTICS_TERMS.uniqueClicker,
+  clickRate: ANALYTICS_TERMS.clickRate, conversions: "گۆڕانەکان",
+  conversionValue: "بەهای گۆڕان", conversionRate: "ڕێژەی گۆڕان",
+  fromDate: "لە بەرواری", toDate: "بۆ بەرواری", buttons: "دوگمەکان",
+  historyHint: "کۆی سەرەوە هەموو کلیکە تۆمارکراوەکان دەگرێتەوە؛ دوگمە سڕاوە یان گۆڕاوەکان لێرە وەک مێژوویی نیشان دەدرێن.",
+  noData: "هێشتا هیچ داتایەک نییە", unattributedClicks: "کلیکە دیارینەکراوەکان",
+  unattributedHint: "کردارێک کە بە دوگمەیەکی دیاریکراو نەبەستراوەتەوە",
+  historical: "مێژوویی", unattributed: "دیارینەکراو", clicks: "کلیک",
+  unique: "تاک", actualConversions: "گۆڕانی ڕاستەقینە",
+  openDestination: "کردنەوەی بەستەری مەبەست",
+  uniqueHint: "ژمارەی «تاک» بۆ هەر دوگمەیەک بە جیاوازی هەژمار دەکرێت؛ یەک کەس دەتوانێت زیاتر لە دوگمەیەک کلیک بکات، بۆیە ئەو ژمارانە کۆ ناکرێنەوە.",
+  clearTitle: "پاککردنەوەی داتاکانی ئامار", confirmClear: "بەڵێ، پاکی بکەوە",
+  clearing: "پاکدەکرێتەوە...", cancel: "هەڵوەشاندنەوە",
+  clearQuestion: "دڵنیایت لە پاککردنەوەی هەموو داتاکانی بینین و کلیکی ئەم پەڕەیە؟ ئەم کردارە ناگەڕێتەوە.",
+  today: "ئەمڕۆ", todayHint: "لە سەرەتای ئەمڕۆ",
+  last24h: "٢٤ ساعت", last24hHint: "٢٤ ساعتی ڕابردوو",
+  last7d: "٧ ڕۆژ", last7dHint: "٧ ڕۆژی ڕابردوو",
+  all: "هەموو", allHint: "هەموو ماوەکان",
+  custom: "تایبەت", customHint: "دیاریکردنی بەروار بە دەستی",
+};
 
 /**
  * Every control in the header is the same 40px square, or the same 40px tall
@@ -111,17 +158,7 @@ const HEADER_DANGER_BUTTON =
 /** The preset options shown in the time-range filter strip. */
 export type DateRangePreset = "today" | "24h" | "7d" | "all" | "custom";
 
-const DATE_RANGE_OPTIONS: Array<{
-  id: DateRangePreset;
-  label: string;
-  hint: string;
-}> = [
-  { id: "today", label: "ئەمڕۆ", hint: "لە سەرەتای ئەمڕۆ" },
-  { id: "24h", label: "٢٤ ساعت", hint: "٢٤ ساعتی ڕابردوو" },
-  { id: "7d", label: "٧ ڕۆژ", hint: "٧ ڕۆژی ڕابردوو" },
-  { id: "all", label: "هەموو", hint: "هەموو ماوەکان" },
-  { id: "custom", label: "تایبەت", hint: "دیاریکردنی بەروار بە دەستی" },
-];
+const DATE_RANGE_OPTIONS: DateRangePreset[] = ["today", "24h", "7d", "all", "custom"];
 
 function toLocalDateString(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -328,7 +365,9 @@ export function BusinessPageAnalyticsModal({
   dataSource = "business",
   onAnalyticsCleared,
   platformTheme = false,
+  copy,
 }: BusinessPageAnalyticsModalProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const [totals, setTotals] = useState<Totals | null>(null);
   const [actions, setActions] = useState<ActionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -397,7 +436,7 @@ export function BusinessPageAnalyticsModal({
       }
 
       if (hadError) {
-        toast.error("داتاکانی ئامار بارنەکران");
+        toast.error(labels.loadFailed);
       } else {
         setLastUpdated(new Date());
       }
@@ -407,7 +446,7 @@ export function BusinessPageAnalyticsModal({
         setRefreshing(false);
       }
     },
-    [dataSource, pageId, summaryOnly],
+    [dataSource, pageId, summaryOnly, labels.loadFailed],
   );
 
   // Initial load / re-load when the modal opens (or when pageId changes).
@@ -466,9 +505,9 @@ export function BusinessPageAnalyticsModal({
       setActions([]);
       setLastUpdated(new Date());
       await onAnalyticsCleared?.();
-      toast.success("داتاکانی ئامار پاککرانەوە");
+      toast.success(labels.cleared);
     } catch (error) {
-      toast.error("پاککردنەوەی داتاکان سەرکەوتوو نەبوو", {
+      toast.error(labels.clearFailed, {
         description: error instanceof Error ? error.message : undefined,
       });
       throw error;
@@ -554,12 +593,12 @@ export function BusinessPageAnalyticsModal({
                       id={titleId}
                       className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-gray-100 font-kurdish"
                     >
-                      ئاماری {pageName}
+                      {labels.title} {pageName}
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 dark:text-gray-500 mt-0.5 font-kurdish truncate">
                       {summaryOnly
-                        ? "کورتەی ئاماری هەموو ماوە"
-                        : "هەموو داتاکان"}
+                        ? labels.summary
+                        : labels.allData}
                     </p>
                   </div>
                 </div>
@@ -567,8 +606,8 @@ export function BusinessPageAnalyticsModal({
                   <div className="flex items-center gap-2 mt-2 text-xs text-slate-400 dark:text-gray-500">
                     <MotionPulse className="theme-fill h-1.5 w-1.5 rounded-full shadow-sm" />
                     <span className="font-kurdish">
-                      دواین نوێکردنەوە:{" "}
-                      {new Intl.DateTimeFormat("ku", {
+                      {labels.lastUpdated}{" "}
+                      {new Intl.DateTimeFormat(copy ? "ar-IQ" : "ku", {
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit",
@@ -583,8 +622,8 @@ export function BusinessPageAnalyticsModal({
                   <Tooltip
                     content={
                       hasAnyData
-                        ? "پاککردنەوەی هەموو داتاکانی ئامار"
-                        : "هیچ داتایەک نییە بۆ پاککردنەوە"
+                        ? labels.clearAll
+                        : labels.nothingToClear
                     }
                     side="bottom"
                   >
@@ -593,32 +632,32 @@ export function BusinessPageAnalyticsModal({
                       onClick={() => setIsClearModalOpen(true)}
                       disabled={refreshing || isClearing || !hasAnyData}
                       className={`${HEADER_ICON_BUTTON} ${HEADER_DANGER_BUTTON}`}
-                      aria-label="پاککردنەوەی داتاکان"
+                      aria-label={labels.clearData}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </Tooltip>
                 )}
-                <Tooltip content="نوێکردنەوە" side="bottom">
+                <Tooltip content={labels.refresh} side="bottom">
                   <button
                     type="button"
                     onClick={refresh}
                     disabled={refreshing}
                     aria-busy={refreshing}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL_BUTTON}`}
-                    aria-label="نوێکردنەوە"
+                    aria-label={labels.refresh}
                   >
                     <MotionSpinner active={refreshing}>
                       <RefreshCw className="h-4 w-4" />
                     </MotionSpinner>
                   </button>
                 </Tooltip>
-                <Tooltip content="داخستن" side="bottom">
+                <Tooltip content={labels.close} side="bottom">
                   <button
                     type="button"
                     onClick={onClose}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL_BUTTON}`}
-                    aria-label="داخستن"
+                    aria-label={labels.close}
                   >
                     <X className="h-4 w-4 transition-transform group-hover:rotate-90" />
                   </button>
@@ -638,25 +677,25 @@ export function BusinessPageAnalyticsModal({
                     <>
                       <StatCard
                         icon={Eye}
-                        label={ANALYTICS_TERMS.uniqueViewer}
+                        label={labels.uniqueViewer}
                         value={totals?.unique_views || 0}
                         color="blue"
                       />
                       <StatCard
                         icon={MousePointerClick}
-                        label={ANALYTICS_TERMS.totalClicks}
+                        label={labels.totalClicks}
                         value={totals?.total_clicks || 0}
                         color="purple"
                       />
                       <StatCard
                         icon={Users}
-                        label={ANALYTICS_TERMS.uniqueClicker}
+                        label={labels.uniqueClicker}
                         value={totals?.unique_clicks || 0}
                         color="green"
                       />
                       <StatCard
                         icon={Target}
-                        label={ANALYTICS_TERMS.clickRate}
+                        label={labels.clickRate}
                         value={`${clickRate}%`}
                         color="orange"
                       />
@@ -665,13 +704,13 @@ export function BusinessPageAnalyticsModal({
                     <>
                       <StatCard
                         icon={Eye}
-                        label={ANALYTICS_TERMS.totalViews}
+                        label={labels.totalViews}
                         value={totals?.total_views || 0}
                         color="blue"
                       />
                       <StatCard
                         icon={Users}
-                        label={ANALYTICS_TERMS.uniqueViewer}
+                        label={labels.uniqueViewer}
                         value={totals?.unique_views || 0}
                         color="green"
                       />
@@ -683,13 +722,13 @@ export function BusinessPageAnalyticsModal({
                       */}
                       <StatCard
                         icon={MousePointerClick}
-                        label={ANALYTICS_TERMS.totalClicks}
+                        label={labels.totalClicks}
                         value={totals?.total_clicks || 0}
                         color="purple"
                       />
                       <StatCard
                         icon={Target}
-                        label={ANALYTICS_TERMS.uniqueClicker}
+                        label={labels.uniqueClicker}
                         value={totals?.unique_clicks || 0}
                         color="orange"
                       />
@@ -701,16 +740,16 @@ export function BusinessPageAnalyticsModal({
                   <StatCardGrid columns={2}>
                     <StatCard
                       icon={TrendingUp}
-                      label="گۆڕانەکان"
+                      label={labels.conversions}
                       value={totals.conversions}
                       color="slate"
                     />
                     <StatCard
                       icon={BarChart3}
-                      label="بەهای گۆڕان"
+                      label={labels.conversionValue}
                       value={totals.conversion_value}
                       color="slate"
-                      subtitle={`${conversionRate}% ڕێژەی گۆڕان`}
+                      subtitle={`${conversionRate}% ${labels.conversionRate}`}
                     />
                   </StatCardGrid>
                 )}
@@ -722,26 +761,28 @@ export function BusinessPageAnalyticsModal({
                       <div className="flex items-center gap-2 flex-wrap">
                         <Calendar className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                         <div className="flex gap-1.5 flex-wrap">
-                          {DATE_RANGE_OPTIONS.map((opt) => {
-                            const active = preset === opt.id;
+                          {DATE_RANGE_OPTIONS.map((id) => {
+                            const active = preset === id;
+                            const label = id === "24h" ? labels.last24h : id === "7d" ? labels.last7d : labels[id];
+                            const hint = id === "24h" ? labels.last24hHint : id === "7d" ? labels.last7dHint : labels[`${id}Hint`];
                             return (
                               <Tooltip
-                                key={opt.id}
-                                content={opt.hint}
+                                key={id}
+                                content={hint}
                                 side="top"
                               >
                                 <button
                                   type="button"
-                                  aria-label={opt.hint}
+                                  aria-label={hint}
                                   aria-pressed={active}
-                                  onClick={() => setPreset(opt.id)}
+                                  onClick={() => setPreset(id)}
                                   className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all cursor-pointer whitespace-nowrap ${
                                     active
                                       ? "theme-fill border-transparent text-[var(--theme-ink,#fff)] shadow-sm"
                                       : "bg-white dark:bg-[#161B22] border-slate-100 dark:border-white/8 text-slate-500 dark:text-gray-400 hover:border-slate-200 dark:hover:border-white/20"
                                   }`}
                                 >
-                                  {opt.label}
+                                  {label}
                                 </button>
                               </Tooltip>
                             );
@@ -753,7 +794,7 @@ export function BusinessPageAnalyticsModal({
                         <div className="mt-2.5 flex items-center gap-2">
                           <div className="flex-1 min-w-0">
                             <DateTimeInput
-                              label="لە بەرواری"
+                              label={labels.fromDate}
                               value={customFrom}
                               onChange={setCustomFrom}
                               dateOnly
@@ -766,7 +807,7 @@ export function BusinessPageAnalyticsModal({
                           </span>
                           <div className="flex-1 min-w-0">
                             <DateTimeInput
-                              label="بۆ بەرواری"
+                              label={labels.toDate}
                               value={customTo}
                               onChange={setCustomTo}
                               dateOnly
@@ -783,14 +824,13 @@ export function BusinessPageAnalyticsModal({
                         <Target className="h-3.5 w-3.5 text-[var(--theme-ink,#fff)]" />
                       </div>
                       <h3 className="text-sm font-semibold text-slate-700 dark:text-gray-200 font-kurdish">
-                        دوگمەکان ({filteredActions.length})
+                        {labels.buttons} ({filteredActions.length})
                       </h3>
                     </div>
 
                     {hasHistoricalActions && (
                       <p className="mb-3 rounded-xl border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-[11px] leading-5 text-amber-800 dark:border-amber-400/15 dark:bg-amber-400/8 dark:text-amber-200 font-kurdish">
-                        کۆی سەرەوە هەموو کلیکە تۆمارکراوەکان دەگرێتەوە؛ دوگمە
-                        سڕاوە یان گۆڕاوەکان لێرە وەک مێژوویی نیشان دەدرێن.
+                        {labels.historyHint}
                       </p>
                     )}
 
@@ -798,7 +838,7 @@ export function BusinessPageAnalyticsModal({
                       <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
                         <Eye className="h-10 w-10 text-slate-300 dark:text-gray-600" />
                         <p className="text-sm text-slate-400 dark:text-gray-500 font-kurdish">
-                          هێشتا هیچ داتایەک نییە
+                          {labels.noData}
                         </p>
                       </div>
                     ) : (
@@ -813,7 +853,7 @@ export function BusinessPageAnalyticsModal({
                           const isUnattributed =
                             action.recordState === "unattributed";
                           const displayLabel = isUnattributed
-                            ? "کلیکە دیارینەکراوەکان"
+                            ? labels.unattributedClicks
                             : action.label;
                           const isExpanded = expandedActionId === action.id;
                           return (
@@ -844,14 +884,14 @@ export function BusinessPageAnalyticsModal({
                                     <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
                                       <p className="truncate text-[10px] text-slate-400 dark:text-gray-500">
                                         {isUnattributed
-                                          ? "کردارێک کە بە دوگمەیەکی دیاریکراو نەبەستراوەتەوە"
+                                          ? labels.unattributedHint
                                           : rowCaption}
                                       </p>
                                       {(isHistorical || isUnattributed) && (
                                         <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300 font-kurdish">
                                           {isHistorical
-                                            ? "مێژوویی"
-                                            : "دیارینەکراو"}
+                                            ? labels.historical
+                                            : labels.unattributed}
                                         </span>
                                       )}
                                     </div>
@@ -861,7 +901,7 @@ export function BusinessPageAnalyticsModal({
                                       {formatNumber(action.totalClicks)}
                                     </p>
                                     <p className="text-[10px] text-slate-400 dark:text-gray-500">
-                                      کلیک
+                                      {labels.clicks}
                                     </p>
                                   </div>
                                   <div className="text-center">
@@ -869,7 +909,7 @@ export function BusinessPageAnalyticsModal({
                                       {formatNumber(action.uniqueClickers)}
                                     </p>
                                     <p className="text-[10px] text-slate-400 dark:text-gray-500">
-                                      تاک
+                                      {labels.unique}
                                     </p>
                                   </div>
                                   <div className="text-center">
@@ -902,7 +942,7 @@ export function BusinessPageAnalyticsModal({
                                         {formatNumber(action.conversions)}
                                       </p>
                                       <p className="text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
-                                        گۆڕانی ڕاستەقینە
+                                        {labels.actualConversions}
                                       </p>
                                     </div>
                                     <div>
@@ -916,12 +956,12 @@ export function BusinessPageAnalyticsModal({
                                         {formatNumber(action.conversionValue)}
                                       </p>
                                       <p className="text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
-                                        بەهای گۆڕان
+                                        {labels.conversionValue}
                                       </p>
                                     </div>
                                     {action.destination && (
                                       <Tooltip
-                                        content="کردنەوەی بەستەری مەبەست"
+                                        content={labels.openDestination}
                                         side="top"
                                         className="col-span-2 sm:col-span-1 min-w-0"
                                       >
@@ -949,9 +989,7 @@ export function BusinessPageAnalyticsModal({
                     )}
                     {filteredActions.length > 1 && (
                       <p className="mt-2 text-[10px] leading-5 text-slate-400 dark:text-gray-500 font-kurdish">
-                        ژمارەی «تاک» بۆ هەر دوگمەیەک بە جیاوازی هەژمار دەکرێت؛
-                        یەک کەس دەتوانێت زیاتر لە دوگمەیەک کلیک بکات، بۆیە ئەو
-                        ژمارانە کۆ ناکرێنەوە.
+                        {labels.uniqueHint}
                       </p>
                     )}
                   </div>
@@ -969,16 +1007,16 @@ export function BusinessPageAnalyticsModal({
             if (!isClearing) setIsClearModalOpen(false);
           }}
           onConfirm={handleClearAnalytics}
-          title="پاککردنەوەی داتاکانی ئامار"
-          confirmLabel="بەڵێ، پاکی بکەوە"
-          loadingLabel="پاکدەکرێتەوە..."
-          cancelLabel="هەڵوەشاندنەوە"
+          title={labels.clearTitle}
+          confirmLabel={labels.confirmClear}
+          loadingLabel={labels.clearing}
+          cancelLabel={labels.cancel}
+          closeLabel={labels.close}
           isDeleting={isClearing}
           zIndexClassName="z-[60]"
           message={
             <p>
-              دڵنیایت لە پاککردنەوەی هەموو داتاکانی بینین و کلیکی ئەم پەڕەیە؟
-              ئەم کردارە ناگەڕێتەوە.
+              {labels.clearQuestion}
             </p>
           }
         />

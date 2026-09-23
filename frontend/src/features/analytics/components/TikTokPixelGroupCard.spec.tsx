@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TikTokPixelGroupCard } from "./TikTokPixelGroupCard";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 const copyToClipboardMock = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 
@@ -44,6 +45,24 @@ describe("TikTokPixelGroupCard", () => {
     expect(deleteButton).toBeDisabled();
     fireEvent.click(deleteButton);
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("renders Business Pixel controls in Arabic when Arabic copy is supplied", () => {
+    render(
+      <TikTokPixelGroupCard
+        index={0}
+        config={{ id: "pixel-1", pixel_id: "C9ABC123456789", events_token: "" }}
+        testEndpoint="/api/analytics/v2/tiktok/test"
+        onUpdate={vi.fn()}
+        canDelete={false}
+        onDelete={vi.fn()}
+        copy={businessMessages.ar.TikTokPixel.group}
+      />,
+    );
+
+    expect(screen.getByText("مجموعة تيك توك #1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "يجب إبقاء مجموعة واحدة على الأقل" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "اختبار" })).toBeInTheDocument();
   });
 
   it("copies Pixel ID to clipboard", async () => {

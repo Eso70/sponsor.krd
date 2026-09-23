@@ -234,7 +234,8 @@ export const SerenityTemplate = memo(function SerenityTemplate({
                     link={link}
                     titleClassName="mb-0.5 block truncate font-kurdish text-base font-bold leading-tight"
                     titleStyle={{ color: textColor }}
-                    platformClassName="block truncate font-sans text-xs font-medium leading-tight"
+                    detailsClassName="flex min-w-0 items-baseline gap-1 leading-tight"
+                    platformClassName="min-w-0 truncate font-sans text-xs font-medium"
                     platformStyle={{ color: textSecondaryColor }}
                   />
 

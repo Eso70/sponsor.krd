@@ -7,6 +7,7 @@ import { getTemplateName } from "@/lib/templates/config";
 import type { LinktreeListItem } from "@linktree/types";
 import { ANALYTICS_TERMS } from "@/components/shared/analytics-terminology";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { KURDISH_LINKTREE_LIST_COPY, type LinktreeListCopy } from "@/features/link-editor/components/linktree-list-copy";
 
 const PILL_BASE =
   "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold leading-none";
@@ -57,6 +58,7 @@ export interface LinktreeMetaBadgesProps {
   className?: string;
   onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
   hideCampaignBadge?: boolean;
+  listCopy?: Partial<LinktreeListCopy>;
 }
 
 export interface LinktreeCampaignButtonProps {
@@ -64,6 +66,7 @@ export interface LinktreeCampaignButtonProps {
   isActive?: boolean;
   onToggle?: (id: string, isCampaignActive: boolean) => void;
   className?: string;
+  listCopy?: Partial<LinktreeListCopy>;
 }
 
 export const LinktreeCampaignButton = memo(function LinktreeCampaignButton({
@@ -71,14 +74,16 @@ export const LinktreeCampaignButton = memo(function LinktreeCampaignButton({
   isActive = false,
   onToggle,
   className = "",
+  listCopy,
 }: LinktreeCampaignButtonProps) {
+  const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
   if (!onToggle && !isActive) return null;
 
   const tooltipText = isActive
     ? onToggle
-      ? "کەمپەین چالاکە · کلیک بکە بۆ ناچالاککردن"
-      : "کەمپەین چالاکە"
-    : "کەمپەین ناچالاکە · کلیک بکە بۆ چالاککردن";
+      ? labels.campaignDisable
+      : labels.campaignActive
+    : labels.campaignInactive;
 
   const pillContent = (
     <span
@@ -99,7 +104,7 @@ export const LinktreeCampaignButton = memo(function LinktreeCampaignButton({
           isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-gray-600"
         }`}
       />
-      <span>{isActive ? "چالاک" : "کەمپەین"}</span>
+      <span>{isActive ? labels.active : labels.campaign}</span>
     </span>
   );
 
@@ -120,7 +125,7 @@ export const LinktreeCampaignButton = memo(function LinktreeCampaignButton({
           onToggle(id, !isActive);
         }}
         className="cursor-pointer"
-        aria-label={isActive ? "Campaign active" : "Campaign inactive"}
+        aria-label={listCopy ? tooltipText : isActive ? "Campaign active" : "Campaign inactive"}
       >
         {pillContent}
       </button>
@@ -152,7 +157,9 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
   className = "",
   onToggleCampaign,
   hideCampaignBadge = false,
+  listCopy,
 }: LinktreeMetaBadgesProps) {
+  const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
   const ageBadge = showAgeBadge && item.created_at ? getRecordAgeBadge(item.created_at) : null;
   const templateName = showTemplate ? getTemplateName(item.template_key) : null;
   const isInactive = item.status === "inactive";
@@ -174,7 +181,7 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       {item.is_default && (
-        <Tooltip content="پەیجی بنەڕەتی بزنسەکە" side="top">
+        <Tooltip content={labels.defaultPageHint} side="top">
           <span
             className={`${PILL_BASE} border-transparent cursor-default`}
             style={{
@@ -184,30 +191,30 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
             }}
           >
             <Star className="h-2.5 w-2.5" />
-            بنەڕەت
+            {labels.defaultPage}
           </span>
         </Tooltip>
       )}
 
       {ageBadge && (
         <LinktreePill
-          label={ageBadge.label}
-          title={ageBadge.title}
+          label={listCopy ? labels[`${ageBadge.tier}Age` as "newAge" | "growingAge" | "oldAge"] : ageBadge.label}
+          title={listCopy ? labels[`${ageBadge.tier}AgeHint` as "newAgeHint" | "growingAgeHint" | "oldAgeHint"] : ageBadge.title}
           className={ageBadge.className}
         />
       )}
       {isInactive && (
         <LinktreePill
-          label="ناچالاک"
-          title="پەڕەکە بۆ سەردانکەران بەردەست نییە"
+          label={labels.inactive}
+          title={labels.inactiveHint}
           className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
           icon={<CirclePause className="h-2.5 w-2.5" />}
         />
       )}
       {hasWhatsappModal && (
         <LinktreePill
-          label="واتساپ"
-          title="مۆداڵی واتساپ چالاکە لەم پەڕەیە"
+          label={labels.whatsapp}
+          title={labels.whatsappHint}
           className="border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300"
           icon={<MessageCircle className="h-2.5 w-2.5" />}
         />
@@ -215,17 +222,17 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
       {templateName && (
         <LinktreePill
           label={templateName}
-          title={`قالبی ${templateName}`}
+          title={`${labels.template} ${templateName}`}
           className="border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300"
         />
       )}
       {isArchived && (
-        <Tooltip content="ئەم پەیجە ئەرشیفکراوە" side="top">
+        <Tooltip content={labels.archivedHint} side="top">
           <span
             className={`${PILL_BASE} border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-300 cursor-default text-[9.5px] px-2 py-0.5`}
           >
             <Archive className="h-2.5 w-2.5" />
-            ئەرشیف
+            {labels.archived}
           </span>
         </Tooltip>
       )}
@@ -236,6 +243,7 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
           id={item.id}
           isActive={isCampaignActive}
           onToggle={onToggleCampaign}
+          listCopy={listCopy}
         />
       )}
     </div>

@@ -21,20 +21,8 @@ import {
   createLinktreeTemplatePreview,
   LINKTREE_TEMPLATE_PREVIEW_THEMES,
 } from "@/components/templates/preview-fixtures";
-import {
-  BUSINESS_LANDING_DECORATION_COLORS,
-  BUSINESS_LANDING_DECORATION_LABELS,
-  BUSINESS_LANDING_SECTION_IDS,
-} from "@/components/business/business-landing-sections";
-import { BusinessSectionDecorations } from "@/components/business/BusinessSectionDecorations";
-import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
-import { PublicSection } from "@/components/public/PublicSection";
-
-
 interface BusinessMobileShowcaseProps {
   accentColor: string;
-  title?: string;
-  description?: string;
 }
 
 type ShowcaseScreen = {
@@ -131,9 +119,6 @@ const ShowcasePhoneContent = memo(function ShowcasePhoneContent({
 
 export function BusinessMobileShowcase({
   accentColor,
-  title = "هەموو دیزاینەکان، لەسەر مۆبایل.",
-  description =
-    "قالبەکانی لینکتری بە شێوازی ڕاستەقینە و گونجاو بۆ شاشەی مۆبایل ببینە.",
 }: BusinessMobileShowcaseProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -159,24 +144,7 @@ export function BusinessMobileShowcase({
   }, [screens.length]);
 
   return (
-    <PublicSection
-      id={BUSINESS_LANDING_SECTION_IDS.mobileShowcase}
-      labelledBy="business-mobile-showcase-title"
-      className="pb-16 sm:pb-20 lg:pb-24"
-      decorations={
-        <BusinessSectionDecorations
-          colors={BUSINESS_LANDING_DECORATION_COLORS.mobileShowcase}
-          labels={BUSINESS_LANDING_DECORATION_LABELS.mobileShowcase}
-          variant={5}
-        />
-      }
-    >
-        <PublicSectionHeading
-          id="business-mobile-showcase-title"
-          title={title}
-          description={description}
-        />
-
+    <div className="px-5 pb-16 sm:px-8 sm:pb-20 lg:pb-24">
         <div
           role="group"
           aria-label="Mobile template carousel"
@@ -254,6 +222,6 @@ export function BusinessMobileShowcase({
             {screens[activeIndex]?.label}
           </p>
         </div>
-    </PublicSection>
+    </div>
   );
 }

@@ -37,6 +37,15 @@ export function appendMessageToUrl(
   try {
     const urlObj = new URL(url);
 
+    // A private Telegram channel invite is not a chat deep link. Appending a
+    // `start` parameter can alter the invite destination; keep it untouched.
+    if (
+      platform === "telegram" &&
+      (/^\/\+[^/]+\/?$/.test(urlObj.pathname) || /^\/joinchat\/[^/]+\/?$/i.test(urlObj.pathname))
+    ) {
+      return url;
+    }
+
     // URL.searchParams.set() automatically encodes the value, so pass raw message
     if (platform === "whatsapp") {
       // WhatsApp: https://wa.me/9647502471667?text=message
@@ -66,4 +75,3 @@ export function appendMessageToUrl(
     return url;
   }
 }
-

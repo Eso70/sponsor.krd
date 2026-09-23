@@ -24,6 +24,7 @@ export interface ColorGradientModalProps {
   title?: string;
   subtitle?: string;
   allowGradient?: boolean;
+  copy?: Partial<Record<"title" | "subtitle" | "unsupported" | "picked" | "pickFailed" | "solid" | "gradient" | "first" | "second" | "color" | "eyedropper" | "pick" | "direction" | "leftRight" | "rightLeft" | "topBottom" | "bottomTop" | "diagonal" | "diagonalReverse" | "topRight" | "topLeft" | "radial" | "quickColors" | "pickedColors" | "apply", string>>;
 }
 
 declare global {
@@ -188,7 +189,10 @@ export function ColorGradientModal({
   title = "ڕەنگی ئارەزوومەندانەیە",
   subtitle = "ڕەنگی تاک یان گرادیێنت دروست بکە",
   allowGradient = true,
+  copy,
 }: ColorGradientModalProps) {
+  title = copy?.title ?? title;
+  subtitle = copy?.subtitle ?? subtitle;
   const [mounted, setMounted] = useState(false);
   const parsedInitial = useMemo(
     () => parseColorValue(value, solidFallback, gradientFallback),
@@ -259,7 +263,7 @@ export function ColorGradientModal({
     setPickerMessage(null);
 
     if (typeof window === "undefined" || typeof window.EyeDropper !== "function") {
-      setPickerMessage("ئەم وێبگەڕە پشتگیری پێنووسی ڕەنگ ناکات.");
+      setPickerMessage(copy?.unsupported ?? "ئەم وێبگەڕە پشتگیری پێنووسی ڕەنگ ناکات.");
       return;
     }
 
@@ -273,11 +277,11 @@ export function ColorGradientModal({
         pickedColor,
         ...previous.filter((color) => color !== pickedColor),
       ].slice(0, 8));
-      setPickerMessage("ڕەنگەکە وەرگیرا.");
+      setPickerMessage(copy?.picked ?? "ڕەنگەکە وەرگیرا.");
     } catch (error) {
       const name = error instanceof DOMException ? error.name : "";
       if (name !== "AbortError") {
-        setPickerMessage("نەتوانرا ڕەنگەکە وەربگیرێت. تکایە دووبارە هەوڵبدەوە.");
+        setPickerMessage(copy?.pickFailed ?? "نەتوانرا ڕەنگەکە وەربگیرێت. تکایە دووبارە هەوڵبدەوە.");
       }
     } finally {
       setIsPickingColor(false);
@@ -352,7 +356,7 @@ export function ColorGradientModal({
               }}
               className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${!isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
             >
-              ڕەنگی تاک
+              {copy?.solid ?? "ڕەنگی تاک"}
             </button>
             <button
               type="button"
@@ -362,7 +366,7 @@ export function ColorGradientModal({
               }}
               className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
             >
-              گرادیێنت
+              {copy?.gradient ?? "گرادیێنت"}
             </button>
           </div>}
 
@@ -374,8 +378,8 @@ export function ColorGradientModal({
           {isGradient && (
             <div className="flex rounded-lg bg-gray-50 border border-gray-200 p-0.5 gap-0.5">
               {([
-                ["from", "ڕەنگی یەکەم"],
-                ["to", "ڕەنگی دووەم"],
+                ["from", copy?.first ?? "ڕەنگی یەکەم"],
+                ["to", copy?.second ?? "ڕەنگی دووەم"],
               ] as const).map(([id, label]) => (
                 <button
                   key={id}
@@ -404,7 +408,7 @@ export function ColorGradientModal({
 
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-600">
-              {isGradient ? (activeColor === "from" ? "ڕەنگی یەکەم" : "ڕەنگی دووەم") : "ڕەنگ"}
+              {isGradient ? (activeColor === "from" ? copy?.first ?? "ڕەنگی یەکەم" : copy?.second ?? "ڕەنگی دووەم") : copy?.color ?? "ڕەنگ"}
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
               <span
@@ -437,16 +441,16 @@ export function ColorGradientModal({
                 autoCapitalize="none"
                 autoCorrect="off"
               />
-              <Tooltip content="پێنووسی ڕەنگ" side="top">
+                  <Tooltip content={copy?.eyedropper ?? "پێنووسی ڕەنگ"} side="top">
                 <button
                   type="button"
                   onClick={pickScreenColor}
                   disabled={isPickingColor}
                   className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-70 cursor-pointer"
-                  aria-label="پێنووسی ڕەنگ"
+                      aria-label={copy?.eyedropper ?? "پێنووسی ڕەنگ"}
                 >
                   <Pipette className="h-4 w-4" />
-                  <span className="hidden sm:inline">{isPickingColor ? "..." : "پێنووس"}</span>
+                      <span className="hidden sm:inline">{isPickingColor ? "..." : copy?.pick ?? "پێنووس"}</span>
                 </button>
               </Tooltip>
             </div>
@@ -531,18 +535,18 @@ export function ColorGradientModal({
 
           {isGradient && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">ئاراستەی گرادیێنت</label>
+              <label className="text-xs font-medium text-gray-600">{copy?.direction ?? "ئاراستەی گرادیێنت"}</label>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {[
-                  { id: "to-r", label: "→", title: "چەپ بۆ ڕاست" },
-                  { id: "to-l", label: "←", title: "ڕاست بۆ چەپ" },
-                  { id: "to-b", label: "↓", title: "سەرەوە بۆ خوارەوە" },
-                  { id: "to-t", label: "↑", title: "خوارەوە بۆ سەرەوە" },
-                  { id: "to-br", label: "↘", title: "لاتەنیشت" },
-                  { id: "to-bl", label: "↙", title: "لاتەنیشت پێچەوانە" },
-                  { id: "to-tr", label: "↗", title: "بۆ سەرەوەی ڕاست" },
-                  { id: "to-tl", label: "↖", title: "بۆ سەرەوەی چەپ" },
-                  { id: "radial", label: "◎", title: "بازنەیی" },
+                  { id: "to-r", label: "→", title: copy?.leftRight ?? "چەپ بۆ ڕاست" },
+                  { id: "to-l", label: "←", title: copy?.rightLeft ?? "ڕاست بۆ چەپ" },
+                  { id: "to-b", label: "↓", title: copy?.topBottom ?? "سەرەوە بۆ خوارەوە" },
+                  { id: "to-t", label: "↑", title: copy?.bottomTop ?? "خوارەوە بۆ سەرەوە" },
+                  { id: "to-br", label: "↘", title: copy?.diagonal ?? "لاتەنیشت" },
+                  { id: "to-bl", label: "↙", title: copy?.diagonalReverse ?? "لاتەنیشت پێچەوانە" },
+                  { id: "to-tr", label: "↗", title: copy?.topRight ?? "بۆ سەرەوەی ڕاست" },
+                  { id: "to-tl", label: "↖", title: copy?.topLeft ?? "بۆ سەرەوەی چەپ" },
+                  { id: "radial", label: "◎", title: copy?.radial ?? "بازنەیی" },
                 ].map((item) => (
                   <Tooltip key={item.id} content={item.title} side="top">
                     <button
@@ -563,7 +567,7 @@ export function ColorGradientModal({
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-600">ڕەنگی ئامادە</label>
+              <label className="text-xs font-medium text-gray-600">{copy?.quickColors ?? "ڕەنگی ئامادە"}</label>
             <div className="flex flex-wrap gap-1.5">
               {QUICK_COLORS.map((color) => (
                 <button
@@ -587,7 +591,7 @@ export function ColorGradientModal({
 
           {pickedColors.length > 0 && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">ڕەنگە وەرگیراوەکان</label>
+              <label className="text-xs font-medium text-gray-600">{copy?.pickedColors ?? "ڕەنگە وەرگیراوەکان"}</label>
               <div className="flex flex-wrap gap-1.5">
                 {pickedColors.map((color) => (
                   <Tooltip key={color} content={color} side="top">
@@ -619,7 +623,7 @@ export function ColorGradientModal({
             onClick={applyColor}
             className="theme-fill w-full rounded-xl py-3.5 sm:py-2.5 text-sm font-semibold text-[var(--theme-ink)] shadow-lg hover:shadow-xl hover:brightness-95 transition-all duration-300"
           >
-            جێبەجێکردن
+            {copy?.apply ?? "جێبەجێکردن"}
           </button>
         </div>
       </div>

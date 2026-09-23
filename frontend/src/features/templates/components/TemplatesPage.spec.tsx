@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TemplatesPage } from "./TemplatesPage";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 const { mockUseTemplateAccess } = vi.hoisted(() => ({
   mockUseTemplateAccess: vi.fn(),
@@ -65,6 +66,14 @@ describe("TemplatesPage", () => {
       isLoading: false,
       isTemplateAllowed: () => true,
     });
+  });
+
+  it("uses Arabic copy for the Business catalogue", () => {
+    render(<TemplatesPage copy={businessMessages.ar.TemplatesPage} />);
+
+    expect(screen.getByRole("heading", { name: "القوالب" })).toBeInTheDocument();
+    expect(screen.getByText(/إجمالي القوالب/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "بحث (Ctrl+K)" })).toBeInTheDocument();
   });
 
   it("shows the complete template-page skeleton while access is loading", () => {

@@ -163,7 +163,8 @@ export const SpectrumTemplate = memo(function SpectrumTemplate({
                       className="min-w-0 text-left"
                       style={labelStyle}
                       titleClassName="block truncate text-base font-semibold leading-tight"
-                      platformClassName="mt-0.5 block truncate font-sans text-xs leading-tight opacity-70"
+                      detailsClassName="mt-0.5 flex min-w-0 items-baseline gap-1 leading-tight"
+                      platformClassName="min-w-0 truncate font-sans text-xs opacity-70"
                     />
                   </div>
                 </TemplateActionButton>

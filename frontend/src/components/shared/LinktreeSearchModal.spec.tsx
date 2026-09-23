@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LinktreeSearchModal } from "./LinktreeSearchModal";
 import type { LinktreeListItem } from "@linktree/types";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -58,6 +59,24 @@ describe("LinktreeSearchModal", () => {
     expect(
       screen.getByText("گەڕان بۆ پەیجەکان بکە....."),
     ).toBeInTheDocument();
+  });
+
+  it("uses Arabic Business copy when supplied", () => {
+    render(
+      <LinktreeSearchModal
+        isOpen
+        onClose={vi.fn()}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        items={sampleItems}
+        onSelect={vi.fn()}
+        copy={businessMessages.ar.LinktreeSearch}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("اكتب اسم الصفحة للبحث...")).toBeInTheDocument();
+    expect(screen.getByText("ابحث عن صفحاتك")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إغلاق" })).toBeInTheDocument();
   });
 
   it("scopes the platform search portal to the continuous platform gradient", () => {

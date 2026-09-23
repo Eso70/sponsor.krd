@@ -2,6 +2,7 @@
 
 import {
   BusinessPageAnalyticsModal,
+  type PageAnalyticsCopy,
 } from "./BusinessPageAnalyticsModal";
 
 /**
@@ -16,12 +17,14 @@ export function BusinessLinktreeAnalyticsModal({
   linktreeId,
   linktreeName,
   canClearAnalytics = true,
+  copy,
 }: {
   isOpen: boolean;
   onClose: () => void;
   linktreeId: string;
   linktreeName: string;
   canClearAnalytics?: boolean;
+  copy?: Partial<PageAnalyticsCopy>;
 }) {
   return (
     <BusinessPageAnalyticsModal
@@ -31,6 +34,7 @@ export function BusinessLinktreeAnalyticsModal({
       pageName={linktreeName}
       pageKind="linktree"
       canClearAnalytics={canClearAnalytics}
+      copy={copy}
     />
   );
 }

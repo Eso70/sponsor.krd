@@ -2,6 +2,8 @@ import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { ComponentProps, ReactNode } from "react";
 import { BusinessDashboard } from "@/components/business/BusinessDashboard";
+import { BusinessLocaleProvider } from "@/features/business/i18n/BusinessLocaleProvider";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
 import { BusinessImpersonationBanner } from "@/components/business/BusinessImpersonationBanner";
 import { extractSubdomain } from "@/lib/subdomain-utils";
 import type { EffectiveAccessManifest } from "@linktree/types";
@@ -41,6 +43,8 @@ interface BusinessProfile {
   default_whatsapp_enabled?: boolean;
   onboarding_required?: boolean;
   onboarding_step?: number;
+  preferred_locale?: BusinessLocale;
+  can_change_locale?: boolean;
 }
 
 interface SessionImpersonation {
@@ -225,28 +229,33 @@ export default async function BusinessDashboardLayout({
           platformAdminName={impersonation.platform_admin_name}
         />
       )}
-      <BusinessDashboard
-        initialLinktrees={initialLinktrees}
-        currentUsername={currentUser.username}
-        businessName={currentUser.name}
-        businessPhone={currentUser.phone}
-        businessLogo={currentUser.logo}
-        businessFavicon={currentUser.favicon}
-        websiteColor={currentUser.website_color}
-        businessDefaults={{
-          default_footer_text: currentUser.default_footer_text,
-          default_footer_phone: currentUser.default_footer_phone,
-          default_template: currentUser.default_template,
-          default_background_color: currentUser.default_background_color,
-          default_footer_hidden: currentUser.default_footer_hidden,
-          default_whatsapp_enabled: currentUser.default_whatsapp_enabled,
-          default_avatar: currentUser.default_avatar,
-        }}
-        effectiveAccess={effectiveAccess}
-        onboardingRequired={currentUser.onboarding_required}
-        onboardingStep={currentUser.onboarding_step}
-      />
-      {children}
+      <BusinessLocaleProvider
+        initialLocale={currentUser.preferred_locale === "ar" ? "ar" : "ckb"}
+        canChangeLocale={currentUser.can_change_locale === true}
+      >
+        <BusinessDashboard
+          initialLinktrees={initialLinktrees}
+          currentUsername={currentUser.username}
+          businessName={currentUser.name}
+          businessPhone={currentUser.phone}
+          businessLogo={currentUser.logo}
+          businessFavicon={currentUser.favicon}
+          websiteColor={currentUser.website_color}
+          businessDefaults={{
+            default_footer_text: currentUser.default_footer_text,
+            default_footer_phone: currentUser.default_footer_phone,
+            default_template: currentUser.default_template,
+            default_background_color: currentUser.default_background_color,
+            default_footer_hidden: currentUser.default_footer_hidden,
+            default_whatsapp_enabled: currentUser.default_whatsapp_enabled,
+            default_avatar: currentUser.default_avatar,
+          }}
+          effectiveAccess={effectiveAccess}
+          onboardingRequired={currentUser.onboarding_required}
+          onboardingStep={currentUser.onboarding_step}
+        />
+        {children}
+      </BusinessLocaleProvider>
     </>
   );
 }

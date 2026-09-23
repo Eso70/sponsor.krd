@@ -1,4 +1,5 @@
 import { COUNTRIES_SORTED } from "./modal-constants";
+import { normalizeTelegramLink } from "./telegram-link";
 
 export const parseGpsCoordinates = (input: string): { lat: string; lng: string } | null => {
   if (!input || typeof input !== "string") return null;
@@ -284,7 +285,9 @@ export const extractValueFromUrl = (platform: string, url: string, metadata?: Re
         // Preserve full URL to support all link types (posts, videos, stories, etc.)
         value = url;
       } else if (platform === "telegram") {
-        value = pathParts[pathParts.length - 1] || "";
+        // Invite URLs contain a significant leading `+` and may carry a
+        // query string. Preserve the full destination for a stable edit/save.
+        value = url;
       } else if (platform === "discord") {
         // Preserve the full URL for all Discord link types:
         // user profiles (discord.com/users/ID), server invites (discord.gg/CODE,
@@ -392,17 +395,7 @@ export const generateUrl = (platform: string, input: string, countryCode?: strin
     }
     
     case "telegram": {
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-        return trimmed;
-      }
-      if (
-        trimmed.startsWith("t.me/") ||
-        trimmed.startsWith("telegram.me/")
-      ) {
-        return `https://${trimmed}`;
-      }
-      const telegramUsername = trimmed.replace(/^@/, "").replace(/[^a-zA-Z0-9_]/g, "");
-      return telegramUsername ? `https://t.me/${telegramUsername}` : "";
+      return normalizeTelegramLink(trimmed) ?? "";
     }
     
     case "instagram": {

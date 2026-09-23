@@ -192,7 +192,8 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
                       link={link}
                       className="min-w-0 text-left"
                       titleClassName="block truncate text-sm font-semibold leading-tight sm:text-base"
-                      platformClassName="mt-0.5 block truncate font-sans text-xs leading-tight opacity-70"
+                      detailsClassName="mt-0.5 flex min-w-0 items-baseline gap-1 leading-tight"
+                      platformClassName="min-w-0 truncate font-sans text-xs opacity-70"
                     />
                   </div>
                 </TemplateActionButton>

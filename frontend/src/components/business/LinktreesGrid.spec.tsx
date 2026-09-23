@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LinktreePill } from "@/components/business/LinktreeMeta";
 import { LinktreesGrid } from "@/components/business/LinktreesGrid";
+import { businessMessages } from "@/features/business/i18n/messages";
 import type {
   CampaignRevenueInput,
   CampaignRevenueRecord,
@@ -89,6 +90,20 @@ beforeEach(() => {
 });
 
 describe("LinktreesGrid shared public-page presentation", () => {
+  it("uses Arabic Business labels when supplied while leaving shared defaults untouched", () => {
+    render(
+      <LinktreesGrid
+        data={[item]}
+        showLinktreeMeta
+        listCopy={businessMessages.ar.LinktreeList}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("تاريخ الإنشاء")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تعديل" })).toBeInTheDocument();
+  });
+
   it("uses custom metadata and traffic wording without changing the card layout", () => {
     const DomainMeta = () => <LinktreePill label="بڵاوکراوە" />;
 
@@ -152,6 +167,25 @@ describe("LinktreesGrid shared public-page presentation", () => {
     expect(screen.queryByRole("button", { name: "قازانج" })).toBeNull();
     expect(screen.getByRole("button", { name: "بینین" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "سڕینەوە" })).toBeInTheDocument();
+  });
+
+  it("opens the campaign profit dialog in Arabic for Business", async () => {
+    render(
+      <LinktreesGrid
+        data={[item]}
+        listCopy={businessMessages.ar.LinktreeList}
+        profitCopy={businessMessages.ar.CampaignProfit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "المزيد من الإجراءات" }));
+    fireEvent.click(screen.getByRole("button", { name: "الأرباح" }));
+
+    expect(screen.getByRole("dialog", { name: "أرباح الحملة" })).toBeInTheDocument();
+    expect(screen.getByLabelText("سعر الإعلان بالدينار العراقي")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("جارٍ تحميل السجلات...")).not.toBeInTheDocument(),
+    );
   });
 
   it("calculates and persists IQD campaign revenue through the shared API", async () => {

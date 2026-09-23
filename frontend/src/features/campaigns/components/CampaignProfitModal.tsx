@@ -36,7 +36,43 @@ interface CampaignProfitModalProps {
   apiBasePath: string;
   pageName: string;
   sponsorKrdTheme?: boolean;
+  copy?: Partial<CampaignProfitCopy>;
 }
+
+export interface CampaignProfitCopy {
+  loadFailed: string; saved: string; saveFailed: string; deleted: string; deleteFailed: string;
+  title: string; description: string; saveEdit: string; saveAnother: string; close: string;
+  editing: string; cancelEdit: string; priceAndDuration: string; adPrice: string;
+  adPriceIqd: string; daysCount: string; campaignDays: string; day: string;
+  startDate: string; endDate: string; dateHint: string; spendAndRate: string;
+  spend: string; spendUsd: string; exchangeRate: string; rateIqd: string;
+  convertedSpend: string; netRevenue: string; savedRecords: string; record: string;
+  totalRevenue: string; loading: string; empty: string; editRecord: string; deleteRecord: string;
+}
+
+const KURDISH_COPY: CampaignProfitCopy = {
+  loadFailed: "بارکردنی تۆمارەکانی داهات سەرکەوتوو نەبوو",
+  saved: "تۆماری داهات پاشەکەوت کرا",
+  saveFailed: "پاشەکەوتکردنی تۆماری داهات سەرکەوتوو نەبوو",
+  deleted: "تۆماری داهات سڕایەوە",
+  deleteFailed: "سڕینەوەی تۆماری داهات سەرکەوتوو نەبوو",
+  title: "داهاتی کەمپەین", description: "هەژمارکردنی داهاتی",
+  saveEdit: "پاشەکەوتکردنی دەستکاری", saveAnother: "پاشەکەوتکردن و زیادکردنی دانەیەکی تر",
+  close: "داخستن", editing: "تۆمارێکی پێشوو دەستکاری دەکەیت",
+  cancelEdit: "هەڵوەشاندنەوە", priceAndDuration: "نرخ و ماوەی ڕیکلام",
+  adPrice: "نرخی ڕیکلام", adPriceIqd: "نرخی ڕیکلام بە دیناری عێراقی",
+  daysCount: "ژمارەی ڕۆژەکان", campaignDays: "ژمارەی ڕۆژەکانی کەمپەین",
+  day: "ڕۆژ", startDate: "بەرواری دەستپێک", endDate: "بەرواری کۆتایی",
+  dateHint: "گۆڕینی ژمارەی ڕۆژەکان بەرواری کۆتایی خۆکارانە نوێ دەکاتەوە؛ بەروارەکانیش دەتوانیت بە دەستی بگۆڕیت",
+  spendAndRate: "خەرجی کەمپەین و نرخی دۆلار", spend: "خەرجی کەمپەین",
+  spendUsd: "خەرجی کەمپەین بە دۆلار", exchangeRate: "نرخی گۆڕینەوە",
+  rateIqd: "نرخی گۆڕینەوەی یەک دۆلار بە دینار",
+  convertedSpend: "خەرجی گۆڕدراو", netRevenue: "داهاتی پاک",
+  savedRecords: "تۆمارە پاشەکەوتکراوەکان", record: "تۆمار",
+  totalRevenue: "Total revenue", loading: "تۆمارەکان بار دەکرێن...",
+  empty: "هێشتا هیچ داهاتێک پاشەکەوت نەکراوە",
+  editRecord: "دەستکاریکردنی تۆماری داهات", deleteRecord: "سڕینەوەی تۆماری داهات",
+};
 
 function formatDateOnly(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -86,7 +122,9 @@ export function CampaignProfitModal({
   apiBasePath,
   pageName,
   sponsorKrdTheme = false,
+  copy,
 }: CampaignProfitModalProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const today = formatDateOnly(new Date());
   const [advertisementPriceIqd, setAdvertisementPriceIqd] = useState(0);
   const [durationDays, setDurationDays] = useState(0);
@@ -112,13 +150,13 @@ export function CampaignProfitModal({
       .then(setRecords)
       .catch((error: unknown) => {
         if (error instanceof Error && error.name === "AbortError") return;
-        toast.error("بارکردنی تۆمارەکانی داهات سەرکەوتوو نەبوو");
+        toast.error(labels.loadFailed);
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [apiBasePath, isOpen, linktreeId]);
+  }, [apiBasePath, isOpen, linktreeId, labels.loadFailed]);
 
   const campaignSpendIqd = campaignSpendUsd * usdToIqdRate;
   const netRevenueIqd = advertisementPriceIqd - campaignSpendIqd;
@@ -195,9 +233,9 @@ export function CampaignProfitModal({
         setRecords((current) => [...current, created]);
       }
       resetForm();
-      toast.success("تۆماری داهات پاشەکەوت کرا");
+      toast.success(labels.saved);
     } catch {
-      toast.error("پاشەکەوتکردنی تۆماری داهات سەرکەوتوو نەبوو");
+      toast.error(labels.saveFailed);
     } finally {
       setIsSaving(false);
     }
@@ -212,9 +250,9 @@ export function CampaignProfitModal({
         current.filter((record) => record.id !== recordId),
       );
       if (editingRecordId === recordId) resetForm();
-      toast.success("تۆماری داهات سڕایەوە");
+      toast.success(labels.deleted);
     } catch {
-      toast.error("سڕینەوەی تۆماری داهات سەرکەوتوو نەبوو");
+      toast.error(labels.deleteFailed);
     } finally {
       setDeletingRecordId(null);
     }
@@ -235,8 +273,8 @@ export function CampaignProfitModal({
     <ManagementModal
       isOpen={isOpen}
       onClose={onClose}
-      title="داهاتی کەمپەین"
-      description={`هەژمارکردنی داهاتی ${pageName}`}
+      title={labels.title}
+      description={`${labels.description} ${pageName}`}
       sponsorKrdTheme={sponsorKrdTheme}
       wide
       busy={isSaving || deletingRecordId !== null}
@@ -244,12 +282,12 @@ export function CampaignProfitModal({
         <ModalFooterActions
           submitLabel={
             editingRecordId
-              ? "پاشەکەوتکردنی دەستکاری"
-              : "پاشەکەوتکردن و زیادکردنی دانەیەکی تر"
+              ? labels.saveEdit
+              : labels.saveAnother
           }
           submitDisabled={!canSave}
           isSubmitting={isSaving}
-          cancelLabel="داخستن"
+          cancelLabel={labels.close}
           onCancel={onClose}
           onSubmit={() => void saveRecord()}
         />
@@ -258,13 +296,13 @@ export function CampaignProfitModal({
       <div className="space-y-5" dir="rtl">
         {editingRecordId ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs font-semibold text-amber-800 dark:text-amber-300">
-            <span>تۆمارێکی پێشوو دەستکاری دەکەیت</span>
+            <span>{labels.editing}</span>
             <button
               type="button"
               onClick={resetForm}
               className="shrink-0 rounded-lg px-2.5 py-1.5 font-bold transition hover:bg-amber-500/15"
             >
-              هەڵوەشاندنەوە
+              {labels.cancelEdit}
             </button>
           </div>
         ) : null}
@@ -272,12 +310,12 @@ export function CampaignProfitModal({
           <div className="mb-4 flex items-center gap-2">
             <ReceiptText className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">
-              نرخ و ماوەی ڕیکلام
+              {labels.priceAndDuration}
             </h3>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <EditorField label="نرخی ڕیکلام">
+            <EditorField label={labels.adPrice}>
               <div className="relative" dir="ltr">
                 <NumberInput
                   key={`advertisement-price-${formRevision}`}
@@ -287,7 +325,7 @@ export function CampaignProfitModal({
                   step={1}
                   hideSteppers
                   clearOnFocus
-                  aria-label="نرخی ڕیکلام بە دیناری عێراقی"
+                  aria-label={labels.adPriceIqd}
                   className={modalInputClass(false, "pr-14")}
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold text-slate-400">
@@ -296,7 +334,7 @@ export function CampaignProfitModal({
               </div>
             </EditorField>
 
-            <EditorField label="ژمارەی ڕۆژەکان">
+            <EditorField label={labels.daysCount}>
               <div className="relative" dir="ltr">
                 <NumberInput
                   key={`duration-${formRevision}`}
@@ -306,25 +344,25 @@ export function CampaignProfitModal({
                   step={1}
                   hideSteppers
                   clearOnFocus
-                  aria-label="ژمارەی ڕۆژەکانی کەمپەین"
+                  aria-label={labels.campaignDays}
                   className={modalInputClass(false, "pr-12")}
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold text-slate-400">
-                  ڕۆژ
+                  {labels.day}
                 </span>
               </div>
             </EditorField>
 
             <DateInput
               key={`start-${startDate}`}
-              label="بەرواری دەستپێک"
+              label={labels.startDate}
               value={startDate}
               onChange={updateStartDate}
               required
             />
             <DateInput
               key={`end-${endDate}`}
-              label="بەرواری کۆتایی"
+              label={labels.endDate}
               value={endDate}
               min={startDate}
               onChange={updateEndDate}
@@ -334,8 +372,7 @@ export function CampaignProfitModal({
 
           <p className="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
             <CalendarDays className="h-3.5 w-3.5" />
-            گۆڕینی ژمارەی ڕۆژەکان بەرواری کۆتایی خۆکارانە نوێ دەکاتەوە؛
-            بەروارەکانیش دەتوانیت بە دەستی بگۆڕیت
+            {labels.dateHint}
           </p>
         </section>
 
@@ -343,12 +380,12 @@ export function CampaignProfitModal({
           <div className="mb-4 flex items-center gap-2">
             <CircleDollarSign className="h-4 w-4 text-sky-500" />
             <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">
-              خەرجی کەمپەین و نرخی دۆلار
+              {labels.spendAndRate}
             </h3>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <EditorField label="خەرجی کەمپەین">
+            <EditorField label={labels.spend}>
               <div className="relative" dir="ltr">
                 <NumberInput
                   key={`campaign-spend-${formRevision}`}
@@ -358,7 +395,7 @@ export function CampaignProfitModal({
                   step={0.01}
                   hideSteppers
                   clearOnFocus
-                  aria-label="خەرجی کەمپەین بە دۆلار"
+                  aria-label={labels.spendUsd}
                   className={modalInputClass(false, "pr-14")}
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold text-slate-400">
@@ -367,7 +404,7 @@ export function CampaignProfitModal({
               </div>
             </EditorField>
 
-            <EditorField label="نرخی گۆڕینەوە" hint="1 USD">
+            <EditorField label={labels.exchangeRate} hint="1 USD">
               <div className="relative" dir="ltr">
                 <NumberInput
                   key={`exchange-rate-${formRevision}`}
@@ -377,7 +414,7 @@ export function CampaignProfitModal({
                   step={1}
                   hideSteppers
                   clearOnFocus
-                  aria-label="نرخی گۆڕینەوەی یەک دۆلار بە دینار"
+                  aria-label={labels.rateIqd}
                   className={modalInputClass(false, "pr-14")}
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold text-slate-400">
@@ -392,7 +429,7 @@ export function CampaignProfitModal({
           <div className="grid gap-px bg-slate-200 dark:bg-white/10 sm:grid-cols-3">
             <div className="bg-white p-4 dark:bg-[#1c222b]">
               <p className="text-[11px] font-semibold text-slate-400">
-                نرخی ڕیکلام
+                {labels.adPrice}
               </p>
               <bdi className="mt-1 block text-base font-black text-slate-700 dark:text-slate-200">
                 {formatIqd(advertisementPriceIqd)}
@@ -401,7 +438,7 @@ export function CampaignProfitModal({
             <div className="bg-white p-4 dark:bg-[#1c222b]">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
                 <RefreshCw className="h-3 w-3" />
-                خەرجی گۆڕدراو
+                {labels.convertedSpend}
               </p>
               <bdi
                 data-testid="campaign-spend-iqd"
@@ -413,7 +450,7 @@ export function CampaignProfitModal({
             <div className="bg-emerald-500/10 p-4 dark:bg-emerald-500/10">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                 <HandCoins className="h-3.5 w-3.5" />
-                داهاتی پاک
+                {labels.netRevenue}
               </p>
               <bdi
                 data-testid="net-revenue-iqd"
@@ -436,15 +473,15 @@ export function CampaignProfitModal({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">
-                تۆمارە پاشەکەوتکراوەکان
+                {labels.savedRecords}
               </h3>
               <p className="mt-1 text-[11px] text-slate-400">
-                {records.length.toLocaleString("en-US")} تۆمار
+                {records.length.toLocaleString("en-US")} {labels.record}
               </p>
             </div>
             <div className="text-left" dir="ltr">
               <p className="text-[10px] font-semibold text-slate-400">
-                Total revenue
+                {labels.totalRevenue}
               </p>
               <bdi
                 data-testid="total-revenue-iqd"
@@ -457,11 +494,11 @@ export function CampaignProfitModal({
 
           {isLoading ? (
             <p className="mt-4 rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-xs text-slate-400 dark:border-white/10">
-              تۆمارەکان بار دەکرێن...
+              {labels.loading}
             </p>
           ) : records.length === 0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-xs text-slate-400 dark:border-white/10">
-              هێشتا هیچ داهاتێک پاشەکەوت نەکراوە
+              {labels.empty}
             </p>
           ) : (
             <div className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 dark:divide-white/5 dark:border-white/10">
@@ -484,14 +521,14 @@ export function CampaignProfitModal({
                     {formatIqd(record.netRevenueIqd)}
                   </bdi>
                   <IconActionButton
-                    label="دەستکاریکردنی تۆماری داهات"
+                    label={labels.editRecord}
                     onClick={() => editRecord(record)}
                     disabled={deletingRecordId !== null || isSaving}
                   >
                     <Pencil className="h-4 w-4" />
                   </IconActionButton>
                   <IconActionButton
-                    label="سڕینەوەی تۆماری داهات"
+                    label={labels.deleteRecord}
                     tone="danger"
                     disabled={deletingRecordId !== null || isSaving}
                     onClick={() => void deleteRecord(record.id)}

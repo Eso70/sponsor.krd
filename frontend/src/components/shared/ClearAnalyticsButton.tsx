@@ -7,16 +7,18 @@ interface ClearAnalyticsButtonProps {
   disabled?: boolean;
   hasData: boolean;
   onClick: () => void;
+  labels?: { clear: string; noData: string };
 }
 
 export function ClearAnalyticsButton({
   disabled = false,
   hasData,
   onClick,
+  labels,
 }: ClearAnalyticsButtonProps) {
   const label = hasData
-    ? "پاککردنەوەی هەموو داتاکانی بینین و کلیک"
-    : "هیچ داتایەک نییە";
+    ? (labels?.clear ?? "پاککردنەوەی هەموو داتاکانی بینین و کلیک")
+    : (labels?.noData ?? "هیچ داتایەک نییە");
 
   return (
     <Tooltip content={label} side="bottom">

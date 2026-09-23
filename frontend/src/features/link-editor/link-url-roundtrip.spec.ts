@@ -32,6 +32,8 @@ const PHONE_PLATFORMS = ["whatsapp", "phone", "viber"] as const;
 
 const NON_PHONE: Fixture[] = [
   { platform: "telegram", url: "https://t.me/example_user" },
+  { platform: "telegram", url: "https://t.me/+4cr7ocQoV-liNmU6" },
+  { platform: "telegram", url: "https://t.me/+4cr7ocQoV-liNmU6", originalInput: "+4cr7ocQoV-liNmU6" },
   { platform: "instagram", url: "https://instagram.com/example" },
   { platform: "facebook", url: "https://facebook.com/example" },
   { platform: "twitter", url: "https://x.com/example" },

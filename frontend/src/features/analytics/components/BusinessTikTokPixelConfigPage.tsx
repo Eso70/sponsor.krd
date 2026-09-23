@@ -15,7 +15,7 @@ import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SkeletonTikTokPixelConfig } from "@/components/shared/SkeletonPageLayouts";
-import { TikTokPixelGroupCard } from "@/features/analytics/components/TikTokPixelGroupCard";
+import { TikTokPixelGroupCard, type TikTokPixelGroupCopy } from "@/features/analytics/components/TikTokPixelGroupCard";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 import {
@@ -31,6 +31,29 @@ interface PixelConfig {
   has_events_token?: boolean;
   keep_events_token?: boolean;
 }
+
+export interface TikTokPixelConfigCopy {
+  loadFailed: string; pixelRequired: string; saveFailed: string; saved: string;
+  title: string; description: string; groups: string; tokenHint: string;
+  addTooltip: string; limitTooltip: string; addGroup: string; emptyTitle: string;
+  emptyDescription: string; saving: string; requiredFields: string;
+  saveTooltip: string; save: string; group: Partial<TikTokPixelGroupCopy>;
+}
+
+const KURDISH_COPY: TikTokPixelConfigCopy = {
+  loadFailed: "بارکردنی ڕێکخستنەکانی TikTok سەرکەوتوو نەبوو",
+  pixelRequired: "Pixel ID بۆ هەر گرووپێک پێویستە",
+  saveFailed: "پاشەکەوتکردن سەرکەوتوو نەبوو", saved: "ڕێکخستنەکانی TikTok نوێکرانەوە",
+  title: "پەیوەستکردنی TikTok", description: TIKTOK_CONFIG_WORKSPACES.business.description,
+  groups: "گرووپەکانی Pixel و Events API",
+  tokenHint: "هەر tokenێک تەنها لەگەڵ Pixel IDی هەمان گرووپ بەکار دەکەوێت.",
+  addTooltip: "زیادکردنی گرووپێکی نوێی TikTok", limitTooltip: "گەیشتوویتە سنووری ڕێگەپێدراوی Pixel",
+  addGroup: "زیادکردنی گرووپ", emptyTitle: "هیچ گرووپێکی TikTok نییە",
+  emptyDescription: "گرووپێک زیاد بکە، Pixel ID دابنێ و ئەگەر دەتەوێت گەیاندنی ڕاژەکار چالاک بێت Events API token زیاد بکە.",
+  saving: "پاشەکەوت دەکرێت...", requiredFields: "تکایە هەموو خانە پێویستەکان پڕبکەرەوە",
+  saveTooltip: "پاشەکەوتکردنی ڕێکخستنەکانی TikTok", save: "پاشەکەوتکردن",
+  group: {},
+};
 
 function normalizeConfigs(value: unknown): PixelConfig[] {
   if (!Array.isArray(value)) return [];
@@ -52,9 +75,12 @@ function normalizeConfigs(value: unknown): PixelConfig[] {
 
 export function BusinessTikTokPixelConfigPage({
   owner = "business",
+  copy,
 }: {
   owner?: TikTokConfigOwner;
+  copy?: Partial<TikTokPixelConfigCopy>;
 } = {}) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const workspace = TIKTOK_CONFIG_WORKSPACES[owner];
   const [configs, setConfigs] = useState<PixelConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +119,7 @@ export function BusinessTikTokPixelConfigPage({
               ),
         ]);
         if (!settingsResponse.ok || !accessResponse.ok) {
-          throw new Error("بارکردنی ڕێکخستنەکان سەرکەوتوو نەبوو");
+          throw new Error(labels.loadFailed);
         }
         const [settingsPayload, accessPayload] = await Promise.all([
           settingsResponse.json(),
@@ -103,10 +129,10 @@ export function BusinessTikTokPixelConfigPage({
         setAccess(workspace.accessEndpoint ? accessPayload.data || null : null);
       } catch (error) {
         if (rethrow) throw error;
-        toast.error("بارکردنی ڕێکخستنەکانی TikTok سەرکەوتوو نەبوو");
+        toast.error(labels.loadFailed);
       }
     },
-    [workspace],
+    [workspace, labels.loadFailed],
   );
 
   useEffect(() => {
@@ -136,7 +162,7 @@ export function BusinessTikTokPixelConfigPage({
 
   const save = async () => {
     if (hasInvalidRows) {
-      toast.error("Pixel ID بۆ هەر گرووپێک پێویستە");
+      toast.error(labels.pixelRequired);
       return;
     }
     setSaving(true);
@@ -159,7 +185,7 @@ export function BusinessTikTokPixelConfigPage({
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(
-          payload?.message || "پاشەکەوتکردنی ڕێکخستنەکان سەرکەوتوو نەبوو",
+          copy ? labels.saveFailed : payload?.message || labels.saveFailed,
         );
       }
       const nextConfigs = normalizeConfigs(payload?.data?.tiktok_configs);
@@ -169,10 +195,10 @@ export function BusinessTikTokPixelConfigPage({
           detail: payload?.data,
         }),
       );
-      toast.success("ڕێکخستنەکانی TikTok نوێکرانەوە");
+      toast.success(labels.saved);
     } catch (error) {
-      toast.error("پاشەکەوتکردن سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : undefined,
+      toast.error(labels.saveFailed, {
+        description: copy ? undefined : error instanceof Error ? error.message : undefined,
       });
     } finally {
       setSaving(false);
@@ -188,25 +214,25 @@ export function BusinessTikTokPixelConfigPage({
       {/* Simple Page Header */}
       <PageHeader
         icon={KeyRound}
-        title="پەیوەستکردنی TikTok"
-        description={workspace.description}
+        title={labels.title}
+        description={copy ? labels.description : workspace.description}
       />
 
       {/* Group Controls Bar */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-white/5">
         <div>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            گرووپەکانی Pixel و Events API
+            {labels.groups}
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            هەر tokenێک تەنها لەگەڵ Pixel IDی هەمان گرووپ بەکار دەکەوێت.
+            {labels.tokenHint}
           </p>
         </div>
         <Tooltip
           content={
             canAdd
-              ? "زیادکردنی گرووپێکی نوێی TikTok"
-              : "گەیشتوویتە سنووری ڕێگەپێدراوی Pixel"
+              ? labels.addTooltip
+              : labels.limitTooltip
           }
           side="bottom"
         >
@@ -235,7 +261,7 @@ export function BusinessTikTokPixelConfigPage({
             }}
           >
             <Plus className="h-4 w-4" />
-            زیادکردنی گرووپ
+            {labels.addGroup}
           </button>
         </Tooltip>
       </div>
@@ -246,8 +272,8 @@ export function BusinessTikTokPixelConfigPage({
           <EmptyState
             compact
             icon={CircleOff}
-            title="هیچ گرووپێکی TikTok نییە"
-            description="گرووپێک زیاد بکە، Pixel ID دابنێ و ئەگەر دەتەوێت گەیاندنی ڕاژەکار چالاک بێت Events API token زیاد بکە."
+            title={labels.emptyTitle}
+            description={labels.emptyDescription}
           />
         </div>
       ) : (
@@ -259,6 +285,7 @@ export function BusinessTikTokPixelConfigPage({
               config={config}
               testEndpoint={workspace.testEndpoint}
               secretEndpoint={workspace.secretEndpoint}
+              copy={copy?.group}
               onUpdate={(patch) => updateConfig(index, patch)}
               canDelete={configs.length > 1}
               onDelete={() =>
@@ -276,10 +303,10 @@ export function BusinessTikTokPixelConfigPage({
         <Tooltip
           content={
             saving
-              ? "پاشەکەوت دەکرێت..."
+              ? labels.saving
               : hasInvalidRows
-                ? "تکایە هەموو خانە پێویستەکان پڕبکەرەوە"
-                : "پاشەکەوتکردنی ڕێکخستنەکانی TikTok"
+                ? labels.requiredFields
+                : labels.saveTooltip
           }
           side="top"
         >
@@ -297,7 +324,7 @@ export function BusinessTikTokPixelConfigPage({
             ) : (
               <Save className="h-4 w-4" />
             )}
-            {saving ? "پاشەکەوتکردن..." : "پاشەکەوتکردن"}
+            {saving ? labels.saving : labels.save}
           </button>
         </Tooltip>
       </div>

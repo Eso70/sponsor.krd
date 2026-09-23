@@ -21,6 +21,7 @@ import { SkeletonTikTokDelivery } from "@/components/shared/SkeletonPageLayouts"
 import { Tooltip } from "@/components/shared/Tooltip";
 import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
 import type { TikTokDeliveryError } from "@/features/analytics/api";
+import { useTranslations, useLocale } from "next-intl";
 
 interface TikTokHealth {
   connections: number;
@@ -80,12 +81,14 @@ function formatNumber(value: number): string {
   return value.toLocaleString("en-US");
 }
 
-function formatWhen(value: string): string {
+function formatWhen(value: string, locale: string): string {
   const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString("en-US");
+  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : "en-US");
 }
 
 function ErrorRow({ item }: { item: TikTokDeliveryError }) {
+  const t = useTranslations("TikTokDelivery");
+  const locale = useLocale();
   const permanent = item.severity === "permanent";
   return (
     <li
@@ -108,7 +111,7 @@ function ErrorRow({ item }: { item: TikTokDeliveryError }) {
               : "text-amber-700 dark:text-amber-300"
           }`}
         >
-          {permanent ? "شکستی کۆتایی" : "هەوڵی دووبارە"}
+          {permanent ? t("permanentFailure") : t("retrying")}
         </span>
         {item.pixelId && (
           <span className="rounded-md bg-white/80 px-2 py-0.5 font-mono text-[11px] text-slate-600 shadow-2xs dark:bg-white/10 dark:text-slate-300">
@@ -125,14 +128,15 @@ function ErrorRow({ item }: { item: TikTokDeliveryError }) {
         {item.message}
       </p>
       <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-        {item.events} ڕووداو · {item.attempts} هەوڵ · دواین بینین لە{" "}
-        {formatWhen(item.lastSeenAt)}
+        {item.events} {t("events")} · {item.attempts} {t("attempts")} · {t("lastSeen")}{" "}
+        {formatWhen(item.lastSeenAt, locale)}
       </p>
     </li>
   );
 }
 
 export function BusinessTikTokDeliveryPage() {
+  const t = useTranslations("TikTokDelivery");
   const requestId = useRef(0);
   const [health, setHealth] = useState<TikTokHealth>(EMPTY_HEALTH);
   const [errors, setErrors] = useState<TikTokDeliveryError[]>([]);
@@ -161,23 +165,23 @@ export function BusinessTikTokDeliveryPage() {
         setErrors([]);
         return;
       }
-      if (showError) toast.error("دۆخی ڕووداوەکانی TikTok نوێ نەکرایەوە");
+      if (showError) toast.error(t("refreshFailed"));
       throw error;
     }
-  }, []);
+  }, [t]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await load(true);
-      toast.success("دۆخی گەیاندن نوێکرایەوە");
+      toast.success(t("refreshed"));
     } catch {
       // The user-facing error is handled by load.
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [load]);
+  }, [load, t]);
 
   useRegisterBusinessDashboardRefresh("analytics:tracking", refresh);
 
@@ -203,10 +207,10 @@ export function BusinessTikTokDeliveryPage() {
         "/api/analytics/v2/tiktok/retry-failed",
         { method: "POST" },
       );
-      toast.success(`${formatNumber(result.retried)} ڕووداو دووبارە نێردرایەوە`);
+      toast.success(`${formatNumber(result.retried)} ${t("retriedSuccess")}`);
       await load();
     } catch {
-      toast.error("هەوڵدانەوەی ناردن سەرکەوتوو نەبوو");
+      toast.error(t("retryFailed"));
     } finally {
       setRefreshing(false);
     }
@@ -221,17 +225,17 @@ export function BusinessTikTokDeliveryPage() {
       {/* Header */}
       <PageHeader
         icon={Target}
-        title="دۆخی گەیاندنی TikTok"
-        description="پشکنینی چالاکی و دڵنیابوونەوە لە گەیشتنی دروستی ڕووداوەکانی وێبگەڕ و Events API."
+        title={t("title")}
+        description={t("description")}
         action={
-          <Tooltip content="نوێکردنەوەی دۆخی گەیاندن" side="bottom">
+          <Tooltip content={t("refreshTooltip")} side="bottom">
             <button
               type="button"
               onClick={() => void refresh()}
               disabled={refreshing}
               aria-busy={refreshing}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200 cursor-pointer"
-              aria-label="نوێکردنەوە"
+              aria-label={t("refresh")}
             >
               <MotionSpinner active={refreshing}>
                 <RefreshCw className="h-4 w-4" />
@@ -245,8 +249,8 @@ export function BusinessTikTokDeliveryPage() {
         <div className="border-t border-slate-100 pt-5 dark:border-white/5">
           <LockedNotice
             icon={Target}
-            title="وردەکاریی گەیاندن لە پلانەکەتدا نییە"
-            description="ڕێکخستنی Pixel و Events API بەردەستە، بەڵام دۆخی وردی ڕووداوەکان پێویستی بە پلانی بەرزتر هەیە."
+            title={t("lockedTitle")}
+            description={t("lockedDescription")}
           />
         </div>
       ) : (
@@ -258,15 +262,15 @@ export function BusinessTikTokDeliveryPage() {
                 <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
                 <div>
                   <p className="text-sm font-bold text-red-900 dark:text-red-100">
-                    {formatNumber(health.failed)} ڕووداوی شکستخواردوو هەیە
+                    {formatNumber(health.failed)} {t("failedEvents")}
                   </p>
                   <p className="text-xs text-red-700/80 dark:text-red-300/80">
-                    تکایە هۆکاری هەڵەکە لە خوارەوە ببینە و دووبارە هەوڵبدەرەوە.
+                    {t("failureHint")}
                   </p>
                 </div>
               </div>
               <Tooltip
-                content="دووبارە هەوڵدانەوەی ناردنی ڕووداوە شکستخواردووەکان"
+                content={t("retryTooltip")}
                 side="top"
               >
                 <button
@@ -276,7 +280,7 @@ export function BusinessTikTokDeliveryPage() {
                   className="inline-flex h-9 items-center gap-2 rounded-xl bg-red-600 px-3.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50 cursor-pointer"
                 >
                   <RotateCw className="h-3.5 w-3.5" />
-                  <span>دووبارە هەوڵدانەوە ({health.failed})</span>
+                  <span>{t("retryButton")} ({health.failed})</span>
                 </button>
               </Tooltip>
             </div>
@@ -285,10 +289,10 @@ export function BusinessTikTokDeliveryPage() {
               <Clock className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
                 <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                  {formatNumber(health.retrying)} ڕووداو لە ڕیزی دووبارە هەوڵداندان
+                  {formatNumber(health.retrying)} {t("queuedEvents")}
                 </p>
                 <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
-                  سیستەم لە چەند خولەکی داهاتوودا بە شێوەی خۆکارانە هەوڵی ناردنەوەیان دەدات.
+                  {t("queuedHint")}
                 </p>
               </div>
             </div>
@@ -301,11 +305,11 @@ export function BusinessTikTokDeliveryPage() {
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-[var(--theme-primary)]" />
                   <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                    بەراوردکردنی ئەنجامەکان (Reconciliation)
+                    {t("reconciliation")}
                   </h3>
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  بەراوردی گۆڕانە تۆمارکراوەکانی ناوخۆ لەگەڵ ئەو ڕووداوانەی لە ڕێگەی Events API گەیشتوونەتە TikTok.
+                  {t("reconciliationDescription")}
                 </p>
               </div>
 
@@ -315,15 +319,15 @@ export function BusinessTikTokDeliveryPage() {
                 {health.reconciliation.internalConversions ===
                   health.reconciliation.serverAcceptedConversions &&
                 health.reconciliation.internalConversions > 0
-                  ? "هاوتا و تەواوە (100%)"
+                  ? t("matched")
                   : health.reconciliation.internalConversions === 0
-                    ? "هیچ گۆڕانێک تۆمار نەکراوە"
+                    ? t("noConversions")
                     : `${formatNumber(
                         Math.abs(
                           health.reconciliation.internalConversions -
                             health.reconciliation.serverAcceptedConversions,
                         ),
-                      )} جیاوازی هەیە`}
+                      )} ${t("difference")}`}
               </span>
             </div>
 
@@ -332,20 +336,20 @@ export function BusinessTikTokDeliveryPage() {
               <div className="relative rounded-xl border border-slate-200/70 bg-slate-50/50 p-4 transition hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    تۆمارکراو لە Sponsor.krd
+                    {t("recordedLocally")}
                   </span>
                   <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-2xs dark:bg-white/10 dark:text-slate-400">
-                    ناوخۆیی
+                    {t("local")}
                   </span>
                 </div>
                 <div className="mt-3 flex items-baseline gap-2">
                   <span className="text-3xl font-black text-slate-800 dark:text-white font-mono">
                     {formatNumber(health.reconciliation.internalConversions)}
                   </span>
-                  <span className="text-xs text-slate-400">ڕووداو / کلیک</span>
+                  <span className="text-xs text-slate-400">{t("eventsClicks")}</span>
                 </div>
                 <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                  ئەو گۆڕان و کلیکانەی کە لەلایەن وێبگەڕی سەردانکەرانەوە لە پەڕەکانت تۆمارکراون.
+                  {t("localDescription")}
                 </p>
               </div>
 
@@ -353,7 +357,7 @@ export function BusinessTikTokDeliveryPage() {
               <div className="relative rounded-xl border border-sky-200/70 bg-sky-50/40 p-4 transition hover:border-sky-300 dark:border-sky-500/20 dark:bg-sky-500/[0.04] dark:hover:border-sky-500/30">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-sky-800 dark:text-sky-300">
-                    وەرگیراو لەلایەن TikTok
+                    {t("receivedByTikTok")}
                   </span>
                   <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700 shadow-2xs dark:bg-sky-500/20 dark:text-sky-300">
                     Events API
@@ -366,11 +370,11 @@ export function BusinessTikTokDeliveryPage() {
                     )}
                   </span>
                   <span className="text-xs text-sky-600/70 dark:text-sky-400/70">
-                    تەئکیدکراو
+                    {t("confirmed")}
                   </span>
                 </div>
                 <p className="mt-2 text-[11px] text-sky-700/80 dark:text-sky-300/80">
-                  ئەو ڕووداوانەی ڕاژەکاری ئێمە ناردوویەتی و TikTok بە فەرمی وەریگرتوون.
+                  {t("tiktokDescription")}
                 </p>
               </div>
             </div>
@@ -381,15 +385,15 @@ export function BusinessTikTokDeliveryPage() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-white/5">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  تۆماری پشکنین و هەڵەکانی گەیاندن
+                  {t("errorLog")}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  هەر وەڵامێکی نەرێنی لەلایەن TikTokـەوە بۆ ئەم بزنسە هاتبێت، لێرە پیشان دەدرێت.
+                  {t("errorLogDescription")}
                 </p>
               </div>
               {errors.length > 0 && (
                 <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-500/20 dark:text-red-300">
-                  {errors.length} هەڵە
+                  {errors.length} {t("errors")}
                 </span>
               )}
             </div>
@@ -401,11 +405,10 @@ export function BusinessTikTokDeliveryPage() {
                     <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <div>
                       <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
-                        Pixel هیچ ڕووداوێکی لە وێبگەڕەوە نەناردووە
+                        {t("pixelSilent")}
                       </p>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                        {health.serverEvents} ڕووداو لە ڕاژەکارەوە (Events API) نێردراون، بەڵام هیچیان لە وێبگەڕەوە نەگەیشتوون.
-                        ئەمە زۆرجار بەهۆی هەڵەی Pixel ID، بوونی Ad-blocker لە وێبگەڕی سەردانکەران، یان بلۆککردنی ترۆڵی شوێنکەوتن ڕوودەدات.
+                        {health.serverEvents} {t("pixelSilentDescription")}
                       </p>
                     </div>
                   </div>
@@ -428,10 +431,10 @@ export function BusinessTikTokDeliveryPage() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      سیستەمی گەیاندن ئاساییە و هیچ هەڵەیەک تۆمار نەکراوە
+                      {t("healthy")}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      هەموو داواکاری و ڕووداوەکان بە سەرکەوتوویی لەگەڵ TikTok دەبەسترێنەوە؛ هیچ ڕووداوێکی شکستخواردوو یان ڕاگیراو لە سیستەمدا نییە.
+                      {t("healthyDescription")}
                     </p>
                   </div>
                 </div>

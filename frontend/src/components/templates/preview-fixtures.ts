@@ -31,13 +31,16 @@ function normalizedPhone(value?: string | null) {
 
 export function createBusinessContactPreviewLinks(
   phoneNumber?: string | null,
+  labels: { whatsapp: string; viber: string; phone: string } = {
+    whatsapp: "واتساپ", viber: "ڤایبەر", phone: "ژمارەی مۆبایل",
+  },
 ): Link[] {
   const phone = normalizedPhone(phoneNumber);
   return [
     {
       id: "preview-whatsapp",
       linktree_id: "template-preview",
-      display_name: "واتساپ",
+      display_name: labels.whatsapp,
       url: `https://wa.me/${phone}`,
       platform: "whatsapp",
       display_order: 1,
@@ -47,7 +50,7 @@ export function createBusinessContactPreviewLinks(
     {
       id: "preview-viber",
       linktree_id: "template-preview",
-      display_name: "ڤایبەر",
+      display_name: labels.viber,
       url: `viber://chat?number=%2B${phone}`,
       platform: "viber",
       display_order: 2,
@@ -57,7 +60,7 @@ export function createBusinessContactPreviewLinks(
     {
       id: "preview-phone",
       linktree_id: "template-preview",
-      display_name: "ژمارەی مۆبایل",
+      display_name: labels.phone,
       url: `tel:${phone}`,
       platform: "phone",
       display_order: 3,

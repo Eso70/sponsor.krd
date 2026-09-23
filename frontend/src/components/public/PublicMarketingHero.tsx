@@ -18,6 +18,7 @@ export function PublicMarketingHero({
   primaryAction,
   secondaryAction,
   decorations,
+  children,
   embedded = false,
   fillViewport = false,
 }: {
@@ -28,6 +29,7 @@ export function PublicMarketingHero({
   primaryAction?: PublicHeroAction;
   secondaryAction?: PublicHeroAction;
   decorations?: ReactNode;
+  children?: ReactNode;
   embedded?: boolean;
   fillViewport?: boolean;
 }) {
@@ -96,6 +98,7 @@ export function PublicMarketingHero({
           </div>
         ) : null}
       </div>
+      {children}
     </section>
   );
 }

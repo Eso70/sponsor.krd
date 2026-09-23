@@ -9,11 +9,12 @@ import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 interface TemplateComboboxProps {
   value: string;
   onChange: (value: string) => void;
+  copy?: { search: string; empty: string; descriptions: Record<string, string> };
 }
 
 const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:ring-2 dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500 dark:[color-scheme:dark]";
 
-export function TemplateCombobox({ value, onChange }: TemplateComboboxProps) {
+export function TemplateCombobox({ value, onChange, copy }: TemplateComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -39,9 +40,9 @@ export function TemplateCombobox({ value, onChange }: TemplateComboboxProps) {
     if (!searchQuery.trim()) return TEMPLATE_OPTIONS;
     const q = searchQuery.toLowerCase();
     return TEMPLATE_OPTIONS.filter(
-      t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+      t => t.name.toLowerCase().includes(q) || (copy?.descriptions[t.id] ?? t.description).toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, copy]);
 
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
@@ -189,7 +190,7 @@ export function TemplateCombobox({ value, onChange }: TemplateComboboxProps) {
                   value={searchQuery}
                   onChange={e => { setSearchQuery(e.target.value); setActiveIndex(0); }}
                   onKeyDown={handleKeyDown}
-                  placeholder="گەڕان بە ناوی تێمپلەیت..."
+                  placeholder={copy?.search ?? "گەڕان بە ناوی تێمپلەیت..."}
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500"
                   style={{ "--tw-ring-color": "color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)" } as React.CSSProperties}
                   onClick={e => e.stopPropagation()}
@@ -204,7 +205,7 @@ export function TemplateCombobox({ value, onChange }: TemplateComboboxProps) {
               style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}
             >
               {filteredOptions.length === 0 ? (
-                <div className="p-6 text-center text-sm text-slate-400">No templates found</div>
+                <div className="p-6 text-center text-sm text-slate-400">{copy?.empty ?? "No templates found"}</div>
               ) : (
                 filteredOptions.map((template, index) => {
                   const isSelected = value === template.id;
@@ -229,7 +230,7 @@ export function TemplateCombobox({ value, onChange }: TemplateComboboxProps) {
                       <span className={`h-7 w-7 shrink-0 rounded-lg bg-linear-to-br ${template.previewGradient} shadow-sm`} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{template.name}</div>
-                        <div className="truncate text-xs text-slate-400 dark:text-slate-500">{template.description}</div>
+                        <div className="truncate text-xs text-slate-400 dark:text-slate-500">{copy?.descriptions[template.id] ?? template.description}</div>
                       </div>
                       {isSelected && <Check className="h-4 w-4 shrink-0" />}
                     </button>

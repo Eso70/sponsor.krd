@@ -25,7 +25,58 @@ interface DuplicateLinktreeModalProps {
   apiBase?: string;
   checkSlugEndpoint?: string;
   platformTheme?: boolean;
+  copy?: Partial<DuplicateLinktreeCopy>;
 }
+
+export interface DuplicateLinktreeCopy {
+  slugTooShort: string;
+  slugInvalid: string;
+  slugTaken: string;
+  slugRequired: string;
+  fixSlug: string;
+  duplicated: string;
+  limitReached: string;
+  slugConflict: string;
+  duplicateFailed: string;
+  title: string;
+  description: string;
+  close: string;
+  sourcePage: string;
+  newName: string;
+  namePlaceholder: string;
+  slugLabel: string;
+  slugAvailable: string;
+  publicLink: string;
+  depthLimit: string;
+  cancel: string;
+  duplicating: string;
+  duplicate: string;
+}
+
+const KURDISH_COPY: DuplicateLinktreeCopy = {
+  slugTooShort: "نازناو دەبێت لانی کەم ٢ پیت بێت",
+  slugInvalid: "تەنها پیتی ئینگلیزی، ژمارە و هێڵی لاری کورت (-) ڕێگەپێدراون",
+  slugTaken: "ئەم نازناوە پێشتر بەکارهاتووە",
+  slugRequired: "نازناوی بەستەر پێویستە",
+  fixSlug: "تکایە سەرەتا کێشەی نازناوەکە چارەسەر بکە",
+  duplicated: "پەڕەکە بە سەرکەوتوویی لەبەرگیرایەوە",
+  limitReached: "گەیشتوویت بە ئەوپەڕی ژمارەی پەڕەکان بۆ ئەم پلانە",
+  slugConflict: "ئەم نازناوە پێشتر بەکارهاتووە، تکایە دانەیەکی تر هەڵبژێرە",
+  duplicateFailed: "هەڵەیەک ڕوویدا لە لەبەرگرتنەوەی پەڕەکە",
+  title: "لەبەرگرتنەوەی پەڕە",
+  description: "دروستکردنی کۆپییەکی نوێ بە هەمان دیزاین و بەستەر",
+  close: "داخستن",
+  sourcePage: "پەڕەی سەرچاوە:",
+  newName: "ناوی پەڕەی نوێ",
+  namePlaceholder: "ناوی پەڕەکە بنووسە",
+  slugLabel: "نازناوی بەستەر (Slug)",
+  slugAvailable: "ئەم نازناوە بەردەستە",
+  publicLink: "بەستەری گشتی ئەم پەڕەیە دەبێتە:",
+  depthLimit: "ئەم پەڕەیە گەیشتووەتە ئەوپەڕی ئاستی لەبەرگرتنەوە (لانی زۆر ٣ ئاست). ناتوانیت کۆپیی تر لەم پەڕەیە دروست بکەیت.",
+  cancel: "پاشگەزبوونەوە",
+  duplicating: "کۆپی دەکرێت...",
+  duplicate: "لەبەرگرتنەوە",
+};
 
 /**
  * Generates an initial slug suggestion for the modal based on the source slug.
@@ -58,7 +109,9 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
   apiBase = "/api/linktrees",
   checkSlugEndpoint,
   platformTheme = false,
+  copy,
 }: DuplicateLinktreeModalProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
@@ -98,13 +151,13 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
     const cleaned = slug.toLowerCase().trim();
     if (cleaned.length < 2) {
       setIsSlugAvailable(false);
-      setSlugError("نازناو دەبێت لانی کەم ٢ پیت بێت");
+      setSlugError(labels.slugTooShort);
       return;
     }
 
     if (!/^[a-z0-9-]+$/.test(cleaned)) {
       setIsSlugAvailable(false);
-      setSlugError("تەنها پیتی ئینگلیزی، ژمارە و هێڵی لاری کورت (-) ڕێگەپێدراون");
+      setSlugError(labels.slugInvalid);
       return;
     }
 
@@ -120,7 +173,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
         const isAvail = available === true;
         setIsSlugAvailable(isAvail);
         if (!isAvail) {
-          setSlugError("ئەم نازناوە پێشتر بەکارهاتووە");
+          setSlugError(labels.slugTaken);
         }
       } catch {
         // Fallback gracefully on network hiccup
@@ -131,7 +184,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [isOpen, slug, apiBase, checkSlugEndpoint]);
+  }, [isOpen, slug, apiBase, checkSlugEndpoint, labels.slugTooShort, labels.slugInvalid, labels.slugTaken]);
 
   const handleSubmit = useCallback(async () => {
     if (!targetLinktree || isSubmitting || isMaxDepthReached) return;
@@ -140,12 +193,12 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
     const trimmedSlug = slug.toLowerCase().trim();
 
     if (!trimmedSlug) {
-      setSlugError("نازناوی بەستەر پێویستە");
+      setSlugError(labels.slugRequired);
       return;
     }
 
     if (slugError || isSlugAvailable === false) {
-      toast.error("تکایە سەرەتا کێشەی نازناوەکە چارەسەر بکە");
+      toast.error(labels.fixSlug);
       return;
     }
 
@@ -160,23 +213,23 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
         }),
       });
 
-      toast.success("پەڕەکە بە سەرکەوتوویی لەبەرگیرایەوە");
+      toast.success(labels.duplicated);
       onSuccess();
       onClose();
     } catch (err) {
       if (isApiRequestError(err, 403)) {
-        toast.error(err.message || "گەیشتوویت بە ئەوپەڕی ژمارەی پەڕەکان بۆ ئەم پلانە");
+        toast.error(copy ? labels.limitReached : err.message || labels.limitReached);
       } else if (isApiRequestError(err, 409)) {
-        toast.error("ئەم نازناوە پێشتر بەکارهاتووە، تکایە دانەیەکی تر هەڵبژێرە");
-      } else if (err instanceof Error && err.message) {
+        toast.error(labels.slugConflict);
+      } else if (!copy && err instanceof Error && err.message) {
         toast.error(err.message);
       } else {
-        toast.error("هەڵەیەک ڕوویدا لە لەبەرگرتنەوەی پەڕەکە");
+        toast.error(labels.duplicateFailed);
       }
     } finally {
       setIsSubmitting(false);
     }
-  }, [targetLinktree, isSubmitting, name, slug, slugError, isSlugAvailable, onSuccess, onClose, apiBase, isMaxDepthReached]);
+  }, [targetLinktree, isSubmitting, name, slug, slugError, isSlugAvailable, onSuccess, onClose, apiBase, isMaxDepthReached, copy, labels.slugRequired, labels.fixSlug, labels.duplicated, labels.limitReached, labels.slugConflict, labels.duplicateFailed]);
 
   useModalKeyboard({
     isOpen,
@@ -211,19 +264,19 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-gray-100 font-kurdish">
-                لەبەرگرتنەوەی پەڕە
+                {labels.title}
               </h3>
               <p className="text-xs text-slate-400 dark:text-gray-400 font-kurdish">
-                دروستکردنی کۆپییەکی نوێ بە هەمان دیزاین و بەستەر
+                {labels.description}
               </p>
             </div>
           </div>
-          <Tooltip content="داخستن" side="bottom">
+          <Tooltip content={labels.close} side="bottom">
             <button
               onClick={onClose}
               disabled={isSubmitting}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer disabled:opacity-50"
-              aria-label="داخستن"
+              aria-label={labels.close}
             >
               <X className="h-5 w-5" />
             </button>
@@ -249,7 +302,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-slate-400 dark:text-gray-500">پەڕەی سەرچاوە:</p>
+              <p className="text-xs text-slate-400 dark:text-gray-500">{labels.sourcePage}</p>
               <p className="text-sm font-bold text-slate-700 dark:text-gray-200 truncate">
                 {targetLinktree.name}
               </p>
@@ -262,14 +315,14 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
           {/* New Page Name Input */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1.5">
-              ناوی پەڕەی نوێ
+              {labels.newName}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
-              placeholder="ناوی پەڕەکە بنووسە"
+              placeholder={labels.namePlaceholder}
               className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0D1117] text-slate-800 dark:text-gray-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary,#6366f1)]/20 focus:border-[var(--theme-primary,#6366f1)] transition-all disabled:opacity-50"
             />
           </div>
@@ -277,7 +330,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
           {/* New Page Slug Input */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-gray-300 mb-1.5">
-              نازناوی بەستەر (Slug)
+              {labels.slugLabel}
               <span style={{ color: "var(--theme-primary, #6366f1)" }} className="ms-1">*</span>
             </label>
             <div className="relative">
@@ -315,11 +368,11 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
               </p>
             ) : isSlugAvailable ? (
               <p className="mt-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                ئەم نازناوە بەردەستە
+                {labels.slugAvailable}
               </p>
             ) : (
               <p className="mt-1.5 text-[11px] text-slate-400">
-                بەستەری گشتی ئەم پەڕەیە دەبێتە: /{slug || "..."}
+                {labels.publicLink} /{slug || "..."}
               </p>
             )}
           </div>
@@ -328,7 +381,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
             <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-[11px] text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-2">
               <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>
-                ئەم پەڕەیە گەیشتووەتە ئەوپەڕی ئاستی لەبەرگرتنەوە (لانی زۆر ٣ ئاست). ناتوانیت کۆپیی تر لەم پەڕەیە دروست بکەیت.
+                {labels.depthLimit}
               </span>
             </div>
           )}
@@ -341,7 +394,7 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
               disabled={isSubmitting}
               className="flex-1 px-4 py-2.5 text-sm rounded-xl transition-all border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/5 disabled:opacity-50 cursor-pointer"
             >
-              پاشگەزبوونەوە
+              {labels.cancel}
             </button>
             <button
               type="button"
@@ -356,12 +409,12 @@ export const DuplicateLinktreeModal = memo(function DuplicateLinktreeModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>کۆپی دەکرێت...</span>
+                  <span>{labels.duplicating}</span>
                 </>
               ) : (
                 <>
                   <CopyPlus className="h-4 w-4" />
-                  <span>لەبەرگرتنەوە</span>
+                  <span>{labels.duplicate}</span>
                 </>
               )}
             </button>

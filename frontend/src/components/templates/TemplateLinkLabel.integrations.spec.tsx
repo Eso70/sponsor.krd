@@ -59,6 +59,9 @@ describe("Linktree template button labels", () => {
         container.querySelector("[data-template-platform-name]"),
       ).toHaveClass("text-xs", "font-sans");
       expect(
+        container.querySelector("[data-template-link-identity]"),
+      ).toHaveTextContent("07502485829");
+      expect(
         screen.queryByText("Editable description must not replace WhatsApp"),
       ).not.toBeInTheDocument();
     },

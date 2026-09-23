@@ -17,7 +17,24 @@ export interface LinktreeSearchModalProps {
   publicPathPrefix?: string;
   actionLabel?: string;
   platformTheme?: boolean;
+  copy?: Partial<LinktreeSearchModalCopy>;
 }
+
+export interface LinktreeSearchModalCopy {
+  action: string;
+  placeholder: string;
+  close: string;
+  prompt: string;
+  noResults: string;
+}
+
+const KURDISH_COPY: LinktreeSearchModalCopy = {
+  action: "دەستکاریکردن ←",
+  placeholder: "ناوی پەیج بنووسە بۆ گەڕان...",
+  close: "داخستن",
+  prompt: "گەڕان بۆ پەیجەکان بکە.....",
+  noResults: "هیچ ئەنجامێک نەدۆزرایەوە بۆ",
+};
 
 export const LinktreeSearchModal = memo(function LinktreeSearchModal({
   isOpen,
@@ -29,7 +46,9 @@ export const LinktreeSearchModal = memo(function LinktreeSearchModal({
   publicPathPrefix = "/linktree",
   actionLabel = "دەستکاریکردن ←",
   platformTheme = false,
+  copy,
 }: LinktreeSearchModalProps) {
+  const labels = { ...KURDISH_COPY, ...copy };
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -104,7 +123,7 @@ export const LinktreeSearchModal = memo(function LinktreeSearchModal({
           <input
             autoFocus
             type="text"
-            placeholder="ناوی پەیج بنووسە بۆ گەڕان..."
+            placeholder={labels.placeholder}
             value={searchQuery}
             onChange={(e) => onSearchQueryChange(e.target.value)}
             onKeyDown={(e) => {
@@ -120,7 +139,7 @@ export const LinktreeSearchModal = memo(function LinktreeSearchModal({
             type="button"
             onClick={onClose}
             className="absolute left-4 p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            aria-label="داخستن"
+            aria-label={labels.close}
           >
             <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-400 font-sans font-bold dark:bg-white/5">
               ESC
@@ -141,11 +160,11 @@ export const LinktreeSearchModal = memo(function LinktreeSearchModal({
                   style={{ color: "var(--theme-primary, #6366f1)" }}
                 />
               </MotionPulseIcon>
-              <span>گەڕان بۆ پەیجەکان بکە.....</span>
+              <span>{labels.prompt}</span>
             </div>
           ) : searchResults.length === 0 ? (
             <div className="py-8 text-center text-slate-400 dark:text-slate-400 text-sm font-kurdish">
-              هیچ ئەنجامێک نەدۆزرایەوە بۆ &quot;{searchQuery}&quot;
+              {labels.noResults} &quot;{searchQuery}&quot;
             </div>
           ) : (
             <div className="flex flex-col gap-0.5">
@@ -190,7 +209,7 @@ export const LinktreeSearchModal = memo(function LinktreeSearchModal({
                     className="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0 pl-2"
                     style={{ color: "var(--theme-primary, #6366f1)" }}
                   >
-                    {actionLabel}
+                    {copy?.action ?? actionLabel}
                   </div>
                 </button>
               ))}

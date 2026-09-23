@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowRight,
   Mail,
@@ -16,31 +17,23 @@ import { usePolling } from "@/lib/utils/usePolling";
 import { ChatComposer } from "./ChatComposer";
 import type { Conversation } from "./types";
 
-const CATEGORY_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "account", label: "هەژمار" },
-  { value: "billing", label: "پارەدان" },
-  { value: "technical", label: "تەکنیکی" },
-  { value: "feature_request", label: "داواکاری تایبەتمەندی" },
-  { value: "security", label: "ئاسایش" },
-  { value: "verification", label: "پشتڕاستکردنەوە" },
-  { value: "other", label: "هیتر" },
-];
+const CATEGORY_KEYS = ["account", "billing", "technical", "feature_request", "security", "verification", "other"] as const;
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  open: { label: "کراوەیە", color: "text-blue-600 dark:text-blue-400" },
+const STATUS_LABELS: Record<string, { key: "open" | "waitingBusiness" | "waitingPlatform" | "resolved" | "archived"; color: string }> = {
+  open: { key: "open", color: "text-blue-600 dark:text-blue-400" },
   waiting_business: {
-    label: "چاوەڕوانی وەڵامی تۆیە",
+    key: "waitingBusiness",
     color: "text-amber-600 dark:text-amber-400",
   },
   waiting_platform: {
-    label: "چاوەڕوانی وەڵامی ئەدمین بە",
+    key: "waitingPlatform",
     color: "text-slate-500 dark:text-slate-400",
   },
   resolved: {
-    label: "چارەسەرکراوە",
+    key: "resolved",
     color: "text-emerald-600 dark:text-emerald-400",
   },
-  archived: { label: "ئەرشیفکراوە", color: "text-slate-400" },
+  archived: { key: "archived", color: "text-slate-400" },
 };
 
 const inputClass =
@@ -48,11 +41,17 @@ const inputClass =
 
 type View = "list" | "thread" | "new";
 
+function messageError(error: unknown, fallback: string, locale: string): string {
+  return locale === "ar" ? fallback : error instanceof Error ? error.message : fallback;
+}
+
 export function BusinessMessagesPanel({
   initialConversationId,
 }: {
   initialConversationId?: string;
 }) {
+  const t = useTranslations("SettingsMessages");
+  const locale = useLocale();
   const [view, setView] = useState<View>(() =>
     initialConversationId ? "thread" : "list",
   );
@@ -81,12 +80,12 @@ export function BusinessMessagesPanel({
       setConversations(data);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "بارکردنی پەیامەکان سەرکەوتوو نەبوو",
+        messageError(error, t("loadFailed"), locale),
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t, locale]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void loadConversations());
@@ -134,12 +133,12 @@ export function BusinessMessagesPanel({
       .then((data) => setActive(data))
       .catch((error) => {
         toast.error(
-          error instanceof Error ? error.message : "بارکردنی گفتوگۆکە سەرکەوتوو نەبوو",
+          messageError(error, t("threadFailed"), locale),
         );
         setView("list");
       })
       .finally(() => setThreadLoading(false));
-  }, [initialConversationId]);
+  }, [initialConversationId, t, locale]);
 
   const openThread = async (conversation: Conversation) => {
     setView("thread");
@@ -157,7 +156,7 @@ export function BusinessMessagesPanel({
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "بارکردنی گفتوگۆکە سەرکەوتوو نەبوو",
+        messageError(error, t("threadFailed"), locale),
       );
       setView("list");
     } finally {
@@ -179,7 +178,7 @@ export function BusinessMessagesPanel({
       requestAnimationFrame(() => replyRef.current?.focus());
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "ناردنی پەیام سەرکەوتوو نەبوو",
+        messageError(error, t("sendFailed"), locale),
       );
     } finally {
       setSendingReply(false);
@@ -188,7 +187,7 @@ export function BusinessMessagesPanel({
 
   const createConversation = async () => {
     if (!form.subject.trim() || !form.message.trim()) {
-      toast.error("بابەت و پەیام پێویستە پڕبکرێتەوە");
+      toast.error(t("required"));
       return;
     }
     setCreating(true);
@@ -204,13 +203,13 @@ export function BusinessMessagesPanel({
           }),
         },
       );
-      toast.success("پەیامەکەت بۆ بەڕێوەبەری پلاتفۆرم نێردرا");
+      toast.success(t("sent"));
       setForm({ subject: "", category: "account", message: "" });
       await loadConversations();
       await openThread(data);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "ناردنی پەیام سەرکەوتوو نەبوو",
+        messageError(error, t("sendFailed"), locale),
       );
     } finally {
       setCreating(false);
@@ -224,53 +223,54 @@ export function BusinessMessagesPanel({
   if (view === "new") {
     return (
       <div className="space-y-5">
-        <Tooltip content="گەڕانەوە بۆ لیستی پەیامەکان" side="bottom">
+        <Tooltip content={t("backToList")} side="bottom">
           <button
             type="button"
             onClick={() => setView("list")}
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
           >
             <ArrowRight className="h-3.5 w-3.5" />
-            گەڕانەوە بۆ لیستی پەیامەکان
+            {t("backToList")}
           </button>
         </Tooltip>
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="block">
             <span className="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-              بابەت
+              {t("subject")}
             </span>
             <input
               className={inputClass}
               value={form.subject}
               onChange={(e) => setForm({ ...form, subject: e.target.value })}
-              placeholder="بابەتی پەیامەکەت"
+              placeholder={t("subjectPlaceholder")}
               maxLength={160}
             />
           </label>
           <div className="block">
             <span className="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-              جۆر
+              {t("category")}
             </span>
             <CustomSelect
               hideLabel
-              label="جۆر"
+              label={t("category")}
               value={form.category}
-              options={CATEGORY_OPTIONS}
+              options={CATEGORY_KEYS.map((value) => ({ value, label: t(value) }))}
               onChange={(value) => setForm((current) => ({ ...current, category: value }))}
               triggerClassName="h-11"
             />
           </div>
           <label className="col-span-full block">
             <span className="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-              پەیام
+              {t("message")}
             </span>
             <ChatComposer
               ref={newMessageRef}
               value={form.message}
               onChange={(value) => setForm((current) => ({ ...current, message: value }))}
               onSubmit={createConversation}
-              placeholder="پەیامەکەت بۆ بەڕێوەبەری پلاتفۆرم بنووسە... (Enter بۆ ناردن، Shift+Enter بۆ دێڕی نوێ)"
+              placeholder={t("newPlaceholder")}
               sending={creating}
+              sendLabel={t("send")}
             />
           </label>
         </div>
@@ -283,17 +283,17 @@ export function BusinessMessagesPanel({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <Tooltip content="گەڕانەوە بۆ لیستی پەیامەکان" side="bottom">
+          <Tooltip content={t("backToList")} side="bottom">
             <button
               type="button"
               onClick={() => setView("list")}
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
             >
               <ArrowRight className="h-3.5 w-3.5" />
-              گەڕانەوە
+              {t("back")}
             </button>
           </Tooltip>
-          <span className={`text-xs font-bold ${status.color}`}>{status.label}</span>
+          <span className={`text-xs font-bold ${status.color}`}>{t(status.key)}</span>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
           <p className="font-bold text-slate-700 dark:text-slate-200">
@@ -321,7 +321,7 @@ export function BusinessMessagesPanel({
                       <p className="whitespace-pre-wrap">{message.body}</p>
                       <p className={`mt-1.5 text-[10px] ${mine ? "opacity-80" : "text-slate-400 dark:text-gray-500"}`}>
                         {message.senderName} ·{" "}
-                        {new Date(message.createdAt).toLocaleDateString("ckb-IQ", {
+                        {new Date(message.createdAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : "ckb-IQ", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -341,13 +341,14 @@ export function BusinessMessagesPanel({
             value={reply}
             onChange={setReply}
             onSubmit={sendReply}
-            placeholder="وەڵامەکەت بنووسە... (Enter بۆ ناردن، Shift+Enter بۆ دێڕی نوێ)"
+            placeholder={t("replyPlaceholder")}
             sending={sendingReply}
             disabled={threadLoading}
+            sendLabel={t("send")}
           />
         ) : (
           <p className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            ئەم گفتوگۆیە داخراوە
+            {t("closed")}
           </p>
         )}
       </div>
@@ -358,16 +359,16 @@ export function BusinessMessagesPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          پەیامەکانت لەگەڵ ئەدمین
+          {t("yourMessages")}
         </p>
-        <Tooltip content="ناردنی پەیامی نوێ بۆ بەڕێوەبەری پلاتفۆرم" side="bottom">
+        <Tooltip content={t("newTooltip")} side="bottom">
           <button
             type="button"
             onClick={() => setView("new")}
             className="theme-fill flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
-            پەیامی نوێ
+            {t("newMessage")}
           </button>
         </Tooltip>
       </div>
@@ -377,9 +378,9 @@ export function BusinessMessagesPanel({
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5">
             <Mail className="h-6 w-6 text-slate-300 dark:text-slate-600" />
           </div>
-          <p className="mt-3 text-sm font-bold text-slate-400">هیچ پەیامێک نییە</p>
+          <p className="mt-3 text-sm font-bold text-slate-400">{t("empty")}</p>
           <p className="mt-1 max-w-xs text-xs text-slate-400">
-            پەیامێکی نوێ بنێرە بۆ بەڕێوەبەری پلاتفۆرم
+            {t("emptyHint")}
           </p>
         </div>
       ) : (
@@ -415,10 +416,10 @@ export function BusinessMessagesPanel({
                   )}
                   <div className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-400 dark:text-gray-500">
                     <MessageSquare className="h-3 w-3" />
-                    <span className={`font-bold ${status.color}`}>{status.label}</span>
+                    <span className={`font-bold ${status.color}`}>{t(status.key)}</span>
                     <span>·</span>
                     <span>
-                      {new Date(conversation.lastMessageAt).toLocaleDateString("ckb-IQ", {
+                      {new Date(conversation.lastMessageAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : "ckb-IQ", {
                         month: "short",
                         day: "numeric",
                       })}

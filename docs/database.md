@@ -15,6 +15,11 @@ underlying advertising-page entitlement where applicable.
 
 ## Business identity and applications
 
+`users.preferred_locale` stores each person's dashboard language (`ckb` or
+`ar`, default `ckb`). It is not business branding and does not change public
+page content. The 2026-09-22 forward migration adds the column after the
+baseline on both fresh and existing installations.
+
 Business onboarding uses `users`, `user_identities`,
 `business_memberships`, `business_signup_invitations`,
 `business_signup_applications`, and

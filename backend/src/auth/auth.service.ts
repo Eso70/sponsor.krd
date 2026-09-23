@@ -40,6 +40,48 @@ export class AuthService {
     private readonly tiktokPixelConfigs?: TikTokPixelConfigService,
   ) {}
 
+  async getBusinessPreferredLocale(
+    businessId: string,
+    userId?: string,
+  ): Promise<'ckb' | 'ar'> {
+    if (!userId) return 'ckb';
+    const result = await this.databaseService.query<{
+      preferred_locale: 'ckb' | 'ar';
+    }>(
+      `SELECT users.preferred_locale
+       FROM users
+       JOIN business_memberships membership ON membership.user_id = users.id
+       WHERE users.id = $1 AND membership.business_id = $2
+         AND users.status = 'active' AND membership.status = 'active'`,
+      [userId, businessId],
+    );
+    return result.rows[0]?.preferred_locale ?? 'ckb';
+  }
+
+  async updateBusinessPreferredLocale(
+    businessId: string,
+    userId: string | undefined,
+    locale: 'ckb' | 'ar',
+  ): Promise<'ckb' | 'ar'> {
+    if (!userId) throw new ForbiddenException('A member account is required');
+    const result = await this.databaseService.query<{
+      preferred_locale: 'ckb' | 'ar';
+    }>(
+      `UPDATE users SET preferred_locale = $3, updated_at = NOW()
+       WHERE users.id = $1 AND users.status = 'active'
+         AND EXISTS (
+           SELECT 1 FROM business_memberships membership
+           WHERE membership.user_id = users.id AND membership.business_id = $2
+             AND membership.status = 'active'
+         )
+       RETURNING preferred_locale`,
+      [userId, businessId, locale],
+    );
+    if (!result.rows[0])
+      throw new ForbiddenException('Business membership required');
+    return result.rows[0].preferred_locale;
+  }
+
   async getBusinessOnboarding(businessId: string) {
     const result = await this.databaseService.query(
       `SELECT business.onboarding_step AS "step",

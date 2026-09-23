@@ -22,17 +22,12 @@ import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonTikTokPage } from "@/components/shared/SkeletonPageLayouts";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { BusinessTikTokDeliveryPage } from "./BusinessTikTokDeliveryPage";
-import { BusinessTikTokPixelConfigPage } from "./BusinessTikTokPixelConfigPage";
-import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
+import { BusinessTikTokPixelConfigPage, type TikTokPixelConfigCopy } from "./BusinessTikTokPixelConfigPage";
 import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
+import { useTranslations } from "next-intl";
 
 type TrackingTab = "delivery" | "config";
-
-const tabs = [
-  { id: "delivery" as const, label: "ڕووداوەکان", icon: Radar },
-  { id: "config" as const, label: "TikTok Pixel و Events API", icon: Globe2 },
-];
 
 interface TrackingSummary {
   browserEvents: number;
@@ -89,7 +84,12 @@ function configCounts(settings: unknown): {
   };
 }
 
-export function BusinessTikTokConfigPage() {
+export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<TikTokPixelConfigCopy> }) {
+  const t = useTranslations("TikTokPage");
+  const tabs = [
+    { id: "delivery" as const, label: t("eventsTab"), icon: Radar },
+    { id: "config" as const, label: t("configTab"), icon: Globe2 },
+  ];
   const [tab, setTab] = useState<TrackingTab>("delivery");
   const [access, setAccess] = useState<EffectiveAccessManifest | null>(null);
   const [configuredPixels, setConfiguredPixels] = useState(0);
@@ -198,7 +198,7 @@ export function BusinessTikTokConfigPage() {
 
   const deliveryAllowed = canReadDelivery(access);
   const lockedAction = (
-    <Tooltip content="لە پلانی بەرزتردا بەردەستە" side="top">
+    <Tooltip content={t("higherPlan")} side="top">
       <span
         className="flex h-7 w-7 items-center justify-center rounded-lg cursor-default"
         style={{
@@ -225,45 +225,45 @@ export function BusinessTikTokConfigPage() {
       <StatCardGrid columns={3} className="mb-8">
         <StatCard
           icon={Radar}
-          label="Pixelی ڕێکخراو"
+          label={t("configuredPixels")}
           value={configuredPixels}
           color="blue"
         />
         <StatCard
           icon={KeyRound}
-          label="Events APIی چالاک"
+          label={t("activeApi")}
           value={apiConnections}
           color="cyan"
         />
         <StatCard
           icon={MousePointerClick}
-          label="ڕووداوی وێبگەڕ"
+          label={t("browserEvents")}
           value={deliveryAllowed ? summary.browserEvents : "—"}
-          subtitle={deliveryAllowed ? undefined : "لە پلانی بەرزتردا بەردەستە"}
+          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
           color="purple"
           action={deliveryAllowed ? undefined : lockedAction}
         />
         <StatCard
           icon={Server}
-          label="ڕووداوی Events API"
+          label={t("apiEvents")}
           value={deliveryAllowed ? summary.serverEvents : "—"}
-          subtitle={deliveryAllowed ? undefined : "لە پلانی بەرزتردا بەردەستە"}
+          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
           color="orange"
           action={deliveryAllowed ? undefined : lockedAction}
         />
         <StatCard
           icon={Send}
-          label="گەیشتوو"
+          label={t("delivered")}
           value={deliveryAllowed ? summary.delivered : "—"}
-          subtitle={deliveryAllowed ? undefined : "لە پلانی بەرزتردا بەردەستە"}
+          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
           color="green"
           action={deliveryAllowed ? undefined : lockedAction}
         />
         <StatCard
           icon={Activity}
-          label="ڕێژەی سەرکەوتن"
+          label={t("successRate")}
           value={deliveryAllowed ? `${summary.deliveryRate.toFixed(1)}٪` : "—"}
-          subtitle={deliveryAllowed ? undefined : "لە پلانی بەرزتردا بەردەستە"}
+          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
           color="pink"
           action={deliveryAllowed ? undefined : lockedAction}
         />
@@ -274,7 +274,7 @@ export function BusinessTikTokConfigPage() {
       </div>
 
       {tab === "config" ? (
-        <BusinessTikTokPixelConfigPage />
+        <BusinessTikTokPixelConfigPage copy={pixelCopy} />
       ) : deliveryAllowed ? (
         <BusinessTikTokDeliveryPage />
       ) : (
@@ -282,8 +282,8 @@ export function BusinessTikTokConfigPage() {
           locked
           className="min-h-[520px]"
           contentClassName="min-h-[520px]"
-          title={`${DASHBOARD_PAGE_LABELS.tiktokSettings} قوفڵە`}
-          description="ڕێکخستنی Pixel و Events API بەردەستە، بەڵام وردەکاریی ڕووداوەکان پێویستی بە پلانی بەرزتر هەیە."
+          title={t("lockedTitle")}
+          description={t("lockedDescription")}
         >
           <DashboardSurface className="min-h-[520px]">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -293,10 +293,10 @@ export function BusinessTikTokConfigPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200">
-                    {DASHBOARD_PAGE_LABELS.tiktokSettings}
+                    {t("title")}
                   </h2>
                   <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    دۆخی ڕووداوەکانی TikTok بە شێوەیەکی سادە ببینە.
+                    {t("simpleDescription")}
                   </p>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export function BusinessTikTokConfigPage() {
                 </div>
                 <div className="flex h-10 w-44 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-400 dark:border-white/10 dark:bg-white/5">
                   <Search className="h-4 w-4" />
-                  <span className="text-xs">هەموو پەڕەکان</span>
+                  <span className="text-xs">{t("allPages")}</span>
                 </div>
               </div>
             </div>
@@ -317,10 +317,10 @@ export function BusinessTikTokConfigPage() {
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
                   <div>
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      هەموو شتێک ئاساییە
+                      {t("allOkay")}
                     </p>
                     <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      ئەگەر کێشەیەک هەبێت، لێرە دەردەکەوێت.
+                      {t("issueHint")}
                     </p>
                   </div>
                 </div>
@@ -329,24 +329,23 @@ export function BusinessTikTokConfigPage() {
 
               <div className="rounded-2xl border border-slate-200/80 p-5 dark:border-white/10">
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  بەراوردکردنی ئەنجامەکان
+                  {t("reconciliation")}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  ئەنجامی ناوخۆ لەگەڵ ڕووداوە وەرگیراوەکانی TikTok بەراورد
-                  دەکرێت.
+                  {t("reconciliationDescription")}
                 </p>
                 <div className="mt-5 grid grid-cols-2 divide-x divide-slate-100 dark:divide-white/5">
                   <StatCard
                     className="p-4"
                     color="green"
-                    label="پشتڕاستکراوەی ناوخۆ"
+                    label={t("localConfirmed")}
                     value="—"
                     variant="comparison"
                   />
                   <StatCard
                     className="p-4"
                     color="blue"
-                    label="وەرگیراو لەلایەن TikTok"
+                    label={t("tiktokReceived")}
                     value="—"
                     variant="comparison"
                   />

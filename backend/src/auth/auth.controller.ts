@@ -25,6 +25,7 @@ import { CurrentUser } from './current-user.decorator';
 import { Subdomain } from './subdomain.decorator';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { UpdatePreferredLocaleDto } from './dto/update-preferred-locale.dto';
 import { AuthorizationService } from './authorization.service';
 import type { PermissionKey } from './capabilities';
 import { StorageService } from '../storage/storage.service';
@@ -119,6 +120,9 @@ export class AuthController {
     if (!business) {
       throw new HttpException('Business not found', HttpStatus.NOT_FOUND);
     }
+    const preferredLocale = user.impersonation
+      ? 'ckb'
+      : await this.authService.getBusinessPreferredLocale(user.id, user.userId);
     return {
       authenticated: true,
       user: {
@@ -140,6 +144,8 @@ export class AuthController {
         default_whatsapp_enabled: business.default_whatsapp_enabled ?? false,
         onboarding_required: !business.onboarding_completed_at,
         onboarding_step: business.onboarding_step ?? 1,
+        preferred_locale: preferredLocale,
+        can_change_locale: Boolean(user.userId) && !user.impersonation,
       },
       // Present only while a platform administrator is signed in as this
       // business. The dashboard uses it to render its permanent banner, so an
@@ -151,6 +157,20 @@ export class AuthController {
           }
         : null,
     };
+  }
+
+  @Patch('preferred-locale')
+  @UseGuards(BusinessGuard)
+  async updatePreferredLocale(
+    @CurrentUser() user: SessionUser,
+    @Body() body: UpdatePreferredLocaleDto,
+  ) {
+    const locale = await this.authService.updateBusinessPreferredLocale(
+      user.id,
+      user.userId,
+      body.locale,
+    );
+    return { locale };
   }
 
   /**

@@ -43,7 +43,9 @@ import type { ManagementTablePagination } from "@/components/shared/ManagementTa
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
 import { CampaignProfitModal } from "@/features/campaigns/components/CampaignProfitModal";
+import type { CampaignProfitCopy } from "@/features/campaigns/components/CampaignProfitModal";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
+import { KURDISH_LINKTREE_LIST_COPY, type LinktreeListCopy } from "@/features/link-editor/components/linktree-list-copy";
 
 interface LinktreesGridProps {
   publicPathPrefix?: string;
@@ -75,6 +77,8 @@ interface LinktreesGridProps {
   onToggleArchive?: (id: string, isArchived: boolean) => void;
   onToggleStatus?: (id: string, status: "active" | "inactive") => void;
   sponsorKrdTheme?: boolean;
+  listCopy?: Partial<LinktreeListCopy>;
+  profitCopy?: Partial<CampaignProfitCopy>;
 }
 
 function getPublicIdentifier(item: Linktree): string {
@@ -99,6 +103,8 @@ const LinktreeCard = memo(function LinktreeCard({
   showPageMeta,
   MetaBadgesComponent,
   trafficLabels,
+  labels,
+  metaCopy,
 }: {
   item: Linktree;
   onEdit?: (id: string) => void;
@@ -116,6 +122,8 @@ const LinktreeCard = memo(function LinktreeCard({
   showPageMeta: boolean;
   MetaBadgesComponent: ComponentType<LinktreeMetaBadgesProps>;
   trafficLabels: PageListTrafficLabels;
+  labels: LinktreeListCopy;
+  metaCopy?: Partial<LinktreeListCopy>;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
   const [showAllActions, setShowAllActions] = useState(false);
@@ -154,6 +162,7 @@ const LinktreeCard = memo(function LinktreeCard({
             id={item.id}
             isActive={isCampaignActive}
             onToggle={onToggleCampaign}
+            listCopy={metaCopy}
           />
         </div>
       )}
@@ -181,7 +190,7 @@ const LinktreeCard = memo(function LinktreeCard({
           {isCampaignActive && (
             <span
               className="absolute bottom-0 right-0 h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
-              title="کەمپەین چالاکە"
+              title={labels.campaignActive}
             />
           )}
         </div>
@@ -198,6 +207,7 @@ const LinktreeCard = memo(function LinktreeCard({
             showTemplate={showPageMeta}
             onToggleCampaign={onToggleCampaign}
             hideCampaignBadge={true}
+            listCopy={metaCopy}
           />
         </div>
       </div>
@@ -229,14 +239,14 @@ const LinktreeCard = memo(function LinktreeCard({
           </a>
           <Tooltip
             content={
-              copiedUid === publicIdentifier ? "کۆپیکرا" : "کۆپیکردنی بەستەر"
+              copiedUid === publicIdentifier ? labels.copied : labels.copyLink
             }
             side="top"
           >
             <button
               onClick={(e) => onCopy(publicIdentifier, e)}
               className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-              aria-label="کۆپیکردنی بەستەر"
+              aria-label={labels.copyLink}
             >
               {copiedUid === publicIdentifier ? (
                 <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400" />
@@ -252,11 +262,11 @@ const LinktreeCard = memo(function LinktreeCard({
       {showPageMeta && (
         <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
           <LinktreeMetaField
-            label="دروستکراوە"
+            label={labels.created}
             value={formatDate(item.created_at)}
           />
           <LinktreeMetaField
-            label="نوێکراوە"
+            label={labels.updated}
             value={formatDate(item.updated_at)}
           />
         </div>
@@ -305,31 +315,31 @@ const LinktreeCard = memo(function LinktreeCard({
           </Tooltip>
         )}
         {onEdit && (
-          <Tooltip content="دەستکاری" side="top">
+          <Tooltip content={labels.edit} side="top">
             <button
               onClick={() => onEdit(item.id)}
               className={`flex h-8 items-center justify-center rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-yellow-700 transition-all duration-200 hover:bg-yellow-500/20 hover:text-yellow-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-yellow-300 ${primaryActionLayout}`}
-              aria-label="دەستکاری"
+              aria-label={labels.edit}
             >
               <Edit className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
               {showPrimaryActionLabels ? (
-                <span className="truncate text-xs font-medium">دەستکاری</span>
+                <span className="truncate text-xs font-medium">{labels.edit}</span>
               ) : null}
             </button>
           </Tooltip>
         )}
 
         {onDuplicate ? (
-          <Tooltip content="لەبەرگرتنەوە" side="top">
+          <Tooltip content={labels.duplicate} side="top">
             <button
               onClick={() => onDuplicate(item)}
               className={`flex h-8 items-center justify-center rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 transition-all duration-200 hover:bg-indigo-500/20 hover:text-indigo-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-indigo-300 ${primaryActionLayout}`}
-              aria-label="لەبەرگرتنەوە"
+              aria-label={labels.duplicate}
             >
               <CopyPlus className="h-3.5 w-3.5" />
               {showPrimaryActionLabels ? (
                 <span className="truncate text-xs font-medium">
-                  لەبەرگرتنەوە
+                  {labels.duplicate}
                 </span>
               ) : null}
             </button>
@@ -338,11 +348,11 @@ const LinktreeCard = memo(function LinktreeCard({
 
         {showAllActions ? (
           <>
-            <Tooltip content="قازانج" side="top">
+            <Tooltip content={labels.profit} side="top">
               <button
                 onClick={() => onViewProfit(item)}
                 className={`flex h-8 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 transition-all duration-200 hover:bg-emerald-500/20 hover:text-emerald-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-emerald-300 ${expandedActionLayout}`}
-                aria-label="قازانج"
+                aria-label={labels.profit}
               >
                 <DollarSign className="h-3.5 w-3.5" />
               </button>
@@ -351,7 +361,7 @@ const LinktreeCard = memo(function LinktreeCard({
             {onToggleArchive && !item.is_default ? (
               <Tooltip
                 content={
-                  item.is_archived ? "گەڕاندنەوە لە ئەرشیف" : "ئەرشیفکردن"
+                  item.is_archived ? labels.restore : labels.archive
                 }
                 side="top"
               >
@@ -363,7 +373,7 @@ const LinktreeCard = memo(function LinktreeCard({
                       : "border-purple-500/30 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 hover:text-purple-800 dark:text-purple-300"
                   }`}
                   aria-label={
-                    item.is_archived ? "Restore from archive" : "Archive"
+                    metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "Restore from archive" : "Archive")
                   }
                 >
                   {item.is_archived ? (
@@ -379,8 +389,8 @@ const LinktreeCard = memo(function LinktreeCard({
               <Tooltip
                 content={
                   item.status === "inactive"
-                    ? "چالاککردنی پەڕە"
-                    : "ناچالاککردنی پەڕە"
+                    ? labels.activate
+                    : labels.deactivate
                 }
                 side="top"
               >
@@ -397,9 +407,7 @@ const LinktreeCard = memo(function LinktreeCard({
                       : "border-rose-500/30 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 hover:text-rose-800 dark:text-rose-300"
                   }`}
                   aria-label={
-                    item.status === "inactive"
-                      ? "Activate page"
-                      : "Deactivate page"
+                    metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "Activate page" : "Deactivate page")
                   }
                 >
                   {item.status === "inactive" ? (
@@ -415,35 +423,35 @@ const LinktreeCard = memo(function LinktreeCard({
         ) : null}
 
         {onDelete && item.uid !== "id" && !item.is_default ? (
-          <Tooltip content="سڕینەوە" side="top">
+          <Tooltip content={labels.delete} side="top">
             <button
               onClick={() => onDelete(item.id, item.uid, item.name)}
               className={`flex h-8 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 transition-all duration-200 hover:bg-red-500/20 hover:text-red-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-red-300 ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
-              aria-label="سڕینەوە"
+              aria-label={labels.delete}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </Tooltip>
         ) : null}
 
-        <Tooltip content="بینینی پەڕە" side="top">
+        <Tooltip content={labels.view} side="top">
           <button
             onClick={handleView}
             className={`flex h-8 items-center justify-center rounded-lg border border-slate-300/70 bg-slate-100/80 text-slate-700 transition-all duration-200 hover:bg-slate-200 hover:text-slate-900 active:scale-95 sm:h-9 sm:rounded-xl dark:border-white/15 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 dark:hover:text-white ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
-            aria-label="بینین"
+            aria-label={labels.viewButton}
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
 
         <Tooltip
-          content={showAllActions ? "شاردنەوەی کردارەکان" : "کردارە زیاترەکان"}
+          content={showAllActions ? labels.hideActions : labels.moreActions}
           side="top"
         >
           <button
             type="button"
             onClick={() => setShowAllActions((current) => !current)}
-            aria-label="کردارە زیاترەکان"
+            aria-label={labels.moreActions}
             aria-expanded={showAllActions}
             className={`flex h-8 items-center justify-center rounded-lg border border-slate-300/70 bg-slate-100/80 text-slate-700 transition-all duration-200 hover:bg-slate-200 hover:text-slate-900 active:scale-95 sm:h-9 sm:rounded-xl dark:border-white/15 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 dark:hover:text-white ${showAllActions ? expandedActionLayout : "w-8 shrink-0 sm:w-9"}`}
           >
@@ -476,7 +484,10 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   onToggleArchive,
   onToggleStatus,
   sponsorKrdTheme = false,
+  listCopy,
+  profitCopy,
 }: LinktreesGridProps) {
+  const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
   const [profitTarget, setProfitTarget] = useState<Linktree | null>(null);
   const displaysPageMeta = showPageMeta ?? showLinktreeMeta;
@@ -490,12 +501,12 @@ export const LinktreesGrid = memo(function LinktreesGrid({
         setTimeout(() => {
           setCopiedUid(null);
         }, 2000);
-        toast.success("بەستەرەکە کۆپی کرا");
+        toast.success(labels.linkCopied);
       } else {
-        toast.error("کۆپیکردنی بەستەر سەرکەوتوو نەبوو");
+        toast.error(labels.linkCopyFailed);
       }
     },
-    [publicPathPrefix],
+    [publicPathPrefix, labels.linkCopied, labels.linkCopyFailed],
   );
 
   const handleDelete = useCallback(
@@ -550,6 +561,8 @@ export const LinktreesGrid = memo(function LinktreesGrid({
             showPageMeta={displaysPageMeta}
             MetaBadgesComponent={MetaBadgesComponent}
             trafficLabels={trafficLabels}
+            labels={labels}
+            metaCopy={listCopy}
           />
         )}
       />
@@ -561,6 +574,7 @@ export const LinktreesGrid = memo(function LinktreesGrid({
         apiBasePath={apiBasePath}
         pageName={profitTarget?.name || ""}
         sponsorKrdTheme={sponsorKrdTheme}
+        copy={profitCopy}
       />
     </>
   );

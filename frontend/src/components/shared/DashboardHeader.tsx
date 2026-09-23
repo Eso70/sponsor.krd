@@ -1,6 +1,6 @@
 "use client";
 
-import { House, Languages, Menu, Moon, RefreshCw, Sun } from "lucide-react";
+import { House, Menu, Moon, RefreshCw, Sun } from "lucide-react";
 import type {
   AnchorHTMLAttributes,
   ButtonHTMLAttributes,
@@ -61,7 +61,20 @@ interface DashboardHeaderProps {
     items: AvatarMenuItem[];
   };
   onProfileItemClick?: () => void;
-  showLanguage?: boolean;
+  languageControl?: ReactNode;
+  labels?: {
+    menu: string;
+    menuLabel: string;
+    refresh: string;
+    refreshLabel: string;
+    home: string;
+    homeLabel: string;
+    theme: string;
+    darkTheme: string;
+    lightTheme: string;
+    themeLabel: string;
+    accountMenu: string;
+  };
   showRefresh?: boolean;
 }
 
@@ -79,17 +92,18 @@ export function DashboardHeader({
   notifications,
   profile,
   onProfileItemClick,
-  showLanguage = true,
+  languageControl,
+  labels,
   showRefresh = true,
 }: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#161B22]/80">
       <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Tooltip content="کردنەوە / داخستنی مینیو" side="bottom">
+          <Tooltip content={labels?.menu ?? "کردنەوە / داخستنی مینیو"} side="bottom">
             <DashboardHeaderActionButton
               onClick={onToggleSidebar}
-              aria-label="Toggle sidebar"
+              aria-label={labels?.menuLabel ?? "Toggle sidebar"}
             >
               <Menu className={iconClassName} aria-hidden="true" />
             </DashboardHeaderActionButton>
@@ -99,12 +113,12 @@ export function DashboardHeader({
 
         <div className="flex items-center gap-2 sm:gap-3">
           {showRefresh ? (
-            <Tooltip content="نوێکردنەوەی داتا" side="bottom">
+            <Tooltip content={labels?.refresh ?? "نوێکردنەوەی داتا"} side="bottom">
               <DashboardHeaderActionButton
                 onClick={() => void onRefresh()}
                 disabled={refreshing}
                 aria-busy={refreshing}
-                aria-label="Refresh dashboard data"
+                aria-label={labels?.refreshLabel ?? "Refresh dashboard data"}
               >
                 <MotionSpinner active={refreshing}>
                   <RefreshCw className={iconClassName} aria-hidden="true" />
@@ -113,12 +127,12 @@ export function DashboardHeader({
             </Tooltip>
           ) : null}
 
-          <Tooltip content="کردنەوەی ماڵپەڕ لە تابێکی نوێ" side="bottom">
+          <Tooltip content={labels?.home ?? "کردنەوەی ماڵپەڕ لە تابێکی نوێ"} side="bottom">
             <DashboardHeaderActionLink
               href="/"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Open home page in new tab"
+              aria-label={labels?.homeLabel ?? "Open home page in new tab"}
             >
               <House className={iconClassName} aria-hidden="true" />
             </DashboardHeaderActionLink>
@@ -126,24 +140,15 @@ export function DashboardHeader({
 
           {notifications}
 
-          {showLanguage ? (
-            <Tooltip content="گۆڕینی زمان" side="bottom">
-              <DashboardHeaderActionButton
-                aria-label="Toggle language"
-                className="hidden sm:flex"
-              >
-                <Languages className={iconClassName} aria-hidden="true" />
-              </DashboardHeaderActionButton>
-            </Tooltip>
-          ) : null}
+          {languageControl}
 
           <Tooltip
-            content={!mounted ? "دۆخی ڕەنگ" : theme === "light" ? "دۆخی تاریک" : "دۆخی ڕووناک"}
+            content={!mounted ? (labels?.theme ?? "دۆخی ڕەنگ") : theme === "light" ? (labels?.darkTheme ?? "دۆخی تاریک") : (labels?.lightTheme ?? "دۆخی ڕووناک")}
             side="bottom"
           >
             <DashboardHeaderActionButton
               onClick={onToggleTheme}
-              aria-label="Toggle theme"
+              aria-label={labels?.themeLabel ?? "Toggle theme"}
             >
               {!mounted ? (
                 <span className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5" />
@@ -160,7 +165,7 @@ export function DashboardHeader({
             email={profile.email}
             badge={profile.badge}
             avatarSrc={profile.avatarSrc}
-            ariaLabel="Account menu"
+            ariaLabel={labels?.accountMenu ?? "Account menu"}
             items={profile.items}
             onItemClick={onProfileItemClick}
           />
