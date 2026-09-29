@@ -46,6 +46,8 @@ export const businessMessages = {
     },
     Language: {
       saveFailed: "زمان نەگۆڕدرا. تکایە دووبارە هەوڵ بدەوە",
+      defaultDashboardLanguage: "زمانی بنەڕەتی داشبۆرد",
+      savedForYourAccount: "گۆڕانکارییەکە خۆکارانە بۆ هەژمارەکەت پاشەکەوت دەکرێت.",
       switchToArabic: "گۆڕینی زمان بۆ عەرەبی",
       switchToKurdish: "گۆڕینی زمان بۆ کوردی",
       switchToEnglish: "گۆڕینی زمان بۆ ئینگلیزی",
@@ -411,6 +413,8 @@ export const businessMessages = {
     },
     Language: {
       saveFailed: "تعذّر تغيير اللغة. حاول مرة أخرى",
+      defaultDashboardLanguage: "اللغة الافتراضية للوحة التحكم",
+      savedForYourAccount: "يُحفظ التغيير تلقائيًا لحسابك.",
       switchToArabic: "التبديل إلى العربية",
       switchToKurdish: "التبديل إلى الكردية",
       switchToEnglish: "التبديل إلى الإنجليزية",

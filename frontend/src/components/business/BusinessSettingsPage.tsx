@@ -47,6 +47,7 @@ import {
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { BusinessOwnerIdentityFields } from "@/features/link-editor/components/BusinessOwnerIdentityFields";
+import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
 import {
   AVATAR_ACCEPT,
   AVATAR_MIME_TYPES,
@@ -614,6 +615,9 @@ export function BusinessSettingsPage() {
                 >
                   <div className="col-span-full rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
                     <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <BusinessLanguageDropdown />
+                      </div>
                       <Field label={t("defaultTemplate")}>
                         <TemplateCombobox
                           copy={locale === "ar" ? businessMessages.ar.SettingsTemplates : locale === "en" ? businessMessages.en.SettingsTemplates : undefined}

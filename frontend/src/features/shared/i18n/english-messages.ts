@@ -18,6 +18,8 @@ export const englishBusinessMessages = {
     lightTheme: "Light theme", themeLabel: "Change appearance", accountMenu: "Account menu",
   },
   Language: {
+    defaultDashboardLanguage: "Default dashboard language",
+    savedForYourAccount: "Changes are saved automatically for your account.",
     saveFailed: "Couldn't change language. Please try again.",
     switchToArabic: "Switch to Arabic", switchToKurdish: "Switch to Kurdish",
     switchToEnglish: "Switch to English",

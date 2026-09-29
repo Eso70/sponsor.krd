@@ -15,6 +15,8 @@ import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { SkeletonBusinessInfoForm } from "@/components/shared/SkeletonModalLayouts";
+import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
+import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
 import type { businessMessages } from "@/features/business/i18n/messages";
 
 type TikTokConfig = {
@@ -45,6 +47,7 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
   identityCopy?: ComponentProps<typeof BusinessOwnerIdentityFields>["copy"];
   colorCopy?: ComponentProps<typeof ColorGradientModal>["copy"];
 }) {
+  const { saving: languageSaving } = useBusinessLocale();
   const [data, setData] = useState<OnboardingData | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTikTok, setShowTikTok] = useState(false);
@@ -187,7 +190,7 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
   }
 
   async function saveAndComplete() {
-    if (!data || !validateFields()) return;
+    if (!data || languageSaving || !validateFields()) return;
     setBusy(true);
     setError("");
     try {
@@ -265,7 +268,7 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
         footer={
           <button
             type="button"
-            disabled={busy || !valid}
+            disabled={busy || languageSaving || !valid}
             onClick={() => void saveAndComplete()}
             className="ml-auto flex h-11 min-w-40 items-center justify-center gap-2 rounded-xl bg-[var(--sponsor-krd-accent)] px-5 text-sm font-bold text-[var(--sponsor-krd-accent-ink)] disabled:opacity-50"
           >
@@ -393,6 +396,7 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
                 </button>
               </EditorField>
             </div>
+            <BusinessLanguageDropdown />
           </div>
         </div>
       </ManagementModal>

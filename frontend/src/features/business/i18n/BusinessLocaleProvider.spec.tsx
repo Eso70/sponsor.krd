@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useTranslations } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessLanguageSelector } from "@/features/business/components/BusinessLanguageSelector";
+import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
 import { BusinessLocaleProvider } from "./BusinessLocaleProvider";
 
 const { apiRequest, toastError } = vi.hoisted(() => ({
@@ -103,6 +104,7 @@ describe("business language preference", () => {
     render(
       <BusinessLocaleProvider initialLocale="ar" canChangeLocale={false}>
         <BusinessLanguageSelector />
+        <BusinessLanguageDropdown />
         <Content />
       </BusinessLocaleProvider>,
     );
@@ -111,5 +113,37 @@ describe("business language preference", () => {
     expect(
       screen.queryByRole("button", { name: "التبديل إلى الإنجليزية" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("اللغة الافتراضية للوحة التحكم")).not.toBeInTheDocument();
+  });
+
+  it("keeps the setup and settings dropdowns synchronized with the header preference", async () => {
+    apiRequest.mockResolvedValue({ locale: "ar" });
+    render(
+      <BusinessLocaleProvider initialLocale="ckb">
+        <BusinessLanguageSelector />
+        <BusinessLanguageDropdown />
+        <BusinessLanguageDropdown />
+      </BusinessLocaleProvider>,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /کوردی/ })[0]);
+    fireEvent.click(screen.getByRole("option", { name: "العربية" }));
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
+        method: "PATCH",
+        json: { locale: "ar" },
+      }),
+    );
+    expect(screen.getAllByRole("button", { name: /العربية/ })).toHaveLength(2);
+
+    apiRequest.mockResolvedValue({ locale: "en" });
+    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
+        method: "PATCH",
+        json: { locale: "en" },
+      }),
+    );
+    expect(screen.getAllByRole("button", { name: /English/ })).toHaveLength(2);
   });
 });
