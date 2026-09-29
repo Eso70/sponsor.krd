@@ -578,6 +578,8 @@ without a member identity. The public business application form lets the
 applicant choose their initial dashboard language (English for a new account).
 Business Settings → Defaults exposes the same member-owned preference as a
 dropdown; changes there or in the header save immediately and stay in sync.
+If an approved business is later deleted, its old signup session shows that a
+new administrator invitation is needed instead of offering an unusable form.
 This is not a business-wide or public-page language setting. The Business dashboard
 stays LTR in all three languages; the Business subtree carries the selected
 `lang` for assistive technology.

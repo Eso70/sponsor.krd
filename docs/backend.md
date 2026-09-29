@@ -59,6 +59,12 @@ number of attempts, and are rate limited per email and per IP.
 New Google and email signup users start with English as their dashboard
 language. The application form can select Kurdish, Arabic, or English; its
 update saves the choice atomically to the verified applicant's user account.
+Deleting an approved business closes its signup application as `deleted` in the
+same PostgreSQL transaction, records the administrator in its review-event
+history, releases the reserved subdomain, and keeps the
+verified user/Google identity. A later administrator invitation can reopen the
+application for the same owner; an approval still linked to an existing
+business remains ineligible for signup.
 
 Both Google and email verification accept the shared private-device choice.
 Normal business sessions last 12 hours; remembered business sessions last 30

@@ -37,6 +37,10 @@ Business onboarding uses `users`, `user_identities`,
 application subdomains without permanently blocking rejected requests. OAuth
 state, signup sessions, and tenant handoff codes are temporary Redis records;
 they never replace durable application or membership state.
+An approved application is closed as `deleted` when its business is removed;
+the owner identity and review-event history remain, while the old subdomain and
+branding references are released. The `2026-09-30_deleted_business_signup_reapply.sql`
+forward migration closes approvals already orphaned by earlier deletions.
 
 `businesses.onboarding_step`, `businesses.onboarding_version`, and
 `businesses.onboarding_completed_at` enforce the required first-login setup.

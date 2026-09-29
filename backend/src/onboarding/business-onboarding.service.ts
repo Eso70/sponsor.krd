@@ -62,6 +62,29 @@ import {
 export const TERMS_VERSION = '2026-08-09';
 export const PRIVACY_VERSION = '2026-08-19';
 const SIGNUP_SESSION_SECONDS = 2 * 60 * 60;
+
+// An approved application can be reused only after its business was deleted.
+// Keep the reset identical for email and Google signup, including removal of
+// the old, no-longer-reserved subdomain and stale branding.
+const REOPEN_SIGNUP_APPLICATION_SQL = `
+  status = CASE WHEN status IN ('rejected', 'deleted')
+                 OR (status = 'approved' AND business_id IS NULL)
+                THEN 'draft' ELSE status END,
+  requested_subdomain = CASE WHEN status IN ('rejected', 'approved', 'deleted')
+                             THEN NULL ELSE requested_subdomain END,
+  logo = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE logo END,
+  favicon = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE favicon END,
+  default_avatar = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE default_avatar END,
+  selected_subscription_plan_id = CASE WHEN status IN ('approved', 'deleted')
+                                       THEN NULL ELSE selected_subscription_plan_id END,
+  submitted_at = CASE WHEN status IN ('rejected', 'deleted', 'approved')
+                      THEN NULL ELSE submitted_at END,
+  reviewed_at = CASE WHEN status IN ('rejected', 'deleted', 'approved')
+                     THEN NULL ELSE reviewed_at END,
+  reviewed_by = CASE WHEN status IN ('rejected', 'deleted', 'approved')
+                     THEN NULL ELSE reviewed_by END,
+  review_reason = CASE WHEN status IN ('rejected', 'deleted', 'approved')
+                       THEN NULL ELSE review_reason END`;
 const DEFAULT_INVITATION_TTL_HOURS = 24;
 const DEFAULT_SPONSOR_KRD_WEBSITE_COLOR = 'gradient:to-r:#25F4EE:#FE2C55';
 
@@ -614,13 +637,14 @@ export class BusinessOnboardingService {
         id: string;
         status: string;
         invitation_id: string;
+        business_id: string | null;
       }>(
-        `SELECT id, status, invitation_id FROM business_signup_applications
+        `SELECT id, status, invitation_id, business_id FROM business_signup_applications
          WHERE user_id = $1 FOR UPDATE`,
         [userId],
       );
       const existing = existingApplication.rows[0];
-      if (existing?.status === 'approved') {
+      if (existing?.status === 'approved' && existing.business_id) {
         throw new ConflictException(
           'This email already owns an approved business',
         );
@@ -630,10 +654,7 @@ export class BusinessOnboardingService {
         const resumed = await client.query<{ id: string }>(
           `UPDATE business_signup_applications
            SET invitation_id = $1, owner_name = $2, owner_email = $2,
-               status = CASE WHEN status = 'rejected' THEN 'draft' ELSE status END,
-               reviewed_at = CASE WHEN status = 'rejected' THEN NULL ELSE reviewed_at END,
-               reviewed_by = CASE WHEN status = 'rejected' THEN NULL ELSE reviewed_by END,
-               review_reason = CASE WHEN status = 'rejected' THEN NULL ELSE review_reason END,
+               ${REOPEN_SIGNUP_APPLICATION_SQL},
                updated_at = NOW()
            WHERE id = $3
            RETURNING id`,
@@ -873,15 +894,16 @@ export class BusinessOnboardingService {
         id: string;
         invitation_id: string;
         status: string;
+        business_id: string | null;
       }>(
-        `SELECT id, invitation_id, status
+        `SELECT id, invitation_id, status, business_id
          FROM business_signup_applications
          WHERE user_id = $1
          FOR UPDATE`,
         [userId],
       );
       const existing = existingApplication.rows[0];
-      if (existing?.status === 'approved') {
+      if (existing?.status === 'approved' && existing.business_id) {
         throw new ConflictException(
           'This Google account already owns an approved business',
         );
@@ -895,10 +917,7 @@ export class BusinessOnboardingService {
                owner_name = $2,
                owner_email = $3,
                google_avatar_url = $4,
-               status = CASE WHEN status = 'rejected' THEN 'draft' ELSE status END,
-               reviewed_at = CASE WHEN status = 'rejected' THEN NULL ELSE reviewed_at END,
-               reviewed_by = CASE WHEN status = 'rejected' THEN NULL ELSE reviewed_by END,
-               review_reason = CASE WHEN status = 'rejected' THEN NULL ELSE review_reason END,
+               ${REOPEN_SIGNUP_APPLICATION_SQL},
                updated_at = NOW()
            WHERE id = $5
            RETURNING id`,

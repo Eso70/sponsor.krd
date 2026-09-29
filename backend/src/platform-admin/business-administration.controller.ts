@@ -34,6 +34,7 @@ import { BusinessListQueryDto } from '../common/dto/admin-list-query.dto';
 import { ImpersonationService } from '../auth/impersonation.service';
 import { StartImpersonationDto } from './dto/start-impersonation.dto';
 import { requestIp } from '../common/request-context';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('api/platform/businesses')
 @UseGuards(PlatformAdminGuard, AuthorizationGuard)
@@ -233,8 +234,11 @@ export class BusinessAdministrationController {
 
   @Delete(':id')
   @RequireCapabilities(Capability.PlatformBusinessesDelete)
-  async deleteBusiness(@Param('id') id: string) {
-    await this.businessAdministrationService.deleteBusiness(id);
+  async deleteBusiness(
+    @Param('id') id: string,
+    @CurrentUser() user: SessionUser,
+  ) {
+    await this.businessAdministrationService.deleteBusiness(id, user.id);
     return { success: true, message: 'Business deleted successfully' };
   }
 

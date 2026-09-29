@@ -227,6 +227,18 @@ export function BusinessSignupWizard() {
     );
   }
 
+  if (application.status === "deleted") {
+    return (
+      <AuthenticationShell brandDescription={copy.wizardBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
+        <AuthenticationCard title={copy.deletedTitle} description={copy.deletedDescription}>
+          <div className="flex justify-center py-3">
+            <ShieldCheck className="h-12 w-12 text-slate-400" />
+          </div>
+        </AuthenticationCard>
+      </AuthenticationShell>
+    );
+  }
+
   return (
     <AuthenticationShell brandDescription={copy.wizardFormBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
       <AuthenticationCard

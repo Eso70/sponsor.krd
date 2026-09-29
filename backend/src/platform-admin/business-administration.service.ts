@@ -971,7 +971,7 @@ export class BusinessAdministrationService {
     return result;
   }
 
-  async deleteBusiness(id: string) {
+  async deleteBusiness(id: string, adminId: string) {
     const businessRes = await this.databaseService.query<{
       logo: string | null;
       favicon: string | null;
@@ -1000,11 +1000,29 @@ export class BusinessAdministrationService {
 
     await this.redisService.clearBusinessSessions(id);
 
-    const res = await this.databaseService.query(
-      `DELETE FROM businesses WHERE id = $1 AND account_type = 'business'`,
-      [id],
-    );
-    if (res.rowCount === 0) throw new NotFoundException('Business not found');
+    await this.databaseService.transaction(async (client) => {
+      await client.query(
+        `WITH closed AS (
+           UPDATE business_signup_applications
+           SET status = 'deleted', business_id = NULL,
+               requested_subdomain = NULL, logo = NULL, favicon = NULL,
+               default_avatar = NULL, selected_subscription_plan_id = NULL
+           WHERE business_id = $1
+           RETURNING id
+         )
+         INSERT INTO business_signup_application_events
+           (application_id, actor_type, actor_id, event_type, metadata)
+         SELECT id, 'platform-admin', $2, 'business_deleted', jsonb_build_object('businessId', $1::text)
+         FROM closed`,
+        [id, adminId],
+      );
+      const result = await client.query(
+        `DELETE FROM businesses WHERE id = $1 AND account_type = 'business'`,
+        [id],
+      );
+      if (result.rowCount === 0)
+        throw new NotFoundException('Business not found');
+    });
 
     if (business.subdomain) {
       try {

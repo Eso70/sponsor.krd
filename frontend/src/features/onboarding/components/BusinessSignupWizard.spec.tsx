@@ -56,6 +56,20 @@ describe("BusinessSignupWizard application status", () => {
     expect(toast.success).toHaveBeenCalledWith("دۆخی داواکاری نوێکرایەوە.");
   });
 
+  it("requires a fresh invitation for a deleted business", async () => {
+    apiRequest.mockResolvedValueOnce({
+      status: "deleted",
+      ownerEmail: "owner@example.com",
+      businessName: "Old Business",
+      phone: "7501234567",
+      requestedSubdomain: null,
+    });
+    render(<RootPublicLocaleProvider initialLocale="en"><BusinessSignupWizard /></RootPublicLocaleProvider>);
+    expect(await screen.findByText("Previous business deleted")).toBeInTheDocument();
+    expect(screen.getByText("Request a new invitation from an administrator to create another business.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit application" })).not.toBeInTheDocument();
+  });
+
   it("updates validation messages when switching the root visitor language", async () => {
     apiRequest.mockResolvedValueOnce({
       status: "draft",

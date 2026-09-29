@@ -1,4 +1,5 @@
 import { spawnSync } from 'child_process';
+import { readdirSync } from 'fs';
 import { join } from 'path';
 import { Pool } from 'pg';
 import {
@@ -73,6 +74,28 @@ describe('consolidated database schema commands (e2e)', () => {
   });
 
   it('records a complete unledgered schema without replaying it', async () => {
+    const admin = await fixture.query<{ id: string }>(
+      `INSERT INTO platform_admins (username, name)
+       VALUES ('migration-fixture-admin', 'Migration fixture') RETURNING id`,
+    );
+    const user = await fixture.query<{ id: string }>(
+      `INSERT INTO users (email, display_name)
+       VALUES ('orphan@example.com', 'Orphan owner') RETURNING id`,
+    );
+    const invitation = await fixture.query<{ id: string }>(
+      `INSERT INTO business_signup_invitations (token_hash, expires_at, created_by)
+       VALUES ($1, NOW() + INTERVAL '1 day', $2) RETURNING id`,
+      ['a'.repeat(64), admin.rows[0].id],
+    );
+    const application = await fixture.query<{ id: string }>(
+      `INSERT INTO business_signup_applications
+         (invitation_id, user_id, status, owner_name, owner_email,
+          requested_subdomain, logo)
+       VALUES ($1, $2, 'approved', 'Orphan owner', 'orphan@example.com',
+               'released-tenant', '/images/upload/old-logo.png')
+       RETURNING id`,
+      [invitation.rows[0].id, user.rows[0].id],
+    );
     const runner = join(__dirname, '../node_modules/ts-node/dist/bin.js');
     const result = spawnSync(
       process.execPath,
@@ -98,9 +121,27 @@ describe('consolidated database schema commands (e2e)', () => {
     const ledger = await fixture.query<{ filename: string }>(
       'SELECT filename FROM schema_migrations ORDER BY filename',
     );
+    const forwardMigrations = readdirSync(migrationsDirectory)
+      .filter((name) => /^\d{4}-\d{2}-\d{2}_.+\.sql$/.test(name))
+      .sort();
     expect(ledger.rows.map((row) => row.filename)).toEqual([
+      ...forwardMigrations,
       BASELINE_LEDGER_NAME,
     ]);
+    const repaired = await fixture.query<{
+      status: string;
+      requested_subdomain: string | null;
+      logo: string | null;
+    }>(
+      `SELECT status, requested_subdomain, logo
+       FROM business_signup_applications WHERE id = $1`,
+      [application.rows[0].id],
+    );
+    expect(repaired.rows[0]).toEqual({
+      status: 'deleted',
+      requested_subdomain: null,
+      logo: null,
+    });
     const retainedBusinessTable = await fixture.query<{ exists: boolean }>(
       `SELECT to_regclass('public.businesses') IS NOT NULL AS exists`,
     );

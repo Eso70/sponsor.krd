@@ -105,7 +105,7 @@ CREATE TABLE public.business_signup_applications (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT business_signup_applications_user_key UNIQUE (user_id),
-    CONSTRAINT business_signup_applications_status_check CHECK (status IN ('draft', 'pending', 'changes_requested', 'approved', 'rejected')),
+    CONSTRAINT business_signup_applications_status_check CHECK (status IN ('draft', 'pending', 'changes_requested', 'approved', 'rejected', 'deleted')),
     CONSTRAINT business_signup_applications_socials_check CHECK (jsonb_typeof(social_profiles) = 'object'),
     CONSTRAINT business_signup_applications_subdomain_check CHECK (requested_subdomain IS NULL OR (requested_subdomain = lower(requested_subdomain) AND requested_subdomain ~ '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'))
 );

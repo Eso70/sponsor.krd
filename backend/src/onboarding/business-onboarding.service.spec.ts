@@ -432,93 +432,209 @@ describe('BusinessOnboardingService invitations', () => {
     );
   });
 
-  it('resumes the existing application when the same Google user gets a new invitation', async () => {
-    const client = {
-      query: jest.fn(async (sql: string) => {
-        if (sql.includes('FROM business_signup_invitations')) {
-          return { rows: [{ id: 'new-invite', email: null }] };
-        }
-        if (sql.includes('FROM user_identities')) {
-          return { rows: [{ user_id: 'user-1' }] };
-        }
-        if (sql.includes('FROM business_signup_applications')) {
-          return {
-            rows: [
-              {
-                id: 'application-1',
-                invitation_id: 'old-invite',
-                status: 'draft',
-              },
-            ],
-          };
-        }
-        if (sql.includes('UPDATE business_signup_applications')) {
-          return { rows: [{ id: 'application-1' }] };
-        }
-        return { rows: [] };
-      }),
-    };
-    const database = {
-      transaction: jest.fn(
-        async (work: (transactionClient: typeof client) => Promise<unknown>) =>
-          work(client),
-      ),
-    };
-    const redis = {
-      isAvailable: jest.fn().mockReturnValue(true),
-      consume: jest.fn().mockResolvedValue({
-        mode: 'signup',
-        nonce: 'nonce',
-        verifier: 'verifier',
-        invitationId: 'new-invite',
-      }),
-      set: jest.fn().mockResolvedValue(true),
-    };
-    const google = {
-      exchangeCode: jest.fn().mockResolvedValue({
-        subject: 'google-subject',
-        email: 'owner@example.com',
-        name: 'Owner',
-        avatarUrl: null,
-        emailVerified: true,
-      }),
-    };
-    const config = {
-      get: jest.fn((_key: string, fallback?: unknown) => fallback),
-    };
-    const service = new BusinessOnboardingService(
-      database as never,
-      redis as never,
-      google as never,
-      {} as never,
-      {} as never,
-      config as never,
-    );
+  it.each([
+    { status: 'draft', businessId: null, blocked: false },
+    { status: 'deleted', businessId: null, blocked: false },
+    { status: 'approved', businessId: null, blocked: false },
+    { status: 'approved', businessId: 'active-business', blocked: true },
+  ])(
+    'handles a $status Google application with business $businessId',
+    async ({ status, businessId, blocked }) => {
+      const client = {
+        query: jest.fn(async (sql: string) => {
+          if (sql.includes('FROM business_signup_invitations')) {
+            return { rows: [{ id: 'new-invite', email: null }] };
+          }
+          if (sql.includes('FROM user_identities')) {
+            return { rows: [{ user_id: 'user-1' }] };
+          }
+          if (sql.includes('FROM business_signup_applications')) {
+            return {
+              rows: [
+                {
+                  id: 'application-1',
+                  invitation_id: 'old-invite',
+                  status,
+                  business_id: businessId,
+                },
+              ],
+            };
+          }
+          if (sql.includes('UPDATE business_signup_applications')) {
+            return { rows: [{ id: 'application-1' }] };
+          }
+          return { rows: [] };
+        }),
+      };
+      const database = {
+        transaction: jest.fn(
+          async (
+            work: (transactionClient: typeof client) => Promise<unknown>,
+          ) => work(client),
+        ),
+      };
+      const redis = {
+        isAvailable: jest.fn().mockReturnValue(true),
+        consume: jest.fn().mockResolvedValue({
+          mode: 'signup',
+          nonce: 'nonce',
+          verifier: 'verifier',
+          invitationId: 'new-invite',
+        }),
+        set: jest.fn().mockResolvedValue(true),
+      };
+      const google = {
+        exchangeCode: jest.fn().mockResolvedValue({
+          subject: 'google-subject',
+          email: 'owner@example.com',
+          name: 'Owner',
+          avatarUrl: null,
+          emailVerified: true,
+        }),
+      };
+      const config = {
+        get: jest.fn((_key: string, fallback?: unknown) => fallback),
+      };
+      const service = new BusinessOnboardingService(
+        database as never,
+        redis as never,
+        google as never,
+        {} as never,
+        {} as never,
+        config as never,
+      );
 
-    const result = await service.finishGoogleCallback('code', 'state');
+      if (blocked) {
+        await expect(
+          service.finishGoogleCallback('code', 'state'),
+        ).rejects.toThrow(
+          'This Google account already owns an approved business',
+        );
+        expect(
+          client.query.mock.calls.some(([sql]) =>
+            String(sql).includes('UPDATE business_signup_applications'),
+          ),
+        ).toBe(false);
+        return;
+      }
 
-    expect(result).toEqual(
-      expect.objectContaining({
-        mode: 'signup',
-        redirectUrl: 'http://localhost:3011/join/application',
-      }),
-    );
-    expect(
-      client.query.mock.calls.some(([sql]) =>
-        String(sql).includes('UPDATE business_signup_applications'),
-      ),
-    ).toBe(true);
-    expect(
-      client.query.mock.calls.some(([sql]) =>
-        String(sql).includes('INSERT INTO business_signup_applications'),
-      ),
-    ).toBe(false);
-    expect(redis.set).toHaveBeenCalledWith(
-      expect.stringMatching(/^signup:session:/),
-      { applicationId: 'application-1', userId: 'user-1' },
-      7200,
-    );
-  });
+      const result = await service.finishGoogleCallback('code', 'state');
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          mode: 'signup',
+          redirectUrl: 'http://localhost:3011/join/application',
+        }),
+      );
+      expect(
+        client.query.mock.calls.some(([sql]) =>
+          String(sql).includes('UPDATE business_signup_applications'),
+        ),
+      ).toBe(true);
+      if (status !== 'draft') {
+        expect(
+          client.query.mock.calls.some(([sql]) =>
+            String(sql).includes(
+              "requested_subdomain = CASE WHEN status IN ('rejected', 'approved', 'deleted')",
+            ),
+          ),
+        ).toBe(true);
+      }
+      expect(
+        client.query.mock.calls.some(([sql]) =>
+          String(sql).includes('INSERT INTO business_signup_applications'),
+        ),
+      ).toBe(false);
+      expect(redis.set).toHaveBeenCalledWith(
+        expect.stringMatching(/^signup:session:/),
+        { applicationId: 'application-1', userId: 'user-1' },
+        7200,
+      );
+    },
+  );
+
+  it.each([
+    { status: 'deleted', businessId: null, blocked: false },
+    { status: 'approved', businessId: null, blocked: false },
+    { status: 'approved', businessId: 'active-business', blocked: true },
+  ])(
+    'handles a $status email application with business $businessId',
+    async ({ status, businessId, blocked }) => {
+      const client = {
+        query: jest.fn(async (sql: string) => {
+          if (sql.includes('FROM business_signup_invitations')) {
+            return { rows: [{ id: 'new-invite', email: 'owner@example.com' }] };
+          }
+          if (sql.includes('SELECT id FROM users WHERE email')) {
+            return { rows: [{ id: 'user-1' }] };
+          }
+          if (sql.includes('FROM business_signup_applications')) {
+            return {
+              rows: [
+                {
+                  id: 'application-1',
+                  invitation_id: 'old-invite',
+                  status,
+                  business_id: businessId,
+                },
+              ],
+            };
+          }
+          if (sql.includes('UPDATE business_signup_applications')) {
+            return { rows: [{ id: 'application-1' }] };
+          }
+          return { rows: [] };
+        }),
+      };
+      const database = {
+        transaction: jest.fn(
+          async (
+            work: (transactionClient: typeof client) => Promise<unknown>,
+          ) => work(client),
+        ),
+      };
+      const service = new BusinessOnboardingService(
+        database as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+      );
+      const resume = (
+        service as unknown as {
+          finishEmailSignupIdentity: (
+            invitationId: string,
+            email: string,
+          ) => Promise<unknown>;
+        }
+      ).finishEmailSignupIdentity.bind(service);
+
+      if (blocked) {
+        await expect(resume('new-invite', 'owner@example.com')).rejects.toThrow(
+          'This email already owns an approved business',
+        );
+        expect(
+          client.query.mock.calls.some(([sql]) =>
+            String(sql).includes('UPDATE business_signup_applications'),
+          ),
+        ).toBe(false);
+        return;
+      }
+
+      await expect(resume('new-invite', 'owner@example.com')).resolves.toEqual({
+        applicationId: 'application-1',
+        userId: 'user-1',
+      });
+      expect(
+        client.query.mock.calls.some(([sql]) =>
+          String(sql).includes(
+            "requested_subdomain = CASE WHEN status IN ('rejected', 'approved', 'deleted')",
+          ),
+        ),
+      ).toBe(true);
+    },
+  );
 
   it('links Google after email signup only for the approved owner on the exact tenant', async () => {
     const client = {

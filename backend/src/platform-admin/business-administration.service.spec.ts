@@ -6,6 +6,70 @@ import { AdvertisingService } from '../advertising/advertising.service';
 import { BusinessAdministrationService } from './business-administration.service';
 
 describe('BusinessAdministrationService', () => {
+  it('closes the approved application and deletes its business atomically', async () => {
+    const clientQuery = jest.fn(async (sql: string) =>
+      sql.includes('DELETE FROM businesses')
+        ? { rows: [], rowCount: 1 }
+        : { rows: [], rowCount: 1 },
+    );
+    const database = {
+      query: jest.fn(async (sql: string) =>
+        sql.includes('FROM businesses a')
+          ? {
+              rows: [
+                {
+                  logo: null,
+                  favicon: null,
+                  default_avatar: null,
+                  subdomain: 'acme',
+                },
+              ],
+            }
+          : { rows: [] },
+      ),
+      transaction: jest.fn(
+        async (
+          work: (client: { query: typeof clientQuery }) => Promise<unknown>,
+        ) => work({ query: clientQuery }),
+      ),
+    };
+    const redis = {
+      clearBusinessSessions: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
+    };
+    const storage = {
+      getBusinessAssetUrls: jest.fn().mockResolvedValue([]),
+      deleteUnreferencedFromValues: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new BusinessAdministrationService(
+      database as never,
+      redis as never,
+      storage as never,
+      {} as never,
+    );
+
+    await expect(
+      service.deleteBusiness('business-1', 'admin-1'),
+    ).resolves.toEqual({
+      success: true,
+    });
+    expect(database.transaction).toHaveBeenCalledTimes(1);
+    expect(clientQuery).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("SET status = 'deleted', business_id = NULL"),
+      ['business-1', 'admin-1'],
+    );
+    expect(clientQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('DELETE FROM businesses'),
+      ['business-1'],
+    );
+    expect(clientQuery.mock.calls[0][0]).toContain(
+      'requested_subdomain = NULL',
+    );
+    expect(clientQuery.mock.calls[0][0]).toContain("'business_deleted'");
+  });
+
   function buildService(query: jest.Mock) {
     const database = { query } as unknown as DatabaseService;
     const redis = {} as unknown as RedisService;
