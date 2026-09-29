@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api/request";
 import { businessMessages, type BusinessLocale } from "./messages";
+import { rememberBusinessLocale } from "./locale-cookie";
 
 interface BusinessLocaleContextValue {
   locale: BusinessLocale;
@@ -32,6 +33,7 @@ export function BusinessLocaleProvider({
 }) {
   const [locale, setLocale] = useState(initialLocale);
   const [saving, setSaving] = useState(false);
+  useEffect(() => rememberBusinessLocale(initialLocale), [initialLocale]);
   const changeLocale = useCallback(async (nextLocale: BusinessLocale) => {
     if (!canChangeLocale || nextLocale === locale || saving) return;
     const previousLocale = locale;
@@ -42,6 +44,7 @@ export function BusinessLocaleProvider({
         method: "PATCH",
         json: { locale: nextLocale },
       });
+      rememberBusinessLocale(nextLocale);
     } catch {
       setLocale(previousLocale);
       toast.error(businessMessages[previousLocale].Language.saveFailed);
@@ -52,7 +55,7 @@ export function BusinessLocaleProvider({
 
   return (
     <BusinessLocaleContext.Provider value={{ locale, saving, canChangeLocale, changeLocale }}>
-      <NextIntlClientProvider locale={locale} messages={businessMessages[locale]}>
+      <NextIntlClientProvider locale={locale} messages={businessMessages[locale]} timeZone="Asia/Baghdad">
         <div lang={locale} dir="ltr">{children}</div>
       </NextIntlClientProvider>
     </BusinessLocaleContext.Provider>

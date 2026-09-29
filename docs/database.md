@@ -15,10 +15,18 @@ underlying advertising-page entitlement where applicable.
 
 ## Business identity and applications
 
-`users.preferred_locale` stores each person's dashboard language (`ckb` or
-`ar`, default `ckb`). It is not business branding and does not change public
+`users.preferred_locale` stores each person's dashboard language (`ckb`, `ar`, or
+`en`, default `ckb`). It is not business branding and does not change public
 page content. The 2026-09-22 forward migration adds the column after the
-baseline on both fresh and existing installations.
+baseline on both fresh and existing installations; the 2026-09-28 forward
+migration expands its check constraint to permit English.
+
+`platform_admins.preferred_locale` independently stores each administrator's
+console language (`ckb`, `ar`, or `en`, default `ckb`). The
+`2026-09-28_platform_admin_preferred_locale.sql` forward migration adds it to
+existing installations; `2026-09-29_platform_admin_english_locale.sql` expands
+the allowed values to English. The consolidated baseline includes all three
+values for fresh installations.
 
 Business onboarding uses `users`, `user_identities`,
 `business_memberships`, `business_signup_invitations`,

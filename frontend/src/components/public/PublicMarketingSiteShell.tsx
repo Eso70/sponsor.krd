@@ -34,6 +34,9 @@ interface PublicMarketingSiteShellProps {
   emphasizeFirstNavItem?: boolean;
   appearance?: "business" | "sponsor-krd";
   embedded?: boolean;
+  navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  language?: string;
+  languageControl?: ReactNode;
 }
 
 export function PublicMarketingSiteShell({
@@ -53,6 +56,9 @@ export function PublicMarketingSiteShell({
   emphasizeFirstNavItem = false,
   appearance = "business",
   embedded = false,
+  navbarCopy,
+  language,
+  languageControl,
 }: PublicMarketingSiteShellProps) {
   const accentInk = getSponsorKrdAccentInk(accentColor);
 
@@ -101,6 +107,8 @@ export function PublicMarketingSiteShell({
             actionInk={primaryActionInk}
             secondaryAction={secondaryAction}
             emphasizeFirstNavItem={emphasizeFirstNavItem}
+            copy={navbarCopy}
+            languageControl={languageControl}
           />
           <CustomScrollbar />
         </>
@@ -124,7 +132,7 @@ export function PublicMarketingSiteShell({
   const style = { "--business-accent": accentColor } as CSSProperties;
   const Element = embedded ? "div" : "main";
   return (
-    <Element id={id} dir="ltr" className={className} style={style}>
+    <Element id={id} dir="ltr" lang={language} className={className} style={style}>
       {content}
     </Element>
   );

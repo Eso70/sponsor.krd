@@ -7,6 +7,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -31,21 +32,28 @@ import type { Overview, Permission, Tab } from "./access-control/types";
 import { AccessTable } from "./access-control/AccessTable";
 import { PermissionProfiles } from "./access-control/PermissionProfiles";
 import { PolicySimulator } from "./access-control/PolicySimulator";
-import { getKurdishPermissionDescription } from "./access-control/permission-descriptions";
+import { getPermissionCategory, getPermissionDescription } from "./access-control/permission-descriptions";
 import {
   Badge,
   riskLevelLabel,
   TableSkeleton,
 } from "./access-control/SharedUI";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
-
-const tabs = [
-  { id: "profiles" as const, label: "پڕۆفایلی مۆڵەت", icon: Layers3 },
-  { id: "permissions" as const, label: "مۆڵەتەکان", icon: KeyRound },
-  { id: "simulator" as const, label: "تاقیکردنەوە", icon: FlaskConical },
-];
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { accessCopy } from "./access-control/access-copy";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 export function AccessControlPage() {
+  const { locale } = usePlatformLocale();
+  const copy = accessCopy[locale];
+  const copyRef = useRef(copy);
+  useEffect(() => { copyRef.current = copy; }, [copy]);
+  const tabs = [
+    { id: "profiles" as const, label: copy.tabs.profiles, icon: Layers3 },
+    { id: "permissions" as const, label: copy.tabs.permissions, icon: KeyRound },
+    { id: "simulator" as const, label: copy.tabs.simulator, icon: FlaskConical },
+  ];
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
@@ -67,17 +75,17 @@ export function AccessControlPage() {
       );
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || "ناتوانرێت مۆڵەتەکان باربکرێن");
+        throw new Error(platformRequestError(result.message, copyRef.current.loadFailed, locale));
       }
       setData(result.data);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "ناتوانرێت مۆڵەتەکان باربکرێن",
+        platformRequestError(error instanceof Error ? error.message : null, copyRef.current.loadFailed, locale),
       );
     } finally {
       setLoading(false);
     }
-  }, [reload]);
+  }, [reload, locale]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -88,26 +96,16 @@ export function AccessControlPage() {
     if (!data) return [];
     return data.permissions.filter((permission) => {
       const text =
-        `${permission.key} ${permission.description} ${getKurdishPermissionDescription(permission.key)} ${permission.category}`.toLowerCase();
+        `${permission.key} ${permission.description} ${getPermissionDescription(permission.key, locale)} ${permission.category}`.toLowerCase();
       return !deferredSearch || text.includes(deferredSearch);
     });
-  }, [data, deferredSearch]);
+  }, [data, deferredSearch, locale]);
 
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const items = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const title =
-    tab === "profiles"
-      ? "پڕۆفایلەکانی مۆڵەتی بەشداربوون"
-      : tab === "permissions"
-        ? "کەتەلۆگی مۆڵەتەکانی بزنس"
-        : "تاقیکردنەوەی پڕۆفایلی مۆڵەت";
-  const description =
-    tab === "profiles"
-      ? "پڕۆفایلەکانی مۆڵەت دروست و بەڕێوە ببە بۆ دیاریکردنی دەستگەیشتنی هەر پلانی بەشداربوون."
-      : tab === "permissions"
-        ? "مۆڵەتەکانی بزنس ببینە و بزانە هەر مۆڵەتێک چ دەستگەیشتنێک دەدات."
-        : "پڕۆفایلێکی مۆڵەت تاقی بکەرەوە بۆ دڵنیابوون لە ئەنجامی یاساکانی دەستگەیشتن.";
+  const title = copy.title[tab];
+  const description = copy.description[tab];
   const icon =
     tab === "profiles"
       ? Layers3
@@ -120,15 +118,17 @@ export function AccessControlPage() {
       <StatCardGrid columns={2}>
         <StatCard
           loading={loading && !data}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={KeyRound}
-          label="مۆڵەتەکانی بزنس"
+          label={copy.businessPermissions}
           value={data?.summary.permissions || 0}
           color="green"
         />
         <StatCard
           loading={loading && !data}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Layers3}
-          label="پڕۆفایلی مۆڵەت"
+          label={copy.permissionProfiles}
           value={data?.summary.profiles || 0}
           color="blue"
         />
@@ -156,7 +156,7 @@ export function AccessControlPage() {
                 type="button"
                 onClick={() => setReload((value) => value + 1)}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/10"
-                aria-label="نوێکردنەوە"
+                aria-label={copy.refresh}
               >
                 <MotionSpinner active={loading}><RefreshCw
                   className="h-4 w-4"
@@ -169,7 +169,7 @@ export function AccessControlPage() {
                   className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-md"
                 >
                   <Plus className="h-4 w-4" />
-                  پڕۆفایلی مۆڵەتی نوێ
+                  {copy.newProfile}
                 </button>
               )}
               {tab === "permissions" && (
@@ -179,7 +179,7 @@ export function AccessControlPage() {
                   className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:text-slate-300"
                 >
                   <SlidersHorizontal className="h-4 w-4" />
-                  گەڕان
+                  {copy.search}
                 </button>
               )}
             </>
@@ -198,14 +198,14 @@ export function AccessControlPage() {
           ) : tab === "simulator" && data ? (
             <PolicySimulator data={data} />
           ) : loading && !data ? (
-            <TableSkeleton />
+            <TableSkeleton loadingLabel={locale === "ar" ? "جارٍ تحميل جدول الصلاحيات" : locale === "en" ? "Loading permissions table" : "خشتەی مۆڵەتەکان بار دەکرێت"} />
           ) : items.length ? (
             <AccessTable items={items} onPermission={setSelectedPermission} />
           ) : (
             <EmptyState
               icon={KeyRound}
-              title="هیچ مۆڵەتێک نییە"
-              description="هیچ مۆڵەتی بزنسی گونجاو نەدۆزرایەوە."
+              title={copy.empty}
+              description={copy.emptyDescription}
             />
           )}
 
@@ -216,6 +216,7 @@ export function AccessControlPage() {
               totalItems={filtered.length}
               totalPages={totalPages}
               onPageChange={setPage}
+              copy={{ of: copy.of, previous: copy.previous, next: copy.next }}
             />
           )}
         </div>
@@ -224,7 +225,11 @@ export function AccessControlPage() {
       <SearchModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
-        placeholder="گەڕان بە کلیلی مۆڵەت یان ناو..."
+        placeholder={copy.searchPlaceholder}
+        clearLabel={copy.clear}
+        applyLabel={copy.close}
+        clearAriaLabel={copy.clear}
+        applyAriaLabel={copy.close}
         searchQuery={search}
         onSearchQueryChange={(value) => {
           setSearch(value);
@@ -232,7 +237,7 @@ export function AccessControlPage() {
         }}
       >
         <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-xs text-slate-500 dark:border-white/10">
-          <span>{filtered.length} ئەنجام</span>
+          <span>{filtered.length} {copy.results}</span>
           {search && (
             <button
               type="button"
@@ -240,7 +245,7 @@ export function AccessControlPage() {
               className="flex items-center gap-1 text-red-500"
             >
               <X className="h-3.5 w-3.5" />
-              سڕینەوە
+              {copy.clear}
             </button>
           )}
         </div>
@@ -248,7 +253,7 @@ export function AccessControlPage() {
           {!search ? (
             <div className="flex flex-col items-center gap-2 py-8 text-xs text-slate-400">
               <Search className="h-5 w-5 opacity-40" />
-              گەڕان بۆ مۆڵەتی بزنس
+              {copy.searchPrompt}
             </div>
           ) : (
             filtered.slice(0, 20).map((permission) => (
@@ -264,14 +269,11 @@ export function AccessControlPage() {
                 <p className="font-mono text-xs font-bold sa-accent-text">
                   {permission.key}
                 </p>
-                <p className="mt-1 text-[10px] text-slate-400">
-                  {permission.description}
-                </p>
                 <p
                   className="mt-1 text-[10px] font-medium text-slate-500"
-                  dir="rtl"
+                  dir={locale === "en" ? "ltr" : "rtl"}
                 >
-                  {getKurdishPermissionDescription(permission.key)}
+                  {getPermissionDescription(permission.key, locale)}
                 </p>
               </button>
             ))
@@ -283,18 +285,18 @@ export function AccessControlPage() {
         isOpen={!!selectedPermission}
         onClose={() => setSelectedPermission(null)}
         title={selectedPermission?.key || ""}
-        subtitle="مۆڵەتی بزنسی ئەپڵیکەیشن"
+        subtitle={copy.detailSubtitle}
         icon={KeyRound}
         iconClassName="sa-soft sa-soft-border"
         fields={
           selectedPermission
             ? [
                 {
-                  label: "پۆل",
-                  value: selectedPermission.category,
+                  label: copy.category,
+                  value: getPermissionCategory(selectedPermission.category, locale),
                 },
                 {
-                  label: "سەرچاوە",
+                  label: copy.resource,
                   value: (
                     <span className="font-mono text-xs">
                       {selectedPermission.resource}
@@ -302,7 +304,7 @@ export function AccessControlPage() {
                   ),
                 },
                 {
-                  label: "کردار",
+                  label: copy.action,
                   value: (
                     <span className="font-mono text-xs">
                       {selectedPermission.action}
@@ -310,10 +312,10 @@ export function AccessControlPage() {
                   ),
                 },
                 {
-                  label: "مەترسی",
+                  label: copy.risk,
                   value: (
                     <Badge
-                      text={riskLevelLabel(selectedPermission.riskLevel)}
+                      text={riskLevelLabel(selectedPermission.riskLevel, locale)}
                       tone={
                         selectedPermission.riskLevel === "critical"
                           ? "red"
@@ -325,41 +327,33 @@ export function AccessControlPage() {
                   ),
                 },
                 {
-                  label: "پەسەندکردن",
+                  label: copy.approval,
                   value: selectedPermission.supportsApproval
-                    ? "پشتگیری دەکرێت"
-                    : "پشتگیری ناکرێت",
+                    ? copy.supported
+                    : copy.unsupported,
                 },
                 {
-                  label: "پڕۆفایلەکان",
+                  label: copy.profiles,
                   value: selectedPermission.profiles.length
                     ? selectedPermission.profiles.join("، ")
-                    : "لە هیچ پڕۆفایلێکدا بەکارنەهاتووە",
+                    : copy.notInProfile,
                 },
                 {
-                  label: "ڕوونکردنەوە",
+                  label: copy.explanation,
                   value: (
                     <div className="space-y-2">
                       <p
                         className="font-semibold leading-6 text-slate-700 dark:text-slate-200"
-                        dir="rtl"
+                        dir={locale === "en" ? "ltr" : "rtl"}
                       >
-                        {getKurdishPermissionDescription(
-                          selectedPermission.key,
-                        )}
-                      </p>
-                      <p
-                        className="font-medium leading-5 text-slate-500 dark:text-slate-400"
-                        dir="ltr"
-                      >
-                        {selectedPermission.description}
+                        {getPermissionDescription(selectedPermission.key, locale)}
                       </p>
                     </div>
                   ),
                   fullWidth: true,
                 },
                 {
-                  label: "خانە تۆمارکراوەکان",
+                  label: copy.fields,
                   value: Object.keys(selectedPermission.fieldSchema).length ? (
                     <div className="overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-100 dark:border-white/10 dark:divide-white/5">
                       {Object.entries(selectedPermission.fieldSchema).map(
@@ -382,7 +376,7 @@ export function AccessControlPage() {
                       )}
                     </div>
                   ) : (
-                    "هیچ خانەیەکی تۆمارکراو نییە"
+                    copy.noFields
                   ),
                   fullWidth: true,
                 },

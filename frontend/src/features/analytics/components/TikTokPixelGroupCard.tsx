@@ -59,6 +59,7 @@ export interface TikTokPixelGroupCopy {
   enterToken: string; enterTestCode: string; pixelRequired: string;
   testTooltip: string; test: string; testSuccess: string; testFailed: string;
   resultBefore: string; resultAfter: string; resultCode: string; resultSaved: string;
+  requestIdLabel: string;
 }
 
 const KURDISH_COPY: TikTokPixelGroupCopy = {
@@ -84,6 +85,7 @@ const KURDISH_COPY: TikTokPixelGroupCopy = {
   testFailed: "نەتوانرا ڕووداوەکە بنێردرێت",
   resultBefore: "ئێستا لە", resultAfter: "سەیری بکە، ڕووداوەکە بە جۆری",
   resultCode: "و کۆدی", resultSaved: "تۆمار کراوە.",
+  requestIdLabel: "ناسنامەی داواکاری:",
 };
 
 type TikTokTestEventName = "ViewContent" | "Contact" | "ClickButton";
@@ -538,7 +540,7 @@ export function TikTokPixelGroupCard({
 
               {testResult.requestId && (
                 <p className="mt-1 font-mono text-[10px] text-slate-400">
-                  Request ID: {testResult.requestId}
+                  {labels.requestIdLabel} {testResult.requestId}
                 </p>
               )}
             </div>

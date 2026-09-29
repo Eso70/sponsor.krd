@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { PhoneMockup } from "@/components/shared/PhoneMockup";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { AdvertisingVideoPlayer } from "./AdvertisingVideoPlayer";
+import { usePublicAdvertisingText } from "../public-locale";
 
 /** TikTok Spark Ads video (authorization) code: "#" + 63 base64 characters + "=" padding. */
 export const TIKTOK_VIDEO_CODE_PATTERN = /^#[A-Za-z0-9+/]{63}=$/;
@@ -27,6 +28,7 @@ export function AdvertisingVideoCodeStep({
   tutorialSteps,
   title,
 }: AdvertisingVideoCodeStepProps) {
+  const t = usePublicAdvertisingText();
   const inputRef = useRef<HTMLInputElement>(null);
   const trimmedCode = videoCode.trim();
   const isInvalid = trimmedCode.length > 0 && !TIKTOK_VIDEO_CODE_PATTERN.test(trimmedCode);
@@ -37,21 +39,21 @@ export function AdvertisingVideoCodeStep({
       const text = await navigator.clipboard?.readText?.();
       if (!text) throw new Error("empty clipboard");
       onVideoCodeChange(text);
-      toast.success("کۆد لکرا");
+      toast.success(t("کۆد لکرا"));
     } catch {
       inputRef.current?.focus();
-      toast.error("لکردن سەرکەوتوو نەبوو، بە دەست بنووسە");
+      toast.error(t("لکردن سەرکەوتوو نەبوو، بە دەست بنووسە"));
     }
   };
 
   return (
     <div className="grid w-full grid-cols-2 items-start gap-3 sm:gap-6">
       <div className="relative mx-auto w-[130px] max-w-full sm:w-[150px] lg:w-[190px]">
-        <PhoneMockup ariaLabel="ڤیدیۆی فێرکردنی وەرگرتنی کۆدی تیکتۆک" name="Tutorial">
-          <AdvertisingVideoPlayer size="compact" src={videoSrc} />
+        <PhoneMockup ariaLabel={t("ڤیدیۆی فێرکردنی وەرگرتنی کۆدی تیکتۆک")} name={t("Tutorial")}>
+          <AdvertisingVideoPlayer size="compact" src={videoSrc} copy={{ empty: t("هیچ ڤیدیۆیەک دانەنراوە"), title: t("ڤیدیۆی فێرکاری"), play: t("لێدانی ڤیدیۆ") }} />
         </PhoneMockup>
         <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-wide text-black/40 dark:text-white/40 sm:mt-3 sm:text-[10px]">
-          ترەیلەرەکە لێرە ببینە
+          {t("ترەیلەرەکە لێرە ببینە")}
         </p>
       </div>
 
@@ -79,7 +81,7 @@ export function AdvertisingVideoCodeStep({
 
         <div>
           <label htmlFor="video-code" className="mb-1.5 block text-xs font-bold text-black/60 dark:text-white/60">
-            کۆدی ڤیدیۆ
+            {t("کۆدی ڤیدیۆ")}
           </label>
           <div className="relative">
             <input
@@ -98,11 +100,11 @@ export function AdvertisingVideoCodeStep({
                   : "border-black/10 focus:border-cyan-400 focus:ring-cyan-400/20 dark:border-white/10",
               )}
             />
-            <Tooltip content="لێکردنەوەی کۆد لە کلیپبۆرد" side="top">
+            <Tooltip content={t("لێکردنەوەی کۆد لە کلیپبۆرد")} side="top">
               <button
                 type="button"
                 onClick={pasteCode}
-                aria-label="لێکردنی کۆد لە کلیپبۆرد"
+                aria-label={t("لێکردنی کۆد لە کلیپبۆرد")}
                 className="absolute inset-y-0 end-1.5 my-auto flex h-8 w-8 items-center justify-center rounded-lg text-black/40 transition-colors hover:bg-black/[0.06] hover:text-black/70 dark:text-white/40 dark:hover:bg-white/[0.1] dark:hover:text-white/80 cursor-pointer"
               >
                 <ClipboardPaste className="h-4 w-4" />
@@ -111,7 +113,7 @@ export function AdvertisingVideoCodeStep({
           </div>
           {isInvalid && (
             <p className="mt-1 text-[11px] font-bold text-red-500 dark:text-red-400" dir="auto">
-              کۆدەکە دروست نییە. تکایە کۆدی ڕاستی سپارک ئادسی تیکتۆک بنووسە
+              {t("کۆدەکە دروست نییە. تکایە کۆدی ڕاستی سپارک ئادسی تیکتۆک بنووسە")}
             </p>
           )}
         </div>

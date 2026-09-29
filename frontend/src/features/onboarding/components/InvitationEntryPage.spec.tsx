@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InvitationEntryPage } from "./InvitationEntryPage";
+import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
@@ -26,14 +27,14 @@ describe("InvitationEntryPage", () => {
   });
 
   it("keeps the validated token for Google signup after hiding it from the URL", async () => {
-    const view = render(<InvitationEntryPage />);
+    const view = render(<RootPublicLocaleProvider initialLocale="ckb"><InvitationEntryPage /></RootPublicLocaleProvider>);
 
     const continueLink = await screen.findByRole("link", {
-      name: "Continue with Google",
+      name: "بە Google بەردەوام بە",
     });
     await waitFor(() => expect(window.location.search).toBe(""));
 
-    view.rerender(<InvitationEntryPage />);
+    view.rerender(<RootPublicLocaleProvider initialLocale="ckb"><InvitationEntryPage /></RootPublicLocaleProvider>);
 
     expect(continueLink).toHaveAttribute(
       "href",
@@ -42,10 +43,10 @@ describe("InvitationEntryPage", () => {
   });
 
   it("shows the email-code signup option after the invitation validates", async () => {
-    render(<InvitationEntryPage />);
+    render(<RootPublicLocaleProvider initialLocale="ckb"><InvitationEntryPage /></RootPublicLocaleProvider>);
 
     expect(
-      await screen.findByRole("textbox", { name: "Email address" }),
+      await screen.findByRole("textbox", { name: "ئیمەیڵ" }),
     ).toBeInTheDocument();
   });
 
@@ -59,7 +60,7 @@ describe("InvitationEntryPage", () => {
       }),
     );
 
-    render(<InvitationEntryPage />);
+    render(<RootPublicLocaleProvider initialLocale="ckb"><InvitationEntryPage /></RootPublicLocaleProvider>);
 
     expect(
       await screen.findByRole("heading", {
@@ -67,5 +68,11 @@ describe("InvitationEntryPage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("410")).toBeInTheDocument();
+  });
+
+  it("shows Arabic invitation controls for an Arabic visitor", async () => {
+    render(<RootPublicLocaleProvider initialLocale="ar"><InvitationEntryPage /></RootPublicLocaleProvider>);
+    expect(await screen.findByRole("link", { name: "المتابعة باستخدام Google" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "البريد الإلكتروني" })).toBeInTheDocument();
   });
 });

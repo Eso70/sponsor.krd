@@ -108,17 +108,19 @@ export function SkeletonTable({
   rows = 6,
   columns = 5,
   className = "",
+  loadingLabel = "Loading table",
 }: {
   rows?: number;
   columns?: number;
   className?: string;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className={`w-full ${className}`}
       role="status"
       aria-busy="true"
-      aria-label="Loading table"
+      aria-label={loadingLabel}
       dir="ltr"
     >
       <div className="divide-y divide-slate-100 border-y border-slate-200/80 dark:divide-white/5 dark:border-white/10 md:hidden">
@@ -279,12 +281,12 @@ export function SkeletonManagementPage({
 }
 
 /** Template catalog frame: metrics, category tabs, header, and phone previews. */
-export function SkeletonTemplatePage() {
+export function SkeletonTemplatePage({ loadingLabel = "Loading templates" }: { loadingLabel?: string } = {}) {
   return (
     <div
       className="min-h-[60vh] space-y-5"
       role="status"
-      aria-label="Loading templates"
+      aria-label={loadingLabel}
     >
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
         {Array.from({ length: 3 }).map((_, index) => (
@@ -323,13 +325,13 @@ export function SkeletonTemplatePage() {
 }
 
 /** Public Linktree frame: identity, copy, action links, and footer. */
-export function SkeletonPublicLinktreePage() {
+export function SkeletonPublicLinktreePage({ loadingLabel = "Loading Linktree page" }: { loadingLabel?: string } = {}) {
   return (
     <main
       className="flex min-h-dvh justify-center bg-slate-100 px-4 py-8 dark:bg-[#0b0d0e] sm:py-12"
       role="status"
       aria-busy="true"
-      aria-label="Loading Linktree page"
+      aria-label={loadingLabel}
     >
       <div className="w-full max-w-xl text-center">
         <Skeleton
@@ -471,17 +473,19 @@ export function SkeletonDashboardPage({
   tabCount = 0,
   body = "table",
   className = "",
+  loadingLabel = "Loading dashboard data",
 }: {
   statCount?: number;
   tabCount?: number;
   body?: SkeletonDashboardBody;
   className?: string;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className={`min-h-[55vh] space-y-5 py-1 ${className}`}
       role="status"
-      aria-label="Loading dashboard data"
+      aria-label={loadingLabel}
     >
       {statCount > 0 && (
         <div
@@ -619,17 +623,19 @@ export function SkeletonStatCards({
   className = "",
   compact = false,
   variant = "standard",
+  loadingLabel = "بارکردن",
 }: {
   count?: number;
   className?: string;
   compact?: boolean;
   variant?: StatCardVariant;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className={`grid gap-3 sm:gap-4 ${count > 2 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"} ${className}`}
       role="status"
-      aria-label="بارکردن"
+      aria-label={loadingLabel}
     >
       {Array.from({ length: count }).map((_, index) => (
         <SkeletonStatCard compact={compact} key={index} variant={variant} />
@@ -731,15 +737,17 @@ export function SkeletonStatCard({
 export function SkeletonList({
   rows = 5,
   className = "",
+  loadingLabel = "بارکردن",
 }: {
   rows?: number;
   className?: string;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className={`divide-y divide-slate-100 rounded-2xl border border-slate-100 dark:divide-white/5 dark:border-white/10 ${className}`}
       role="status"
-      aria-label="بارکردن"
+      aria-label={loadingLabel}
     >
       {Array.from({ length: rows }).map((_, index) => (
         <div key={index} className="flex items-center gap-3 p-3">
@@ -766,17 +774,19 @@ export function SkeletonList({
  */
 export function SkeletonPublicLandingPage({
   variant = "platform",
+  loadingLabel = "Loading homepage",
 }: {
   variant?: "platform" | "business";
+  loadingLabel?: string;
 }) {
   return (
     <main
       className="min-h-screen overflow-hidden bg-[#f8f9fa] text-slate-900 dark:bg-[#0b0d0e] dark:text-white"
       role="status"
       aria-busy="true"
-      aria-label="Loading homepage"
+      aria-label={loadingLabel}
     >
-      <span className="sr-only">Loading homepage</span>
+      <span className="sr-only">{loadingLabel}</span>
 
       <div className="h-[60px] w-full border-b border-transparent bg-transparent">
         <div className="mx-auto flex h-[60px] w-full max-w-[75rem] items-center justify-between px-5 sm:px-6">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
@@ -34,6 +34,8 @@ interface PublicSiteNavbarProps {
   actionInk?: string;
   /** Whether the first nav item is emphasized like an active page. Default true. */
   emphasizeFirstNavItem?: boolean;
+  copy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  languageControl?: ReactNode;
 }
 
 export function PublicSiteNavbar({
@@ -47,6 +49,8 @@ export function PublicSiteNavbar({
   actionColor,
   actionInk,
   emphasizeFirstNavItem = true,
+  copy,
+  languageControl,
 }: PublicSiteNavbarProps = {}) {
   const primaryColor = branding?.accentColor || "var(--sponsor-krd-accent)";
   const primaryActionColor = actionColor || primaryColor;
@@ -128,7 +132,7 @@ export function PublicSiteNavbar({
         src={
           branding ? branding.logo || BUSINESS_LOGO_PLACEHOLDER : SPONSOR_KRD_LOGO
         }
-        alt={branding ? `${branding.name} logo` : "Sponsor.krd logo"}
+        alt={branding ? `${branding.name} ${copy?.logo ?? "logo"}` : "Sponsor.krd logo"}
         width={30}
         height={30}
         className="rounded-lg object-cover shadow-sm"
@@ -183,7 +187,7 @@ export function PublicSiteNavbar({
   const navbar = (
     <motion.nav
       dir="ltr"
-      aria-label="Primary navigation"
+      aria-label={copy?.navigation ?? "Primary navigation"}
       className={`fixed inset-x-0 top-0 z-50 w-full border-b text-slate-950 dark:text-white ${businessGlassActive ? scrolledClass : atTopClass}`}
       initial={false}
       animate={{
@@ -225,11 +229,12 @@ export function PublicSiteNavbar({
         </div>
 
         <div className="flex items-center gap-2">
+          {languageControl}
           <button
             type="button"
             onClick={toggleTheme}
             className="flex size-9 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-black/6 hover:text-slate-950 dark:text-white/75 dark:hover:bg-white/8 dark:hover:text-white"
-            aria-label="Toggle theme mode"
+            aria-label={copy?.theme ?? "Toggle theme mode"}
           >
             {theme === "light" ? (
               <Moon className="size-5" />
@@ -268,7 +273,7 @@ export function PublicSiteNavbar({
               type="button"
               className="flex size-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-black/6 hover:text-slate-950 dark:text-white/75 dark:hover:bg-white/8 dark:hover:text-white lg:hidden"
               onClick={() => setMenuOpen((current) => !current)}
-              aria-label="Toggle navigation"
+              aria-label={copy?.menu ?? "Toggle navigation"}
               aria-expanded={menuOpen}
             >
               {menuOpen ? (

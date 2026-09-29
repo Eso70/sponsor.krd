@@ -1,16 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { LinktreeListItem } from "@linktree/types";
 
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { LinktreeSearchModal } from "@/components/shared/LinktreeSearchModal";
-import {
-  SkeletonLinktreeEditorModal,
-  SkeletonPageAnalyticsModal,
-} from "@/components/shared/SkeletonModalLayouts";
+import { PlatformLinktreeAnalyticsSkeleton, PlatformLinktreeEditorSkeleton } from "@/features/platform-admin/components/PlatformLinktreesModalSkeletons";
 import type {
   EditLinkData,
   LinktreeEditorSubmitData,
@@ -19,6 +16,11 @@ import { LinktreesManagementPage } from "@/features/link-editor/components/Linkt
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { apiRequest } from "@/lib/api/request";
 import { buildPlatformLinktreePayload } from "@/features/platform-admin/api/platform-linktrees";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLinktreesCopy } from "@/features/platform-admin/i18n/linktrees-copy";
+import { sharedArabicLinktreeCopy } from "@/features/link-editor/shared-arabic-copy";
+import { arabicEditorCopy, englishEditorCopy } from "@/features/link-editor/editor-copy";
+import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
 
 const LinktreeEditorModal = dynamic(
   () =>
@@ -27,7 +29,7 @@ const LinktreeEditorModal = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <SkeletonLinktreeEditorModal platformAdminTheme />,
+    loading: () => <PlatformLinktreeEditorSkeleton />,
   },
 );
 const DuplicateLinktreeModal = dynamic(
@@ -44,7 +46,7 @@ const AnalyticsModal = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <SkeletonPageAnalyticsModal platformAdminTheme />,
+    loading: () => <PlatformLinktreeAnalyticsSkeleton />,
   },
 );
 
@@ -87,6 +89,12 @@ const EMPTY_TOTALS: AnalyticsTotals = {
 };
 
 export function PlatformLinktreesPage() {
+  const { locale } = usePlatformLocale();
+  const copy = platformLinktreesCopy[locale];
+  const copyRef = useRef(copy);
+  useEffect(() => { copyRef.current = copy; }, [copy]);
+  const arabic = locale === "ar";
+  const english = locale === "en";
   const apiBase = "/api/platform/linktrees";
   const [context, setContext] = useState<PlatformLinktreeContext | null>(null);
   const [items, setItems] = useState<LinktreeListItem[]>([]);
@@ -147,11 +155,8 @@ export function PlatformLinktreesPage() {
             ),
         );
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "بارکردنی پەڕەکانی لینکتری سەرکەوتوو نەبوو",
-        );
+        console.error("Platform Linktrees load failed:", error);
+        toast.error(copyRef.current.loadFailed);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -216,11 +221,8 @@ export function PlatformLinktreesPage() {
         setEditData(await apiRequest<EditLinkData>(`${apiBase}/${id}/edit`));
       } catch (error) {
         setEditorOpen(false);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "بارکردنی پەڕەی لینکتری سەرکەوتوو نەبوو",
-        );
+        console.error("Platform Linktree edit load failed:", error);
+        toast.error(copyRef.current.editLoadFailed);
       } finally {
         setLoadingEdit(false);
       }
@@ -237,16 +239,11 @@ export function PlatformLinktreesPage() {
         });
         setEditorOpen(false);
         setEditData(null);
-        toast.success(
-          editId ? "پەڕەی لینکتری نوێ کرایەوە" : "پەڕەی لینکتری دروست کرا",
-        );
+        toast.success(editId ? copyRef.current.updated : copyRef.current.created);
         await load(true);
       } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "پاشەکەوتکردنی پەڕەی لینکتری سەرکەوتوو نەبوو",
-        );
+        console.error("Platform Linktree save failed:", error);
+        toast.error(copyRef.current.saveFailed);
         throw error;
       }
     },
@@ -273,19 +270,16 @@ export function PlatformLinktreesPage() {
         toast.success(
           field === "is_archived"
             ? value
-              ? "پەڕەکە ئەرشیفکرا"
-              : "پەڕەکە لە ئەرشیف گەڕێندرایەوە"
+              ? copyRef.current.archived
+              : copyRef.current.restored
             : value
-              ? "پەڕەکە بۆ کەمپین چالاککرا"
-              : "پەڕەکە لە کەمپین لابرا",
+              ? copyRef.current.campaignEnabled
+              : copyRef.current.campaignDisabled,
         );
       } catch (error) {
         await load(true);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "گۆڕینی دۆخی پەڕە سەرکەوتوو نەبوو",
-        );
+        console.error("Platform Linktree state update failed:", error);
+        toast.error(copyRef.current.statusFailed);
       }
     },
     [apiBase, load],
@@ -301,16 +295,11 @@ export function PlatformLinktreesPage() {
           method: "PATCH",
           json: { status },
         });
-        toast.success(
-          status === "active" ? "پەڕەکە چالاککرایەوە" : "پەڕەکە ناچالاککرا",
-        );
+        toast.success(status === "active" ? copyRef.current.statusEnabled : copyRef.current.statusDisabled);
       } catch (error) {
         await load(true);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "گۆڕینی دۆخی پەڕە سەرکەوتوو نەبوو",
-        );
+        console.error("Platform Linktree status update failed:", error);
+        toast.error(copyRef.current.statusFailed);
       }
     },
     [apiBase, load],
@@ -323,13 +312,10 @@ export function PlatformLinktreesPage() {
       await apiRequest(`${apiBase}/analytics`, { method: "DELETE" });
       await load(true);
       setClearAllAnalyticsOpen(false);
-      toast.success("هەموو ئامارەکانی لینکتری پاککرانەوە");
+      toast.success(copyRef.current.clearSuccess);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "پاککردنەوەی هەموو ئامارەکان سەرکەوتوو نەبوو",
-      );
+      console.error("Platform Linktree analytics clear failed:", error);
+      toast.error(copyRef.current.clearFailed);
       throw error;
     } finally {
       setClearingAllAnalytics(false);
@@ -376,17 +362,22 @@ export function PlatformLinktreesPage() {
         }
         onToggleStatus={handleToggleStatus}
         accentMode="platform"
-        description="پەڕە گشتییەکانی پلاتفۆرم دروست و بەڕێوە ببە لە sponsor.krd/linktree/name."
+        copy={arabic ? sharedArabicLinktreeCopy.management : english ? englishBusinessMessages.Linktrees : undefined}
+        listCopy={arabic ? { ...sharedArabicLinktreeCopy.list, defaultPageHint: "الصفحة الافتراضية للمنصة" } : english ? { ...englishBusinessMessages.LinktreeList, defaultPageHint: "Default platform page" } : undefined}
+        trafficLabels={arabic ? { column: sharedArabicLinktreeCopy.list.traffic, views: sharedArabicLinktreeCopy.list.views, interactions: sharedArabicLinktreeCopy.list.interactions } : english ? { column: englishBusinessMessages.LinktreeList.traffic, views: englishBusinessMessages.LinktreeList.views, interactions: englishBusinessMessages.LinktreeList.interactions } : undefined}
+        profitCopy={arabic ? sharedArabicLinktreeCopy.campaignProfit : english ? englishBusinessMessages.CampaignProfit : undefined}
+        calendarLocale={locale}
+        description={copy.description}
         publicPathPrefix={context?.publicPathPrefix || "/linktree"}
         emptyTitle={
           query.trim()
-            ? "هیچ ئەنجامێک بۆ گەڕانەکەت نەدۆزرایەوە"
-            : "هێشتا هیچ پەڕەیەکی لینکتریی پلاتفۆرم نییە"
+            ? copy.searchEmpty
+            : copy.empty
         }
         emptyDescription={
           query.trim()
-            ? "وشەیەکی دیکە بنووسە یان گەڕانەکە پاک بکەرەوە."
-            : "یەکەم پەڕەی لینکتری لە دۆمەینی سەرەکی دروست بکە."
+            ? copy.searchEmptyDescription
+            : copy.emptyDescription
         }
       />
 
@@ -410,6 +401,8 @@ export function PlatformLinktreesPage() {
           businessIdentity={{ name: context?.branding.name || "Sponsor.krd" }}
           apiEndpoints={apiEndpoints}
           platformTheme
+          copy={arabic ? arabicEditorCopy : english ? englishEditorCopy : undefined}
+          colorCopy={english ? englishBusinessMessages.SettingsColorPicker : undefined}
         />
       ) : null}
 
@@ -425,6 +418,7 @@ export function PlatformLinktreesPage() {
           dataSource="platform-linktree"
           onAnalyticsCleared={load}
           platformTheme
+          copy={arabic ? sharedArabicLinktreeCopy.analytics : english ? englishBusinessMessages.PageAnalytics : undefined}
         />
       ) : null}
 
@@ -434,16 +428,14 @@ export function PlatformLinktreesPage() {
           if (!clearingAllAnalytics) setClearAllAnalyticsOpen(false);
         }}
         onConfirm={clearAllAnalytics}
-        title="پاککردنەوەی هەموو ئامارەکان"
-        confirmLabel="بەڵێ، هەمووی پاک بکەوە"
-        loadingLabel="پاکدەکرێتەوە..."
-        cancelLabel="هەڵوەشاندنەوە"
+        title={copy.clearTitle}
+        confirmLabel={copy.clearConfirm}
+        loadingLabel={copy.clearing}
+        cancelLabel={copy.cancel}
+        closeLabel={copy.close}
         isDeleting={clearingAllAnalytics}
         message={
-          <p>
-            دڵنیایت لە پاککردنەوەی هەموو داتاکانی بینین و کلیکی پەڕەکانی
-            لینکتری؟ ئەم کردارە ناگەڕێتەوە.
-          </p>
+          <p>{copy.clearQuestion}</p>
         }
       />
 
@@ -451,22 +443,23 @@ export function PlatformLinktreesPage() {
         isOpen={Boolean(deleting)}
         onClose={() => setDeleting(null)}
         isDeleting={isDeleting}
-        title="سڕینەوەی پەڕەی لینکتری"
-        message={`دڵنیایت لە سڕینەوەی «${deleting?.name || "ئەم پەڕەیە"}»؟ بەستەرە گشتییەکەی بۆ هەمیشە نامێنێت.`}
+        title={copy.deleteTitle}
+        confirmLabel={copy.confirmDelete}
+        loadingLabel={copy.deleting}
+        cancelLabel={copy.cancel}
+        closeLabel={copy.close}
+        message={`${copy.deleteQuestion} «${deleting?.name || copy.thisPage}»؟ ${copy.deleteConsequence}`}
         onConfirm={async () => {
           if (!deleting) return;
           setIsDeleting(true);
           try {
             await apiRequest(`${apiBase}/${deleting.id}`, { method: "DELETE" });
             setDeleting(null);
-            toast.success("پەڕەی لینکتری سڕایەوە");
+            toast.success(copyRef.current.deleteSuccess);
             await load(true);
           } catch (error) {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "سڕینەوەی پەڕەی لینکتری سەرکەوتوو نەبوو",
-            );
+            console.error("Platform Linktree deletion failed:", error);
+            toast.error(copyRef.current.deleteFailed);
             throw error;
           } finally {
             setIsDeleting(false);
@@ -486,6 +479,7 @@ export function PlatformLinktreesPage() {
         }}
         publicPathPrefix={context?.publicPathPrefix || "/linktree"}
         platformTheme
+        copy={arabic ? { ...sharedArabicLinktreeCopy.search, prompt: "ابحث عن صفحات المنصة" } : english ? { ...englishBusinessMessages.LinktreeSearch, prompt: "Search platform pages" } : undefined}
       />
 
       {duplicateTarget ? (
@@ -496,6 +490,7 @@ export function PlatformLinktreesPage() {
           apiBase={apiBase}
           onSuccess={() => void load(true)}
           platformTheme
+          copy={arabic ? sharedArabicLinktreeCopy.duplicate : english ? englishBusinessMessages.DuplicateLinktree : undefined}
         />
       ) : null}
     </ThemeProvider>

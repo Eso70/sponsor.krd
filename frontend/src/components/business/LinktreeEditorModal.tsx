@@ -10,6 +10,8 @@ import {
   startTransition,
 } from "react";
 import { BasicInfoStep } from "@/features/link-editor/components/BasicInfoStep";
+import type { ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
+import { getEditorPlatformName, localizeEditorUploadError, localizeEditorValidationError, type EditorCopy } from "@/features/link-editor/editor-copy";
 import { PlatformSelectionStep } from "@/features/link-editor/components/PlatformSelectionStep";
 import { LinksStep } from "@/features/link-editor/components/LinksStep";
 import {
@@ -18,7 +20,6 @@ import {
   DEFAULT_DESCRIPTION,
   DEFAULT_FOOTER_TEXT,
   DEFAULT_FOOTER_PHONE,
-  getPlatformNameKurdish,
 } from "@/features/link-editor/modal-constants";
 import {
   buildSlugFromName,
@@ -106,6 +107,8 @@ export interface LinktreeEditorModalProps {
   };
   /** Uses the platform-admin gradient for modal chrome while preserving the page preview palette. */
   platformTheme?: boolean;
+  copy?: EditorCopy;
+  colorCopy?: ColorGradientModalProps["copy"];
 }
 
 const DEFAULT_API_ENDPOINTS = {
@@ -177,6 +180,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
   isDefault = false,
   apiEndpoints = DEFAULT_API_ENDPOINTS,
   platformTheme = false,
+  copy,
+  colorCopy,
 }: LinktreeEditorModalProps) {
   const defaultTemplateKey = resolveDefaultTemplateKey(
     businessDefaults?.default_template,
@@ -192,7 +197,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
   const [name, setName] = useState("");
   const [subtitle, setSubtitle] = useState(DEFAULT_SUBTITLE);
   const [subtitleColor, setSubtitleColor] = useState("");
-  const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
+  const [description, setDescription] = useState(copy?.defaultDescription ?? DEFAULT_DESCRIPTION);
   const [slug, setSlug] = useState("");
   const [backgroundColor, setBackgroundColor] = useState(() =>
     resolveDefaultBackgroundColor(businessDefaults?.default_background_color),
@@ -236,15 +241,15 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
   const [whatsappModalEnabled, setWhatsappModalEnabled] = useState(
     businessDefaults?.default_whatsapp_enabled ?? false,
   );
-  const [whatsappModalTitle, setWhatsappModalTitle] = useState("پەیوەندی کردن");
+  const [whatsappModalTitle, setWhatsappModalTitle] = useState(copy?.whatsappTitle ?? "پەیوەندی کردن");
   const [whatsappModalSubtitle, setWhatsappModalSubtitle] =
-    useState("پرسیارێک هەڵبژێرە");
+    useState(copy?.whatsappSubtitle ?? "پرسیارێک هەڵبژێرە");
   const [whatsappQuestions, setWhatsappQuestions] = useState<
     WhatsAppQuestion[]
   >([
-    { id: "order", text: "داواکردن", message: "سڵاو بەڕێز دەمەوێت داوا بکەم." },
-    { id: "price", text: "زانینی نرخ", message: "سڵاو بەڕێز، نرخی چەندە ؟" },
-    { id: "other", text: "پرسیارێکی تر", message: "سڵاو" },
+    { id: "order", text: copy?.order ?? "داواکردن", message: copy?.orderMessage ?? "سڵاو بەڕێز دەمەوێت داوا بکەم." },
+    { id: "price", text: copy?.price ?? "زانینی نرخ", message: copy?.priceMessage ?? "سڵاو بەڕێز، نرخی چەندە ؟" },
+    { id: "other", text: copy?.other ?? "پرسیارێکی تر", message: copy?.otherMessage ?? "سڵاو" },
   ]);
 
   // Validation errors state
@@ -307,9 +312,21 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
 
   // Real-time validation, delegated to the shared rules so the modal, the DTO
   // and the table CHECK constraints cannot disagree.
-  const validateName = useCallback(validateLinktreeName, []);
+  const validateName = useCallback(
+    (value: string) => localizeEditorValidationError(validateLinktreeName(value), copy),
+    [copy],
+  );
 
-  const validateSlug = useCallback(validateSlugValue, []);
+  const validateSlug = useCallback(
+    (value: string) => localizeEditorValidationError(validateSlugValue(value), copy),
+    [copy],
+  );
+
+  const validateLink = useCallback(
+    (platform: string, value: string, countryCode?: string) =>
+      localizeEditorValidationError(validateSingleLink(platform, value, countryCode), copy),
+    [copy],
+  );
 
   /**
    * Half-filled question rows.
@@ -332,10 +349,10 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       }
       setQuestionErrors(next);
       return Object.keys(next).length > 0
-        ? "تکایە پرسیارە ناتەواوەکان تەواو بکە"
+        ? copy?.incompleteQuestions ?? "تکایە پرسیارە ناتەواوەکان تەواو بکە"
         : undefined;
     },
-    [],
+    [copy],
   );
 
   const validateBackgroundColor = useCallback(
@@ -343,37 +360,37 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       const selectedBgColor =
         BACKGROUND_COLORS.find((c) => c.id === value)?.value || value;
       if (!selectedBgColor) {
-        return "تکایە ڕەنگی باکگڕاوند هەڵبژێرە";
+        return copy?.backgroundRequired ?? "تکایە ڕەنگی باکگڕاوند هەڵبژێرە";
       }
       return undefined;
     },
-    [],
+    [copy],
   );
 
   const validateTemplateKey = useCallback(
     (value: string): string | undefined => {
       if (!value || !isTemplateKey(value)) {
-        return "تکایە شێوازی پەڕە هەڵبژێرە";
+        return copy?.templateRequired ?? "تکایە شێوازی پەڕە هەڵبژێرە";
       }
       return undefined;
     },
-    [],
+    [copy],
   );
 
   const validatePlatforms = useCallback(
     (platforms: string[]): string | undefined => {
       if (!platforms || platforms.length === 0) {
-        return "لانیکەم یەک پلاتفۆڕمەکان هەڵبژێرە";
+        return copy?.platformRequired ?? "لانیکەم یەک پلاتفۆڕمەکان هەڵبژێرە";
       }
       return undefined;
     },
-    [],
+    [copy],
   );
 
   const validateLinks = useCallback(
     (links: SocialLink[], selected: string[]): string | undefined => {
       if (!selected || selected.length === 0) {
-        return "لانیکەم یەک پلاتفۆڕمەکان هەڵبژێرە";
+        return copy?.platformRequired ?? "لانیکەم یەک پلاتفۆڕمەکان هەڵبژێرە";
       }
       let hasError = false;
       const newLinkErrors: Record<string, string> = {};
@@ -388,12 +405,12 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
 
         // Must have either value or URL
         if (!linkValue && !linkUrl) {
-          newLinkErrors[linkId] = "تکایە بەهای لینکەکە بنووسە";
+          newLinkErrors[linkId] = copy?.linkValueRequired ?? "تکایە بەهای لینکەکە بنووسە";
           hasError = true;
           continue;
         }
 
-        const error = validateSingleLink(
+        const error = validateLink(
           link.platform,
           linkValue,
           link.countryCode,
@@ -406,25 +423,25 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
 
       if (hasError) {
         setLinkErrors(newLinkErrors);
-        return "تکایە هەڵەی لینکەکان چاک بکەرەوە";
+        return copy?.fixLinks ?? "تکایە هەڵەی لینکەکان چاک بکەرەوە";
       } else {
         setLinkErrors({});
       }
 
       return undefined;
     },
-    [],
+    [copy, validateLink],
   );
 
   const validateFooterPhone = useCallback(
     (value: string): string | undefined => {
       const trimmed = value.trim();
       if (trimmed && !/^\+?\d{10,15}$/.test(trimmed)) {
-        return "ژمارەی مۆبایلی دەستپێکردن نادروستە (دەبێت ١٠-١٥ ژمارە بێت)";
+        return copy?.footerPhoneInvalid ?? "ژمارەی مۆبایلی دەستپێکردن نادروستە (دەبێت ١٠-١٥ ژمارە بێت)";
       }
       return undefined;
     },
-    [],
+    [copy],
   );
 
   // Validate all fields before submission
@@ -454,7 +471,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         subtitleColor.trim(),
       );
       if (!isSolidHex) {
-        newErrors.subtitleColor = "ڕەنگ دەبێت کۆدی Hex بێت (وەک #000000)";
+        newErrors.subtitleColor = copy?.hexColorInvalid ?? "ڕەنگ دەبێت کۆدی Hex بێت (وەک #000000)";
       }
     }
 
@@ -491,6 +508,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
     validateLinks,
     validateQuestions,
     validateFooterPhone,
+    copy,
   ]);
 
   // Question rows clear their own error as soon as the missing half is typed.
@@ -740,7 +758,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       // Sanitize and set name (max 100 chars)
       const sanitizedName = (linktree.name || "").trim().slice(0, 100);
       if (!sanitizedName) {
-        setName("Untitled Linktree");
+        setName(copy?.untitledPage ?? "Untitled Linktree");
       } else {
         setName(sanitizedName);
       }
@@ -755,7 +773,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       const sanitizedDescription = (linktree.description || "")
         .trim()
         .slice(0, 500);
-      setDescription(sanitizedDescription || DEFAULT_DESCRIPTION);
+      setDescription(sanitizedDescription || copy?.defaultDescription || DEFAULT_DESCRIPTION);
 
       // Sanitize and set slug (max 100 chars, validate format)
       const sanitizedSlug = (
@@ -891,7 +909,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
                   value: extracted.value,
                   countryCode: extracted.countryCode,
                   displayName:
-                    link.display_name || getPlatformNameKurdish(link.platform), // Pre-fill with Kurdish if not set
+              link.display_name || getEditorPlatformName(link.platform, copy),
                   customColor: (link.metadata as Record<string, string>)
                     ?.custom_color,
                   customIcon: (link.metadata as Record<string, string>)
@@ -929,7 +947,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       setName(isDefault ? defaultBusinessName : "");
       setSubtitle(DEFAULT_SUBTITLE);
       setSubtitleColor("");
-      setDescription(DEFAULT_DESCRIPTION);
+      setDescription(copy?.defaultDescription ?? DEFAULT_DESCRIPTION);
       setSlug("");
       setBackgroundColor(
         resolveDefaultBackgroundColor(
@@ -956,7 +974,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             ),
             value: normalizedPhone.value,
             countryCode: normalizedPhone.countryCode,
-            displayName: getPlatformNameKurdish(platform),
+            displayName: getEditorPlatformName(platform, copy),
             enabled: true,
             order,
           })),
@@ -975,20 +993,20 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       setWhatsappModalEnabled(
         businessDefaults?.default_whatsapp_enabled ?? false,
       );
-      setWhatsappModalTitle("پەیوەندی کردن");
-      setWhatsappModalSubtitle("پرسیارێک هەڵبژێرە");
+      setWhatsappModalTitle(copy?.whatsappTitle ?? "پەیوەندی کردن");
+      setWhatsappModalSubtitle(copy?.whatsappSubtitle ?? "پرسیارێک هەڵبژێرە");
       setWhatsappQuestions([
         {
           id: "order",
-          text: "داواکردن",
-          message: "سڵاو بەڕێز دەمەوێت داوا بکەم.",
+          text: copy?.order ?? "داواکردن",
+          message: copy?.orderMessage ?? "سڵاو بەڕێز دەمەوێت داوا بکەم.",
         },
         {
           id: "price",
-          text: "زانینی نرخ",
-          message: "سڵاو بەڕێز، نرخی چەندە ؟",
+          text: copy?.price ?? "زانینی نرخ",
+          message: copy?.priceMessage ?? "سڵاو بەڕێز، نرخی چەندە ؟",
         },
-        { id: "other", text: "پرسیارێکی تر", message: "سڵاو" },
+        { id: "other", text: copy?.other ?? "پرسیارێکی تر", message: copy?.otherMessage ?? "سڵاو" },
       ]);
       setCurrentStep("basic");
       resetSubmission();
@@ -1051,7 +1069,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         const json = await res.json();
         if (cancelled) return;
         if (json.success) {
-          setSlugApiError(json.data ? null : "ئەم سلاگە پێشتر بەکارهاتووە");
+          setSlugApiError(json.data ? null : copy?.slugTaken ?? "ئەم سلاگە پێشتر بەکارهاتووە");
           if (!json.data) setTouched((prev) => ({ ...prev, slug: true }));
         }
       } catch {
@@ -1069,6 +1087,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
     isEditMode,
     editData?.linktree?.id,
     apiEndpoints.checkSlug,
+    copy,
   ]);
 
   /**
@@ -1097,7 +1116,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         const json = await res.json();
         if (cancelled) return;
         if (json.success) {
-          setNameWarning(json.data ? null : "پەڕەیەکی تر بە هەمان ناو هەیە");
+          setNameWarning(json.data ? null : copy?.nameTaken ?? "پەڕەیەکی تر بە هەمان ناو هەیە");
         }
       } catch {
         // network error — the name is not required to be unique anyway
@@ -1114,6 +1133,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
     isEditMode,
     editData?.linktree?.id,
     apiEndpoints.checkName,
+    copy,
   ]);
 
   // Merge API slug error into displayed errors
@@ -1154,7 +1174,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             platform: platformId,
             url: "",
             value: "",
-            displayName: getPlatformNameKurdish(platformId),
+          displayName: getEditorPlatformName(platformId, copy),
             enabled: true,
             order: prevLinks.length,
           };
@@ -1171,7 +1191,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         });
       });
     },
-    [generateLinkId],
+    [generateLinkId, copy],
   );
 
   // Add another instance of a platform - memoized for performance
@@ -1187,7 +1207,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           platform: platformId,
           url: "",
           value: "",
-          displayName: getPlatformNameKurdish(platformId), // Pre-fill with Kurdish
+          displayName: getEditorPlatformName(platformId, copy),
           enabled: true,
           order: prev.length,
         };
@@ -1197,7 +1217,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         return nextLinks.map((link, index) => ({ ...link, order: index }));
       });
     },
-    [generateLinkId],
+    [generateLinkId, copy],
   );
 
   // Remove a link instance - memoized for performance
@@ -1237,7 +1257,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
 
         // If this link already has an error, re-validate it in real-time
         if (linkErrors[id]) {
-          const error = validateSingleLink(platformId, value || "", code);
+          const error = validateLink(platformId, value || "", code);
           setLinkErrors((prevErrors) => {
             if (error) {
               return { ...prevErrors, [id]: error };
@@ -1257,7 +1277,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             url,
             value: value || "",
             countryCode: code,
-            displayName: getPlatformNameKurdish(platformId), // Pre-fill with Kurdish
+            displayName: getEditorPlatformName(platformId, copy),
             enabled: true,
             order: prev.length,
           };
@@ -1276,7 +1296,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         return prev.map((link) => (link.id === id ? updatedLink : link));
       });
     },
-    [linkErrors],
+    [linkErrors, validateLink, copy],
   );
 
   // Update display name for a link
@@ -1362,7 +1382,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       };
 
       // Run validation with the new country code and current value
-      const error = validateSingleLink(
+      const error = validateLink(
         existing.platform,
         existing.value || "",
         trimmedCode,
@@ -1380,14 +1400,14 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       // Return new array with updated link
       return prev.map((link) => (link.id === id ? updatedLink : link));
     });
-  }, []);
+  }, [validateLink]);
 
   const handleLinkBlur = useCallback(
     (id: string) => {
       const link = socialLinks.find((l) => l.id === id);
       if (!link) return;
 
-      const error = validateSingleLink(
+      const error = validateLink(
         link.platform,
         link.value || "",
         link.countryCode,
@@ -1402,7 +1422,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         }
       });
     },
-    [socialLinks],
+    [socialLinks, validateLink],
   );
 
   // Handle next step with validation - memoized for performance
@@ -1542,7 +1562,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           subtitleColor.trim(),
         );
         if (!isSolidHex) {
-          fieldErrors.subtitleColor = "ڕەنگ دەبێت کۆدی Hex بێت (وەک #000000)";
+          fieldErrors.subtitleColor = copy?.hexColorInvalid ?? "ڕەنگ دەبێت کۆدی Hex بێت (وەک #000000)";
         }
       }
 
@@ -1563,7 +1583,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           subtitleColor: true,
         });
 
-        let firstErrorMsg = "تکایە هەموو خانە پێویستەکان بە دروستی پڕبکەرەوە.";
+        let firstErrorMsg = copy?.allFieldsRequired ?? "تکایە هەموو خانە پێویستەکان بە دروستی پڕبکەرەوە.";
         if (fieldErrors.name) {
           firstErrorMsg = fieldErrors.name;
           if (currentStep !== "basic") setCurrentStep("basic");
@@ -1586,7 +1606,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           !templateKey ||
           !isTemplateKey(templateKey)
         ) {
-          firstErrorMsg = fieldErrors.templateKey || "شێوازی پەڕە هەڵبژێرە";
+          firstErrorMsg = fieldErrors.templateKey || copy?.templateRequired || "شێوازی پەڕە هەڵبژێرە";
           if (currentStep !== "basic") setCurrentStep("basic");
           document
             .querySelector("[data-template-section]")
@@ -1607,7 +1627,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
 
         setSubmitError({
           code: "VALIDATION_FAILED",
-          title: "زانیارییەکان تەواو نین",
+          title: copy?.incompleteTitle ?? "زانیارییەکان تەواو نین",
           message: firstErrorMsg,
           status: 400,
         });
@@ -1700,7 +1720,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       // SANITIZE TEXT FIELDS
       // ============================================
       const sanitizedSubtitle = subtitle.trim();
-      const sanitizedDescription = description.trim() || DEFAULT_DESCRIPTION;
+      const sanitizedDescription = description.trim() || copy?.defaultDescription || DEFAULT_DESCRIPTION;
       const sanitizedFooterText = footerText.trim() || undefined;
       const sanitizedFooterPhone = footerPhone.trim() || undefined;
 
@@ -1739,8 +1759,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           enabled: whatsappModalEnabled,
           ...(whatsappModalEnabled && whatsappQuestions.length > 0
             ? {
-                title: whatsappModalTitle.trim() || "پەیوەندی کردن",
-                subtitle: whatsappModalSubtitle.trim() || "پرسیارێک هەڵبژێرە",
+          title: whatsappModalTitle.trim() || copy?.whatsappTitle || "پەیوەندی کردن",
+          subtitle: whatsappModalSubtitle.trim() || copy?.whatsappSubtitle || "پرسیارێک هەڵبژێرە",
                 questions: whatsappQuestions.filter(
                   (q) => q.text.trim() && q.message.trim(),
                 ),
@@ -1800,7 +1820,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             const errorKey = `${link.platform}_${count}`;
 
             if (linkErrorsData[errorKey]) {
-              mappedErrors[linkId] = linkErrorsData[errorKey];
+              mappedErrors[linkId] = copy?.linkErrorsHint ?? linkErrorsData[errorKey];
             }
 
             platformLinkCounts.set(link.platform, count + 1);
@@ -1813,23 +1833,23 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         }
         setSubmitError({
           code: "LINK_ERRORS",
-          title: "هەڵە لە لینکەکاندا هەیە",
+          title: copy?.linkErrorsTitle ?? "هەڵە لە لینکەکاندا هەیە",
           message:
             error instanceof Error &&
             error.message &&
             error.message !== "Some links have validation errors"
-              ? error.message
-              : "تکایە بەستەر و زانیاری لینکەکان بپشکنە و هەڵەکان چاک بکەوە.",
+              ? copy?.linkErrorsHint ?? error.message
+              : copy?.linkErrorsHint ?? "تکایە بەستەر و زانیاری لینکەکان بپشکنە و هەڵەکان چاک بکەوە.",
           status: 400,
         });
       } else {
         const message =
-          error instanceof Error && error.message
+          copy?.saveFailedHint ?? (error instanceof Error && error.message
             ? error.message
-            : "هەڵەیەک ڕوویدا لە کاتی پاشەکەوتکردن. تکایە دووبارە هەوڵبدەوە.";
+            : "هەڵەیەک ڕوویدا لە کاتی پاشەکەوتکردن. تکایە دووبارە هەوڵبدەوە.");
         setSubmitError({
           code: "SUBMIT_FAILED",
-          title: "پاشەکەوتکردن سەرکەوتوو نەبوو",
+          title: copy?.saveFailedTitle ?? "پاشەکەوتکردن سەرکەوتوو نەبوو",
           message,
           status: 400,
         });
@@ -1912,7 +1932,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       if (!hasValue) return false;
 
       if (
-        validateSingleLink(link.platform, link.value || "", link.countryCode)
+        validateLink(link.platform, link.value || "", link.countryCode)
       ) {
         return false;
       }
@@ -1927,7 +1947,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
     }
 
     return true;
-  }, [selectedPlatforms, socialLinks]);
+  }, [selectedPlatforms, socialLinks, validateLink]);
 
   const canContinueToNextStep = useMemo(() => {
     if (isLoadingEditData) return false;
@@ -1973,20 +1993,21 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
       onClose={onClose}
       title={
         isEditMode
-          ? "دەستکاریکردنی پەڕە"
+          ? copy?.editPage ?? "دەستکاریکردنی پەڕە"
           : isDefault
-            ? "دروستکردنی پەڕەی بنەڕەتی"
-            : "پەڕەی نوێ دروست بکە"
+            ? copy?.createDefaultPage ?? "دروستکردنی پەڕەی بنەڕەتی"
+            : copy?.createPage ?? "پەڕەی نوێ دروست بکە"
       }
       description={
         currentStep === "basic"
-          ? "زانیارییە سەرەکییەکان"
+          ? copy?.basicDescription ?? "زانیارییە سەرەکییەکان"
           : currentStep === "select"
-            ? "پلاتفۆڕمەکان هەڵبژێرە"
-            : "لینکەکان زیاد بکە"
+            ? copy?.selectDescription ?? "پلاتفۆڕمەکان هەڵبژێرە"
+            : copy?.linksDescription ?? "لینکەکان زیاد بکە"
       }
       createBusinessStyle
       sponsorKrdTheme={platformTheme}
+      closeLabel={copy?.close}
       // Business editors use the tenant's complete colour value (including a
       // gradient). Platform editors keep the system gradient for their chrome;
       // the page background being designed remains independent in the preview.
@@ -1995,9 +2016,9 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         <ModalWizardProgress
           currentStep={currentStep}
           steps={[
-            { id: "basic", label: "زانیارییەکان" },
-            { id: "select", label: "پلاتفۆڕمەکان" },
-            { id: "links", label: "لینکەکان" },
+            { id: "basic", label: copy?.basicStep ?? "زانیارییەکان" },
+            { id: "select", label: copy?.selectStep ?? "پلاتفۆڕمەکان" },
+            { id: "links", label: copy?.linksStep ?? "لینکەکان" },
           ]}
         />
       }
@@ -2012,14 +2033,21 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             currentStep === "links" ? hasValidLinks : canContinueToNextStep
           }
           disableWhenInvalid={false}
+          nextLabel={copy?.next}
+          backLabel={copy?.back}
+          backTooltip={copy?.backTooltip}
+          cancelLabel={copy?.cancel}
+          cancelTooltip={copy?.cancelTooltip}
+          requiredTooltip={copy?.requiredTooltip}
+          savingLabel={copy?.saving}
           submitLabel={
             isEditMode
-              ? "پاشەکەوتکردن"
+              ? copy?.save ?? "پاشەکەوتکردن"
               : isDefault
-                ? "دروستکردنی پەڕەی بنەڕەتی"
-                : "دروستکردن"
+                ? copy?.createDefaultPage ?? "دروستکردنی پەڕەی بنەڕەتی"
+                : copy?.create ?? "دروستکردن"
           }
-          saveCurrentLabel="ئێستا پاشەکەوت بکە"
+          saveCurrentLabel={copy?.saveNow ?? "ئێستا پاشەکەوت بکە"}
           onSaveCurrent={
             isEditMode && currentStep !== "links"
               ? () => {
@@ -2069,7 +2097,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
           <InlineRequestError className="mb-4" error={submitError} />
         )}
         {uploadError && (
-          <InlineRequestError className="mb-4" error={uploadError} />
+          <InlineRequestError className="mb-4" error={localizeEditorUploadError(uploadError, copy)} />
         )}
         {/* Loading state mirrors the first editor step to prevent layout shift. */}
         {isLoadingEditData && <SkeletonLinktreeBasicInfo />}
@@ -2077,6 +2105,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         {/* Step 1: Basic Info */}
         {!isLoadingEditData && currentStep === "basic" && (
           <BasicInfoStep
+            copy={copy}
+            colorCopy={colorCopy}
             profileImagePreview={profileImagePreview}
             hideRemoveImage={
               !profileImage && !!businessDefaults?.default_avatar
@@ -2132,6 +2162,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         {/* Step 2: Select Platforms */}
         {!isLoadingEditData && currentStep === "select" && (
           <PlatformSelectionStep
+            copy={copy}
             socialLinks={socialLinks}
             error={errors.platforms}
             touched={touched.platforms}
@@ -2142,6 +2173,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         {/* Step 3: Add Links */}
         {!isLoadingEditData && currentStep === "links" && (
           <LinksStep
+            copy={copy}
+            colorCopy={colorCopy}
             selectedPlatforms={selectedPlatforms}
             socialLinks={socialLinks}
             linkErrors={linkErrors}

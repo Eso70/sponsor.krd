@@ -6,8 +6,10 @@ import { SOCIAL_PLATFORMS } from "../modal-constants";
 import type { SocialLink } from "@/features/link-editor/types";
 import { PlatformBadge } from "@/lib/brand/PlatformVisuals";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { getEditorPlatformName, type EditorCopy } from "../editor-copy";
 
 interface PlatformSelectionStepProps {
+  copy?: EditorCopy;
   socialLinks: SocialLink[];
   error?: string;
   touched?: boolean;
@@ -20,15 +22,18 @@ const PlatformButton = memo(
     platform,
     isSelected,
     onToggle,
+    copy,
   }: {
     platform: (typeof SOCIAL_PLATFORMS)[0];
     isSelected: boolean;
     onToggle: () => void;
+    copy?: EditorCopy;
   }) {
+    const platformName = copy ? getEditorPlatformName(platform.id, copy) : platform.name;
     return (
       <Tooltip
         content={
-          isSelected ? `لابردنی ${platform.name}` : `دیاریکردنی ${platform.name}`
+          isSelected ? `${copy?.removePlatform ?? "لابردنی"} ${platformName}` : `${copy?.selectPlatform ?? "دیاریکردنی"} ${platformName}`
         }
         side="top"
       >
@@ -57,7 +62,7 @@ const PlatformButton = memo(
             iconClassName="h-6 w-6"
           />
           <span className="text-xs font-medium text-gray-900">
-            {platform.name}
+            {platformName}
           </span>
         </button>
       </Tooltip>
@@ -66,7 +71,8 @@ const PlatformButton = memo(
   (prevProps, nextProps) => {
     return (
       prevProps.isSelected === nextProps.isSelected &&
-      prevProps.platform.id === nextProps.platform.id
+      prevProps.platform.id === nextProps.platform.id &&
+      prevProps.copy === nextProps.copy
     );
   },
 );
@@ -74,6 +80,7 @@ const PlatformButton = memo(
 PlatformButton.displayName = "PlatformButton";
 
 export const PlatformSelectionStep = memo(function PlatformSelectionStep({
+  copy,
   socialLinks,
   error,
   touched,
@@ -93,12 +100,12 @@ export const PlatformSelectionStep = memo(function PlatformSelectionStep({
   return (
     <div className="space-y-3 sm:space-y-4">
       <p className="text-xs sm:text-sm text-gray-600 text-center">
-        پلاتفۆڕمەکان هەڵبژێرە
+        {copy?.selectPlatformsTitle ?? "پلاتفۆڕمەکان هەڵبژێرە"}
       </p>
       {selectedPlatformOptions.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
           <p className="mb-2 text-xs font-semibold text-slate-600">
-            {selectedPlatformOptions.length} پلاتفۆڕم هەڵبژێردراوە
+            {selectedPlatformOptions.length} {copy?.selectedCount ?? "پلاتفۆڕم هەڵبژێردراوە"}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {selectedPlatformOptions.map((platform) => (
@@ -106,7 +113,7 @@ export const PlatformSelectionStep = memo(function PlatformSelectionStep({
                 key={platform.id}
                 className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600"
               >
-                {platform.name}
+                {copy ? getEditorPlatformName(platform.id, copy) : platform.name}
               </span>
             ))}
           </div>
@@ -115,6 +122,7 @@ export const PlatformSelectionStep = memo(function PlatformSelectionStep({
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {SOCIAL_PLATFORMS.map((platform) => (
           <PlatformButton
+            copy={copy}
             key={platform.id}
             platform={platform}
             isSelected={selectedPlatformsMap.has(platform.id)}

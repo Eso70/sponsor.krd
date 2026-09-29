@@ -17,6 +17,7 @@ interface AvatarImageUploadProps {
   hideRemove?: boolean;
   error?: string;
   uploadLabel?: string;
+  removeLabel?: string;
 }
 
 /**
@@ -36,6 +37,7 @@ export function AvatarImageUpload({
   hideRemove = false,
   error,
   uploadLabel = "وێنەی پڕۆفایل هەڵبژێرە",
+  removeLabel = "لادانی وێنە",
 }: AvatarImageUploadProps) {
   const showRemove = !onUploadClick && !hideRemove && !!imageUrl && imageUrl !== fallbackSrc;
 
@@ -81,12 +83,12 @@ export function AvatarImageUpload({
           </label>
         )}
         {showRemove && (
-          <Tooltip content="لادانی وێنە" side="top">
+          <Tooltip content={removeLabel} side="top">
             <button
               type="button"
               onClick={onRemove}
               className="absolute -top-2 -right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-red-600 cursor-pointer"
-              aria-label="Remove image"
+              aria-label={removeLabel}
             >
               <X className="h-4 w-4" />
             </button>

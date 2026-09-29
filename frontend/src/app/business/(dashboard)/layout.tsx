@@ -4,12 +4,14 @@ import type { ComponentProps, ReactNode } from "react";
 import { BusinessDashboard } from "@/components/business/BusinessDashboard";
 import { BusinessLocaleProvider } from "@/features/business/i18n/BusinessLocaleProvider";
 import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { businessMessages } from "@/features/business/i18n/messages";
 import { BusinessImpersonationBanner } from "@/components/business/BusinessImpersonationBanner";
 import { extractSubdomain } from "@/lib/subdomain-utils";
 import type { EffectiveAccessManifest } from "@linktree/types";
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
 import { businessErrorTheme } from "@/components/error-pages/error-theme";
-import { ERROR_PAGE_COPY } from "@/components/error-pages/copy";
+import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
+import { BUSINESS_LOCALE_COOKIE, businessLocaleFromCookie } from "@/features/business/i18n/locale-cookie";
 import { fetchAuthenticatedBusinessTheme } from "@/lib/utils/business-error-theme.server";
 import { BusinessBadGatewayPage } from "@/components/error-pages/BusinessBadGatewayPage";
 import { BusinessGatewayTimeoutPage } from "@/components/error-pages/BusinessGatewayTimeoutPage";
@@ -58,6 +60,7 @@ export default async function BusinessDashboardLayout({
   children: ReactNode;
 }) {
   const cookieStore = await cookies();
+  const errorLocale = businessLocaleFromCookie(cookieStore.get(BUSINESS_LOCALE_COOKIE)?.value);
   const sessionToken = cookieStore.get("business_session")?.value;
 
   if (!sessionToken) {
@@ -160,14 +163,14 @@ export default async function BusinessDashboardLayout({
   }
 
   if (badGateway) {
-    return <BusinessBadGatewayPage authenticated />;
+    return <BusinessBadGatewayPage authenticated pageCopy={businessErrorPageCopy(errorLocale, "badGateway")} />;
   }
 
   if (serviceUnavailable) {
     const theme = await fetchAuthenticatedBusinessTheme();
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.serviceUnavailable}
+        {...businessErrorPageCopy(errorLocale, "serviceUnavailable")}
         theme={businessErrorTheme(theme)}
         homeHref="/"
         showRetry
@@ -176,7 +179,7 @@ export default async function BusinessDashboardLayout({
   }
 
   if (gatewayTimeout) {
-    return <BusinessGatewayTimeoutPage authenticated />;
+    return <BusinessGatewayTimeoutPage authenticated pageCopy={businessErrorPageCopy(errorLocale, "gatewayTimeout")} />;
   }
 
   if (authenticationInvalid) {
@@ -187,7 +190,7 @@ export default async function BusinessDashboardLayout({
     const theme = await fetchAuthenticatedBusinessTheme();
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.forbidden}
+        {...businessErrorPageCopy(errorLocale, "forbidden")}
         theme={businessErrorTheme(theme)}
         homeHref="/"
       />
@@ -227,10 +230,11 @@ export default async function BusinessDashboardLayout({
         <BusinessImpersonationBanner
           businessName={currentUser.name}
           platformAdminName={impersonation.platform_admin_name}
+          copy={businessMessages[businessLocaleFromCookie(currentUser.preferred_locale)].Impersonation}
         />
       )}
       <BusinessLocaleProvider
-        initialLocale={currentUser.preferred_locale === "ar" ? "ar" : "ckb"}
+        initialLocale={businessLocaleFromCookie(currentUser.preferred_locale)}
         canChangeLocale={currentUser.can_change_locale === true}
       >
         <BusinessDashboard

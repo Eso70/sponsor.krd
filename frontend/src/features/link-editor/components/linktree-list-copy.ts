@@ -48,4 +48,10 @@ export const KURDISH_LINKTREE_LIST_COPY = {
 
 export type LinktreeListCopy = {
   [Key in keyof typeof KURDISH_LINKTREE_LIST_COPY]: string;
+} & {
+  loadingCards?: string;
+  loadingTable?: string;
+  paginationOf?: string;
+  paginationPrevious?: string;
+  paginationNext?: string;
 };

@@ -22,6 +22,18 @@ describe("parseTypedTime", () => {
 });
 
 describe("TimeInput", () => {
+  it.each([
+    { locale: "ar" as const, open: "فتح الوقت", hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم" },
+    { locale: "en" as const, open: "Open Time", hour: "Hour", minute: "Minute", now: "Now", done: "Done" },
+  ])("localizes the time picker in $locale", ({ locale, open, hour, minute, now, done }) => {
+    render(<TimeInput label={locale === "ar" ? "الوقت" : "Time"} locale={locale} value="09:00" onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: open }));
+    expect(screen.getByRole("group", { name: hour })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: minute })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: now })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: done })).toBeInTheDocument();
+  });
+
   it("shows the stored 24-hour value in 12-hour form", () => {
     render(<TimeInput label="کاتی کردنەوە" value="18:05" onChange={vi.fn()} />);
     expect(screen.getByLabelText("کاتی کردنەوە")).toHaveValue("06:05 PM");

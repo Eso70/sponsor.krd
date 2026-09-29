@@ -35,6 +35,7 @@ type PublicSiteFooterProps = {
   /** When set, the logo + brand name link back to this href. */
   homeHref?: string;
   direction?: "ltr" | "rtl";
+  logoLabel?: string;
 };
 
 function FooterLink({ link }: { link: PublicFooterLink }) {
@@ -78,11 +79,13 @@ function BrandBlock({
   brandName,
   logo,
   homeHref,
+  logoLabel,
   children,
 }: {
   brandName: string;
   logo?: string | null;
   homeHref?: string;
+  logoLabel?: string;
   children?: ReactNode;
 }) {
   const inner = (
@@ -96,7 +99,7 @@ function BrandBlock({
       >
         <Image
           src={logo || BUSINESS_LOGO_PLACEHOLDER}
-          alt={`${brandName} logo`}
+          alt={logoLabel ?? `${brandName} logo`}
           width={42}
           height={42}
           className="h-full w-full rounded-[0.85rem] object-cover shadow-sm"
@@ -146,6 +149,7 @@ export function PublicSiteFooter({
   appearance = "adaptive",
   homeHref,
   direction,
+  logoLabel,
 }: PublicSiteFooterProps) {
   const totalColumns = 1 + columns.length;
   const gridClass =
@@ -190,7 +194,7 @@ export function PublicSiteFooter({
         className={`relative mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 sm:px-6 ${gridClass}`}
       >
         <div className="flex max-w-sm flex-col gap-4">
-          <BrandBlock brandName={brandName} logo={logo} homeHref={homeHref}>
+          <BrandBlock brandName={brandName} logo={logo} homeHref={homeHref} logoLabel={logoLabel}>
             {showVerifiedBadge && (
               <VerifiedBadge compact label={verifiedLabel} />
             )}

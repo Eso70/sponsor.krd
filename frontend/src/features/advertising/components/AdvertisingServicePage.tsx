@@ -93,6 +93,10 @@ import type {
   AdvertisingTestimonial,
   AdvertisingTestimonialColor,
 } from "../types";
+import { useAdvertisingEditorText } from "../editor-copy";
+import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
+import { businessMessages } from "@/features/business/i18n/messages";
+import { arabicColorNames, englishColorNames } from "@/features/link-editor/editor-copy";
 
 type AdvertisingTab =
   | "texts"
@@ -275,14 +279,13 @@ function createId(prefix: string) {
 async function uploadPickedImage(
   file: File | undefined,
   onUploaded: (url: string) => void,
+  failureMessage = "نەتوانرا وێنەکە باربکرێت",
 ): Promise<void> {
   if (!file || !file.type.startsWith("image/")) return;
   try {
     onUploaded(await uploadAdvertisingImage(file));
-  } catch (error) {
-    toast.error(
-      error instanceof Error ? error.message : "نەتوانرا وێنەکە باربکرێت",
-    );
+  } catch {
+    toast.error(failureMessage);
   }
 }
 
@@ -305,6 +308,7 @@ function JourneyVideoUpload({
   videoUrl: string;
   onVideoUrlChange: (url: string) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const inputRef = useRef<HTMLInputElement>(null);
   // Blob URLs come from the file picker and are meaningless to show or save as
   // text — the link field stays blank until the owner pastes a real URL.
@@ -317,7 +321,7 @@ function JourneyVideoUpload({
   const acceptFile = (file: File | undefined) => {
     if (!file || !file.type.startsWith("video/")) return;
     onVideoUrlChange(URL.createObjectURL(file));
-    toast.success("ڤیدیۆ بۆ پێشبینینی ناو وێبگەڕ هەڵبژێردرا");
+    toast.success(t("ڤیدیۆ بۆ پێشبینینی ناو وێبگەڕ هەڵبژێردرا"));
   };
 
   const removeVideo = () => {
@@ -329,7 +333,11 @@ function JourneyVideoUpload({
     <div className="flex flex-col items-center gap-3">
       <div className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-black/10 shadow-xl dark:border-white/10">
         <div className="aspect-[9/16] w-full">
-          <AdvertisingVideoPlayer size="full" src={videoUrl || undefined} />
+          <AdvertisingVideoPlayer
+            size="full"
+            src={videoUrl || undefined}
+            copy={{ empty: t("هیچ ڤیدیۆیەک دانەنراوە"), title: t("ڤیدیۆی فێرکاری"), play: t("لێدانی ڤیدیۆ") }}
+          />
         </div>
       </div>
       <input
@@ -348,7 +356,7 @@ function JourneyVideoUpload({
           onClick={() => inputRef.current?.click()}
           className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
         >
-          <CloudUpload className="h-3.5 w-3.5" /> گۆڕینی ڤیدیۆ
+          <CloudUpload className="h-3.5 w-3.5" /> {t("گۆڕینی ڤیدیۆ")}
         </button>
         {videoUrl && (
           <button
@@ -356,12 +364,12 @@ function JourneyVideoUpload({
             onClick={removeVideo}
             className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-bold text-red-500 transition hover:bg-red-50 dark:border-white/10 dark:hover:bg-red-500/10"
           >
-            <Trash2 className="h-3.5 w-3.5" /> گەڕانەوە بۆ بنەڕەت
+            <Trash2 className="h-3.5 w-3.5" /> {t("گەڕانەوە بۆ بنەڕەت")}
           </button>
         )}
       </div>
       <div className="w-full max-w-sm">
-        <EditorField label="لینکی ڤیدیۆ">
+        <EditorField label={t("لینکی ڤیدیۆ")}>
           <input
             type="url"
             value={isBlob ? "" : videoUrl}
@@ -386,10 +394,11 @@ function ResultImageUpload({
   imageUrl?: string;
   onImageUrlChange: (url: string | undefined) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const acceptFile = (file: File | undefined) =>
-    void uploadPickedImage(file, onImageUrlChange);
+    void uploadPickedImage(file, onImageUrlChange, t("نەتوانرا وێنەکە باربکرێت"));
 
   return (
     <div>
@@ -400,7 +409,7 @@ function ResultImageUpload({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          aria-label={`بارکردنی وێنەی ${label}`}
+          aria-label={`${t("بارکردنی وێنەی")} ${label}`}
           className="group/slot relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 transition hover:border-[var(--theme-primary)] dark:border-white/15 dark:bg-white/[0.02]"
         >
           {imageUrl ? (
@@ -420,7 +429,7 @@ function ResultImageUpload({
           ) : (
             <span className="flex flex-col items-center gap-1.5 text-slate-400">
               <CloudUpload className="h-6 w-6" />
-              <span className="text-[10px] font-bold">وێنە هەڵبژێرە</span>
+              <span className="text-[10px] font-bold">{t("وێنە هەڵبژێرە")}</span>
             </span>
           )}
         </button>
@@ -438,7 +447,7 @@ function ResultImageUpload({
           <button
             type="button"
             onClick={() => onImageUrlChange(undefined)}
-            aria-label={`سڕینەوەی وێنەی ${label}`}
+            aria-label={`${t("سڕینەوەی وێنەی")} ${label}`}
             className="absolute -end-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-white shadow-sm dark:border-[#1c222b]"
           >
             <Trash2 className="h-3 w-3" />
@@ -457,20 +466,21 @@ function ReceiptExampleImageUpload({
   imageUrl?: string;
   onImageUrlChange: (url: string | undefined) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const acceptFile = (file: File | undefined) =>
-    void uploadPickedImage(file, onImageUrlChange);
+    void uploadPickedImage(file, onImageUrlChange, t("نەتوانرا وێنەکە باربکرێت"));
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="w-[150px]">
-        <PhoneMockup ariaLabel="پێشبینینی نموونەی وەسڵ" name="Receipt">
+        <PhoneMockup ariaLabel={t("پێشبینینی نموونەی وەسڵ")} name={t("نموونەی وەسڵ")}>
           <div className="relative flex h-full w-full items-center justify-center bg-[#f4efe8]">
             {imageUrl ? (
               <Image
                 src={imageUrl}
-                alt="وێنەی نموونەی وەسڵی گواستنەوەی پارە"
+                alt={t("وێنەی نموونەی وەسڵی گواستنەوەی پارە")}
                 fill
                 sizes="150px"
                 className="object-contain"
@@ -483,7 +493,7 @@ function ReceiptExampleImageUpload({
                 className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-black/45 transition hover:bg-black/[0.03]"
               >
                 <CloudUpload className="h-7 w-7" />
-                <span className="text-xs font-bold">وێنە هەڵبژێرە</span>
+                <span className="text-xs font-bold">{t("وێنە هەڵبژێرە")}</span>
               </button>
             )}
           </div>
@@ -505,7 +515,7 @@ function ReceiptExampleImageUpload({
           onClick={() => inputRef.current?.click()}
           className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
         >
-          <CloudUpload className="h-3.5 w-3.5" /> گۆڕینی وێنە
+          <CloudUpload className="h-3.5 w-3.5" /> {t("گۆڕینی وێنە")}
         </button>
         {imageUrl && (
           <button
@@ -513,7 +523,7 @@ function ReceiptExampleImageUpload({
             onClick={() => onImageUrlChange(undefined)}
             className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-bold text-red-500 transition hover:bg-red-50 dark:border-white/10 dark:hover:bg-red-500/10"
           >
-            <Trash2 className="h-3.5 w-3.5" /> سڕینەوەی وێنە
+            <Trash2 className="h-3.5 w-3.5" /> {t("سڕینەوەی وێنە")}
           </button>
         )}
       </div>
@@ -534,6 +544,7 @@ function FaqModal({
   onClose: () => void;
   onSubmit: (values: { question: string; answer: string }) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const existing = state.mode === "edit" ? state.faq : null;
   const [question, setQuestion] = useState(existing?.question ?? "");
   const [answer, setAnswer] = useState(existing?.answer ?? "");
@@ -543,11 +554,13 @@ function FaqModal({
       isOpen
       accentColor={accentColor}
       onClose={onClose}
-      title={state.mode === "create" ? "پرسیارێکی نوێ" : "دەستکاریکردنی پرسیار"}
-      description="پرسیار و وەڵامەکەی دیاری بکە."
+      title={t(state.mode === "create" ? "پرسیارێکی نوێ" : "دەستکاریکردنی پرسیار")}
+      description={t("پرسیار و وەڵامەکەی دیاری بکە.")}
+      closeLabel={t("داخستن")}
       footer={
         <ModalFooterActions
-          submitLabel={state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن"}
+          submitLabel={t(state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={!question.trim() || !answer.trim()}
           onCancel={onClose}
           onSubmit={() =>
@@ -557,24 +570,24 @@ function FaqModal({
       }
     >
       <div className="space-y-5">
-        <EditorField label="پرسیار" required>
+        <EditorField label={t("پرسیار")} required>
           <input
             autoFocus
             value={question}
             maxLength={140}
             onChange={(event) => setQuestion(event.target.value)}
             className={inputClass}
-            placeholder="پرسیار بنووسە..."
+            placeholder={t("پرسیار بنووسە...")}
             dir="auto"
           />
         </EditorField>
-        <EditorField label="وەڵام" required>
+        <EditorField label={t("وەڵام")} required>
           <textarea
             value={answer}
             maxLength={500}
             onChange={(event) => setAnswer(event.target.value)}
             className={cn(textareaClass, "w-full")}
-            placeholder="وەڵام بنووسە..."
+            placeholder={t("وەڵام بنووسە...")}
             dir="auto"
           />
         </EditorField>
@@ -604,6 +617,7 @@ function ResultModal({
     afterImageUrl?: string;
   }) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const existing = state.mode === "edit" ? state.result : null;
   const [category, setCategory] = useState(existing?.category ?? "");
   const [before, setBefore] = useState(existing?.before ?? "");
@@ -634,12 +648,14 @@ function ResultModal({
       accentColor={accentColor}
       onClose={onClose}
       title={
-        state.mode === "create" ? "نموونەیەکی نوێ" : "دەستکاریکردنی نموونە"
+        t(state.mode === "create" ? "نموونەیەکی نوێ" : "دەستکاریکردنی نموونە")
       }
-      description="جۆری ناوەڕۆک، بینینی پێش و دوای سپۆنسەر و نرخ دیاری بکە."
+      description={t("جۆری ناوەڕۆک، بینینی پێش و دوای سپۆنسەر و نرخ دیاری بکە.")}
+      closeLabel={t("داخستن")}
       footer={
         <ModalFooterActions
-          submitLabel={state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن"}
+          submitLabel={t(state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={!category.trim() || !before.trim() || !after.trim()}
           onCancel={onClose}
           onSubmit={submit}
@@ -649,17 +665,17 @@ function ResultModal({
       <div className="space-y-5">
         <div className="mx-auto grid max-w-xs grid-cols-2 gap-3">
           <ResultImageUpload
-            label="پێش"
+            label={t("پێش")}
             imageUrl={beforeImageUrl}
             onImageUrlChange={setBeforeImageUrl}
           />
           <ResultImageUpload
-            label="دوای"
+            label={t("دوای")}
             imageUrl={afterImageUrl}
             onImageUrlChange={setAfterImageUrl}
           />
         </div>
-        <EditorField label="جۆری ناوەڕۆک" required>
+        <EditorField label={t("جۆری ناوەڕۆک")} required>
           <input
             autoFocus
             value={category}
@@ -667,11 +683,11 @@ function ResultModal({
             onChange={(event) => setCategory(event.target.value)}
             className={inputClass}
             dir="auto"
-            placeholder="بۆ نموونە: بازرگانی — چێشتخانە"
+            placeholder={t("بۆ نموونە: بازرگانی — چێشتخانە")}
           />
         </EditorField>
         <div className="grid gap-4 sm:grid-cols-2">
-          <EditorField label="بینین — پێش" required>
+          <EditorField label={t("بینین — پێش")} required>
             <input
               value={before}
               maxLength={12}
@@ -681,7 +697,7 @@ function ResultModal({
               placeholder="4.1K"
             />
           </EditorField>
-          <EditorField label="بینین — دوای" required>
+          <EditorField label={t("بینین — دوای")} required>
             <input
               value={after}
               maxLength={12}
@@ -692,7 +708,7 @@ function ResultModal({
             />
           </EditorField>
         </div>
-        <EditorField label="نرخ (IQD)">
+        <EditorField label={t("نرخ (IQD)")}>
           <NumberInput
             value={price}
             step={1000}
@@ -725,6 +741,7 @@ function TestimonialModal({
     avatarUrl?: string;
   }) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const existing = state.mode === "edit" ? state.testimonial : null;
   const [name, setName] = useState(existing?.name ?? "");
   const [role, setRole] = useState(existing?.role ?? "");
@@ -747,11 +764,13 @@ function TestimonialModal({
       isOpen
       accentColor={accentColor}
       onClose={onClose}
-      title={state.mode === "create" ? "ڕایەکی نوێ" : "دەستکاریکردنی ڕا"}
-      description="ناو، پیشە و دەقی ڕای کڕیار دیاری بکە."
+      title={t(state.mode === "create" ? "ڕایەکی نوێ" : "دەستکاریکردنی ڕا")}
+      description={t("ناو، پیشە و دەقی ڕای کڕیار دیاری بکە.")}
+      closeLabel={t("داخستن")}
       footer={
         <ModalFooterActions
-          submitLabel={state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن"}
+          submitLabel={t(state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={!name.trim() || !quote.trim()}
           onCancel={onClose}
           onSubmit={submit}
@@ -763,45 +782,46 @@ function TestimonialModal({
           <AvatarImageUpload
             imageUrl={avatarUrl}
             onFileChange={(event) => {
-              void uploadPickedImage(event.target.files?.[0], setAvatarUrl);
+              void uploadPickedImage(event.target.files?.[0], setAvatarUrl, t("نەتوانرا وێنەکە باربکرێت"));
             }}
             onRemove={() => setAvatarUrl(undefined)}
-            uploadLabel="وێنەی کڕیار هەڵبژێرە"
+            uploadLabel={t("وێنەی کڕیار هەڵبژێرە")}
+            removeLabel={t("سڕینەوەی وێنە")}
           />
           <span className="text-[11px] font-bold text-slate-400">
-            وێنە (ئارەزوومەندانە)
+            {t("وێنە (ئارەزوومەندانە)")}
           </span>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <EditorField label="ناو" required>
+          <EditorField label={t("ناو")} required>
             <input
               autoFocus
               value={name}
               maxLength={40}
               onChange={(event) => setName(event.target.value)}
               className={inputClass}
-              placeholder="ناوی کڕیار"
+              placeholder={t("ناوی کڕیار")}
               dir="auto"
             />
           </EditorField>
-          <EditorField label="پیشە / ڕۆڵ">
+          <EditorField label={t("پیشە / ڕۆڵ")}>
             <input
               value={role}
               maxLength={40}
               onChange={(event) => setRole(event.target.value)}
               className={inputClass}
-              placeholder="پیشە یان ڕۆڵی کڕیار"
+              placeholder={t("پیشە یان ڕۆڵی کڕیار")}
               dir="auto"
             />
           </EditorField>
         </div>
-        <EditorField label="ڕا" required>
+        <EditorField label={t("ڕا")} required>
           <textarea
             value={quote}
             maxLength={280}
             onChange={(event) => setQuote(event.target.value)}
             className={cn(textareaClass, "w-full")}
-            placeholder="ڕای کڕیار لێرە بنووسە..."
+            placeholder={t("ڕای کڕیار لێرە بنووسە...")}
             dir="auto"
           />
         </EditorField>
@@ -837,6 +857,8 @@ function PackageCategoryModal({
   onClose: () => void;
   onSubmit: (label: string, color: string) => void;
 }) {
+  const t = useAdvertisingEditorText();
+  const { locale } = useBusinessLocale();
   const [label, setLabel] = useState(
     state.mode === "edit" ? state.category.label : "",
   );
@@ -852,12 +874,14 @@ function PackageCategoryModal({
       accentColor={accentColor}
       onClose={onClose}
       title={
-        state.mode === "create" ? "جۆرێکی نوێی پاکێج" : "دەستکاریکردنی جۆر"
+        t(state.mode === "create" ? "جۆرێکی نوێی پاکێج" : "دەستکاریکردنی جۆر")
       }
-      description="ناو و ڕەنگی ئەم جۆرە دیاری بکە."
+      description={t("ناو و ڕەنگی ئەم جۆرە دیاری بکە.")}
+      closeLabel={t("داخستن")}
       footer={
         <ModalFooterActions
-          submitLabel={state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن"}
+          submitLabel={t(state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={!label.trim()}
           onCancel={onClose}
           onSubmit={() => onSubmit(label.trim(), color)}
@@ -865,7 +889,7 @@ function PackageCategoryModal({
       }
     >
       <div className="space-y-5">
-        <EditorField label="ناوی جۆر" required>
+        <EditorField label={t("ناوی جۆر")} required>
           <input
             autoFocus
             value={label}
@@ -873,11 +897,14 @@ function PackageCategoryModal({
             onChange={(event) => setLabel(event.target.value)}
             className={inputClass}
             dir="auto"
-            placeholder="بۆ نموونە: خوێندکار"
+            placeholder={t("بۆ نموونە: خوێندکار")}
           />
         </EditorField>
-        <EditorField label="ڕەنگ" required>
+        <EditorField label={t("ڕەنگ")} required>
           <BackgroundColorPicker
+            customLabel={t("ڕەنگ")}
+            colorNames={locale === "ar" ? arabicColorNames : locale === "en" ? englishColorNames : undefined}
+            colorCopy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : locale === "en" ? businessMessages.en.SettingsColorPicker : undefined}
             value={color}
             onChange={setColor}
             colors={RAINBOW_BACKGROUND_COLORS}
@@ -900,17 +927,18 @@ function PaymentLogoUpload({
   logoUrl?: string;
   onLogoUrlChange: (url: string | undefined) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const acceptFile = (file: File | undefined) =>
-    void uploadPickedImage(file, onLogoUrlChange);
+    void uploadPickedImage(file, onLogoUrlChange, t("نەتوانرا وێنەکە باربکرێت"));
 
   return (
     <div className="relative shrink-0">
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        aria-label="بارکردنی لۆگۆ"
+        aria-label={t("بارکردنی لۆگۆ")}
         className="group/logo relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 dark:border-white/15 dark:bg-white/[0.02]"
       >
         {logoUrl ? (
@@ -943,7 +971,7 @@ function PaymentLogoUpload({
         <button
           type="button"
           onClick={() => onLogoUrlChange(undefined)}
-          aria-label="سڕینەوەی لۆگۆ"
+          aria-label={t("سڕینەوەی لۆگۆ")}
           className="absolute -end-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-white shadow-sm dark:border-[#1c222b]"
         >
           <Trash2 className="h-3 w-3" />
@@ -967,6 +995,7 @@ function PaymentProviderModal({
   onClose: () => void;
   onSubmit: (values: { name: string; phone: string; logoUrl?: string }) => void;
 }) {
+  const t = useAdvertisingEditorText();
   const existing = state.mode === "edit" ? state.provider : null;
   const isKnownName = (name: string) =>
     KNOWN_PAYMENT_PROVIDER_NAMES.includes(name);
@@ -998,13 +1027,15 @@ function PaymentProviderModal({
       onClose={onClose}
       title={
         state.mode === "create"
-          ? "شێوازێکی نوێی پارەدان"
-          : "دەستکاریکردنی شێوازی پارەدان"
+          ? t("شێوازێکی نوێی پارەدان")
+          : t("دەستکاریکردنی شێوازی پارەدان")
       }
-      description="لە پارەدانە بەناوبانگەکان هەڵبژێرە یان ناوێکی تایبەت بنووسە."
+      description={t("لە پارەدانە بەناوبانگەکان هەڵبژێرە یان ناوێکی تایبەت بنووسە.")}
+      closeLabel={t("داخستن")}
       footer={
         <ModalFooterActions
-          submitLabel={state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن"}
+          submitLabel={t(state.mode === "create" ? "زیادکردن" : "پاشەکەوتکردن")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={!name}
           onCancel={onClose}
           onSubmit={submit}
@@ -1012,7 +1043,7 @@ function PaymentProviderModal({
       }
     >
       <div className="space-y-5">
-        <EditorField label="جۆری پارەدان" required>
+        <EditorField label={t("جۆری پارەدان")} required>
           <div className="flex flex-wrap gap-2.5">
             {KNOWN_PAYMENT_PROVIDER_NAMES.map((known) => {
               const logo = PAYMENT_PROVIDER_LOGOS[known];
@@ -1061,14 +1092,14 @@ function PaymentProviderModal({
               )}
             >
               <Plus className="h-4 w-4" />
-              <span className="text-[9px] font-bold">تایبەت</span>
+              <span className="text-[9px] font-bold">{t("تایبەت")}</span>
             </button>
           </div>
         </EditorField>
 
         {isCustom && (
           <>
-            <EditorField label="ناو" required>
+            <EditorField label={t("ناو")} required>
               <input
                 autoFocus
                 value={customName}
@@ -1076,7 +1107,7 @@ function PaymentProviderModal({
                 onChange={(event) => setCustomName(event.target.value)}
                 className={inputClass}
                 dir="auto"
-                placeholder="بۆ نموونە: ZainCash"
+                placeholder={t("بۆ نموونە: ZainCash")}
               />
             </EditorField>
             <div className="flex items-center gap-3">
@@ -1085,13 +1116,13 @@ function PaymentProviderModal({
                 onLogoUrlChange={setLogoUrl}
               />
               <span className="text-[11px] font-bold text-slate-400">
-                لۆگۆ (ئارەزوومەندانە)
+                {t("لۆگۆ (ئارەزوومەندانە)")}
               </span>
             </div>
           </>
         )}
 
-        <EditorField label="ژمارەی مۆبایل">
+        <EditorField label={t("ژمارەی مۆبایل")}>
           <input
             value={phone}
             onChange={(event) =>
@@ -1118,6 +1149,7 @@ export function AdvertisingServicePage({
   accentColor,
   subdomain,
 }: AdvertisingServicePageProps) {
+  const t = useAdvertisingEditorText();
   const [draft, setDraft] = useState<AdvertisingDraftConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -1129,11 +1161,8 @@ export function AdvertisingServicePage({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setLoadError(
-          error instanceof Error
-            ? error.message
-            : "نەتوانرا زانیارییەکان باربکرێن",
-        );
+        console.error("Failed to load advertising draft", error);
+        setLoadError("نەتوانرا زانیارییەکان باربکرێن");
       });
     return () => {
       cancelled = true;
@@ -1145,15 +1174,15 @@ export function AdvertisingServicePage({
       <DashboardSurface>
         <EmptyState
           icon={CircleHelp}
-          title="نەتوانرا خزمەتگوزاری ڕیکلام باربکرێت"
-          description={loadError}
+          title={t("نەتوانرا خزمەتگوزاری ڕیکلام باربکرێت")}
+          description={t(loadError)}
         />
       </DashboardSurface>
     );
   }
 
   if (!draft) {
-    return <SkeletonAdvertisingEditor />;
+    return <SkeletonAdvertisingEditor loadingLabel={t("دەستکاریکەری ڕیکلام بار دەکرێت")} />;
   }
 
   return (
@@ -1205,6 +1234,15 @@ function AdvertisingServiceEditor({
   subdomain: string;
   initialDraft: AdvertisingDraftConfig;
 }) {
+  const t = useAdvertisingEditorText();
+  const saveCopy = {
+    savingTooltip: t("پاشەکەوت دەکرێت..."),
+    saveTooltip: t("پاشەکەوتکردنی گۆڕانکارییەکان"),
+    unchangedTooltip: t("هیچ گۆڕانکارییەک نەکراوە"),
+    saving: t("پاشەکەوتکردن..."),
+    save: t("پاشەکەوتکردن"),
+    saved: t("پاشەکەوت کرا"),
+  };
   const [activeTab, setActiveTab] = useState<AdvertisingTab>("texts");
   const [packageCategory, setPackageCategory] = useState<string>(
     initialDraft.packageCategories[0]?.id ?? "personal",
@@ -1261,10 +1299,10 @@ function AdvertisingServiceEditor({
       const published = await saveAndPublishAdvertising(savePatchFor(config));
       setConfig(published);
       setDirty(false);
-      toast.success("گۆڕانکاریەکان پاشەکەوت کران و بڵاوکرانەوە");
-    } catch (error) {
+      toast.success(t("گۆڕانکاریەکان پاشەکەوت کران و بڵاوکرانەوە"));
+    } catch {
       toast.error(
-        error instanceof Error ? error.message : "نەتوانرا پاشەکەوت بکرێت",
+        t("نەتوانرا پاشەکەوت بکرێت"),
       );
     } finally {
       setSaving(false);
@@ -1291,10 +1329,10 @@ function AdvertisingServiceEditor({
           : await publishAdvertising();
       setConfig(next);
       setDirty(false);
-      toast.success(wasPublished ? "پەیجەکە وەستێنرا" : "پەیجەکە بڵاوکرایەوە");
-    } catch (error) {
+      toast.success(t(wasPublished ? "پەیجەکە وەستێنرا" : "پەیجەکە بڵاوکرایەوە"));
+    } catch {
       toast.error(
-        error instanceof Error ? error.message : "نەتوانرا بڵاوکرایەوە",
+        t("نەتوانرا بڵاوکرایەوە"),
       );
     } finally {
       setPublishing(false);
@@ -1531,21 +1569,21 @@ function AdvertisingServiceEditor({
 
   return (
     <div className="space-y-5" dir="ltr">
-      <AdvertisingEditorStats config={config} />
+      <AdvertisingEditorStats config={config} translate={t} />
 
-      <SegmentedTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+      <SegmentedTabs tabs={tabs.map((tab) => ({ ...tab, label: t(tab.label) }))} value={activeTab} onChange={setActiveTab} />
 
       <DashboardSurface>
         {activeTab === "texts" && (
           <PageHeaderSection
             icon={LayoutDashboard}
-            title="دەقی سەرەکی و کۆتایی"
-            description="دەقی سەرەتای پەڕە و بەشی بانگهێشتی کۆتایی."
+            title={t("دەقی سەرەکی و کۆتایی")}
+            description={t("دەقی سەرەتای پەڕە و بەشی بانگهێشتی کۆتایی.")}
             action={
               <>
                 <Tooltip
                   content={
-                    isPublished ? "کردنەوەی پەیجی گشتی" : "پەیجەکە نابڵاوکراوە"
+                    t(isPublished ? "کردنەوەی پەیجی گشتی" : "پەیجەکە نابڵاوکراوە")
                   }
                   side="bottom"
                 >
@@ -1562,14 +1600,14 @@ function AdvertisingServiceEditor({
                     )}
                   >
                     <ExternalLink className="h-4 w-4" />
-                    کردنەوە
+                    {t("کردنەوە")}
                   </a>
                 </Tooltip>
                 <Tooltip
                   content={
                     isPublished
-                      ? "کلیک بکە بۆ وەستاندنی پەیج"
-                      : "بڵاوکردنەوەی پەیج"
+                      ? t("کلیک بکە بۆ وەستاندنی پەیج")
+                      : t("بڵاوکردنەوەی پەیج")
                   }
                   side="bottom"
                 >
@@ -1587,14 +1625,15 @@ function AdvertisingServiceEditor({
                     )}
                     {publishing
                       ? isPublished
-                        ? "وەستاندن..."
-                        : "بڵاوکردنەوە..."
+                        ? t("وەستاندن...")
+                        : t("بڵاوکردنەوە...")
                       : isPublished
-                        ? "بڵاوکراوە"
-                        : "بڵاوکردنەوە"}
+                        ? t("بڵاوکراوە")
+                        : t("بڵاوکردنەوە")}
                   </button>
                 </Tooltip>
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -1606,13 +1645,13 @@ function AdvertisingServiceEditor({
               <div className="space-y-4 sm:pe-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    بەشی سەرەکی (سەرەتای پەڕە)
+                    {t("بەشی سەرەکی (سەرەتای پەڕە)")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    یەکەم شتێکە سەردانکەر دەیبینێت.
+                    {t("یەکەم شتێکە سەردانکەر دەیبینێت.")}
                   </p>
                 </div>
-                <EditorField label="ناونیشانی سەرەکی">
+                <EditorField label={t("ناونیشانی سەرەکی")}>
                   <input
                     value={config.title}
                     maxLength={90}
@@ -1623,7 +1662,7 @@ function AdvertisingServiceEditor({
                     dir="auto"
                   />
                 </EditorField>
-                <EditorField label="وەسفی خزمەتگوزاری">
+                <EditorField label={t("وەسفی خزمەتگوزاری")}>
                   <textarea
                     value={config.description}
                     maxLength={280}
@@ -1639,13 +1678,13 @@ function AdvertisingServiceEditor({
               <div className="space-y-4 sm:ps-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    بانگهێشتی کۆتایی (کۆتایی پەڕە)
+                    {t("بانگهێشتی کۆتایی (کۆتایی پەڕە)")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    دوا بەشی پەڕە کە داواکاری لە سەردانکەر دەکات.
+                    {t("دوا بەشی پەڕە کە داواکاری لە سەردانکەر دەکات.")}
                   </p>
                 </div>
-                <EditorField label="ناونیشان">
+                <EditorField label={t("ناونیشان")}>
                   <input
                     value={config.closingCta.title}
                     maxLength={90}
@@ -1656,7 +1695,7 @@ function AdvertisingServiceEditor({
                     dir="auto"
                   />
                 </EditorField>
-                <EditorField label="دەقی دوگمە">
+                <EditorField label={t("دەقی دوگمە")}>
                   <input
                     value={config.closingCta.buttonLabel}
                     maxLength={40}
@@ -1667,7 +1706,7 @@ function AdvertisingServiceEditor({
                     dir="auto"
                   />
                 </EditorField>
-                <EditorField label="وەسف">
+                <EditorField label={t("وەسف")}>
                   <input
                     value={config.closingCta.description}
                     maxLength={160}
@@ -1679,8 +1718,8 @@ function AdvertisingServiceEditor({
                   />
                 </EditorField>
                 <EditorField
-                  label="ژمارەی WhatsApp"
-                  hint="دوگمەکە بۆ ئێرە دەبات"
+                  label={t("ژمارەی WhatsApp")}
+                  hint={t("دوگمەکە بۆ ئێرە دەبات")}
                 >
                   <input
                     value={config.whatsappNumber}
@@ -1701,11 +1740,12 @@ function AdvertisingServiceEditor({
         {activeTab === "journey" && (
           <PageHeaderSection
             icon={Route}
-            title="قۆناغەکانی سپۆنسەر کردن"
-            description="ئەو بەشانەی ڕاژنماییەکە کە ناوەڕۆکیان دەگۆڕدرێت."
+            title={t("قۆناغەکانی سپۆنسەر کردن")}
+            description={t("ئەو بەشانەی ڕاژنماییەکە کە ناوەڕۆکیان دەگۆڕدرێت.")}
             action={
               <>
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -1716,7 +1756,7 @@ function AdvertisingServiceEditor({
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition [background:var(--theme-css)] hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  شێوازێکی نوێ
+                  {t("شێوازێکی نوێ")}
                 </button>
               </>
             }
@@ -1725,10 +1765,10 @@ function AdvertisingServiceEditor({
               <div className="min-w-0 space-y-4 sm:pe-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    شێوازی پارەدان
+                    {t("شێوازی پارەدان")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    ناو و ژمارەی هەر شێوازێک کە کڕیار پارەکەی بۆ دەنێرێت.
+                    {t("ناو و ژمارەی هەر شێوازێک کە کڕیار پارەکەی بۆ دەنێرێت.")}
                   </p>
                 </div>
 
@@ -1736,9 +1776,9 @@ function AdvertisingServiceEditor({
                   <EmptyState
                     compact
                     icon={CloudUpload}
-                    title="هیچ شێوازێکی پارەدان زیاد نەکراوە"
+                    title={t("هیچ شێوازێکی پارەدان زیاد نەکراوە")}
                     description={
-                      '"شێوازێکی نوێ"ی سەرەوە کلیک بکە بۆ زیادکردنی یەکەم شێواز.'
+                      t('"شێوازێکی نوێ"ی سەرەوە کلیک بکە بۆ زیادکردنی یەکەم شێواز.')
                     }
                   />
                 ) : (
@@ -1767,7 +1807,7 @@ function AdvertisingServiceEditor({
                               className="truncate text-xs font-black text-slate-700 dark:text-slate-200"
                               dir="auto"
                             >
-                              {provider.name || "بێ ناو"}
+                              {provider.name || t("بێ ناو")}
                             </p>
                             <p
                               className="truncate text-[11px] text-slate-400"
@@ -1778,7 +1818,7 @@ function AdvertisingServiceEditor({
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
                             <IconActionButton
-                              label={`دەستکاریکردنی ${provider.name || "شێواز"}`}
+                              label={`${t("دەستکاریکردنی")} ${provider.name || t("شێواز")}`}
                               onClick={() =>
                                 setPaymentProviderModal({
                                   mode: "edit",
@@ -1789,12 +1829,12 @@ function AdvertisingServiceEditor({
                               <Pencil className="h-4 w-4" />
                             </IconActionButton>
                             <IconActionButton
-                              label={`سڕینەوەی ${provider.name || "شێواز"}`}
+                              label={`${t("سڕینەوەی")} ${provider.name || t("شێواز")}`}
                               tone="danger"
                               onClick={() =>
                                 setPendingDelete({
-                                  title: "سڕینەوەی شێوازی پارەدان",
-                                  message: `دڵنیایت لە سڕینەوەی "${provider.name || "ئەم شێوازە"}"؟`,
+                                  title: t("سڕینەوەی شێوازی پارەدان"),
+                                  message: `${t("دڵنیایت لە سڕینەوەی")} "${provider.name || t("ئەم شێوازە")}"؟`,
                                   confirm: () =>
                                     removePaymentProvider(provider.id),
                                 })
@@ -1813,10 +1853,10 @@ function AdvertisingServiceEditor({
               <div className="min-w-0 space-y-4 sm:ps-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    وەسڵی پارەدان
+                    {t("وەسڵی پارەدان")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    وێنەی نموونەی وەسڵ کە بۆ ڕێنمایی کڕیار پیشان دەدرێت.
+                    {t("وێنەی نموونەی وەسڵ کە بۆ ڕێنمایی کڕیار پیشان دەدرێت.")}
                   </p>
                 </div>
                 <div className="flex justify-center">
@@ -1844,10 +1884,11 @@ function AdvertisingServiceEditor({
         {activeTab === "video" && (
           <PageHeaderSection
             icon={MonitorPlay}
-            title="ڤیدیۆی دەرهێنانی کۆد"
-            description="ئەم ڤیدیۆیە هەردوو پەڕەکە بەکاردێنن: هەنگاوی ٥ی ڕاژنمایی و پەڕەی /advertising/video-code."
+            title={t("ڤیدیۆی دەرهێنانی کۆد")}
+            description={t("ئەم ڤیدیۆیە هەردوو پەڕەکە بەکاردێنن: هەنگاوی ٥ی ڕاژنمایی و پەڕەی /advertising/video-code.")}
             action={
               <TabSaveButton
+                copy={saveCopy}
                 dirty={dirty}
                 saving={saving}
                 onSave={() => void handleSave()}
@@ -1858,11 +1899,10 @@ function AdvertisingServiceEditor({
               <div className="min-w-0 space-y-4 sm:pe-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    ڤیدیۆ
+                    {t("ڤیدیۆ")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    ئەم ڤیدیۆیە لە هەنگاوی ٥ی ڕاژنمایی و پەڕەی
-                    /advertising/video-code پیشان دەدرێت.
+                    {t("ئەم ڤیدیۆیە لە هەنگاوی ٥ی ڕاژنمایی و پەڕەی")} /advertising/video-code
                   </p>
                 </div>
                 <div className="flex justify-center">
@@ -1876,13 +1916,13 @@ function AdvertisingServiceEditor({
               <div className="min-w-0 space-y-4 sm:ps-6">
                 <div>
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    دەق و هەنگاوەکان
+                    {t("دەق و هەنگاوەکان")}
                   </h4>
                   <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                    ناونیشان، وەسف و هەنگاوەکانی فێرکاری پەڕەی ڤیدیۆ.
+                    {t("ناونیشان، وەسف و هەنگاوەکانی فێرکاری پەڕەی ڤیدیۆ.")}
                   </p>
                 </div>
-                <EditorField label="ناونیشانی فێرکاری">
+                <EditorField label={t("ناونیشانی فێرکاری")}>
                   <input
                     value={config.videoTutorialTitle}
                     maxLength={90}
@@ -1896,7 +1936,7 @@ function AdvertisingServiceEditor({
 
                 <div className="border-t border-slate-100 pt-4 dark:border-white/5">
                   <h5 className="text-xs font-black text-slate-700 dark:text-slate-200">
-                    هەنگاوەکانی فێرکاری
+                    {t("هەنگاوەکانی فێرکاری")}
                   </h5>
                   <div className="mt-3 space-y-3">
                     {config.tutorialSteps.map((step, index) => (
@@ -1913,12 +1953,12 @@ function AdvertisingServiceEditor({
                           dir="auto"
                         />
                         <IconActionButton
-                          label={`سڕینەوەی هەنگاوی ${index + 1}`}
+                          label={`${t("سڕینەوەی هەنگاوی")} ${index + 1}`}
                           tone="danger"
                           onClick={() =>
                             setPendingDelete({
-                              title: "سڕینەوەی هەنگاو",
-                              message: `دڵنیایت لە سڕینەوەی هەنگاوی "${step || index + 1}"؟`,
+                              title: t("سڕینەوەی هەنگاو"),
+                              message: `${t("دڵنیایت لە سڕینەوەی هەنگاوی")} "${step || index + 1}"؟`,
                               confirm: () => removeTutorialStep(index),
                             })
                           }
@@ -1930,11 +1970,7 @@ function AdvertisingServiceEditor({
                   </div>
                   <div className="mt-3">
                     <EditorAddButton
-                      label={
-                        config.tutorialSteps.length
-                          ? "هەنگاوێکی تر"
-                          : "زیادکردنی هەنگاو"
-                      }
+                      label={t(config.tutorialSteps.length ? "هەنگاوێکی تر" : "زیادکردنی هەنگاو")}
                       onClick={() =>
                         updateConfig("tutorialSteps", [
                           ...config.tutorialSteps,
@@ -1952,11 +1988,12 @@ function AdvertisingServiceEditor({
         {activeTab === "results" && (
           <PageHeaderSection
             icon={TrendingUp}
-            title="پێش و دوای"
-            description="هەمان نموونەکانی پەڕەی گشتی — نموونە زیاد، دەستکاری یان بسڕەوە."
+            title={t("پێش و دوای")}
+            description={t("هەمان نموونەکانی پەڕەی گشتی — نموونە زیاد، دەستکاری یان بسڕەوە.")}
             action={
               <>
                 <AdvertisingSectionVisibilityToggle
+                  translate={t}
                   checked={config.sections.results}
                   onChange={(checked) =>
                     updateConfig("sections", {
@@ -1966,6 +2003,7 @@ function AdvertisingServiceEditor({
                   }
                 />
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -1976,7 +2014,7 @@ function AdvertisingServiceEditor({
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition [background:var(--theme-css)] hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  نموونەی نوێ
+                  {t("نموونەی نوێ")}
                 </button>
               </>
             }
@@ -1986,8 +2024,8 @@ function AdvertisingServiceEditor({
                 <EmptyState
                   compact
                   icon={TrendingUp}
-                  title="هیچ نموونەیەک نییە"
-                  description="نموونەیەکی ئەنجام زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت."
+                  title={t("هیچ نموونەیەک نییە")}
+                  description={t("نموونەیەکی ئەنجام زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت.")}
                 />
               </div>
             ) : (
@@ -1999,6 +2037,7 @@ function AdvertisingServiceEditor({
                   // No auto-advance here — it would pull a card away mid-interaction.
                   <div className="sm:col-span-2">
                     <ResultCardFan
+                      translate={t}
                       items={config.results}
                       activeIndex={activeIndex}
                       onPrevious={() =>
@@ -2010,7 +2049,7 @@ function AdvertisingServiceEditor({
                         <div className="absolute end-2 top-9 z-20 flex items-center gap-1">
                           <button
                             type="button"
-                            aria-label={`دەستکاریکردنی ${item.category}`}
+                            aria-label={`${t("دەستکاریکردنی")} ${item.category}`}
                             onClick={() =>
                               setResultModal({ mode: "edit", result: item })
                             }
@@ -2020,11 +2059,11 @@ function AdvertisingServiceEditor({
                           </button>
                           <button
                             type="button"
-                            aria-label={`سڕینەوەی ${item.category}`}
+                            aria-label={`${t("سڕینەوەی")} ${item.category}`}
                             onClick={() =>
                               setPendingDelete({
-                                title: "سڕینەوەی نموونە",
-                                message: `دڵنیایت لە سڕینەوەی نموونەی "${item.category}"؟`,
+                                title: t("سڕینەوەی نموونە"),
+                                message: `${t("دڵنیایت لە سڕینەوەی نموونەی")} "${item.category}"؟`,
                                 confirm: () => removeResult(item.id),
                               })
                             }
@@ -2061,11 +2100,12 @@ function AdvertisingServiceEditor({
         {activeTab === "packages" && (
           <PageHeaderSection
             icon={BadgeDollarSign}
-            title="پاکێجەکان"
-            description="هەمان پاکێج و نرخەکانی پەڕەی گشتی — نرخ و ڕەزی بینەر زیاد، دەستکاری یان بسڕەوە."
+            title={t("پاکێجەکان")}
+            description={t("هەمان پاکێج و نرخەکانی پەڕەی گشتی — نرخ و ڕەزی بینەر زیاد، دەستکاری یان بسڕەوە.")}
             action={
               <>
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -2076,7 +2116,7 @@ function AdvertisingServiceEditor({
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition [background:var(--theme-css)] hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  جۆری نوێ
+                  {t("جۆری نوێ")}
                 </button>
               </>
             }
@@ -2084,7 +2124,7 @@ function AdvertisingServiceEditor({
             <div className="sm:col-span-2">
               <div
                 role="tablist"
-                aria-label="جۆری پاکێج"
+                aria-label={t("جۆری پاکێج")}
                 className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-white/5"
               >
                 {config.packageCategories.map((category) => {
@@ -2119,7 +2159,7 @@ function AdvertisingServiceEditor({
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       <span className="max-w-24 truncate">
-                        {category.label || "بێ ناو"}
+                        {category.label || t("بێ ناو")}
                       </span>
                       <span
                         className={cn(
@@ -2134,7 +2174,7 @@ function AdvertisingServiceEditor({
                       <span className="ms-0.5 flex items-center gap-0.5 border-s border-current/15 ps-1.5">
                         <button
                           type="button"
-                          aria-label={`دەستکاریکردنی ${category.label}`}
+                          aria-label={`${t("دەستکاریکردنی")} ${category.label}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             setCategoryModal({ mode: "edit", category });
@@ -2146,12 +2186,12 @@ function AdvertisingServiceEditor({
                         {config.packageCategories.length > 1 && (
                           <button
                             type="button"
-                            aria-label={`سڕینەوەی ${category.label}`}
+                            aria-label={`${t("سڕینەوەی")} ${category.label}`}
                             onClick={(event) => {
                               event.stopPropagation();
                               setPendingDelete({
-                                title: "سڕینەوەی جۆر",
-                                message: `دڵنیایت لە سڕینەوەی جۆری "${category.label}" و هەموو پاکێجەکانی؟`,
+                                title: t("سڕینەوەی جۆر"),
+                                message: `${t("دڵنیایت لە سڕینەوەی جۆری")} "${category.label}" ${t("و هەموو پاکێجەکانی؟")}`,
                                 confirm: () =>
                                   removePackageCategory(category.id),
                               });
@@ -2186,12 +2226,13 @@ function AdvertisingServiceEditor({
                         <EmptyState
                           compact
                           icon={BadgeDollarSign}
-                          title="هیچ پاکێجێک نییە"
-                          description="پاکێجێک زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت."
+                          title={t("هیچ پاکێجێک نییە")}
+                          description={t("پاکێجێک زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت.")}
                         />
                       </div>
                     ) : (
                       <AdvertisingPriceTable
+                        copy={{ price: t("نرخ"), views: t("ڕەزی بینەر"), remove: t("سڕینەوەی پاکێج") }}
                         className="mt-4"
                         rows={tiers}
                         theme={categoryTheme}
@@ -2203,8 +2244,8 @@ function AdvertisingServiceEditor({
                         }
                         onRemove={(id) =>
                           setPendingDelete({
-                            title: "سڕینەوەی پاکێج",
-                            message: "دڵنیایت لە سڕینەوەی ئەم پاکێجە؟",
+                            title: t("سڕینەوەی پاکێج"),
+                            message: t("دڵنیایت لە سڕینەوەی ئەم پاکێجە؟"),
                             confirm: () =>
                               removePackageTier(activeCategory.id, id),
                           })
@@ -2214,7 +2255,7 @@ function AdvertisingServiceEditor({
 
                     <div className="mt-4">
                       <EditorAddButton
-                        label={tiers.length ? "پاکێجێکی تر" : "زیادکردنی پاکێج"}
+                        label={t(tiers.length ? "پاکێجێکی تر" : "زیادکردنی پاکێج")}
                         onClick={() => addPackageTier(activeCategory.id)}
                       />
                     </div>
@@ -2237,11 +2278,12 @@ function AdvertisingServiceEditor({
         {activeTab === "testimonials" && (
           <PageHeaderSection
             icon={Quote}
-            title="ڕای کڕیاران"
-            description="هەمان ڕاکانی پەڕەی گشتی — بۆچوون زیاد، دەستکاری یان بسڕەوە."
+            title={t("ڕای کڕیاران")}
+            description={t("هەمان ڕاکانی پەڕەی گشتی — بۆچوون زیاد، دەستکاری یان بسڕەوە.")}
             action={
               <>
                 <AdvertisingSectionVisibilityToggle
+                  translate={t}
                   checked={config.sections.testimonials}
                   onChange={(checked) =>
                     updateConfig("sections", {
@@ -2251,6 +2293,7 @@ function AdvertisingServiceEditor({
                   }
                 />
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -2261,7 +2304,7 @@ function AdvertisingServiceEditor({
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition [background:var(--theme-css)] hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  ڕایەکی نوێ
+                  {t("ڕایەکی نوێ")}
                 </button>
               </>
             }
@@ -2271,8 +2314,8 @@ function AdvertisingServiceEditor({
                 <EmptyState
                   compact
                   icon={Quote}
-                  title="هیچ ڕایەک نییە"
-                  description="ڕایەکی کڕیار زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت."
+                  title={t("هیچ ڕایەک نییە")}
+                  description={t("ڕایەکی کڕیار زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت.")}
                 />
               </div>
             ) : (
@@ -2285,6 +2328,7 @@ function AdvertisingServiceEditor({
                         it would pull a card away mid-edit. Every card stays reachable
                         through the dots/arrows below. */}
                     <TestimonialStackCard
+                      translate={t}
                       items={config.testimonials}
                       activeIndex={activeIndex}
                       onSelect={setTestimonialIndex}
@@ -2297,7 +2341,7 @@ function AdvertisingServiceEditor({
                       renderActions={(item) => (
                         <div className="flex shrink-0 items-center gap-1">
                           <IconActionButton
-                            label={`دەستکاریکردنی ${item.name || "ڕا"}`}
+                            label={`${t("دەستکاریکردنی")} ${item.name || t("ڕا")}`}
                             onClick={() =>
                               setTestimonialModal({
                                 mode: "edit",
@@ -2308,12 +2352,12 @@ function AdvertisingServiceEditor({
                             <Pencil className="h-4 w-4" />
                           </IconActionButton>
                           <IconActionButton
-                            label={`سڕینەوەی ${item.name || "ڕا"}`}
+                            label={`${t("سڕینەوەی")} ${item.name || t("ڕا")}`}
                             tone="danger"
                             onClick={() =>
                               setPendingDelete({
-                                title: "سڕینەوەی ڕا",
-                                message: `دڵنیایت لە سڕینەوەی ڕای "${item.name || "بێ ناو"}"؟`,
+                                title: t("سڕینەوەی ڕا"),
+                                message: `${t("دڵنیایت لە سڕینەوەی ڕای")} "${item.name || t("بێ ناو")}"؟`,
                                 confirm: () => removeTestimonial(item.id),
                               })
                             }
@@ -2342,11 +2386,12 @@ function AdvertisingServiceEditor({
         {activeTab === "faq" && (
           <PageHeaderSection
             icon={CircleHelp}
-            title="پرسیارە باوەکان"
-            description="هەمان پرسیارەکانی پەڕەی گشتی — پرسیار زیاد، دەستکاری یان بسڕەوە."
+            title={t("پرسیارە باوەکان")}
+            description={t("هەمان پرسیارەکانی پەڕەی گشتی — پرسیار زیاد، دەستکاری یان بسڕەوە.")}
             action={
               <>
                 <AdvertisingSectionVisibilityToggle
+                  translate={t}
                   checked={config.sections.faq}
                   onChange={(checked) =>
                     updateConfig("sections", {
@@ -2356,6 +2401,7 @@ function AdvertisingServiceEditor({
                   }
                 />
                 <TabSaveButton
+                  copy={saveCopy}
                   dirty={dirty}
                   saving={saving}
                   onSave={() => void handleSave()}
@@ -2366,7 +2412,7 @@ function AdvertisingServiceEditor({
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition [background:var(--theme-css)] hover:brightness-95 disabled:cursor-wait disabled:opacity-60"
                 >
                   <Plus aria-hidden="true" className="h-4 w-4" />
-                  پرسیاری نوێ
+                  {t("پرسیاری نوێ")}
                 </button>
               </>
             }
@@ -2376,8 +2422,8 @@ function AdvertisingServiceEditor({
                 <EmptyState
                   compact
                   icon={CircleHelp}
-                  title="هیچ پرسیارێک نییە"
-                  description="پرسیارێک زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت."
+                  title={t("هیچ پرسیارێک نییە")}
+                  description={t("پرسیارێک زیاد بکە تاکو لە پەڕەی گشتیدا دەربکەوێت.")}
                 />
               </div>
             ) : (
@@ -2388,6 +2434,7 @@ function AdvertisingServiceEditor({
                   // The public FAQ card, so the editor previews what visitors get.
                   <div className="sm:col-span-2 mx-auto w-full max-w-2xl">
                     <FaqCarousel
+                      translate={t}
                       items={config.faqs}
                       activeIndex={activeIndex}
                       onSelect={setFaqIndex}
@@ -2398,18 +2445,18 @@ function AdvertisingServiceEditor({
                       renderActions={(faq) => (
                         <span className="flex items-center gap-1">
                           <IconActionButton
-                            label={`دەستکاریکردنی ${faq.question}`}
+                            label={`${t("دەستکاریکردنی")} ${faq.question}`}
                             onClick={() => setFaqModal({ mode: "edit", faq })}
                           >
                             <Pencil className="h-4 w-4" />
                           </IconActionButton>
                           <IconActionButton
-                            label={`سڕینەوەی ${faq.question}`}
+                            label={`${t("سڕینەوەی")} ${faq.question}`}
                             tone="danger"
                             onClick={() =>
                               setPendingDelete({
-                                title: "سڕینەوەی پرسیار",
-                                message: `دڵنیایت لە سڕینەوەی "${faq.question}"؟`,
+                                title: t("سڕینەوەی پرسیار"),
+                                message: `${t("دڵنیایت لە سڕینەوەی")} "${faq.question}"؟`,
                                 confirm: () => removeFaq(faq.id),
                               })
                             }
@@ -2442,6 +2489,10 @@ function AdvertisingServiceEditor({
         onConfirm={async () => pendingDelete?.confirm()}
         title={pendingDelete?.title ?? ""}
         message={pendingDelete?.message ?? ""}
+        confirmLabel={t("سڕینەوە")}
+        loadingLabel={t("دەسڕێتەوە...")}
+        cancelLabel={t("پاشگەزبوونەوە")}
+        closeLabel={t("داخستن")}
       />
     </div>
   );

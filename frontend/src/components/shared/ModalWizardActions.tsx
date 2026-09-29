@@ -13,6 +13,12 @@ interface ModalWizardActionsProps {
   disableWhenInvalid?: boolean;
   submitLabel: string;
   nextLabel?: string;
+  backLabel?: string;
+  backTooltip?: string;
+  cancelLabel?: string;
+  cancelTooltip?: string;
+  requiredTooltip?: string;
+  savingLabel?: string;
   saveCurrentLabel?: string;
   onSaveCurrent?: () => void;
   onBack: () => void;
@@ -31,6 +37,12 @@ export function ModalWizardActions({
   disableWhenInvalid = true,
   submitLabel,
   nextLabel = "بەردەوام بە",
+  backLabel = "گەڕانەوە",
+  backTooltip = "گەڕانەوە بۆ هەنگاوی پێشوو",
+  cancelLabel = "هەڵوەشاندنەوە",
+  cancelTooltip = "داخستن و هەڵوەشاندنەوەی گۆڕانکارییەکان",
+  requiredTooltip = "تکایە خانە پێویستەکان پڕبکەرەوە",
+  savingLabel = "پاشەکەوتکردن...",
   saveCurrentLabel = "پاشەکەوتکردن",
   onSaveCurrent,
   onBack,
@@ -50,23 +62,23 @@ export function ModalWizardActions({
   return (
     <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 border-t border-slate-100 dark:border-white/5 p-3.5 sm:p-4 bg-linear-to-r from-white to-slate-50/30 dark:from-[#1c222b] dark:to-slate-900/10">
       {!isFirstStep && (
-        <Tooltip content="گەڕانەوە بۆ هەنگاوی پێشوو" side="top">
+        <Tooltip content={backTooltip} side="top">
           <button
             type="button"
             onClick={onBack}
             className="flex h-11 w-full sm:w-auto items-center justify-center px-4 sm:px-5 rounded-xl bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 border border-slate-200/80 dark:border-white/10 text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white text-sm font-medium transition-all duration-300 shadow-xs hover:shadow-sm cursor-pointer whitespace-nowrap"
           >
-            گەڕانەوە
+            {backLabel}
           </button>
         </Tooltip>
       )}
-      <Tooltip content="داخستن و هەڵوەشاندنەوەی گۆڕانکارییەکان" side="top">
+      <Tooltip content={cancelTooltip} side="top">
         <button
           type="button"
           onClick={onCancel}
           className={`flex h-11 w-full sm:w-auto items-center justify-center px-4 sm:px-5 rounded-xl bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 border border-slate-200/80 dark:border-white/10 text-slate-600 hover:text-slate-700 dark:text-slate-300 dark:hover:text-white text-sm font-medium transition-all duration-300 shadow-xs hover:shadow-sm cursor-pointer whitespace-nowrap ${isFirstStep ? "sm:flex-1" : ""}`}
         >
-          هەڵوەشاندنەوە
+          {cancelLabel}
         </button>
       </Tooltip>
       {onSaveCurrent && (
@@ -91,7 +103,7 @@ export function ModalWizardActions({
         <Skeleton className="h-11 w-full sm:flex-1" />
       ) : !isFinalStep ? (
         <Tooltip
-          content={canContinue ? nextLabel : "تکایە خانە پێویستەکان پڕبکەرەوە"}
+          content={canContinue ? nextLabel : requiredTooltip}
           side="top"
         >
           {variant === "sponsor-krd" ? (
@@ -116,7 +128,7 @@ export function ModalWizardActions({
         </Tooltip>
       ) : (
         <Tooltip
-          content={isSubmitting ? "پاشەکەوت دەکرێت..." : submitLabel}
+          content={isSubmitting ? savingLabel : submitLabel}
           side="top"
         >
           {variant === "sponsor-krd" ? (
@@ -132,7 +144,7 @@ export function ModalWizardActions({
                   <MotionSpinner>
                     <Loader2 className="h-4 w-4 " />
                   </MotionSpinner>
-                  <span>پاشەکەوتکردن...</span>
+                  <span>{savingLabel}</span>
                 </>
               ) : (
                 <span>{submitLabel}</span>
@@ -151,7 +163,7 @@ export function ModalWizardActions({
                   <MotionSpinner>
                     <Loader2 className="h-4 w-4 " />
                   </MotionSpinner>
-                  <span>پاشەکەوتکردن...</span>
+                  <span>{savingLabel}</span>
                 </>
               ) : (
                 <span>{submitLabel}</span>

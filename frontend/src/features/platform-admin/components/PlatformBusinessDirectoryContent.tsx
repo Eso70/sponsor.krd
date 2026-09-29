@@ -5,6 +5,7 @@ import { BusinessesTable } from "@/features/platform-admin/components/Businesses
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { ManagementTablePagination } from "@/components/shared/ManagementTable";
 import type { BusinessPagination } from "@/features/platform-admin/hooks/useBusinesses";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 interface PlatformBusinessDirectoryContentProps {
   businesses: Business[];
@@ -33,6 +34,7 @@ export function PlatformBusinessDirectoryContent({
   onManageSessions,
   onOpenDashboard,
 }: PlatformBusinessDirectoryContentProps) {
+  const copy = usePlatformCopy();
   // The server pages this list, so both views take the same page number rather
   // than each drawing its own footer.
   const listPagination: ManagementTablePagination = {
@@ -49,14 +51,14 @@ export function PlatformBusinessDirectoryContent({
       {businesses.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="هیچ بزنسێک نییە"
-          description="بانگهێشتنامەیەکی نوێ دروست بکە بۆ دەستپێکردنی تۆمارکردنی یەکەم بزنس."
+          title={copy.noBusinesses}
+          description={copy.noBusinessesDescription}
         />
       ) : filteredBusinesses.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="هیچ ئەنجامێک نەدۆزرایەوە"
-          description="دووبارە گەڕان بکەرەوە بە وشەیەکی تر"
+          title={copy.noResults}
+          description={copy.noResultsDescription}
         />
       ) : viewMode === "grid" ? (
         <BusinessesGrid

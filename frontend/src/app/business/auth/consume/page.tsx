@@ -6,11 +6,15 @@ import { AuthenticationCard } from "@/components/shared/AuthenticationCard";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { BUSINESS_LOGO_PLACEHOLDER } from "@/lib/brand/brand-assets";
+import { businessPreAuthCopy } from "@/features/business/i18n/pre-auth-copy";
+import { usePreAuthBusinessLocale } from "@/features/business/i18n/usePreAuthBusinessLocale";
 
 export default function ConsumeBusinessAuthPage() {
   const search = useSearchParams();
   const code = search.get("code");
   const started = useRef(false);
+  const { locale } = usePreAuthBusinessLocale();
+  const copy = businessPreAuthCopy[locale];
 
   useEffect(() => {
     if (started.current) return;
@@ -43,20 +47,23 @@ export default function ConsumeBusinessAuthPage() {
   return (
     <AuthenticationShell
       backHref="/business/workspace-entry"
-      brandDescription="بە پاراستن دەچیتە داشبۆردی بزنسەکەت"
-      brandName="بزنس"
+      brandDescription={copy.consumeDescription}
+      brandName={copy.business}
       brandLogo={BUSINESS_LOGO_PLACEHOLDER}
-      previewTitle="پانێڵی بزنس"
+      previewTitle={copy.preview}
       businessTenant
+      language={locale}
+      backLabel={copy.back}
+      themeCopy={{ label: copy.theme, light: copy.lightTheme, dark: copy.darkTheme }}
     >
       <AuthenticationCard
-        title="چوونەژوورەوەی پارێزراو"
-        description="دانیشتنەکەت پشتڕاست دەکەینەوە"
+        title={copy.consumeTitle}
+        description={copy.consumeHint}
       >
         <LoadingState
           compact
-          title="دانیشتنەکەت ئامادە دەکرێت"
-          description="ئەمە تەنها چەند چرکەیەک دەخایەنێت."
+          title={copy.consumeLoading}
+          description={copy.consumeWait}
         />
       </AuthenticationCard>
     </AuthenticationShell>

@@ -89,11 +89,13 @@ export function TestimonialStackDots({
   activeIndex,
   onSelect,
   className,
+  translate = (text: string) => text,
 }: {
   items: readonly AdvertisingTestimonial[];
   activeIndex: number;
   onSelect: (index: number) => void;
   className?: string;
+  translate?: (text: string) => string;
 }) {
   return (
     <div className={`flex items-center justify-center gap-1.5 ${className ?? ""}`}>
@@ -105,7 +107,7 @@ export function TestimonialStackDots({
             key={item.id}
             type="button"
             onClick={() => onSelect(dotIndex)}
-            aria-label={item.name || "ڕا"}
+            aria-label={item.name || translate("ڕا")}
             aria-current={isActive}
             className={`!h-2 !min-h-0 !min-w-0 rounded-full transition-all ${
               isActive ? `!w-6 ${dotTheme.dot}` : `!w-2 ${dotTheme.dotMuted}`
@@ -130,6 +132,7 @@ export function TestimonialStackCard({
   onNext,
   renderActions,
   className,
+  translate = (text) => text,
 }: {
   items: readonly AdvertisingTestimonial[];
   activeIndex: number;
@@ -139,6 +142,7 @@ export function TestimonialStackCard({
   /** Overlay rendered on the front card only (the dashboard's edit/delete controls). */
   renderActions?: (item: AdvertisingTestimonial) => ReactNode;
   className?: string;
+  translate?: (text: string) => string;
 }) {
   const total = items.length;
   const activeTheme = TESTIMONIAL_THEME[items[activeIndex].color];
@@ -187,7 +191,7 @@ export function TestimonialStackCard({
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-base font-black text-slate-900 dark:text-white" dir="auto">
-                    {item.name || "بێ ناو"}
+                    {item.name || translate("بێ ناو")}
                   </p>
                   <p className="truncate text-xs font-bold text-slate-500 dark:text-slate-400" dir="auto">
                     {item.role}
@@ -212,7 +216,7 @@ export function TestimonialStackCard({
           <button
             type="button"
             onClick={onPrevious}
-            aria-label="ڕای پێشوو"
+            aria-label={translate("ڕای پێشوو")}
             className={`flex !h-9 !w-9 !min-h-0 !min-w-0 shrink-0 items-center justify-center rounded-full transition hover:opacity-75 active:scale-90 ${activeTheme.soft} ${activeTheme.text}`}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -227,7 +231,7 @@ export function TestimonialStackCard({
           <button
             type="button"
             onClick={onNext}
-            aria-label="ڕای داهاتوو"
+            aria-label={translate("ڕای داهاتوو")}
             className={`flex !h-9 !w-9 !min-h-0 !min-w-0 shrink-0 items-center justify-center rounded-full transition hover:opacity-75 active:scale-90 ${activeTheme.soft} ${activeTheme.text}`}
           >
             <ChevronRight className="h-5 w-5" />

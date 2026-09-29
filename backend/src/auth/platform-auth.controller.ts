@@ -7,28 +7,52 @@
   UseGuards,
   HttpCode,
   HttpStatus,
+  Patch,
+  Body,
 } from '@nestjs/common';
 import { SessionService } from './session.service';
 import type { SessionUser } from './session.service';
 import { PlatformAdminGuard } from './platform-admin.guard';
 import { CurrentUser } from './current-user.decorator';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { PlatformLocaleService } from './platform-locale.service';
+import { UpdatePlatformPreferredLocaleDto } from './dto/update-platform-preferred-locale.dto';
 
 @Controller('api/platform/auth')
 export class PlatformAuthController {
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly platformLocaleService: PlatformLocaleService,
+  ) {}
 
   @Get('profile')
   @UseGuards(PlatformAdminGuard)
-  getProfile(@CurrentUser() user: SessionUser) {
+  async getProfile(@CurrentUser() user: SessionUser) {
+    const preferredLocale = await this.platformLocaleService.getPreferredLocale(
+      user.id,
+    );
     return {
       user: {
         id: user.id,
         username: user.username,
         name: user.name,
         email: user.email || null,
+        preferred_locale: preferredLocale,
       },
     };
+  }
+
+  @Patch('preferred-locale')
+  @UseGuards(PlatformAdminGuard)
+  async updatePreferredLocale(
+    @CurrentUser() user: SessionUser,
+    @Body() body: UpdatePlatformPreferredLocaleDto,
+  ) {
+    const locale = await this.platformLocaleService.updatePreferredLocale(
+      user.id,
+      body.locale,
+    );
+    return { locale };
   }
 
   @Get('effective-access')

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessInvitationButton } from "@/features/platform-admin/components/BusinessInvitationButton";
 import { apiRequest } from "@/lib/api/request";
 import { copyToClipboard } from "@/lib/utils/clipboard";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 vi.mock("@/lib/api/request", () => ({ apiRequest: vi.fn() }));
 vi.mock("@/lib/utils/clipboard", () => ({ copyToClipboard: vi.fn() }));
@@ -14,9 +15,9 @@ describe("BusinessInvitationButton", () => {
   });
 
   it("uses the shared wizard and reports an invalid optional email inline", () => {
-    render(<BusinessInvitationButton showLabel />);
+    render(<PlatformLocaleProvider initialLocale="ckb"><BusinessInvitationButton showLabel /></PlatformLocaleProvider>);
 
-    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    fireEvent.click(screen.getByRole("button", { name: "بانگهێشتنامەی نوێ" }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByTestId("modal-wizard-progress")).toBeInTheDocument();
@@ -40,9 +41,9 @@ describe("BusinessInvitationButton", () => {
       expiresAt: "2026-08-20T10:00:00.000Z",
     });
     vi.mocked(copyToClipboard).mockResolvedValue(true);
-    render(<BusinessInvitationButton />);
+    render(<PlatformLocaleProvider initialLocale="ckb"><BusinessInvitationButton /></PlatformLocaleProvider>);
 
-    fireEvent.click(screen.getByRole("button", { name: "Invite" }));
+    fireEvent.click(screen.getByRole("button", { name: "بانگهێشتنامەی نوێ" }));
     fireEvent.change(screen.getByLabelText(/ئیمەیڵی دیاریکراو/), {
       target: { value: "owner@example.com" },
     });
@@ -64,5 +65,17 @@ describe("BusinessInvitationButton", () => {
         "https://example.test/join?invite=test-token",
       ),
     );
+  });
+
+  it("translates the invitation wizard into Arabic", () => {
+    render(<PlatformLocaleProvider initialLocale="ar"><BusinessInvitationButton /></PlatformLocaleProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "دعوة جديدة" }));
+    expect(screen.getByRole("dialog", { name: "دعوة جديدة" })).toBeInTheDocument();
+    expect(screen.getByText("التفاصيل")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إنشاء الدعوة" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/بريد إلكتروني محدد/), { target: { value: "invalid" } });
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الدعوة" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("أدخل بريداً إلكترونياً صحيحاً.");
   });
 });

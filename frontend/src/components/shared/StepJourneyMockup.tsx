@@ -35,6 +35,7 @@ export interface StepJourneyMockupProps {
   backLabel?: string;
   nextLabel?: string;
   submitLabel?: string;
+  stepsAriaLabel?: string;
   /** Overrides the back button's default neutral outline color. */
   backButtonClass?: string;
   /** Overrides the next/submit button's color (otherwise falls back to the active step's buttonClass). */
@@ -61,6 +62,7 @@ export function StepJourneyMockup({
   backLabel = "Back",
   nextLabel = "Next",
   submitLabel = "Submit",
+  stepsAriaLabel = "Tutorial steps",
   backButtonClass,
   nextButtonClass,
   progressBarClass,
@@ -116,7 +118,7 @@ export function StepJourneyMockup({
           </div>
         </header>
 
-        <nav className="border-b border-black/8 px-3 py-3 dark:border-white/8 lg:hidden" aria-label="Tutorial steps">
+        <nav className="border-b border-black/8 px-3 py-3 dark:border-white/8 lg:hidden" aria-label={stepsAriaLabel}>
           <p className="mb-3 truncate px-1 text-lg font-black" dir="auto">{active.title}</p>
           <div className="grid grid-cols-6 gap-1.5" role="tablist">
             {steps.map((step, index) => {
@@ -164,7 +166,7 @@ export function StepJourneyMockup({
 
         <div className="lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
           <aside className="hidden border-r border-black/8 p-4 dark:border-white/8 lg:block">
-            <div className="space-y-1.5" role="tablist" aria-label="Tutorial steps">
+            <div className="space-y-1.5" role="tablist" aria-label={stepsAriaLabel}>
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = activeStep === index;

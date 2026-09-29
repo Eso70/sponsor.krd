@@ -2,8 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApprovalNotifications } from "./ApprovalNotifications";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 const mocks = vi.hoisted(() => ({
+  loading: false,
   load: vi.fn().mockResolvedValue(undefined),
   read: vi.fn().mockResolvedValue(undefined),
   dismiss: vi.fn().mockResolvedValue(undefined),
@@ -31,13 +33,13 @@ vi.mock("@/features/communications/useNotificationInbox", () => ({
       ],
       unreadCount: 1,
     },
-    loading: false,
     ...mocks,
   }),
 }));
 
 describe("ApprovalNotifications", () => {
   beforeEach(() => {
+    mocks.loading = false;
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -47,6 +49,13 @@ describe("ApprovalNotifications", () => {
     );
   });
 
+  it("announces notification loading in Arabic", async () => {
+    mocks.loading = true;
+    render(<PlatformLocaleProvider initialLocale="ar"><ApprovalNotifications /></PlatformLocaleProvider>);
+    await userEvent.setup().click(screen.getByRole("button", { name: "الإشعارات" }));
+    expect(screen.getByRole("status", { name: "جارٍ تحميل الإشعارات" })).toBeInTheDocument();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
@@ -54,7 +63,7 @@ describe("ApprovalNotifications", () => {
 
   it("opens the shared notification detail modal instead of navigating immediately", async () => {
     const user = userEvent.setup();
-    render(<ApprovalNotifications />);
+    render(<PlatformLocaleProvider initialLocale="ckb"><ApprovalNotifications /></PlatformLocaleProvider>);
 
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: "ئاگادارییەکان" }));
@@ -66,5 +75,15 @@ describe("ApprovalNotifications", () => {
     expect(
       within(dialog).getByRole("button", { name: "وەڵامدانەوە" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows Arabic notification actions", async () => {
+    const user = userEvent.setup();
+    render(<PlatformLocaleProvider initialLocale="ar"><ApprovalNotifications /></PlatformLocaleProvider>);
+
+    await user.click(screen.getByRole("button", { name: "الإشعارات" }));
+    await user.click(await screen.findByText("پەیامی بزنس"));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "رد" })).toBeInTheDocument();
   });
 });

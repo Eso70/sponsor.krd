@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/shared/Skeleton";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 function MetricRows({ count }: { count: number }) {
   return (
@@ -24,11 +25,12 @@ function MetricRows({ count }: { count: number }) {
 }
 
 export function SkeletonRetentionSettings() {
+  const { locale } = usePlatformLocale();
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading retention settings"
+      aria-label={locale === "ar" ? "جارٍ تحميل إعدادات الاحتفاظ بالبيانات" : locale === "en" ? "Loading retention settings" : "ڕێکخستنەکانی ماوەی هەڵگرتن بار دەکرێن"}
       className="space-y-6"
     >
       <MetricRows count={3} />
@@ -57,11 +59,12 @@ export function SkeletonRetentionSettings() {
 }
 
 export function SkeletonMediaSettings() {
+  const { locale } = usePlatformLocale();
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading media settings"
+      aria-label={locale === "ar" ? "جارٍ تحميل إعدادات الوسائط" : locale === "en" ? "Loading media settings" : "ڕێکخستنەکانی میدیا بار دەکرێن"}
       className="space-y-6"
     >
       <MetricRows count={4} />

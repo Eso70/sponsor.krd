@@ -51,6 +51,7 @@ interface CountrySelectorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  copy?: Partial<Record<"title" | "count" | "close" | "search" | "empty" | "loading", string>>;
 }
 
 // Comprehensive list of countries with phone codes - Iraq first
@@ -62,6 +63,7 @@ export function CountrySelector({
   value,
   onChange,
   className = "",
+  copy,
 }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -219,10 +221,10 @@ export function CountrySelector({
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-700">
-                  وڵات هەڵبژێرە
+                  {copy?.title ?? "وڵات هەڵبژێرە"}
                 </h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--theme-primary, #64748b)' }}>
-                  {ALL_COUNTRIES.length} وڵات
+                  {ALL_COUNTRIES.length} {copy?.count ?? "وڵات"}
                 </p>
               </div>
             </div>
@@ -231,7 +233,7 @@ export function CountrySelector({
               type="button"
               onClick={handleClose}
               className="shrink-0 rounded-xl p-2 bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 text-slate-500 hover:text-slate-700 transition-all duration-300 border border-slate-100 shadow-sm hover:shadow"
-              aria-label="Close"
+              aria-label={copy?.close ?? "Close"}
             >
               <X className="h-4 w-4" />
             </button>
@@ -247,7 +249,7 @@ export function CountrySelector({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ناوی وڵات یان کۆد..."
+              placeholder={copy?.search ?? "ناوی وڵات یان کۆد..."}
               className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-300 shadow-sm hover:shadow-md"
               style={{ '--tw-ring-color': 'color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)' } as React.CSSProperties}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-primary, #64748b)'; }}
@@ -281,7 +283,7 @@ export function CountrySelector({
         >
           {filteredCountries.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-500">
-              هیچ وڵاتێک نەدۆزرایەوە
+              {copy?.empty ?? "هیچ وڵاتێک نەدۆزرایەوە"}
             </div>
           ) : (
             <div className="space-y-1">
@@ -305,7 +307,7 @@ export function CountrySelector({
               <MotionSpinner>
                 <span className="h-3.5 w-3.5 rounded-full border-2 border-slate-300 border-t-slate-500" />
               </MotionSpinner>
-              <span>وڵاتی زیاتر بار دەکرێت...</span>
+              <span>{copy?.loading ?? "وڵاتی زیاتر بار دەکرێت..."}</span>
             </div>
           )}
         </div>

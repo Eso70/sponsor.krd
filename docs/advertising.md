@@ -24,6 +24,14 @@ The page supports:
 The page is not a general website builder. There is one fixed advertising page
 per business and no delete endpoint.
 
+Public advertising and its video-code guide use the business host's visitor
+AR/KU/EN preference for application-owned navigation, guide controls, pricing
+labels, metadata fallbacks, and footer text. The preference is stored in the
+host-only `business_public_locale` cookie, separately from the authenticated
+dashboard language. Saved headings, tutorial steps, packages, testimonials,
+FAQs, payment providers, and other business-authored content are rendered
+verbatim; translating those requires an explicit multilingual content model.
+
 ## Ownership and authorization
 
 Dashboard endpoints resolve the business exclusively from the authenticated
@@ -109,6 +117,11 @@ standalone components; the route files remain thin data-loading boundaries.
 The public page must never read dashboard-only state or browser local storage.
 Unavailable public data uses the normal not-found behavior instead of rendering
 a draft or fallback copy.
+
+The Business editor follows the dashboard's `ckb`/`ar`/`en` language preference for
+its controls and dialogs without changing direction or rewriting stored page
+content. Shared public preview components accept optional translated editor
+labels; the public page keeps its existing copy.
 
 ## Tracking
 

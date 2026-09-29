@@ -58,9 +58,11 @@ describe("Linktree management language", () => {
       </BusinessLocaleProvider>,
     );
 
-    expect(await screen.findByRole("button", { name: "نسخ الرابط" })).toBeInTheDocument();
+    // The page-card chunk is dynamically imported and can take longer under
+    // the full parallel suite than Testing Library's one-second default.
+    expect(await screen.findByRole("button", { name: "نسخ الرابط" }, { timeout: 15_000 })).toBeInTheDocument();
     expect(screen.getByText("تاريخ الإنشاء")).toBeInTheDocument();
-  });
+  }, 20_000);
 
   it("keeps the shared Platform screen on its existing Kurdish copy", () => {
     render(<LinktreesManagementPage {...props} accentMode="platform" />);

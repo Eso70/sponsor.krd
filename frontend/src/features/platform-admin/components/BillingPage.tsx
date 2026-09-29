@@ -7,6 +7,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -48,6 +49,11 @@ import { SkeletonStatCards } from "@/components/shared/Skeleton";
 import { RequiredMark } from "@/components/shared/RequiredMark";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { billingText, useBillingText } from "./use-billing-text";
+import type { PlatformLocale } from "@/features/platform-admin/i18n/locale";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 type Tab = "plans" | "businesses";
 type PlanStatus = "active" | "inactive" | "archived";
@@ -171,18 +177,18 @@ const businessSortOptions: CustomSelectOption<BusinessSort>[] = [
   { value: "planName", label: "ناوی پلان" },
 ];
 
-function planStatusLabel(status: PlanStatus) {
-  return (
+function planStatusLabel(status: PlanStatus, locale: PlatformLocale) {
+  return billingText(
     planStatusOptions.find((option) => option.value === status)?.label || status
-  );
+  , locale);
 }
 
-function subscriptionStatusLabel(status?: SubscriptionStatus) {
-  if (!status) return "دیاری نەکراوە";
-  return (
+function subscriptionStatusLabel(status: SubscriptionStatus | undefined, locale: PlatformLocale) {
+  if (!status) return billingText("دیاری نەکراوە", locale);
+  return billingText(
     subscriptionStatusOptions.find((option) => option.value === status)
       ?.label || status
-  );
+  , locale);
 }
 
 function formatMoney(value: number, currency: string) {
@@ -198,10 +204,12 @@ function formatMoney(value: number, currency: string) {
   }
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return "دیاری نەکراوە";
+function formatDate(value: string | null | undefined, locale: PlatformLocale = "ckb") {
+  if (!value) return billingText("دیاری نەکراوە", locale);
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "دیاری نەکراوە" : date.toLocaleString();
+  return Number.isNaN(date.getTime())
+    ? billingText("دیاری نەکراوە", locale)
+    : date.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ");
 }
 
 function StatusBadge({
@@ -211,6 +219,7 @@ function StatusBadge({
   status: PlanStatus | SubscriptionStatus | "unassigned";
   type: "plan" | "subscription";
 }) {
+  const { locale } = usePlatformLocale();
   const critical = ["past_due", "expired", "incomplete", "archived"].includes(
     status,
   );
@@ -219,10 +228,10 @@ function StatusBadge({
   );
   const label =
     status === "unassigned"
-      ? "پلان دیاری نەکراوە"
+      ? billingText("پلان دیاری نەکراوە", locale)
       : type === "plan"
-        ? planStatusLabel(status as PlanStatus)
-        : subscriptionStatusLabel(status as SubscriptionStatus);
+        ? planStatusLabel(status as PlanStatus, locale)
+        : subscriptionStatusLabel(status as SubscriptionStatus, locale);
   return (
     <span
       className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-bold ${
@@ -241,6 +250,10 @@ function StatusBadge({
 }
 
 export function BillingPage() {
+  const t = useBillingText();
+  const { locale } = usePlatformLocale();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
   const [tab, setTab] = useState<Tab>("plans");
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -294,22 +307,20 @@ export function BillingPage() {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
           throw new Error(
-            result.message || "بارکردنی بەشداربوونەکان سەرکەوتوو نەبوو",
+            platformRequestError(result.message, tRef.current("بارکردنی بەشداربوونەکان سەرکەوتوو نەبوو"), locale),
           );
         }
         setOverview(result.data);
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "بارکردنی بەشداربوونەکان سەرکەوتوو نەبوو",
+          platformRequestError(error instanceof Error ? error.message : null, tRef.current("بارکردنی بەشداربوونەکان سەرکەوتوو نەبوو"), locale),
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [businessPage, businessPlanFilter, businessSearch, businessStatusFilter],
+    [businessPage, businessPlanFilter, businessSearch, businessStatusFilter, locale],
   );
 
   useEffect(() => {
@@ -387,12 +398,12 @@ export function BillingPage() {
       if (!response.ok) {
         toast.error(
           response.status === 409
-            ? "پلانی بنەڕەتی یان پلانێک کە بزنسی پێوە بەستراوە ناتوانرێت بسڕدرێتەوە."
-            : result.message || "سڕینەوەی پلان سەرکەوتوو نەبوو",
+            ? t("پلانی بنەڕەتی یان پلانێک کە بزنسی پێوە بەستراوە ناتوانرێت بسڕدرێتەوە.")
+            : platformRequestError(result.message, t("سڕینەوەی پلان سەرکەوتوو نەبوو"), locale),
         );
         throw new Error(result.message || "Delete failed");
       }
-      toast.success("پلانی بەشداربوون سڕایەوە");
+      toast.success(t("پلانی بەشداربوون سڕایەوە"));
       await load(true);
     } finally {
       setIsDeleting(false);
@@ -402,7 +413,7 @@ export function BillingPage() {
   if (loading && !overview) {
     return (
       <div className="min-h-[55vh] py-4">
-        <SkeletonStatCards count={3} className="sm:grid-cols-3" />
+        <SkeletonStatCards count={3} className="sm:grid-cols-3" loadingLabel={platformLoadingCopy[locale].loading} />
       </div>
     );
   }
@@ -412,26 +423,26 @@ export function BillingPage() {
       <StatCardGrid columns={3}>
         <StatCard
           icon={Layers3}
-          label="پلانە چالاکەکان"
+          label={t("پلانە چالاکەکان")}
           value={overview?.summary.activePlans || 0}
           color="green"
         />
         <StatCard
           icon={UsersRound}
-          label="بەشداربوونی چالاک"
+          label={t("بەشداربوونی چالاک")}
           value={overview?.summary.activeSubscriptions || 0}
           color="blue"
         />
         <StatCard
           icon={AlertTriangle}
-          label="پێویستی بە سەرنجدان"
+          label={t("پێویستی بە سەرنجدان")}
           value={overview?.summary.attentionRequired || 0}
           color="orange"
         />
       </StatCardGrid>
 
       <SegmentedTabs
-        tabs={tabs}
+        tabs={tabs.map((item) => ({ ...item, label: t(item.label) }))}
         value={tab}
         onChange={(value) => {
           setTab(value);
@@ -443,12 +454,12 @@ export function BillingPage() {
       <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
         <PageHeader
           title={
-            tab === "plans" ? "پلانەکانی بەشداربوون" : "بزنس و بەشداربوونەکان"
+            tab === "plans" ? t("پلانەکانی بەشداربوون") : t("بزنس و بەشداربوونەکان")
           }
           description={
             tab === "plans"
-              ? "پلان، نرخ، ماوە و پڕۆفایلی مۆڵەتی هەر پلانێک بەڕێوە ببە."
-              : "پلانی دیاریکراو، دۆخی بەشداربوون و ماوەی هەر بزنسێک بەڕێوە ببە."
+              ? t("پلان، نرخ، ماوە و پڕۆفایلی مۆڵەتی هەر پلانێک بەڕێوە ببە.")
+              : t("پلانی دیاریکراو، دۆخی بەشداربوون و ماوەی هەر بزنسێک بەڕێوە ببە.")
           }
           icon={tab === "plans" ? Layers3 : Building2}
           action={
@@ -457,7 +468,7 @@ export function BillingPage() {
                 type="button"
                 onClick={() => void load(true)}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/10"
-                aria-label="نوێکردنەوە"
+                aria-label={t("نوێکردنەوە")}
               >
                 <MotionSpinner active={refreshing}>
                   <RefreshCw className="h-4 w-4" />
@@ -469,7 +480,7 @@ export function BillingPage() {
                 className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
               >
                 <SlidersHorizontal className="h-4 w-4" />
-                گەڕان
+                {t("گەڕان")}
               </button>
               {tab === "plans" && (
                 <button
@@ -478,7 +489,7 @@ export function BillingPage() {
                   className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-md"
                 >
                   <Plus className="h-4 w-4" />
-                  پلانی نوێ
+                  {t("پلانی نوێ")}
                 </button>
               )}
             </>
@@ -493,12 +504,12 @@ export function BillingPage() {
               onEdit={setPlanModal}
               onDelete={(plan) => {
                 if (plan.isDefault) {
-                  toast.error("پلانی بنەڕەتی ناتوانرێت بسڕدرێتەوە.");
+                  toast.error(t("پلانی بنەڕەتی ناتوانرێت بسڕدرێتەوە."));
                   return;
                 }
                 if (plan.subscriberCount > 0) {
                   toast.error(
-                    "ئەم پلانە لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە.",
+                    t("ئەم پلانە لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە."),
                   );
                   return;
                 }
@@ -517,6 +528,7 @@ export function BillingPage() {
                 totalItems={overview?.pagination.total || 0}
                 totalPages={totalBusinessPages}
                 onPageChange={setBusinessPage}
+                copy={{ of: t("لە"), previous: t("پەڕەی پێشوو"), next: t("پەڕەی دواتر") }}
               />
             </>
           )}
@@ -529,9 +541,13 @@ export function BillingPage() {
         wide
         placeholder={
           tab === "plans"
-            ? "گەڕان بە ناو، کۆد یان پڕۆفایلی مۆڵەت..."
-            : "گەڕان بە ناو، ناوی بەکارهێنەر یان پلان..."
+            ? t("گەڕان بە ناو، کۆد یان پڕۆفایلی مۆڵەت...")
+            : t("گەڕان بە ناو، ناوی بەکارهێنەر یان پلان...")
         }
+        clearLabel={t("پاککردنەوە")}
+        applyLabel={t("داخستن")}
+        clearAriaLabel={t("پاککردنەوە")}
+        applyAriaLabel={t("داخستن")}
         searchQuery={tab === "plans" ? planSearch : businessSearch}
         onSearchQueryChange={(value) => {
           if (tab === "plans") {
@@ -545,7 +561,7 @@ export function BillingPage() {
         <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              فلتەر و ڕیزبەندی
+              {t("فلتەر و ڕیزبەندی")}
             </p>
             {(tab === "plans"
               ? !!planSearch ||
@@ -573,7 +589,7 @@ export function BillingPage() {
                 className="flex items-center gap-1 text-[10px] font-bold text-red-500 transition hover:text-red-600"
               >
                 <X className="h-3.5 w-3.5" />
-                پاککردنەوە
+                {t("پاککردنەوە")}
               </button>
             )}
           </div>
@@ -581,29 +597,29 @@ export function BillingPage() {
           {tab === "plans" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <CustomSelect
-                label="دۆخی پلان"
+                label={t("دۆخی پلان")}
                 value={planStatusFilter}
                 options={[
-                  { value: "all", label: "هەموو دۆخەکان" },
-                  ...planStatusOptions,
+                  { value: "all", label: t("هەموو دۆخەکان") },
+                  ...planStatusOptions.map((option) => ({ ...option, label: t(option.label) })),
                 ]}
                 onChange={setPlanStatusFilter}
               />
               <CustomSelect
-                label="ڕیزبەندی"
+                label={t("ڕیزبەندی")}
                 value={planSort}
-                options={planSortOptions}
+                options={planSortOptions.map((option) => ({ ...option, label: t(option.label) }))}
                 onChange={setPlanSort}
               />
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-3">
               <CustomSelect
-                label="پلانی بەشداربوون"
+                label={t("پلانی بەشداربوون")}
                 value={businessPlanFilter}
                 options={[
-                  { value: "all", label: "هەموو پلانەکان" },
-                  { value: "unassigned", label: "بێ پلان" },
+                  { value: "all", label: t("هەموو پلانەکان") },
+                  { value: "unassigned", label: t("بێ پلان") },
                   ...(overview?.plans || []).map((plan) => ({
                     value: plan.id,
                     label: plan.name,
@@ -615,12 +631,12 @@ export function BillingPage() {
                 }}
               />
               <CustomSelect
-                label="دۆخی بەشداربوون"
+                label={t("دۆخی بەشداربوون")}
                 value={businessStatusFilter}
                 options={[
-                  { value: "all", label: "هەموو دۆخەکان" },
-                  { value: "unassigned", label: "بێ بەشداربوون" },
-                  ...subscriptionStatusOptions,
+                  { value: "all", label: t("هەموو دۆخەکان") },
+                  { value: "unassigned", label: t("بێ بەشداربوون") },
+                  ...subscriptionStatusOptions.map((option) => ({ ...option, label: t(option.label) })),
                 ]}
                 onChange={(value) => {
                   setBusinessStatusFilter(value);
@@ -628,9 +644,9 @@ export function BillingPage() {
                 }}
               />
               <CustomSelect
-                label="ڕیزبەندی"
+                label={t("ڕیزبەندی")}
                 value={businessSort}
-                options={businessSortOptions}
+                options={businessSortOptions.map((option) => ({ ...option, label: t(option.label) }))}
                 onChange={(value) => {
                   setBusinessSort(value);
                   setBusinessPage(1);
@@ -646,10 +662,10 @@ export function BillingPage() {
             {tab === "plans"
               ? filteredPlans.length
               : filteredBusinesses.length}{" "}
-            ئەنجام
+            {t("ئەنجام")}
           </span>
           <span className="text-[10px] text-slate-400">
-            گەڕان و فلتەرەکان خۆکارانە جێبەجێ دەبن
+            {t("گەڕان و فلتەرەکان خۆکارانە جێبەجێ دەبن")}
           </span>
         </div>
       </SearchModal>
@@ -680,11 +696,13 @@ export function BillingPage() {
         }}
         onConfirm={confirmDeletePlan}
         isDeleting={isDeleting}
-        title="سڕینەوەی پلانی بەشداربوون"
+        title={t("سڕینەوەی پلانی بەشداربوون")}
+        confirmLabel={t("سڕینەوە")}
+        cancelLabel={t("هەڵوەشاندنەوە")}
+        closeLabel={t("داخستن")}
         message={
           <span>
-            دڵنیایت لە سڕینەوەی پلانی <strong>{deletePlan?.name}</strong>؟ ئەم
-            کردارە ناگەڕێندرێتەوە.
+            {t("دڵنیایت لە سڕینەوەی پلانی")} <strong>{deletePlan?.name}</strong>؟ {t("ئەم کردارە ناگەڕێندرێتەوە.")}
           </span>
         }
         zIndexClassName="z-[160]"
@@ -704,12 +722,13 @@ function PlansTable({
   onEdit: (plan: SubscriptionPlan) => void;
   onDelete: (plan: SubscriptionPlan) => void;
 }) {
+  const t = useBillingText();
   if (!plans.length) {
     return (
       <EmptyState
         icon={Layers3}
-        title="هیچ پلانێک نییە"
-        description="یەکەم پلانی بەشداربوون دروست بکە."
+        title={t("هیچ پلانێک نییە")}
+        description={t("یەکەم پلانی بەشداربوون دروست بکە.")}
       />
     );
   }
@@ -728,7 +747,7 @@ function PlansTable({
               "کارەکان",
             ].map((header) => (
               <th key={header} className="px-3 py-3 font-semibold">
-                {header}
+                {t(header)}
               </th>
             ))}
           </tr>
@@ -749,7 +768,7 @@ function PlansTable({
                   </div>
                   {plan.isDefault && (
                     <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      بنەڕەتی
+                      {t("بنەڕەتی")}
                     </span>
                   )}
                 </div>
@@ -764,7 +783,7 @@ function PlansTable({
                 {formatMoney(plan.yearlyPriceMinor, plan.currency)}
               </td>
               <td className="px-3 py-3">
-                {plan.trialDays ? `${plan.trialDays} ڕۆژ` : "نییە"}
+                {plan.trialDays ? `${plan.trialDays} ${t("ڕۆژ")}` : t("نییە")}
               </td>
               <td className="px-3 py-3">{plan.subscriberCount}</td>
               <td className="px-3 py-3">
@@ -772,35 +791,35 @@ function PlansTable({
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-1">
-                  <Tooltip content="بینین" side="top">
+                  <Tooltip content={t("بینین")} side="top">
                     <button
                       type="button"
                       onClick={() => onView(plan)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 dark:hover:bg-sky-500/10 cursor-pointer"
-                      title="بینین"
-                      aria-label="بینینی پلان"
+                      title={t("بینین")}
+                      aria-label={t("بینینی پلان")}
                     >
                       <Eye className="h-4 w-4" />
                     </button>
                   </Tooltip>
-                  <Tooltip content="دەستکاریکردن" side="top">
+                  <Tooltip content={t("دەستکاریکردن")} side="top">
                     <button
                       type="button"
                       onClick={() => onEdit(plan)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-50 dark:hover:bg-violet-500/10 cursor-pointer"
-                      title="دەستکاریکردن"
-                      aria-label="دەستکاریکردنی پلان"
+                      title={t("دەستکاریکردن")}
+                      aria-label={t("دەستکاریکردنی پلان")}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                   </Tooltip>
-                  <Tooltip content="سڕینەوە" side="top">
+                  <Tooltip content={t("سڕینەوە")} side="top">
                     <button
                       type="button"
                       onClick={() => onDelete(plan)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer"
-                      title="سڕینەوە"
-                      aria-label="سڕینەوەی پلان"
+                      title={t("سڕینەوە")}
+                      aria-label={t("سڕینەوەی پلان")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -822,12 +841,14 @@ function BusinessesSubscriptionsTable({
   businesses: BusinessRow[];
   onView: (business: BusinessRow) => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useBillingText();
   if (!businesses.length) {
     return (
       <EmptyState
         icon={Building2}
-        title="هیچ بزنسێک نەدۆزرایەوە"
-        description="فلتەرەکان بگۆڕە یان ناوێکی تر بگەڕێ."
+        title={t("هیچ بزنسێک نەدۆزرایەوە")}
+        description={t("فلتەرەکان بگۆڕە یان ناوێکی تر بگەڕێ.")}
       />
     );
   }
@@ -845,7 +866,7 @@ function BusinessesSubscriptionsTable({
               "کارەکان",
             ].map((header) => (
               <th key={header} className="px-3 py-3 font-semibold">
-                {header}
+                {t(header)}
               </th>
             ))}
           </tr>
@@ -863,13 +884,13 @@ function BusinessesSubscriptionsTable({
                 </p>
               </td>
               <td className="px-3 py-3 font-bold">
-                {business.subscription?.planName || "دیاری نەکراوە"}
+                {business.subscription?.planName || t("دیاری نەکراوە")}
               </td>
               <td className="px-3 py-3">
                 {business.subscription?.permissionProfileName || "—"}
               </td>
               <td className="px-3 py-3">
-                {formatDate(business.subscription?.currentPeriodEnd)}
+                {formatDate(business.subscription?.currentPeriodEnd, locale)}
               </td>
               <td className="px-3 py-3">
                 <StatusBadge
@@ -879,13 +900,13 @@ function BusinessesSubscriptionsTable({
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-1">
-                  <Tooltip content="بینین" side="top">
+                  <Tooltip content={t("بینین")} side="top">
                     <button
                       type="button"
                       onClick={() => onView(business)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 dark:hover:bg-sky-500/10 cursor-pointer"
-                      title="بینین"
-                      aria-label="بینینی بەشداری"
+                      title={t("بینین")}
+                      aria-label={t("بینینی بەشداری")}
                     >
                       <Eye className="h-4 w-4" />
                     </button>
@@ -907,48 +928,49 @@ function PlanDetailModal({
   plan: SubscriptionPlan | null;
   onClose: () => void;
 }) {
+  const t = useBillingText();
   return (
     <DetailViewModal
       isOpen={!!plan}
       onClose={onClose}
       title={plan?.name || ""}
-      subtitle="وردەکاری پلانی بەشداربوون"
+      subtitle={t("وردەکاری پلانی بەشداربوون")}
       icon={CreditCard}
       iconClassName="sa-soft sa-soft-border"
       fields={
         plan
           ? [
               {
-                label: "دۆخ",
+                label: t("دۆخ"),
                 value: <StatusBadge status={plan.status} type="plan" />,
               },
               {
-                label: "پڕۆفایلی مۆڵەت",
+                label: t("پڕۆفایلی مۆڵەت"),
                 value: plan.permissionProfileName,
               },
               {
-                label: "نرخی ساڵانە",
+                label: t("نرخی ساڵانە"),
                 value: formatMoney(plan.yearlyPriceMinor, plan.currency),
               },
               {
-                label: "ماوەی تاقیکردنەوە",
-                value: plan.trialDays ? `${plan.trialDays} ڕۆژ` : "نییە",
+                label: t("ماوەی تاقیکردنەوە"),
+                value: plan.trialDays ? `${plan.trialDays} ${t("ڕۆژ")}` : t("نییە"),
               },
               {
-                label: "بەشداربووان",
+                label: t("بەشداربووان"),
                 value: String(plan.subscriberCount),
               },
               {
-                label: "پلانی بنەڕەتی",
-                value: plan.isDefault ? "بەڵێ" : "نەخێر",
+                label: t("پلانی بنەڕەتی"),
+                value: plan.isDefault ? t("بەڵێ") : t("نەخێر"),
               },
               {
-                label: "ڕیزبەندی",
+                label: t("ڕیزبەندی"),
                 value: String(plan.displayOrder),
               },
               {
-                label: "ڕوونکردنەوە",
-                value: plan.description || "ڕوونکردنەوە نییە",
+                label: t("ڕوونکردنەوە"),
+                value: plan.description || t("ڕوونکردنەوە نییە"),
                 fullWidth: true,
               },
             ]
@@ -965,6 +987,8 @@ function BusinessSubscriptionDetailModal({
   business: BusinessRow | null;
   onClose: () => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useBillingText();
   const subscription = business?.subscription;
   return (
     <DetailViewModal
@@ -978,35 +1002,35 @@ function BusinessSubscriptionDetailModal({
         business
           ? [
               {
-                label: "پلانی دیاریکراو",
-                value: subscription?.planName || "دیاری نەکراوە",
+                label: t("پلانی دیاریکراو"),
+                value: subscription?.planName || t("دیاری نەکراوە"),
               },
               {
-                label: "پڕۆفایلی مۆڵەت",
-                value: subscription?.permissionProfileName || "دیاری نەکراوە",
+                label: t("پڕۆفایلی مۆڵەت"),
+                value: subscription?.permissionProfileName || t("دیاری نەکراوە"),
               },
               {
-                label: "دۆخی بەشداربوون",
+                label: t("دۆخی بەشداربوون"),
                 value: subscription ? (
                   <StatusBadge
                     status={subscription.status}
                     type="subscription"
                   />
                 ) : (
-                  "دیاری نەکراوە"
+                  t("دیاری نەکراوە")
                 ),
               },
               {
-                label: "دەستپێکی ماوە",
-                value: formatDate(subscription?.currentPeriodStart),
+                label: t("دەستپێکی ماوە"),
+                value: formatDate(subscription?.currentPeriodStart, locale),
               },
               {
-                label: "کۆتایی ماوە",
-                value: formatDate(subscription?.currentPeriodEnd),
+                label: t("کۆتایی ماوە"),
+                value: formatDate(subscription?.currentPeriodEnd, locale),
               },
               {
-                label: "دواین نوێکردنەوە",
-                value: formatDate(subscription?.updatedAt),
+                label: t("دواین نوێکردنەوە"),
+                value: formatDate(subscription?.updatedAt, locale),
               },
             ]
           : []
@@ -1034,6 +1058,7 @@ function ManagementModal({
   onSave: () => void;
   children: ReactNode;
 }) {
+  const t = useBillingText();
   useModalKeyboard({
     isOpen: true,
     onEscape: onClose,
@@ -1061,7 +1086,7 @@ function ManagementModal({
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-md   duration-300"
         onClick={onClose}
-        aria-label="داخستن"
+        aria-label={t("داخستن")}
       />
       <div className="relative z-10 w-full max-w-2xl max-h-[95vh] overflow-hidden rounded-2xl border border-gray-100 bg-primary-95 shadow-2xl backdrop-blur-sm    duration-300 sm:max-h-[90vh]">
         <form
@@ -1084,7 +1109,7 @@ function ManagementModal({
               type="button"
               onClick={onClose}
               className="ml-3 flex shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 p-2 text-slate-500 shadow-sm transition-all hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow"
-              aria-label="داخستن"
+              aria-label={t("داخستن")}
             >
               <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -1099,6 +1124,10 @@ function ManagementModal({
             isSubmitting={saving}
             canContinue={canSave}
             submitLabel={submitLabel}
+            cancelLabel={t("هەڵوەشاندنەوە")}
+            cancelTooltip={t("داخستن و هەڵوەشاندنەوەی گۆڕانکارییەکان")}
+            requiredTooltip={t("تکایە خانە پێویستەکان پڕبکەرەوە")}
+            savingLabel={t("پاشەکەوتکردن...")}
             onBack={() => undefined}
             onCancel={onClose}
             onNext={() => undefined}
@@ -1138,14 +1167,22 @@ const PLAN_DESCRIPTION_PRESETS: Record<string, string> = {
     "Complete business access\n\nUnlimited link pages\n6 Linktree templates\nAdvanced analytics & reporting\nBusiness profile editing\nCustom branding (logo, favicon, colors)\nTikTok Pixel & Events API\nRemove Sponsor.krd branding\nPremium templates\nPage defaults configuration\nSponsor.krd subdomain",
 };
 
+const ARABIC_PLAN_DESCRIPTION_PRESETS: Record<string, string> = {
+  basic: "وصول أساسي للنشاط التجاري\n\nحتى ٥ صفحات روابط\nقالبان للصفحات\nإحصاءات أساسية\nإعدادات الصفحة الافتراضية\nنطاق فرعي على Sponsor.krd",
+  pro: "وصول متقدم لإدارة الإحصاءات\n\nحتى ٢٠ صفحة روابط\n٥ قوالب للصفحات\nإحصاءات وتقارير متقدمة\nتعديل ملف النشاط التجاري\nعلامة تجارية مخصصة (شعار، أيقونة، ألوان)\nبكسل تيك توك وواجهة الأحداث\nتجربة مجانية لمدة ٧ أيام\nإعدادات الصفحة الافتراضية\nنطاق فرعي على Sponsor.krd",
+  ultra: "وصول كامل للنشاط التجاري\n\nصفحات روابط غير محدودة\n٦ قوالب للصفحات\nإحصاءات وتقارير متقدمة\nتعديل ملف النشاط التجاري\nعلامة تجارية مخصصة (شعار، أيقونة، ألوان)\nبكسل تيك توك وواجهة الأحداث\nإزالة علامة Sponsor.krd\nقوالب مميزة\nإعدادات الصفحة الافتراضية\nنطاق فرعي على Sponsor.krd",
+};
+
 function getPlanDescriptionPreset(
   profileId: string,
   permissionProfiles: PermissionProfile[],
+  locale: PlatformLocale,
 ) {
   const code = permissionProfiles.find(
     (profile) => profile.id === profileId,
   )?.code;
-  return code ? PLAN_DESCRIPTION_PRESETS[code] || "" : "";
+  const presets = locale === "ar" ? ARABIC_PLAN_DESCRIPTION_PRESETS : PLAN_DESCRIPTION_PRESETS;
+  return code ? presets[code] || "" : "";
 }
 
 function PlanFormModal({
@@ -1161,6 +1198,8 @@ function PlanFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useBillingText();
   const initialPermissionProfileId =
     plan?.permissionProfileId || permissionProfiles[0]?.id || "";
   const [name, setName] = useState(plan?.name || "");
@@ -1172,6 +1211,7 @@ function PlanFormModal({
       getPlanDescriptionPreset(
         initialPermissionProfileId,
         permissionProfiles,
+        locale,
       ) ||
       plan?.description ||
       "",
@@ -1221,15 +1261,15 @@ function PlanFormModal({
       if (!response.ok) {
         toast.error(
           response.status === 409
-            ? "ئەم ناوە پێشتر بەکارهاتووە یان پلانی بنەڕەتی تر هەیە."
-            : result.message || "پاشەکەوتکردنی پلان سەرکەوتوو نەبوو",
+            ? t("ئەم ناوە پێشتر بەکارهاتووە یان پلانی بنەڕەتی تر هەیە.")
+            : platformRequestError(result.message, t("پاشەکەوتکردنی پلان سەرکەوتوو نەبوو"), locale),
         );
         return;
       }
-      toast.success(plan ? "پلان نوێکرایەوە" : "پلانی نوێ دروستکرا");
+      toast.success(plan ? t("پلان نوێکرایەوە") : t("پلانی نوێ دروستکرا"));
       onSaved();
     } catch {
-      toast.error("پاشەکەوتکردنی پلان سەرکەوتوو نەبوو");
+      toast.error(t("پاشەکەوتکردنی پلان سەرکەوتوو نەبوو"));
     } finally {
       setSaving(false);
     }
@@ -1237,46 +1277,47 @@ function PlanFormModal({
 
   return (
     <ManagementModal
-      title={plan ? "دەستکاریکردنی پلان" : "پلانی بەشداربوونی نوێ"}
-      subtitle="زانیاری نرخ و پڕۆفایلی مۆڵەتی پلان دیاری بکە."
+      title={plan ? t("دەستکاریکردنی پلان") : t("پلانی بەشداربوونی نوێ")}
+      subtitle={t("زانیاری نرخ و پڕۆفایلی مۆڵەتی پلان دیاری بکە.")}
       saving={saving}
       canSave={canSave}
-      submitLabel={plan ? "نوێکردنەوە" : "دروستکردن"}
+      submitLabel={plan ? t("نوێکردنەوە") : t("دروستکردن")}
       onClose={onClose}
       onSave={() => void save()}
     >
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="ناوی پلان" required>
+          <FormField label={t("ناوی پلان")} required>
             <input
               autoFocus
               className={modalInputClass(duplicateName)}
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="بۆ نموونە: Business Pro"
+              placeholder={t("بۆ نموونە: Business Pro")}
             />
             {duplicateName && (
               <span className="block text-xs font-medium text-red-500">
-                ئەم ناوە پێشتر بەکارهاتووە.
+                {t("ئەم ناوە پێشتر بەکارهاتووە.")}
               </span>
             )}
           </FormField>
           <CustomSelect
-            label="پڕۆفایلی مۆڵەت *"
+            label={`${t("پڕۆفایلی مۆڵەت")} *`}
             value={permissionProfileId}
             options={
               permissionProfiles.length
                 ? permissionProfiles.map((profile) => ({
                     value: profile.id,
-                    label: `${profile.name} · ${profile.permissionCount} مۆڵەت`,
+                    label: `${profile.name} · ${profile.permissionCount} ${t("مۆڵەت")}`,
                   }))
-                : [{ value: "", label: "هیچ پڕۆفایلێک بەردەست نییە" }]
+                : [{ value: "", label: t("هیچ پڕۆفایلێک بەردەست نییە") }]
             }
             onChange={(profileId) => {
               setPermissionProfileId(profileId);
               const preset = getPlanDescriptionPreset(
                 profileId,
                 permissionProfiles,
+                locale,
               );
               if (preset) setDescription(preset);
             }}
@@ -1286,18 +1327,18 @@ function PlanFormModal({
           />
         </div>
 
-        <FormField label="ڕوونکردنەوە">
+        <FormField label={t("ڕوونکردنەوە")}>
           <textarea
             className={`${modalInputClass()} min-h-24 resize-y`}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="وردەکاری و ئامانجی ئەم پلانە بنووسە..."
+            placeholder={t("وردەکاری و ئامانجی ئەم پلانە بنووسە...")}
             maxLength={500}
           />
         </FormField>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="نرخی ساڵانە" required>
+          <FormField label={t("نرخی ساڵانە")} required>
             <input
               type="number"
               min="0"
@@ -1307,14 +1348,14 @@ function PlanFormModal({
               onChange={(event) => setYearlyPrice(event.target.value)}
             />
           </FormField>
-          <FormField label="دراو" required>
+          <FormField label={t("دراو")} required>
             <CustomSelect
               label=""
               hideLabel
               value={currency}
               options={[
-                { value: "USD", label: "USD · دۆلار" },
-                { value: "IQD", label: "IQD · دینار" },
+                { value: "USD", label: t("USD · دۆلار") },
+                { value: "IQD", label: t("IQD · دینار") },
               ]}
               onChange={setCurrency}
               triggerClassName={`${modalInputClass()} flex items-center justify-between gap-2 font-medium h-auto`}

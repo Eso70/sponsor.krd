@@ -1,6 +1,7 @@
 import { PublicSiteNavbar } from "@/components/public/PublicSiteNavbar";
 import { CustomScrollbar } from "@/components/home/CustomScrollbar";
 import { HomeFooter } from "@/components/home/HomeFooter";
+import type { ReactNode } from "react";
 
 type Section = { title: string; paragraphs: string[] };
 
@@ -18,7 +19,7 @@ type Section = { title: string; paragraphs: string[] };
  * `bg-white dark:bg-[#0f172a]` is the same pair the adaptive `PublicSiteFooter`
  * and the scrolled navbar glass use, so the three read as one surface.
  *
- * The document body is Kurdish and renders `dir="rtl"`; the root layout sets
+ * The document body is Kurdish or Arabic and renders `dir="rtl"`; the root layout sets
  * `dir="ltr"` on `<html>`, so the direction has to be declared on the element
  * that actually wraps the prose. The brand + revision line stays LTR because
  * an RTL context reorders `SponsorKrd · Version 2026-08-19`.
@@ -27,10 +28,18 @@ export function LegalDocumentPage({
   title,
   version,
   sections,
+  locale = "ckb",
+  versionLabel = "Version",
+  navbarCopy,
+  languageControl,
 }: {
   title: string;
   version: string;
   sections: Section[];
+  locale?: string;
+  versionLabel?: string;
+  navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  languageControl?: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#111827] dark:bg-[#0f172a] dark:text-white">
@@ -45,6 +54,8 @@ export function LegalDocumentPage({
         appearance="business"
         navigationItems={[]}
         emphasizeFirstNavItem={false}
+        copy={navbarCopy}
+        languageControl={languageControl}
       />
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 pb-24 pt-28 sm:px-6 sm:pt-32">
         <header className="border-b border-gray-200 pb-8 dark:border-white/10">
@@ -52,16 +63,17 @@ export function LegalDocumentPage({
             className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-500"
             dir="ltr"
           >
-            Sponsor.krd · Version {version}
+            Sponsor.krd · {versionLabel} {version}
           </p>
           <h1
             className="mt-3 text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl"
             dir="rtl"
+            lang={locale}
           >
             {title}
           </h1>
         </header>
-        <div className="mt-10 space-y-10" dir="rtl">
+        <div className="mt-10 space-y-10" dir="rtl" lang={locale}>
           {sections.map((section, sectionIndex) => (
             <section key={sectionIndex}>
               <h2 className="flex items-center gap-3 text-lg font-bold text-gray-900 dark:text-slate-100">

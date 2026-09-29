@@ -40,6 +40,7 @@ import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import {
   createUploadFailureError,
   inlineRequestErrorFromResponse,
+  localizeInlineRequestError,
   type InlineRequestErrorData,
   validateUploadFile,
 } from "@/lib/api/inline-request-error";
@@ -277,7 +278,7 @@ export function BusinessSettingsPage() {
       );
     } catch (error) {
       toast.error(t("saveFailed"), {
-        description: locale === "ar" ? undefined : error instanceof Error ? error.message : undefined,
+        description: locale !== "ckb" ? undefined : error instanceof Error ? error.message : undefined,
       });
     } finally {
       setSaving(false);
@@ -314,7 +315,7 @@ export function BusinessSettingsPage() {
       });
     } catch (error) {
       toast.error(t("defaultCreateFailed"), {
-        description: locale === "ar" ? undefined : error instanceof Error ? error.message : undefined,
+        description: locale !== "ckb" ? undefined : error instanceof Error ? error.message : undefined,
       });
     } finally {
       setCreatingDefault(false);
@@ -440,7 +441,7 @@ export function BusinessSettingsPage() {
 
   if (loading)
     return (
-      <SkeletonSettingsPage tabCount={tabs.length} />
+      <SkeletonSettingsPage tabCount={tabs.length} loadingLabel={t("loadingSettings")} />
     );
 
   return (
@@ -482,6 +483,7 @@ export function BusinessSettingsPage() {
         <LockedContent
           locked={tabLocked}
           icon={ShieldCheck}
+          title={t("lockedTitle")}
           description={t("upgradeRequired")}
         >
           <DashboardSurface>
@@ -506,7 +508,7 @@ export function BusinessSettingsPage() {
                     <Clock3 className="h-4 w-4" />
                     <span>
                       {t("brandCooldownBefore")}{" "}
-                      {cooldown.until.toLocaleDateString()} (
+                      {cooldown.until.toLocaleDateString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ")} (
                       {t("daysRemaining", { count: cooldown.daysLeft })})
                     </span>
                   </div>
@@ -520,7 +522,7 @@ export function BusinessSettingsPage() {
                   {brandAssetError && (
                     <InlineRequestError
                       className="mx-auto mt-3 max-w-xl"
-                      error={brandAssetError}
+                      error={localizeInlineRequestError(brandAssetError, locale === "ar" ? "ar" : locale === "en" ? "en" : "ckb")}
                     />
                   )}
                   <div className="mt-3 flex justify-center">
@@ -614,7 +616,7 @@ export function BusinessSettingsPage() {
                     <div className="grid gap-5 sm:grid-cols-2">
                       <Field label={t("defaultTemplate")}>
                         <TemplateCombobox
-                          copy={locale === "ar" ? businessMessages.ar.SettingsTemplates : undefined}
+                          copy={locale === "ar" ? businessMessages.ar.SettingsTemplates : locale === "en" ? businessMessages.en.SettingsTemplates : undefined}
                           value={data.default_template}
                           onChange={(value) =>
                             setData({ ...data, default_template: value })
@@ -691,7 +693,7 @@ export function BusinessSettingsPage() {
                     <div
                       className="flex items-center gap-3.5"
                       role="status"
-                      aria-label="Loading default Linktree"
+                      aria-label={t("loadingDefaultLinktree")}
                     >
                       <Skeleton className="h-12 w-12 shrink-0" />
                       <div className="min-w-0 flex-1">
@@ -808,7 +810,8 @@ export function BusinessSettingsPage() {
                 </div>
                 <SessionManagementPanel
                   endpoint="/api/auth/sessions"
-                  copy={locale === "ar" ? businessMessages.ar.SettingsSessions : undefined}
+                  copy={locale === "ar" ? businessMessages.ar.SettingsSessions : locale === "en" ? businessMessages.en.SettingsSessions : undefined}
+                  dateLocale={locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : undefined}
                 />
               </PageHeaderSection>
             )}
@@ -830,7 +833,7 @@ export function BusinessSettingsPage() {
         </LockedContent>
         <ColorGradientModal
           isOpen={showColorPicker}
-          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : undefined}
+          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : locale === "en" ? businessMessages.en.SettingsColorPicker : undefined}
           value={data.website_color}
           onChange={(value) =>
             setData((current) => ({ ...current, website_color: value }))
@@ -841,7 +844,7 @@ export function BusinessSettingsPage() {
         />
         <ColorGradientModal
           isOpen={showDefaultColorPicker}
-          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : undefined}
+          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : locale === "en" ? businessMessages.en.SettingsColorPicker : undefined}
           value={data.default_background_color}
           onChange={(value) =>
             setData((current) => ({
@@ -908,7 +911,7 @@ function BrandImageStack({
           <label className="group absolute left-5 top-7 z-30 h-24 w-24 rotate-[-8deg] cursor-pointer overflow-hidden rounded-full border-4 border-white bg-white shadow-xl ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.default_avatar || DEFAULT_AVATAR}
-              alt="Default avatar"
+              alt={t("avatar")}
               width={112}
               height={112}
               className="h-full w-full object-cover"
@@ -929,7 +932,7 @@ function BrandImageStack({
           <label className="group absolute right-6 top-4 z-30 h-20 w-20 rotate-[10deg] cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-lg ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.favicon || BUSINESS_FAVICON_PLACEHOLDER}
-              alt="Favicon"
+              alt={t("favicon")}
               width={96}
               height={96}
               className="h-full w-full object-contain"
@@ -949,7 +952,7 @@ function BrandImageStack({
           <label className="group absolute left-1/2 top-12 z-20 h-32 w-32 -translate-x-1/2 cursor-pointer overflow-hidden rounded-3xl border-4 border-white bg-white p-3 shadow-2xl ring-1 ring-gray-200 transition hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
             <Image
               src={data.logo || BUSINESS_LOGO_PLACEHOLDER}
-              alt="Logo"
+              alt={t("logo")}
               width={144}
               height={144}
               className="h-full w-full object-contain"
@@ -971,7 +974,7 @@ function BrandImageStack({
           className="h-2 w-2 rounded-full"
           style={{ background: "var(--theme-primary)" }}
         />
-        Logo<span>·</span>Avatar<span>·</span>Favicon
+        {t("logo")}<span>·</span>{t("avatar")}<span>·</span>{t("favicon")}
       </div>
     </div>
   );

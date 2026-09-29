@@ -1,0 +1,45 @@
+export const publicLinktreeCopy = {
+  ckb: {
+    description: "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە",
+    loading: "پەڕەی لینکتری بار دەکرێت",
+    empty: "هێشتا هیچ لینکێک نییە",
+    modalTitle: "پەیوەندی کردن",
+    modalSubtitle: "پرسیارێک هەڵبژێرە",
+    close: "داخستن",
+    gpsLocation: "شوێنی GPS",
+    mapsPreview: "پێشبینینی Google Maps",
+    openInMaps: "لە Google Maps بیکەرەوە",
+    questions: [
+      { id: "order", text: "داواکردن", message: "سڵاو بەڕێز دەمەوێت داوا بکەم." },
+      { id: "price", text: "زانینی نرخ", message: "سڵاو بەڕێز، نرخی چەندە ؟" },
+      { id: "other", text: "پرسیارێکی تر", message: "سڵاو" },
+    ],
+  },
+  ar: {
+    description: "للتواصل، اضغط على أحد الروابط أدناه",
+    loading: "جارٍ تحميل صفحة الروابط",
+    empty: "لا توجد روابط بعد",
+    modalTitle: "تواصل معنا",
+    modalSubtitle: "اختر سؤالًا",
+    close: "إغلاق",
+    gpsLocation: "موقع GPS",
+    mapsPreview: "معاينة Google Maps",
+    openInMaps: "افتح في Google Maps",
+    questions: [
+      { id: "order", text: "تقديم طلب", message: "مرحبًا، أود تقديم طلب." },
+      { id: "price", text: "معرفة السعر", message: "مرحبًا، ما السعر؟" },
+      { id: "other", text: "سؤال آخر", message: "مرحبًا" },
+    ],
+  },
+  en: {
+    description: "To contact us, tap one of the links below",
+    loading: "Loading Linktree page", empty: "No links yet",
+    modalTitle: "Contact us", modalSubtitle: "Choose a question", close: "Close",
+    gpsLocation: "GPS location", mapsPreview: "Google Maps preview", openInMaps: "Open in Google Maps",
+    questions: [
+      { id: "order", text: "Place an order", message: "Hello, I'd like to place an order." },
+      { id: "price", text: "Ask about price", message: "Hello, what is the price?" },
+      { id: "other", text: "Another question", message: "Hello" },
+    ],
+  },
+} as const;

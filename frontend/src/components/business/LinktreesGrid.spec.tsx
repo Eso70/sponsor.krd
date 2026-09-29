@@ -90,6 +90,28 @@ beforeEach(() => {
 });
 
 describe("LinktreesGrid shared public-page presentation", () => {
+  it("shows Arabic Business pagination in the grid", () => {
+    render(
+      <LinktreesGrid
+        data={Array.from({ length: 25 }, (_, index) => ({ ...item, id: `page-${index}`, uid: `page-${index}` }))}
+        pagination={{ mode: "client" }}
+        listCopy={businessMessages.ar.LinktreeList}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "الصفحة التالية" })).toBeInTheDocument();
+    expect(screen.getByText(/من 25/)).toBeInTheDocument();
+  });
+
+  it("uses the Business loading announcement without changing the shared default", () => {
+    const { rerender } = render(
+      <LinktreesGrid isLoading listCopy={businessMessages.ar.LinktreeList} />,
+    );
+    expect(screen.getByRole("status", { name: "جارٍ تحميل بطاقات الصفحات" })).toBeInTheDocument();
+
+    rerender(<LinktreesGrid isLoading />);
+    expect(screen.getByRole("status", { name: "Loading page cards" })).toBeInTheDocument();
+  });
+
   it("uses Arabic Business labels when supplied while leaving shared defaults untouched", () => {
     render(
       <LinktreesGrid

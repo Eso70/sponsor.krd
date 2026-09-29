@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
 import {
   businessErrorTheme,
@@ -19,12 +19,14 @@ interface RuntimeErrorPageProps {
   context: "root" | "business" | "platform";
   error: Error & { digest?: string };
   reset: () => void;
+  pageCopy?: Pick<ComponentProps<typeof ErrorPage>, "code" | "title" | "description" | "copy" | "language" | "languageControl">;
 }
 
 export function RuntimeErrorPage({
   context,
   error,
   reset,
+  pageCopy,
 }: RuntimeErrorPageProps) {
   const [theme, setTheme] = useState<ErrorPageTheme>(() =>
     context === "platform" ? platformErrorTheme() : SPONSOR_KRD_ERROR_THEME,
@@ -51,7 +53,7 @@ export function RuntimeErrorPage({
 
   return (
     <ErrorPage
-      {...ERROR_PAGE_COPY.unexpected}
+      {...(pageCopy ?? ERROR_PAGE_COPY.unexpected)}
       theme={theme}
       homeHref="/"
       onReset={reset}

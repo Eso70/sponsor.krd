@@ -3,6 +3,7 @@
 import { AdvertisingPriceTable, SPONSOR_CATEGORY_THEME } from "./AdvertisingPriceTable";
 import type { AdvertisingPriceRow, SponsorCategory } from "../pricing-data";
 import type { SponsorType } from "../journey-types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 interface AdvertisingPackageStepProps {
   sponsorType: SponsorType;
@@ -17,6 +18,7 @@ export function AdvertisingPackageStep({
   onPriceChange,
   packageTiers,
 }: AdvertisingPackageStepProps) {
+  const t = usePublicAdvertisingText();
   const rows = packageTiers?.[sponsorType] ?? [];
 
   return (
@@ -27,6 +29,7 @@ export function AdvertisingPackageStep({
         theme={SPONSOR_CATEGORY_THEME[sponsorType]}
         selectedPrice={selectedPrices[sponsorType]}
         onSelectPrice={(price) => onPriceChange(sponsorType, price)}
+        copy={{ price: t("نرخ"), views: t("بینەر") }}
       />
     </div>
   );

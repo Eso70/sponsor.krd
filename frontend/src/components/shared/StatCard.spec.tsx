@@ -40,4 +40,9 @@ describe("StatCard", () => {
     expect(container.querySelector(".border-emerald-200")).toBeInTheDocument();
     expect(screen.queryByText("Live visitors")).not.toBeInTheDocument();
   });
+
+  it("uses the caller's language for its loading announcement", () => {
+    render(<StatCard label="المشاهدات" loading loadingLabel="جارٍ التحميل" value={0} />);
+    expect(screen.getByRole("status", { name: "جارٍ التحميل" })).toBeInTheDocument();
+  });
 });

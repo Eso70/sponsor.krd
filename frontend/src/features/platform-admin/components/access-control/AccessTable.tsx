@@ -2,6 +2,9 @@ import { Eye } from "lucide-react";
 import type { Permission } from "./types";
 import { Badge, riskLevelLabel } from "./SharedUI";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { useAccessText } from "./use-access-text";
+import { getPermissionCategory } from "./permission-descriptions";
 
 export function AccessTable({
   items,
@@ -10,6 +13,8 @@ export function AccessTable({
   items: Permission[];
   onPermission: (permission: Permission) => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useAccessText();
   return (
     <div className="overflow-x-auto custom-scrollbar brand-custom-scrollbar">
       <table className="w-full min-w-[760px] text-left text-xs">
@@ -24,7 +29,7 @@ export function AccessTable({
               "کارەکان",
             ].map((header) => (
               <th key={header} className="px-3 py-3 font-semibold">
-                {header}
+                {t(header)}
               </th>
             ))}
           </tr>
@@ -38,7 +43,7 @@ export function AccessTable({
               <td className="px-3 py-3 font-mono font-semibold sa-accent-text">
                 {permission.key}
               </td>
-              <td className="px-3 py-3">{permission.category}</td>
+              <td className="px-3 py-3">{getPermissionCategory(permission.category, locale)}</td>
               <td className="px-3 py-3">
                 <div className="flex max-w-64 flex-wrap gap-1">
                   {permission.profiles.length ? (
@@ -58,7 +63,7 @@ export function AccessTable({
               <td className="px-3 py-3">{permission.action}</td>
               <td className="px-3 py-3">
                 <Badge
-                  text={riskLevelLabel(permission.riskLevel)}
+                  text={riskLevelLabel(permission.riskLevel, locale)}
                   tone={
                     permission.riskLevel === "critical"
                       ? "red"
@@ -69,12 +74,12 @@ export function AccessTable({
                 />
               </td>
               <td className="px-3 py-3">
-                <Tooltip content="بینین" side="top">
+                <Tooltip content={t("بینین")} side="top">
                   <button
                     type="button"
                     onClick={() => onPermission(permission)}
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 dark:hover:bg-sky-500/10 cursor-pointer"
-                    aria-label="بینین"
+                    aria-label={t("بینین")}
                   >
                     <Eye className="h-4 w-4" />
                   </button>

@@ -10,13 +10,9 @@ import { apiRequest } from "@/lib/api/request";
 import { copyToClipboard } from "@/lib/utils/clipboard";
 import { formatDateTime } from "@/lib/utils/format-date-time";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 type InvitationStep = "details" | "result";
-
-const INVITATION_STEPS = [
-  { id: "details", label: "زانیاری" },
-  { id: "result", label: "بەستەر" },
-];
 
 function isValidOptionalEmail(value: string): boolean {
   const normalized = value.trim();
@@ -30,6 +26,12 @@ export function BusinessInvitationButton({
 }: {
   showLabel?: boolean;
 }) {
+  const copy = usePlatformCopy();
+  const label = copy.invitation;
+  const invitationSteps = [
+    { id: "details", label: copy.invitationDetails },
+    { id: "result", label: copy.invitationResult },
+  ];
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<InvitationStep>("details");
   const [email, setEmail] = useState("");
@@ -51,9 +53,9 @@ export function BusinessInvitationButton({
 
   const copyInvitationLink = useCallback(async () => {
     const copied = await copyToClipboard(inviteUrl);
-    if (copied) toast.success("کۆپی کرا");
-    else toast.error("کۆپیکردن سەرکەوتوو نەبوو");
-  }, [inviteUrl]);
+    if (copied) toast.success(copy.invitationCopied);
+    else toast.error(copy.invitationCopyFailed);
+  }, [inviteUrl, copy]);
 
   async function createInvite() {
     if (busy) return;
@@ -69,11 +71,10 @@ export function BusinessInvitationButton({
       setInviteUrl(result.signupUrl);
       setInviteExpiresAt(result.expiresAt);
       setStep("result");
-      toast.success("بانگهێشتنامە دروستکرا");
+      toast.success(copy.invitationCreated);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "بانگهێشتنامە دروست نەکرا",
-      );
+      console.error("Invitation creation failed:", error);
+      toast.error(copy.invitationCreateFailed);
     } finally {
       setBusy(false);
     }
@@ -81,18 +82,18 @@ export function BusinessInvitationButton({
 
   return (
     <div className="relative">
-      <Tooltip content="بانگهێشتنامەی نوێ" side="bottom">
+      <Tooltip content={label} side="bottom">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Invite"
-          title="بانگهێشتنامەی نوێ"
+          aria-label={label}
+          title={label}
           className={`sa-gradient sa-gradient-hover group flex h-10 items-center justify-center gap-2 rounded-xl border border-transparent shadow-sm hover:shadow cursor-pointer ${showLabel ? "w-10 px-0 sm:w-auto sm:px-3.5" : "w-10"}`}
         >
           <Link2 className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
           {showLabel ? (
             <span className="hidden text-xs font-bold sm:inline">
-              بانگهێشتنامەی نوێ
+              {label}
             </span>
           ) : null}
         </button>
@@ -101,15 +102,16 @@ export function BusinessInvitationButton({
       <ManagementModal
         isOpen={open}
         onClose={closeModal}
-        title="بانگهێشتنامەی نوێ"
-        description="تۆمارکردن تەنها بە بەستەرێکی یەکجارەی ٧ ڕۆژە دەکرێت."
+        title={label}
+        description={copy.invitationDescription}
+        closeLabel={copy.close}
         busy={busy}
         createBusinessStyle
         sponsorKrdTheme
         flushFooter
         progress={
           <ModalWizardProgress
-            steps={INVITATION_STEPS}
+            steps={invitationSteps}
             currentStep={step}
             variant="sponsor-krd"
           />
@@ -122,8 +124,14 @@ export function BusinessInvitationButton({
             isSubmitting={busy}
             canContinue={step === "details" ? emailValid : Boolean(inviteUrl)}
             disableWhenInvalid={false}
-            nextLabel="دروستکردنی بانگهێشتنامە"
-            submitLabel="کۆپیکردنی بەستەر"
+            nextLabel={copy.invitationCreate}
+            submitLabel={copy.invitationCopyLink}
+            backLabel={copy.back}
+            backTooltip={copy.backTooltip}
+            cancelLabel={copy.cancel}
+            cancelTooltip={copy.cancelTooltip}
+            requiredTooltip={copy.requiredTooltip}
+            savingLabel={copy.saving}
             onBack={() => setStep("details")}
             onCancel={closeModal}
             onNext={() => void createInvite()}
@@ -143,14 +151,13 @@ export function BusinessInvitationButton({
                     htmlFor="invitation-email"
                     className="block text-sm font-black text-slate-700 dark:text-slate-200"
                   >
-                    ئیمەیڵی دیاریکراو
+                    {copy.invitationEmail}
                     <span className="ms-1 text-xs font-medium text-slate-400">
-                      (ئارەزوومەندانە)
+                      ({copy.optional})
                     </span>
                   </label>
                   <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    ئەگەر ئیمەیڵێک دیاری بکەیت، تەنها هەمان ئیمەیڵ دەتوانێت
-                    بەستەرەکە بەکاربهێنێت.
+                    {copy.invitationEmailExplanation}
                   </p>
                 </div>
               </div>
@@ -184,7 +191,7 @@ export function BusinessInvitationButton({
                   role="alert"
                   className="mt-2 text-xs font-bold text-rose-600 dark:text-rose-400"
                 >
-                  تکایە ئیمەیڵێکی دروست بنووسە.
+                  {copy.invitationEmailInvalid}
                 </p>
               ) : null}
             </div>
@@ -192,7 +199,7 @@ export function BusinessInvitationButton({
             <div className="flex items-center gap-3 rounded-xl border border-amber-200/80 bg-amber-50/70 p-3 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
               <Clock3 className="h-4 w-4 shrink-0" />
               <p className="text-xs font-semibold leading-5">
-                بەستەرەکە یەکجار بەکاردێت و دوای ٧ ڕۆژ بەسەردەچێت.
+                {copy.invitationExpiryNotice}
               </p>
             </div>
           </div>
@@ -203,10 +210,10 @@ export function BusinessInvitationButton({
             </div>
             <div>
               <h3 className="text-base font-black text-slate-700 dark:text-slate-100">
-                بانگهێشتنامەکە ئامادەیە
+                {copy.invitationReady}
               </h3>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                بەستەرەکە بە شێوەیەکی پارێزراو بۆ خاوەن بزنس بنێرە.
+                {copy.invitationShare}
               </p>
             </div>
 
@@ -218,7 +225,7 @@ export function BusinessInvitationButton({
                 <button
                   type="button"
                   onClick={() => void copyInvitationLink()}
-                  aria-label="کۆپیکردنی بانگهێشتنامە"
+                  aria-label={copy.invitationCopy}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-slate-700 dark:border-white/10 dark:bg-[#1c222b] dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   <Clipboard className="h-4 w-4" />
@@ -227,7 +234,7 @@ export function BusinessInvitationButton({
               {inviteExpiresAt ? (
                 <p className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3 text-xs font-semibold text-amber-600 dark:border-white/10 dark:text-amber-400">
                   <Clock3 className="h-3.5 w-3.5" />
-                  بەسەردەچێت: {formatDateTime(inviteExpiresAt)}
+                  {copy.invitationExpires}: {formatDateTime(inviteExpiresAt)}
                 </p>
               ) : null}
             </div>

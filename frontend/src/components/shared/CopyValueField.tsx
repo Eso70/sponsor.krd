@@ -11,18 +11,20 @@ export function CopyValueField({
   label,
   value,
   copyName,
+  copyText,
   monospace = false,
   centered = false,
 }: {
   label: string;
   value: string;
   copyName: string;
+  copyText?: { action: string; success: string; failure: string };
   monospace?: boolean;
   centered?: boolean;
 }) {
   const copy = async () => {
-    if (await copyToClipboard(value)) toast.success(`${copyName} کۆپی کرا`);
-    else toast.error(`کۆپیکردنی ${copyName} سەرکەوتوو نەبوو`);
+    if (await copyToClipboard(value)) toast.success(copyText?.success ?? `${copyName} کۆپی کرا`);
+    else toast.error(copyText?.failure ?? `کۆپیکردنی ${copyName} سەرکەوتوو نەبوو`);
   };
 
   return (
@@ -34,10 +36,10 @@ export function CopyValueField({
           aria-label={label}
           className={`${monospace ? "font-mono font-bold tracking-wider" : "text-xs"} ${centered ? "text-center" : ""}`}
         />
-        <Tooltip content={`کۆپیکردنی ${copyName}`} side="bottom">
+        <Tooltip content={copyText?.action ?? `کۆپیکردنی ${copyName}`} side="bottom">
           <button
             type="button"
-            aria-label={`کۆپیکردنی ${copyName}`}
+            aria-label={copyText?.action ?? `کۆپیکردنی ${copyName}`}
             onClick={() => void copy()}
             className="theme-soft flex min-h-10 w-11 shrink-0 cursor-pointer items-center justify-center self-stretch rounded-lg border shadow-sm transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 sm:rounded-xl"
           >

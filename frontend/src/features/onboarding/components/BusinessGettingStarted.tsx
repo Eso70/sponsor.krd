@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState, type ComponentProps } from "react";
 import { CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 import { apiRequest } from "@/lib/api/request";
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
@@ -15,6 +15,7 @@ import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { SkeletonBusinessInfoForm } from "@/components/shared/SkeletonModalLayouts";
+import type { businessMessages } from "@/features/business/i18n/messages";
 
 type TikTokConfig = {
   id?: string;
@@ -36,7 +37,14 @@ type OnboardingData = {
   tiktokConfigs: TikTokConfig[];
 };
 
-export function BusinessGettingStarted(_props: { initialStep?: number }) {
+export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCopy, colorCopy }: {
+  initialStep?: number;
+  copy?: typeof businessMessages.ar.Onboarding | typeof businessMessages.en.Onboarding;
+  brandCopy?: ComponentProps<typeof BrandAssetStack>["copy"];
+  tikTokCopy?: ComponentProps<typeof TikTokConfigModal>["copy"];
+  identityCopy?: ComponentProps<typeof BusinessOwnerIdentityFields>["copy"];
+  colorCopy?: ComponentProps<typeof ColorGradientModal>["copy"];
+}) {
   const [data, setData] = useState<OnboardingData | null>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTikTok, setShowTikTok] = useState(false);
@@ -69,10 +77,10 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
       })
       .catch((cause) =>
         setError(
-          cause instanceof Error ? cause.message : "Setup could not load",
+          copy?.loadFailed ?? (cause instanceof Error ? cause.message : "Setup could not load"),
         ),
       );
-  }, []);
+  }, [copy?.loadFailed]);
 
   useEffect(
     () => () => {
@@ -101,13 +109,13 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
       name:
         data.name.trim().length >= 2
           ? undefined
-          : "Business name must be at least 2 characters.",
+          : copy?.nameRequired ?? "Business name must be at least 2 characters.",
       phone: /^\+?[0-9][0-9\s-]{6,29}$/.test(data.phone.trim())
         ? undefined
-        : "Enter a valid phone number.",
+        : copy?.phoneInvalid ?? "Enter a valid phone number.",
       logo: data.logo.startsWith("/images/upload/")
         ? undefined
-        : "لۆگۆی بزنس پێویستە",
+        : copy?.logoRequired ?? "لۆگۆی بزنس پێویستە",
     };
     setFieldErrors(next);
     return !next.name && !next.phone && !next.logo;
@@ -145,7 +153,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
           return url;
         } catch (cause) {
           setError(
-            cause instanceof Error ? cause.message : "Image upload failed",
+          copy?.uploadFailed ?? (cause instanceof Error ? cause.message : "Image upload failed"),
           );
           return null;
         }
@@ -204,7 +212,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
       window.location.assign("/business");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Setup could not be saved",
+        copy?.saveFailed ?? (cause instanceof Error ? cause.message : "Setup could not be saved"),
       );
       setBusy(false);
     }
@@ -217,18 +225,18 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
         locked
         busy
         onClose={() => undefined}
-        title="ڕێکخستنی سەرەتایی"
-        description={error || "زانیارییەکان بار دەکرێن"}
+        title={copy?.setupTitle ?? "ڕێکخستنی سەرەتایی"}
+        description={error || copy?.loading || "زانیارییەکان بار دەکرێن"}
         headerAction={<LockKeyhole className="h-4 w-4 text-slate-400" />}
       >
         {!error ? (
-          <SkeletonBusinessInfoForm />
+          <SkeletonBusinessInfoForm loadingLabel={copy?.loading ?? "زانیارییەکان بار دەکرێن"} />
         ) : (
           <InlineRequestError
             error={{
               code: "ONBOARDING_LOAD_ERROR",
               status: null,
-              title: "Setup error",
+              title: copy?.errorTitle ?? "Setup error",
               message: error,
             }}
           />
@@ -246,12 +254,12 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
         createBusinessStyle
         busy={busy}
         onClose={() => undefined}
-        title="بەخێربێیت بۆ Sponsor.krd"
-        description="زانیارییەکانی بزنس و براندەکەت پێداچوونەوە بکە"
+        title={copy?.welcome ?? "بەخێربێیت بۆ Sponsor.krd"}
+        description={copy?.description ?? "زانیارییەکانی بزنس و براندەکەت پێداچوونەوە بکە"}
         headerAction={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-white/5 dark:text-slate-300">
             <LockKeyhole className="h-3.5 w-3.5" />
-            پێویستە
+            {copy?.required ?? "پێویستە"}
           </span>
         }
         footer={
@@ -268,7 +276,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4" />
-                پاشەکەوتکردن و چوونە داشبۆرد
+                {copy?.complete ?? "پاشەکەوتکردن و چوونە داشبۆرد"}
               </>
             )}
           </button>
@@ -280,7 +288,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
               error={{
                 code: "ONBOARDING_ERROR",
                 status: null,
-                title: "Setup error",
+                title: copy?.errorTitle ?? "Setup error",
                 message: error,
               }}
             />
@@ -288,6 +296,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
 
           <BrandAssetStack
             lockedAssets
+            copy={brandCopy}
             logo={logoPreview || data.logo}
             favicon={data.favicon}
             defaultAvatar={data.defaultAvatar}
@@ -317,17 +326,18 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
           >
             {fieldErrors.logo ||
               (hasLogo
-                ? "فایڤ لە لۆگۆوە دانراوە. بۆ گۆڕینی فایڤ یان ئەڤاتار، کلیکی قوفڵەکە بکە"
-                : "لۆگۆ هەڵبژێرە — فایڤ خۆکارانە لە لۆگۆوە دادەنرێت")}
+                ? copy?.logoReady ?? "فایڤ لە لۆگۆوە دانراوە. بۆ گۆڕینی فایڤ یان ئەڤاتار، کلیکی قوفڵەکە بکە"
+                : copy?.logoHint ?? "لۆگۆ هەڵبژێرە — فایڤ خۆکارانە لە لۆگۆوە دادەنرێت")}
           </p>
 
           <div className="space-y-3">
             <BusinessOwnerIdentityFields
               ownerName={data.ownerName}
               ownerEmail={data.ownerEmail}
+              copy={identityCopy}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <EditorField label="ناوی بزنس" required error={fieldErrors.name}>
+              <EditorField label={copy?.businessName ?? "ناوی بزنس"} required error={fieldErrors.name}>
                 <input
                   className={modalInputClass(Boolean(fieldErrors.name))}
                   value={data.name}
@@ -339,7 +349,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
                 />
               </EditorField>
               <EditorField
-                label="ژمارەی مۆبایل"
+                label={copy?.phone ?? "ژمارەی مۆبایل"}
                 required
                 error={fieldErrors.phone}
               >
@@ -357,8 +367,8 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <EditorField
-                label="ساب‌دۆمەین"
-                hint="لە کاتی تۆمارکردندا دیاریکراوە"
+                label={copy?.subdomain ?? "ساب‌دۆمەین"}
+                hint={copy?.subdomainHint ?? "لە کاتی تۆمارکردندا دیاریکراوە"}
               >
                 <input
                   disabled
@@ -366,7 +376,7 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
                   value={data.subdomain}
                 />
               </EditorField>
-              <EditorField label="ڕێکخستنی تیکتۆک">
+              <EditorField label={copy?.tiktokSettings ?? "ڕێکخستنی تیکتۆک"}>
                 <button
                   type="button"
                   onClick={() => setShowTikTok(true)}
@@ -374,8 +384,8 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
                 >
                   <span>
                     {data.tiktokConfigs.length
-                      ? `${data.tiktokConfigs.length} گرووپی تیکتۆک`
-                      : "زیادکردنی Pixel و Events API"}
+                      ? `${data.tiktokConfigs.length} ${copy?.tiktokGroups ?? "گرووپی تیکتۆک"}`
+                      : copy?.addPixel ?? "زیادکردنی Pixel و Events API"}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-white/10">
                     {data.tiktokConfigs.length}
@@ -394,12 +404,14 @@ export function BusinessGettingStarted(_props: { initialStep?: number }) {
         onClose={() => setShowColorPicker(false)}
         solidFallback={SPONSOR_KRD_ACCENT_COLOR}
         gradientFallback="#22c55e"
+        copy={colorCopy}
       />
       <TikTokConfigModal
         isOpen={showTikTok}
         configs={data.tiktokConfigs}
         onChange={(tiktokConfigs) => setData({ ...data, tiktokConfigs })}
         onClose={() => setShowTikTok(false)}
+        copy={tikTokCopy}
       />
     </>
   );

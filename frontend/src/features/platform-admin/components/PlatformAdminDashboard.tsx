@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { CreateBusinessModal } from "@/features/platform-admin/components/CreateBusinessModal";
-import { TemplatesPage } from "@/features/templates/components/TemplatesPage";
+import { PlatformTemplatesPage } from "@/features/platform-admin/components/PlatformTemplatesPage";
 import { SearchModal } from "@/components/shared/SearchModal";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { PlatformSettingsPage } from "@/features/platform-admin/components/PlatformSettingsPage";
@@ -59,16 +59,20 @@ import {
   type DashboardSidebarItem,
 } from "@/components/shared/DashboardSidebar";
 import { DashboardHeader } from "@/components/shared/DashboardHeader";
-import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
 import { apiRequest } from "@/lib/api/request";
 import { PlatformLinktreesPage } from "@/features/platform-admin/components/PlatformLinktreesPage";
 import {
   getPlatformPage,
   type PlatformPage,
 } from "@/features/platform-admin/platform-pages";
-import { SkeletonBusinessAnalyticsModal } from "@/components/shared/SkeletonModalLayouts";
+import { PlatformBusinessAnalyticsSkeleton } from "@/features/platform-admin/components/PlatformBusinessAnalyticsSkeleton";
 import { SkeletonDashboardShell } from "@/components/shared/Skeleton";
 import { SkeletonBusinessDirectoryPage } from "@/components/shared/SkeletonPageLayouts";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
+import { PlatformLanguageSelector } from "@/features/platform-admin/components/PlatformLanguageSelector";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 const BusinessAnalyticsModal = dynamic(
   () =>
@@ -77,13 +81,15 @@ const BusinessAnalyticsModal = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <SkeletonBusinessAnalyticsModal platformAdminTheme />,
+    loading: () => <PlatformBusinessAnalyticsSkeleton />,
   },
 );
 
 type PlatformTheme = "light" | "dark";
 
 export function PlatformAdminDashboard() {
+  const copy = usePlatformCopy();
+  const { locale, syncLocale } = usePlatformLocale();
   const notificationsRef = useRef<ApprovalNotificationsHandle>(null);
   const [platformBranding, setPlatformBranding] = useState({
     name: "Sponsor.krd",
@@ -223,13 +229,14 @@ export function PlatformAdminDashboard() {
 
   const loadAdministratorProfile = useCallback(async () => {
     const payload = await apiRequest<{
-      user: { name?: string; email?: string };
+      user: { name?: string; email?: string; preferred_locale?: "ckb" | "ar" | "en" };
     }>("/api/platform/auth/profile");
     setAdministrator({
       name: payload.user.name?.trim() || "Platform Admin",
       email: payload.user.email?.trim() || "",
     });
-  }, []);
+    if (payload.user.preferred_locale) syncLocale(payload.user.preferred_locale);
+  }, [syncLocale]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -282,7 +289,7 @@ export function PlatformAdminDashboard() {
     () => [
       {
         id: "businesses",
-        label: "بەڕێوەبردنی بزنسەکان",
+        label: copy.businessesManagement,
         icon: <Users className="h-4 w-4" />,
         active: activePage === "businesses",
         hidden: permissionsLoaded && !canPage("businesses"),
@@ -290,7 +297,7 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "linktrees",
-        label: DASHBOARD_PAGE_LABELS.linktrees,
+        label: copy.linktrees,
         icon: <Link2 className="h-4 w-4" />,
         active: activePage === "linktrees",
         hidden: permissionsLoaded && !canPage("linktrees"),
@@ -298,7 +305,7 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "campaigns",
-        label: DASHBOARD_PAGE_LABELS.campaigns,
+        label: copy.campaigns,
         icon: <Megaphone className="h-4 w-4" />,
         active: activePage === "campaigns",
         hidden: permissionsLoaded && !canPage("campaigns"),
@@ -306,7 +313,7 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "templates",
-        label: DASHBOARD_PAGE_LABELS.templates,
+        label: copy.templates,
         icon: <LayoutTemplate className="h-4 w-4" />,
         active: activePage === "templates",
         hidden: permissionsLoaded && !canPage("templates"),
@@ -314,7 +321,7 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "access-control",
-        label: "کۆنترۆڵی دەستگەیشتن",
+        label: copy.accessControl,
         icon: <UserCog className="h-4 w-4" />,
         active: activePage === "access-control",
         hidden: permissionsLoaded && !canPage("access-control"),
@@ -322,7 +329,7 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "billing",
-        label: "پارەدان و بەشدارییەکان",
+        label: copy.billing,
         icon: <CreditCard className="h-4 w-4" />,
         active: activePage === "billing",
         hidden: permissionsLoaded && !canPage("billing"),
@@ -330,32 +337,32 @@ export function PlatformAdminDashboard() {
       },
       {
         id: "communication-center",
-        label: "ناوەندی پەیوەندی",
+        label: copy.communications,
         icon: <MessagesSquare className="h-4 w-4" />,
         active: activePage === "communication-center",
         onClick: () => router.push(`${consoleBasePath}/communication-center`),
       },
       {
         id: "settings",
-        label: DASHBOARD_PAGE_LABELS.settings,
+        label: copy.settings,
         icon: <Settings className="h-4 w-4" />,
         active: activePage === "settings",
         hidden: permissionsLoaded && !canPage("settings"),
         onClick: () => router.push(`${consoleBasePath}/settings`),
       },
     ],
-    [activePage, canPage, consoleBasePath, permissionsLoaded, router],
+    [activePage, canPage, consoleBasePath, permissionsLoaded, router, copy],
   );
 
   const pageTitle: Record<PlatformPage, string> = {
-    businesses: "بەڕێوەبردنی بزنسەکان",
-    linktrees: DASHBOARD_PAGE_LABELS.linktrees,
-    templates: DASHBOARD_PAGE_LABELS.templates,
-    campaigns: DASHBOARD_PAGE_LABELS.campaigns,
-    "access-control": "کۆنترۆڵی دەستگەیشتن",
-    billing: "پارەدان و بەشدارییەکان",
-    "communication-center": "ناوەندی پەیوەندی",
-    settings: DASHBOARD_PAGE_LABELS.settings,
+    businesses: copy.businessesManagement,
+    linktrees: copy.linktrees,
+    templates: copy.templates,
+    campaigns: copy.campaigns,
+    "access-control": copy.accessControl,
+    billing: copy.billing,
+    "communication-center": copy.communications,
+    settings: copy.settings,
   };
 
   const handleDelete = useCallback(
@@ -396,12 +403,10 @@ export function PlatformAdminDashboard() {
       .catch((error: unknown) => {
         tenantTab?.close();
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to open the business dashboard",
+          platformRequestError(error instanceof Error ? error.message : null, copy.openFailure, locale),
         );
       });
-  }, []);
+  }, [copy, locale]);
 
   const confirmDelete = async () => {
     if (!deletingBusiness) return;
@@ -413,19 +418,19 @@ export function PlatformAdminDashboard() {
       );
       if (res.ok) {
         removeBusiness(deletingBusiness.id);
-        toast.success("بزنسەکە بە سەرکەوتوویی سڕایەوە");
+        toast.success(copy.deleteSuccess);
       } else {
         const errData = await res.json();
-        const message = errData.message || "Failed to delete business";
+        const message = platformRequestError(errData.message, copy.deleteFailure, locale);
         setOperationError(message);
-        toast.error("سڕینەوەی بزنسەکە سەرکەوتوو نەبوو", {
+        toast.error(copy.deleteFailure, {
           description: message,
         });
       }
     } catch (err) {
-      const message = (err as Error).message;
+      const message = platformRequestError(err instanceof Error ? err.message : null, copy.deleteFailure, locale);
       setOperationError(message);
-      toast.error("سڕینەوەی بزنسەکە سەرکەوتوو نەبوو", { description: message });
+      toast.error(copy.deleteFailure, { description: message });
     } finally {
       setIsDeleting(false);
     }
@@ -434,7 +439,7 @@ export function PlatformAdminDashboard() {
   if (loading) {
     return (
       <SkeletonDashboardShell navigationItems={12} platformAdminTheme>
-        <SkeletonBusinessDirectoryPage />
+        <SkeletonBusinessDirectoryPage loadingLabel={platformLoadingCopy[locale].businessDirectory} />
       </SkeletonDashboardShell>
     );
   }
@@ -443,6 +448,7 @@ export function PlatformAdminDashboard() {
     return (
       <PlatformAdminErrorPage
         kind="badGateway"
+        locale={locale}
         branding={platformBranding}
         onReset={() => void fetchBusinesses()}
       />
@@ -453,6 +459,7 @@ export function PlatformAdminDashboard() {
     return (
       <PlatformAdminErrorPage
         kind="serviceUnavailable"
+        locale={locale}
         branding={platformBranding}
         onReset={() => void fetchBusinesses()}
       />
@@ -463,6 +470,7 @@ export function PlatformAdminDashboard() {
     return (
       <PlatformAdminErrorPage
         kind="gatewayTimeout"
+        locale={locale}
         branding={platformBranding}
         onReset={() => void fetchBusinesses()}
       />
@@ -471,7 +479,7 @@ export function PlatformAdminDashboard() {
 
   if (permissionsLoaded && !activePageAllowed) {
     return (
-      <PlatformAdminErrorPage kind="forbidden" branding={platformBranding} />
+      <PlatformAdminErrorPage kind="forbidden" branding={platformBranding} locale={locale} />
     );
   }
 
@@ -479,12 +487,13 @@ export function PlatformAdminDashboard() {
     <div
       className="h-screen bg-slate-50 dark:bg-[#161B22] text-slate-800 dark:text-gray-100 flex flex-col md:flex-row relative overflow-hidden"
       dir="ltr"
+      lang={locale}
       data-sponsor-krd-theme
       data-platform-admin-theme
     >
       <DashboardSidebar
         brandName={platformBranding.name}
-        brandSubtitle="کۆنترۆڵی گشتی"
+        brandSubtitle={copy.generalControl}
         brandImage={
           platformBranding.logo ||
           platformBranding.avatar ||
@@ -497,7 +506,7 @@ export function PlatformAdminDashboard() {
         footer={
           <div className="shrink-0 border-t border-slate-200 p-4 dark:border-white/10">
             <Tooltip
-              content="ڕێکخستنەکانی بەڕێوەبەر"
+              content={copy.adminSettings}
               side="right"
               disabled={!isSidebarCollapsed}
             >
@@ -507,8 +516,8 @@ export function PlatformAdminDashboard() {
                 className={`flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-slate-100 cursor-pointer ${
                   isSidebarCollapsed ? "md:justify-center md:px-0" : "gap-3"
                 }`}
-                title="ڕێکخستنەکانی بەڕێوەبەر"
-                aria-label="ڕێکخستنەکانی بەڕێوەبەر"
+                title={copy.adminSettings}
+                aria-label={copy.adminSettings}
               >
                 <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span
@@ -518,7 +527,7 @@ export function PlatformAdminDashboard() {
                       : "opacity-100"
                   }`}
                 >
-                  ڕێکخستنەکانی بەڕێوەبەر
+                  {copy.adminSettings}
                 </span>
               </button>
             </Tooltip>
@@ -542,16 +551,18 @@ export function PlatformAdminDashboard() {
           }}
           onToggleTheme={toggleTheme}
           onRefresh={handleGlobalRefresh}
+          languageControl={<PlatformLanguageSelector />}
+          labels={{ menu: copy.menu, menuLabel: copy.menu, refresh: copy.refreshData, refreshLabel: copy.refreshData, home: copy.home, homeLabel: copy.home, theme: copy.theme, darkTheme: copy.darkTheme, lightTheme: copy.lightTheme, themeLabel: copy.theme, accountMenu: copy.accountMenu }}
           notifications={<ApprovalNotifications ref={notificationsRef} />}
           profile={{
             name: administrator.name,
             email: administrator.email,
-            badge: "Platform Admin",
+            badge: copy.admin,
             avatarSrc: platformBranding.avatar || platformBranding.logo,
             items: [
               {
                 id: "settings",
-                label: DASHBOARD_PAGE_LABELS.settings,
+                label: copy.settings,
                 icon: <Settings className="h-4 w-4" />,
                 onClick: () => router.push(`${consoleBasePath}/settings`),
               },
@@ -564,7 +575,7 @@ export function PlatformAdminDashboard() {
               },
               {
                 id: "logout",
-                label: "چوونەدەرەوە",
+                label: copy.logout,
                 icon: <LogOut className="h-4 w-4" />,
                 danger: true,
                 onClick: () => void handleLogout(),
@@ -579,7 +590,7 @@ export function PlatformAdminDashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-6 md:py-8 lg:py-10 relative z-10">
             {error && (
               <div className="mb-6 p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
-                {error}
+                {platformRequestError(error, copy.loadFailure, locale)}
               </div>
             )}
 
@@ -611,7 +622,7 @@ export function PlatformAdminDashboard() {
                       const payload = await response.json().catch(() => ({}));
                       if (!response.ok) {
                         throw new Error(
-                          payload.message || "Failed to load business",
+                          platformRequestError(payload.message, copy.loadFailure, locale),
                         );
                       }
                       setEditingBusiness(payload.data as Business);
@@ -619,9 +630,7 @@ export function PlatformAdminDashboard() {
                     })
                     .catch((error: unknown) =>
                       toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Failed to load business",
+                        platformRequestError(error instanceof Error ? error.message : null, copy.loadFailure, locale),
                       ),
                     );
                 }}
@@ -633,7 +642,7 @@ export function PlatformAdminDashboard() {
             ) : activePage === "linktrees" ? (
               <PlatformLinktreesPage />
             ) : activePage === "templates" ? (
-              <TemplatesPage />
+              <PlatformTemplatesPage />
             ) : activePage === "campaigns" ? (
               <PlatformCampaignsPage />
             ) : activePage === "billing" ? (
@@ -685,10 +694,7 @@ export function PlatformAdminDashboard() {
             });
 
             if (!res.ok) {
-              const errData = await res.json();
-              toast.error(
-                errData.message || "پاشەکەوتکردنی بزنس سەرکەوتوو نەبوو",
-              );
+              toast.error(copy.businessSaveFailed);
               return;
             }
 
@@ -696,13 +702,13 @@ export function PlatformAdminDashboard() {
             setShowCreateModal(false);
             setEditingBusiness(null);
             if (editId) {
-              toast.info("بزنسەکە بە سەرکەوتوویی نوێکرایەوە");
+              toast.info(copy.businessUpdated);
             } else {
-              toast.success("بزنسەکە بە سەرکەوتوویی دروستکرا");
+              toast.success(copy.businessCreated);
             }
           } catch (err) {
             console.error("Error saving business:", err);
-            toast.error("هەڵەیەک ڕوویدا لە پاشەکەوتکردندا");
+            toast.error(copy.businessSaveUnexpected);
           }
         }}
         editData={editingBusiness}
@@ -714,19 +720,19 @@ export function PlatformAdminDashboard() {
         isOpen={!!deletingBusiness}
         onClose={() => setDeletingBusiness(null)}
         onConfirm={confirmDelete}
-        title="سڕینەوەی بزنس"
+        title={copy.deleteBusiness}
+        confirmLabel={copy.delete}
+        loadingLabel={copy.deleting}
+        cancelLabel={copy.cancel}
+        closeLabel={copy.close}
         isDeleting={isDeleting}
         message={
           <p>
-            {
-              "\u0626\u0627\u06cc\u0627 \u062f\u06b5\u0646\u06cc\u0627\u06cc\u062a \u0644\u06d5 \u0633\u0695\u06cc\u0646\u06d5\u0648\u06d5\u06cc \u0626\u06d5\u062f\u0645\u06cc\u0646\u06cc"
-            }{" "}
+            {copy.deleteQuestion}{" "}
             <span className="font-bold text-slate-900 dark:text-white">
               &quot;{deletingBusiness?.name || ""}&quot;
             </span>
-            {
-              "\u061f \u0626\u06d5\u0645 \u06a9\u0631\u062f\u0627\u0631\u06d5 \u0646\u0627\u06af\u06d5\u0695\u06ce\u0646\u0631\u06ce\u062a\u06d5\u0648\u06d5."
-            }
+            ؟ {copy.irreversible}
           </p>
         }
       />
@@ -749,7 +755,11 @@ export function PlatformAdminDashboard() {
       <SearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
-        placeholder="ناوی بزنس بنووسە بۆ گەڕان..."
+        placeholder={copy.searchBusinessPlaceholder}
+        clearLabel={copy.clearSearch}
+        applyLabel={copy.close}
+        clearAriaLabel={copy.clearSearch}
+        applyAriaLabel={copy.close}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
       >
@@ -761,11 +771,11 @@ export function PlatformAdminDashboard() {
                 style={{ color: "var(--sponsor-krd-accent)" }}
               />
             </MotionPulseIcon>
-            <span>گەڕان بۆ بزنسەکان بکە.....</span>
+            <span>{copy.searchBusinesses}</span>
           </div>
         ) : filteredBusinesses.length === 0 ? (
           <div className="py-8 text-center text-slate-450 dark:text-gray-500 text-sm font-kurdish">
-            هیچ ئەنجامێک نەدۆزرایەوە بۆ &quot;{searchQuery}&quot;
+            {copy.noSearchResultFor} &quot;{searchQuery}&quot;
           </div>
         ) : (
           <div className="flex flex-col gap-0.5">
@@ -796,7 +806,7 @@ export function PlatformAdminDashboard() {
                   className="text-xs font-semibold opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0 pl-2"
                   style={{ color: "var(--sponsor-krd-accent)" }}
                 >
-                  دەستکاریکردن ←
+                  {copy.edit} ←
                 </div>
               </button>
             ))}

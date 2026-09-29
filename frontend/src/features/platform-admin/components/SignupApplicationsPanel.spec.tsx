@@ -8,6 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiRequest } from "@/lib/api/request";
 import { SignupApplicationsPanel } from "./SignupApplicationsPanel";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 vi.mock("@/lib/api/request", () => ({ apiRequest: vi.fn() }));
 
@@ -52,7 +53,7 @@ describe("SignupApplicationsPanel", () => {
   });
 
   it("uses the edit-business plan selector and needs no phone verification", async () => {
-    render(<SignupApplicationsPanel onApproved={vi.fn()} />);
+    render(<PlatformLocaleProvider initialLocale="ckb"><SignupApplicationsPanel onApproved={vi.fn()} /></PlatformLocaleProvider>);
 
     expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
@@ -64,7 +65,7 @@ describe("SignupApplicationsPanel", () => {
   });
 
   it("shows only rejection review and requires its reason", async () => {
-    render(<SignupApplicationsPanel onApproved={vi.fn()} />);
+    render(<PlatformLocaleProvider initialLocale="ckb"><SignupApplicationsPanel onApproved={vi.fn()} /></PlatformLocaleProvider>);
 
     await screen.findByText("owner@example.com");
     expect(screen.queryByLabelText("هۆکار")).not.toBeInTheDocument();
@@ -91,5 +92,17 @@ describe("SignupApplicationsPanel", () => {
         }),
       ),
     );
+  });
+
+  it("uses Arabic for the applications card and rejection dialog", async () => {
+    render(<PlatformLocaleProvider initialLocale="ar"><SignupApplicationsPanel onApproved={vi.fn()} /></PlatformLocaleProvider>);
+
+    expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
+    expect(screen.getByText("خطة الاشتراك")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "رفض" }));
+    expect(screen.getByRole("dialog", { name: "رفض الطلب" })).toBeInTheDocument();
+    expect(screen.getByLabelText("السبب")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "رفض" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("السبب مطلوب.");
   });
 });

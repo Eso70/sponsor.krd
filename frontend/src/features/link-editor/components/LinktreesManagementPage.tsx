@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import {
   Eye,
   FileText,
@@ -64,6 +64,18 @@ const KURDISH_COPY = {
   noAnalytics: "هیچ داتایەک نییە",
 } as const;
 
+const LoadingCopyContext = createContext<Partial<LinktreeListCopy> | undefined>(undefined);
+
+function LoadingGrid() {
+  const copy = useContext(LoadingCopyContext);
+  return <SkeletonLinktreeGrid count={6} loadingLabel={copy?.loadingCards ?? "پەیجەکان بار دەکرێن"} />;
+}
+
+function LoadingTable() {
+  const copy = useContext(LoadingCopyContext);
+  return <SkeletonTable rows={6} columns={8} loadingLabel={copy?.loadingTable ?? "خشتەی پەیجەکان بار دەکرێت"} />;
+}
+
 export type LinktreesManagementCopy = {
   [Key in keyof typeof KURDISH_COPY]: string;
 };
@@ -73,14 +85,14 @@ const LinktreesGrid = dynamic(
     import("@/components/business/LinktreesGrid").then((module) => ({
       default: module.LinktreesGrid,
     })),
-  { ssr: false, loading: () => <SkeletonLinktreeGrid count={6} /> },
+  { ssr: false, loading: LoadingGrid },
 );
 const LinktreesTable = dynamic(
   () =>
     import("@/components/business/LinktreesTable").then((module) => ({
       default: module.LinktreesTable,
     })),
-  { ssr: false, loading: () => <SkeletonTable rows={6} columns={8} /> },
+  { ssr: false, loading: LoadingTable },
 );
 
 export interface LinktreesManagementPageProps {
@@ -128,6 +140,7 @@ export interface LinktreesManagementPageProps {
   listCopy?: Partial<LinktreeListCopy>;
   trafficLabels?: PageListTrafficLabels;
   profitCopy?: Partial<CampaignProfitCopy>;
+  calendarLocale?: "ckb" | "ar" | "en";
 }
 
 export function LinktreesManagementPage({
@@ -169,6 +182,7 @@ export function LinktreesManagementPage({
   listCopy,
   trafficLabels,
   profitCopy,
+  calendarLocale,
 }: LinktreesManagementPageProps) {
   const labels = { ...KURDISH_COPY, ...copy };
   const [archiveFilter, setArchiveFilter] = useState<"active" | "archived">(
@@ -211,13 +225,15 @@ export function LinktreesManagementPage({
     listCopy,
     trafficLabels,
     profitCopy,
+    calendarLocale,
   };
 
   return (
-    <>
+    <LoadingCopyContext.Provider value={listCopy}>
       <StatCardGrid columns={3} className="mb-8">
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={FileText}
           label={labels.totalPages}
           value={linktreeCount}
@@ -225,6 +241,7 @@ export function LinktreesManagementPage({
         />
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={Eye}
           label={labels.totalViews}
           value={totalViews}
@@ -232,6 +249,7 @@ export function LinktreesManagementPage({
         />
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={Users}
           label={labels.uniqueViews}
           value={uniqueViews}
@@ -239,6 +257,7 @@ export function LinktreesManagementPage({
         />
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={MousePointerClick}
           label={labels.totalClicks}
           value={totalClicks}
@@ -246,6 +265,7 @@ export function LinktreesManagementPage({
         />
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={Target}
           label={labels.clickRate}
           value={`${ctr}%`}
@@ -253,6 +273,7 @@ export function LinktreesManagementPage({
         />
         <StatCard
           loading={isLoading}
+          loadingLabel={listCopy?.loadingCards ?? "پەیجەکان بار دەکرێن"}
           icon={TrendingUp}
           label={labels.conversions}
           value={conversions}
@@ -403,6 +424,6 @@ export function LinktreesManagementPage({
           </div>
         </DashboardSurface>
       )}
-    </>
+    </LoadingCopyContext.Provider>
   );
 }

@@ -31,7 +31,8 @@ import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 import { toast } from "sonner";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { AnalyticsSummaryCards } from "@/features/analytics/components/AnalyticsSummaryCards";
-import { ANALYTICS_TERMS } from "@/components/shared/analytics-terminology";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformAnalyticsCopy } from "@/features/platform-admin/i18n/analytics-copy";
 import { analyticsModalScrollbarStyles } from "@/features/analytics/modalStyles";
 import type { BusinessLinktreeAnalyticsSummary } from "@linktree/types";
 import {
@@ -51,12 +52,6 @@ const HEADER_NEUTRAL =
   "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:border-slate-200 dark:hover:border-white/20 hover:text-slate-700 dark:hover:text-gray-200";
 
 type SortMode = "most-views" | "most-clicks" | "least";
-
-const SORT_OPTIONS: Array<[SortMode, string]> = [
-  ["most-views", "زۆرترین بینین"],
-  ["most-clicks", "زۆرترین کلیک"],
-  ["least", "کەمترین"],
-];
 
 /**
  * The default page first, then the requested order, then the name.
@@ -151,11 +146,13 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
   businessName,
   businessDefaultAvatar,
 }: BusinessAnalyticsModalProps) {
+  const { locale } = usePlatformLocale();
+  const copy = platformAnalyticsCopy[locale];
   const [linktrees, setLinktrees] = useState<
     BusinessLinktreeAnalyticsSummary[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"load" | "import" | "export" | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("most-views");
@@ -175,7 +172,8 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
         `${businessName}-linktrees.sponsor-krd.json`,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      console.error("Business linktree export failed:", err);
+      setError("export");
     } finally {
       setIsTransferring(false);
     }
@@ -190,13 +188,11 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
         file,
       );
       await fetchData(true);
-      toast.success("لینکترییەکان بە سەرکەوتوویی هاوردە کران");
+      toast.success(copy.importSuccess);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Import failed";
-      setError(message);
-      toast.error("هاوردەکردنی لینکترییەکان سەرکەوتوو نەبوو", {
-        description: message,
-      });
+      console.error("Business linktree import failed:", err);
+      setError("import");
+      toast.error(copy.importFailed);
     } finally {
       setIsTransferring(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -224,7 +220,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
         setLastUpdated(new Date());
       } catch (err) {
         if (requestId !== requestRef.current) return;
-        setError(err instanceof Error ? err.message : "داتاکان بار نەکران");
+        setError("load");
         console.error("Error fetching business linktrees:", err);
       } finally {
         if (requestId === requestRef.current) setIsLoading(false);
@@ -337,7 +333,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                       id={titleId}
                       className="text-xl sm:text-2xl font-bold text-slate-700 dark:text-gray-100 font-kurdish"
                     >
-                      ئاماری بەڕێوەبەر
+                      {copy.title}
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 dark:text-gray-500 mt-0.5 font-kurdish truncate">
                       {businessName}
@@ -350,8 +346,8 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                       className="theme-fill h-1.5 w-1.5 rounded-full shadow-sm"
                     />
                     <span className="font-kurdish">
-                      دواین نوێکردنەوە:{" "}
-                      {new Intl.DateTimeFormat("ku", {
+                      {copy.updated}:{" "}
+                      {new Intl.DateTimeFormat(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ", {
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit",
@@ -372,25 +368,25 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                     handleImport(event.target.files[0])
                   }
                 />
-                <Tooltip content="هاوردەکردنی لینکترییەکان" side="bottom">
+                <Tooltip content={copy.import} side="bottom">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isTransferring}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL}`}
-                    aria-label="هاوردەکردنی لینکترییەکان"
+                    aria-label={copy.import}
                   >
                     <Upload className="h-4 w-4" />
                   </button>
                 </Tooltip>
-                <Tooltip content="هەناردەکردنی لینکترییەکان" side="bottom">
+                <Tooltip content={copy.export} side="bottom">
                   <button
                     type="button"
                     onClick={handleExport}
                     disabled={isTransferring}
                     aria-busy={isTransferring}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL}`}
-                    aria-label="هەناردەکردنی لینکترییەکان"
+                    aria-label={copy.export}
                   >
                     {isTransferring ? (
                       <MotionSpinner>
@@ -401,26 +397,26 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                     )}
                   </button>
                 </Tooltip>
-                <Tooltip content="نوێکردنەوە" side="bottom">
+                <Tooltip content={copy.refresh} side="bottom">
                   <button
                     type="button"
                     onClick={() => void handleRefresh()}
                     disabled={isLoading}
                     aria-busy={isLoading}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL}`}
-                    aria-label="نوێکردنەوە"
+                    aria-label={copy.refresh}
                   >
                     <MotionSpinner active={isLoading}>
                       <RefreshCw className="h-4 w-4" />
                     </MotionSpinner>
                   </button>
                 </Tooltip>
-                <Tooltip content="داخستن" side="bottom">
+                <Tooltip content={copy.close} side="bottom">
                   <button
                     type="button"
                     onClick={onClose}
                     className={`${HEADER_ICON_BUTTON} ${HEADER_NEUTRAL}`}
-                    aria-label="داخستن"
+                    aria-label={copy.close}
                   >
                     <X className="h-4 w-4 transition-transform group-hover:rotate-90" />
                   </button>
@@ -437,16 +433,16 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
           "
           >
             {isLoading ? (
-              <SkeletonBusinessAnalyticsContent />
+              <SkeletonBusinessAnalyticsContent loadingLabel={copy.loading} />
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <p className="text-sm text-red-600 font-kurdish">{error}</p>
+                <p className="text-sm text-red-600 font-kurdish">{error === "import" ? copy.importFailed : error === "export" ? copy.exportFailed : copy.loadFailed}</p>
                 <button
                   type="button"
                   onClick={() => void fetchData(true)}
                   className="theme-fill px-4 py-2.5 rounded-xl text-[var(--theme-ink)] font-kurdish shadow-lg hover:shadow-xl transition-all hover:opacity-90 cursor-pointer"
                 >
-                  هەوڵ بدەوە
+                  {copy.retry}
                 </button>
               </div>
             ) : (
@@ -454,8 +450,8 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                 <AnalyticsSummaryCards
                   views={totals.totalViews}
                   clicks={totals.totalClicks}
-                  viewsLabel={ANALYTICS_TERMS.totalViews}
-                  clicksLabel={ANALYTICS_TERMS.totalClicks}
+                  viewsLabel={copy.totalViews}
+                  clicksLabel={copy.totalClicks}
                 />
 
                 {/* Search + Filters */}
@@ -466,7 +462,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="گەڕان بە ناوی لینک..."
+                      placeholder={copy.search}
                       className="w-full pr-9 pl-3 py-2 text-sm rounded-xl border bg-white dark:bg-[#161B22] border-slate-100 dark:border-white/8 text-slate-700 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all"
                       style={
                         {
@@ -476,7 +472,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                     />
                   </div>
                   <div className="flex gap-1.5">
-                    {SORT_OPTIONS.map(([value, label]) => (
+                    {([["most-views", copy.mostViews], ["most-clicks", copy.mostClicks], ["least", copy.least]] as Array<[SortMode, string]>).map(([value, label]) => (
                       <button
                         key={value}
                         type="button"
@@ -499,8 +495,8 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                     <Globe className="h-10 w-10 text-slate-300 dark:text-gray-600" />
                     <p className="text-sm text-slate-400 dark:text-gray-500 font-kurdish">
                       {linktrees.length === 0
-                        ? "هیچ لینکترییەک نەدۆزرایەوە"
-                        : "هیچ هاوتابوونێک نەدۆزرایەوە"}
+                        ? copy.empty
+                        : copy.noMatch}
                     </p>
                   </div>
                 ) : (
@@ -510,10 +506,10 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                         <Globe className="h-3.5 w-3.5 text-white" />
                       </div>
                       <h3 className="text-sm font-semibold text-slate-700 dark:text-gray-200 font-kurdish">
-                        هەموو لینکەکان ({filteredLinktrees.length})
+                        {copy.allLinks} ({filteredLinktrees.length})
                         {filteredLinktrees.length !== linktrees.length && (
                           <span className="text-slate-400 dark:text-gray-500 font-normal text-xs mr-1">
-                            لە {linktrees.length}
+                            {copy.of} {linktrees.length}
                           </span>
                         )}
                       </h3>
@@ -546,15 +542,15 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                                   </span>
                                   {lt.is_default && (
                                     <span className="sa-soft sa-soft-border rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
-                                      سەرەکی
+                                      {copy.default}
                                     </span>
                                   )}
                                   <span
                                     className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadge(lt.status)}`}
                                   >
                                     {lt.status === "active"
-                                      ? "چالاک"
-                                      : "ناچالاک"}
+                                      ? copy.active
+                                      : copy.inactive}
                                   </span>
                                 </div>
                                 {lt.subtitle && (
@@ -568,7 +564,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                                   {lt.unique_views.toLocaleString()}
                                 </p>
                                 <p className="text-[10px] text-slate-400 dark:text-gray-500">
-                                  بینین
+                                  {copy.views}
                                 </p>
                               </div>
                               <div className="text-center">
@@ -576,7 +572,7 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
                                   {lt.unique_clicks.toLocaleString()}
                                 </p>
                                 <p className="text-[10px] text-slate-400 dark:text-gray-500">
-                                  کلیک
+                                  {copy.clicks}
                                 </p>
                               </div>
                               <div className="text-center">

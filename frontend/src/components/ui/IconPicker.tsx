@@ -24,10 +24,12 @@ import {
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
 
 interface IconPickerProps {
+  copy?: Partial<Record<"choose" | "icon" | "title" | "search" | "close" | "upload" | "clear" | "icons" | "noResults" | "loading", string>> & { categories?: Partial<Record<CategoryKey, string>> };
   value: string;
   onChange: (iconName: string) => void;
   customTrigger?: React.ReactNode;
   uploadUrl?: string;
+  localizeError?: (error: InlineRequestErrorData) => InlineRequestErrorData;
 }
 
 type CategoryKey = keyof typeof ICON_CATEGORIES;
@@ -83,10 +85,12 @@ const IconButton = React.memo(({
 IconButton.displayName = "IconButton";
 
 export function IconPicker({
+  copy,
   value,
   onChange,
   customTrigger,
   uploadUrl = "/api/linktrees/upload",
+  localizeError,
 }: IconPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -237,14 +241,14 @@ setUploading(true);
       {customTrigger}
     </div>
   ) : (
-    <Tooltip content="دیاریکردنی ئایکۆن" side="top">
+    <Tooltip content={copy?.choose ?? "دیاریکردنی ئایکۆن"} side="top">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative flex items-center justify-center shrink-0 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 lg:h-12 overflow-hidden rounded-lg sm:rounded-xl md:rounded-2xl border border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20 focus-within:ring-2 transition-all cursor-pointer shadow-sm group bg-white dark:bg-[#161B22]"
         style={{ '--tw-ring-color': 'color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)' } as React.CSSProperties}
-        title="ئاڕاستەی ئایکۆن (Choose Icon)"
-        aria-label="دیاریکردنی ئایکۆن"
+        title={copy?.choose ?? "ئاڕاستەی ئایکۆن (Choose Icon)"}
+        aria-label={copy?.choose ?? "دیاریکردنی ئایکۆن"}
       >
         {uploadedIcon ? (
           <Image
@@ -259,7 +263,7 @@ setUploading(true);
           <SelectedIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300   duration-300" />
         ) : (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-[#161B22] text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold group-hover:bg-gray-100 dark:group-hover:bg-[#161B22] transition-colors">
-            ئایکۆن
+            {copy?.icon ?? "ئایکۆن"}
           </div>
         )}
       </button>
@@ -299,9 +303,9 @@ setUploading(true);
               </div>
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-gray-100 leading-tight">
-                  ئایکۆن هەڵبژێرە
+                  {copy?.title ?? "ئایکۆن هەڵبژێرە"}
                 </h2>
-                <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">Choose Icon</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">{copy?.title ?? "Choose Icon"}</p>
               </div>
             </div>
             <button
@@ -314,7 +318,7 @@ setUploading(true);
                 hover:bg-slate-100 dark:hover:bg-[#161B22]
                 hover:text-slate-700 dark:hover:text-gray-200
                 hover:border-slate-300 dark:hover:border-white/15"
-              aria-label="Close"
+              aria-label={copy?.close ?? "Close"}
             >
               <X className="h-4 w-4" />
             </button>
@@ -331,7 +335,7 @@ setUploading(true);
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="گەڕان بە ناوی ئایکۆن..."
+              placeholder={copy?.search ?? "گەڕان بە ناوی ئایکۆن..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm transition-all duration-200
@@ -389,9 +393,9 @@ setUploading(true);
                     : "bg-white dark:bg-[#161B22] text-slate-500 dark:text-gray-400 border-slate-200/80 dark:border-white/8 hover:bg-slate-50 dark:hover:bg-[#161B22] hover:text-slate-700 dark:hover:text-gray-200 hover:border-slate-300 dark:hover:border-white/15"
                   }
                 `}
-                title={`${CATEGORY_LABELS[cat]} (${count})`}
+                title={`${copy?.categories?.[cat] ?? CATEGORY_LABELS[cat]} (${count})`}
               >
-                <span>{CATEGORY_LABELS[cat]}</span>
+                <span>{copy?.categories?.[cat] ?? CATEGORY_LABELS[cat]}</span>
                 {active && (
                   <span className="rounded-md bg-white/25 px-1.5 py-0.5 text-[10px] font-bold text-inherit">
                     {count}
@@ -425,7 +429,7 @@ setUploading(true);
           {filteredIcons.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400 dark:text-gray-500">
               <Search className="h-9 w-9 opacity-25" />
-              <span className="text-sm">No icons found for &ldquo;{searchQuery}&rdquo;</span>
+              <span className="text-sm">{copy?.noResults ?? "No icons found for"} &ldquo;{searchQuery}&rdquo;</span>
             </div>
           )}
 
@@ -441,7 +445,7 @@ setUploading(true);
                   style={{ borderTopColor: 'var(--theme-primary, #64748b)' }}
                 />
               </MotionSpinner>
-              <span>Loading more icons...</span>
+              <span>{copy?.loading ?? "Loading more icons..."}</span>
             </div>
           )}
         </div>
@@ -472,14 +476,14 @@ setUploading(true);
               ) : (
                 <ImagePlus className="h-4 w-4" />
               )}
-              بارکردنی وێنە
+              {copy?.upload ?? "بارکردنی وێنە"}
             </button>
             <button
               type="button"
               onClick={() => { onChange(""); setIsOpen(false); }}
               className="rounded-lg border border-red-200/60 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 sm:text-sm"
             >
-              سڕینەوە
+              {copy?.clear ?? "سڕینەوە"}
             </button>
           </div>
           <span className="text-xs font-medium px-2.5 py-1 rounded-lg border
@@ -487,12 +491,12 @@ setUploading(true);
             bg-slate-100 dark:bg-white/5
             border-slate-200/60 dark:border-white/8
           ">
-            {Math.min(visibleCount, filteredIcons.length)} / {filteredIcons.length} icons
+            {Math.min(visibleCount, filteredIcons.length)} / {filteredIcons.length} {copy?.icons ?? "icons"}
           </span>
         </div>
         {uploadError && (
           <InlineRequestError
-            error={uploadError}
+            error={localizeError ? localizeError(uploadError) : uploadError}
             className="mx-4 mb-3 shrink-0"
           />
         )}

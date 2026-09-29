@@ -1,17 +1,19 @@
 "use client";
 
 import { memo } from "react";
-import { CompactTemplateSelectorModal } from "@/components/shared/CompactTemplateSelectorModal";
+import { CompactTemplateSelectorModal, type CompactTemplateSelectorCopy } from "@/components/shared/CompactTemplateSelectorModal";
 import { useTemplateAccess } from "@/hooks/useTemplateAccess";
 import { TEMPLATE_OPTIONS } from "@/lib/templates/config";
 
 export const TemplateSelector = memo(function TemplateSelector({
+  copy,
   isOpen,
   onClose,
   selectedTemplate,
   onSelectTemplate,
   allowedTemplateKeys,
 }: {
+  copy?: CompactTemplateSelectorCopy;
   isOpen: boolean;
   onClose: () => void;
   selectedTemplate: string;
@@ -26,6 +28,7 @@ export const TemplateSelector = memo(function TemplateSelector({
 
   return (
     <CompactTemplateSelectorModal
+      copy={copy}
       isOpen={isOpen}
       onClose={onClose}
       templates={TEMPLATE_OPTIONS}

@@ -12,6 +12,7 @@ function youtubeVideoId(value = ""): string | null {
 }
 
 interface AdvertisingVideoPlayerProps {
+  copy?: Partial<Record<"empty" | "title" | "play", string>>;
   /** "full" is used on the dedicated video page; "compact" fits inside the phone mockup in the guide. */
   size?: "compact" | "full";
   className?: string;
@@ -28,7 +29,7 @@ interface AdvertisingVideoPlayerProps {
  * A YouTube link resolves to a standard embed instead; the provider's own
  * player handles playback with its own thumbnail and controls.
  */
-export function AdvertisingVideoPlayer({ size = "compact", className, src }: AdvertisingVideoPlayerProps) {
+export function AdvertisingVideoPlayer({ size = "compact", className, src, copy }: AdvertisingVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoSrc = src?.trim() ?? "";
@@ -39,7 +40,7 @@ export function AdvertisingVideoPlayer({ size = "compact", className, src }: Adv
       <div className={cn("flex h-full w-full flex-col items-center justify-center gap-3 bg-slate-100 px-5 text-center dark:bg-white/[0.04]", className)}>
         <VideoOff className="h-8 w-8 text-black/25 dark:text-white/25" />
         <p className="text-xs font-bold text-black/45 dark:text-white/45" dir="auto">
-          هیچ ڤیدیۆیەک دانەنراوە
+          {copy?.empty ?? "هیچ ڤیدیۆیەک دانەنراوە"}
         </p>
       </div>
     );
@@ -50,7 +51,7 @@ export function AdvertisingVideoPlayer({ size = "compact", className, src }: Adv
       <div className={cn("relative h-full w-full bg-black", className)}>
         <iframe
           src={`https://www.youtube.com/embed/${youtubeId}?rel=0&playsinline=1`}
-          title="ڤیدیۆی فێرکاری"
+          title={copy?.title ?? "ڤیدیۆی فێرکاری"}
           className="h-full w-full border-0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           allowFullScreen
@@ -91,7 +92,7 @@ export function AdvertisingVideoPlayer({ size = "compact", className, src }: Adv
         <button
           type="button"
           onClick={play}
-          aria-label="لێدانی ڤیدیۆ"
+          aria-label={copy?.play ?? "لێدانی ڤیدیۆ"}
           className="absolute inset-0 flex items-center justify-center bg-black/25 transition hover:bg-black/35"
         >
           <span

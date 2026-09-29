@@ -4,6 +4,8 @@ import { memo, useCallback, useEffect } from "react";
 import { X, MessageCircle } from "lucide-react";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
+import { publicLinktreeCopy } from "@/features/business/i18n/public-linktree-copy";
 
 // Export the question interface for use in other components
 export interface WhatsAppQuestion {
@@ -23,25 +25,16 @@ interface WhatsAppQuestionModalProps {
   questions?: WhatsAppQuestion[]; // Completely dynamic array
 }
 
-// Default fallbacks if no questions provided
-const DEFAULT_QUESTIONS: WhatsAppQuestion[] = [
-  { id: "order", text: "داواکردن", message: "سڵاو بەڕێز دەمەوێت داوا بکەم." },
-  { id: "price", text: "زانینی نرخ", message: "سڵاو بەڕێز، نرخی چەندە ؟" },
-  { id: "other", text: "پرسیارێکی تر", message: "سڵاو" },
-];
-
-const DEFAULT_TITLE = "پەیوەندی کردن";
-const DEFAULT_SUBTITLE = "پرسیارێک هەڵبژێرە";
-
 export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({
   isOpen,
   onClose,
   onSelectQuestion,
   whatsappUrl: _whatsappUrl, // Prefixed with _ to indicate intentionally unused (kept for future use)
-  title = DEFAULT_TITLE,
-  subtitle = DEFAULT_SUBTITLE,
-  questions = DEFAULT_QUESTIONS,
+  title,
+  subtitle,
+  questions,
 }: WhatsAppQuestionModalProps) {
+  const copy = usePublicLinktreeCopy();
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -72,7 +65,16 @@ export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({
     [onClose]
   );
 
-  const displayQuestions = questions && questions.length > 0 ? questions : DEFAULT_QUESTIONS;
+  const displayQuestions = (questions && questions.length > 0 ? questions : copy.questions).map((question) => {
+    const original = publicLinktreeCopy.ckb.questions.find((item) => item.id === question.id);
+    const localized = copy.questions.find((item) => item.id === question.id);
+    if (!original || !localized) return question;
+    return {
+      ...question,
+      text: question.text === original.text ? localized.text : question.text,
+      message: question.message === original.message ? localized.message : question.message,
+    };
+  });
 
   useModalKeyboard({
     isOpen,
@@ -109,19 +111,19 @@ export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({
                   id="whatsapp-modal-title"
                   className="text-base sm:text-lg md:text-xl font-bold text-slate-800 font-kurdish"
                 >
-                  {title}
+                  {title && title !== publicLinktreeCopy.ckb.modalTitle ? title : copy.modalTitle}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-kurdish">
-                  {subtitle}
+                  {subtitle && subtitle !== publicLinktreeCopy.ckb.modalSubtitle ? subtitle : copy.modalSubtitle}
                 </p>
               </div>
             </div>
-            <Tooltip content="داخستن" side="bottom">
+            <Tooltip content={copy.close} side="bottom">
               <button
                 type="button"
                 onClick={onClose}
                 className="shrink-0 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 active:scale-95 cursor-pointer"
-                aria-label="داخستن"
+                aria-label={copy.close}
               >
                 <X className="h-5 w-5" />
               </button>

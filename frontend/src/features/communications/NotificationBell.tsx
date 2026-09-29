@@ -10,6 +10,8 @@ import { formatNotificationDate } from "./format";
 import type { CommunicationNotification, NotificationInbox } from "./types";
 
 interface NotificationBellProps {
+  copy?: Partial<Record<"title" | "unread" | "deleteAll" | "close" | "markAllRead" | "delete" | "empty" | "emptyHint" | "loading", string>>;
+  dateLocale?: string;
   inbox: NotificationInbox;
   loading: boolean;
   onRefresh: () => void | Promise<unknown>;
@@ -28,6 +30,8 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({
+  copy,
+  dateLocale,
   inbox,
   loading,
   onRefresh,
@@ -106,14 +110,14 @@ export function NotificationBell({
         } as React.CSSProperties
       }
     >
-      <Tooltip content="ئاگادارییەکان" side="bottom">
+      <Tooltip content={copy?.title ?? "ئاگادارییەکان"} side="bottom">
         <DashboardHeaderActionButton
           onClick={() => {
             const nextOpen = !open;
             setOpen(nextOpen);
             if (nextOpen) void onRefresh();
           }}
-          aria-label="ئاگادارییەکان"
+          aria-label={copy?.title ?? "ئاگادارییەکان"}
           aria-expanded={open}
         >
           <Bell className="h-4 w-4 transition-transform group-hover:scale-110 sm:h-4 sm:w-4 md:h-5 md:w-5" />
@@ -134,45 +138,45 @@ export function NotificationBell({
               </div>
               <div>
                 <h2 className="text-sm font-black text-slate-700 dark:text-slate-200">
-                  ئاگادارییەکان
+                  {copy?.title ?? "ئاگادارییەکان"}
                 </h2>
                 <p className="mt-0.5 text-[11px] text-slate-400">
-                  {unreadTotal} بابەتی نەخوێندراو
+                  {unreadTotal} {copy?.unread ?? "بابەتی نەخوێندراو"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <Tooltip content="سڕینەوەی هەموو ئاگادارییەکان" side="bottom">
+              <Tooltip content={copy?.deleteAll ?? "سڕینەوەی هەموو ئاگادارییەکان"} side="bottom">
                 <button
                   type="button"
                   onClick={() => void onDeleteAll().catch(() => undefined)}
                   disabled={inbox.items.length === 0}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300 dark:disabled:hover:bg-transparent cursor-pointer"
-                  title="سڕینەوەی هەموو ئاگادارییەکان"
-                  aria-label="سڕینەوەی هەموو ئاگادارییەکان"
+                  title={copy?.deleteAll ?? "سڕینەوەی هەموو ئاگادارییەکان"}
+                  aria-label={copy?.deleteAll ?? "سڕینەوەی هەموو ئاگادارییەکان"}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </Tooltip>
-              <Tooltip content="داخستن" side="bottom">
+              <Tooltip content={copy?.close ?? "داخستن"} side="bottom">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200 cursor-pointer"
-                  title="داخستن"
-                  aria-label="داخستن"
+                  title={copy?.close ?? "داخستن"}
+                  aria-label={copy?.close ?? "داخستن"}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </Tooltip>
-              <Tooltip content="هەمووی خوێندراوەتەوە" side="bottom">
+              <Tooltip content={copy?.markAllRead ?? "هەمووی خوێندراوەتەوە"} side="bottom">
                 <button
                   type="button"
                   onClick={() => void onMarkAllRead().catch(() => undefined)}
                   disabled={inbox.unreadCount === 0}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200 dark:disabled:hover:bg-transparent cursor-pointer"
-                  title="هەمووی خوێندراوەتەوە"
-                  aria-label="هەمووی خوێندراوەتەوە"
+                  title={copy?.markAllRead ?? "هەمووی خوێندراوەتەوە"}
+                  aria-label={copy?.markAllRead ?? "هەمووی خوێندراوەتەوە"}
                 >
                   <CheckCheck className="h-4 w-4" />
                 </button>
@@ -183,7 +187,7 @@ export function NotificationBell({
           <div className="custom-scrollbar max-h-[min(36rem,72vh)] overflow-y-auto">
             {loading ? (
               <div className="m-3 overflow-hidden rounded-2xl border border-slate-100 dark:border-white/10">
-                <SkeletonNotificationList rows={4} />
+                <SkeletonNotificationList rows={4} loadingLabel={copy?.loading} />
               </div>
             ) : hasContent ? (
               <div className="divide-y divide-slate-100 dark:divide-white/5">
@@ -236,13 +240,13 @@ export function NotificationBell({
                           </p>
                         )}
                         <p className="mt-1.5 text-[10px] text-slate-400 dark:text-gray-500">
-                          {formatNotificationDate(item.createdAt)}
+                          {formatNotificationDate(item.createdAt, dateLocale)}
                         </p>
                       </div>
                       {canOpenAction(item) && (
                         <ChevronRight className="mt-1.5 h-3.5 w-3.5 shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-600" />
                       )}
-                      <Tooltip content="سڕینەوە" side="top">
+                      <Tooltip content={copy?.delete ?? "سڕینەوە"} side="top">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -250,7 +254,7 @@ export function NotificationBell({
                             void dismissNotification(item.id);
                           }}
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-300 opacity-0 transition-colors group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 dark:text-gray-600 dark:hover:bg-red-500/10 dark:hover:text-red-400 cursor-pointer"
-                          aria-label="سڕینەوە"
+                          aria-label={copy?.delete ?? "سڕینەوە"}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -266,10 +270,10 @@ export function NotificationBell({
                   <Inbox className="h-6 w-6 text-slate-300 dark:text-slate-600" />
                 </div>
                 <p className="mt-3 text-sm font-bold text-slate-400">
-                  هیچ ئاگادارییەک نییە
+                  {copy?.empty ?? "هیچ ئاگادارییەک نییە"}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  کاتێک ئاگادارییەکی نوێ هات، لێرەدا دەردەکەوێت
+                  {copy?.emptyHint ?? "کاتێک ئاگادارییەکی نوێ هات، لێرەدا دەردەکەوێت"}
                 </p>
               </div>
             )}
@@ -282,6 +286,7 @@ export function NotificationBell({
         onClose={() => setSelectedNotification(null)}
         title={selectedNotification?.title ?? ""}
         description={modalDescription}
+        closeLabel={copy?.close}
         createBusinessStyle
         sponsorKrdTheme={sponsorKrdModalTheme}
         accentColor={modalAccentColor}
@@ -293,7 +298,7 @@ export function NotificationBell({
                 onClick={() => setSelectedNotification(null)}
                 className="flex w-full flex-1 items-center justify-center gap-2 rounded-xl bg-linear-to-br from-slate-50 to-gray-50 px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:shadow sm:py-3 sm:text-sm"
               >
-                داخستن
+                {copy?.close ?? "داخستن"}
               </button>
               <button
                 type="button"
@@ -303,7 +308,7 @@ export function NotificationBell({
                 className="flex w-full flex-1 items-center justify-center gap-2 rounded-xl bg-linear-to-br from-rose-50 to-red-50 px-4 py-2.5 text-xs font-semibold text-rose-600 shadow-sm transition-all duration-300 hover:from-rose-100 hover:to-red-100 hover:shadow dark:from-rose-500/15 dark:to-red-500/15 dark:text-rose-400 dark:hover:from-rose-500/25 dark:hover:to-red-500/25 sm:py-3 sm:text-sm"
               >
                 <Trash2 className="h-4 w-4" />
-                سڕینەوە
+                {copy?.delete ?? "سڕینەوە"}
               </button>
               {canOpenAction(selectedNotification) && onOpenAction && (
                 <button
@@ -330,7 +335,7 @@ export function NotificationBell({
           )}
           {selectedNotification?.createdAt && (
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              {formatNotificationDate(selectedNotification.createdAt)}
+              {formatNotificationDate(selectedNotification.createdAt, dateLocale)}
             </p>
           )}
         </div>

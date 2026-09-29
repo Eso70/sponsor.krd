@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ComponentProps, type ReactNode } from "react";
 import Link from "next/link";
 import { Home, RefreshCw } from "lucide-react";
 import { PublicMarketingSiteShell } from "@/components/public/PublicMarketingSiteShell";
@@ -21,6 +21,13 @@ interface ErrorContentProps {
   errorDigest?: string;
   onReset?: () => void;
   showRetry?: boolean;
+  language?: string;
+  languageControl?: ReactNode;
+  copy?: Partial<Record<"errorCode" | "retry" | "home" | "linktrees" | "advertise" | "contact", string>> & {
+    footerDescription?: string;
+    footer?: ComponentProps<typeof BusinessPublicFooter>["copy"];
+    navbar?: ComponentProps<typeof PublicMarketingSiteShell>["navbarCopy"];
+  };
 }
 
 interface ErrorPageProps extends ErrorContentProps {
@@ -36,6 +43,7 @@ function ErrorContent({
   errorDigest,
   onReset,
   showRetry = false,
+  copy,
 }: ErrorContentProps) {
   const accentBackground = theme.accentBackground ?? theme.accentColor;
   const accentInk = theme.accentInk ?? "#ffffff";
@@ -83,7 +91,7 @@ function ErrorContent({
               background: `color-mix(in srgb, ${theme.accentColor} 20%, transparent)`,
             }}
           >
-            کۆدی هەڵە: {errorDigest}
+            {copy?.errorCode ?? "کۆدی هەڵە"}: {errorDigest}
           </p>
         ) : null}
       </div>
@@ -97,7 +105,7 @@ function ErrorContent({
             style={{ background: accentBackground, color: accentInk }}
           >
             <RefreshCw className="h-5 w-5" />
-            <span>هەوڵ بدەوە</span>
+            <span>{copy?.retry ?? "هەوڵ بدەوە"}</span>
           </button>
         ) : null}
 
@@ -108,7 +116,7 @@ function ErrorContent({
             style={{ background: accentBackground, color: accentInk }}
           >
             <Home className="h-5 w-5" />
-            <span>پەڕەی سەرەکی</span>
+            <span>{copy?.home ?? "پەڕەی سەرەکی"}</span>
           </Link>
         ) : null}
       </div>
@@ -121,6 +129,7 @@ export function ErrorPagePanel(props: ErrorContentProps) {
     <div
       role="alert"
       aria-live="polite"
+      lang={props.language}
       className="relative flex min-h-[calc(100vh-4rem)] w-full items-center justify-center px-4 py-16"
     >
       <ErrorContent {...props} />
@@ -137,7 +146,7 @@ export function ErrorPagePanel(props: ErrorContentProps) {
  * and it silently drifted off the grid backdrop and the shared dark surface.
  */
 export function ErrorPage(props: ErrorPageProps) {
-  const { theme, homeHref } = props;
+  const { theme, homeHref, copy } = props;
   const isBusiness = theme.scope === "business";
   const brandName = theme.name || (isBusiness ? "Business" : "Sponsor.krd");
   const footer = theme.footer;
@@ -168,11 +177,11 @@ export function ErrorPage(props: ErrorPageProps) {
   const navigationItems = isBusiness
     ? [
         {
-          label: "لینکترییەکان",
+          label: copy?.linktrees ?? "لینکترییەکان",
           href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.workspace}`,
         },
         ...(footer?.advertisingEnabled
-          ? [{ label: "ڕیکلام", href: "/advertising" }]
+          ? [{ label: copy?.advertise ?? "ڕیکلام", href: "/advertising" }]
           : []),
       ]
     : [];
@@ -181,7 +190,7 @@ export function ErrorPage(props: ErrorPageProps) {
   // surfaces do not advertise an account workflow.
   const primaryAction = isBusiness
     ? footer?.whatsappEnabled && whatsappHref
-      ? { label: "پەیوەندی", href: whatsappHref, external: true }
+      ? { label: copy?.contact ?? "پەیوەندی", href: whatsappHref, external: true }
       : null
     : null;
 
@@ -194,6 +203,9 @@ export function ErrorPage(props: ErrorPageProps) {
       navigationItems={navigationItems}
       primaryAction={primaryAction}
       emphasizeFirstNavItem={false}
+      navbarCopy={copy?.navbar}
+      language={props.language}
+      languageControl={props.languageControl}
       footer={
         theme.scope === "sponsor-krd" ? (
           <HomeFooter />
@@ -203,7 +215,7 @@ export function ErrorPage(props: ErrorPageProps) {
             accentColor={theme.accentColor}
             logo={theme.logo}
             description={
-              footer?.description || `${brandName}'s official public website.`
+              copy?.footerDescription || footer?.description || `${brandName}'s official public website.`
             }
             phone={footer?.phone ?? null}
             whatsappEnabled={footer?.whatsappEnabled ?? null}
@@ -211,6 +223,7 @@ export function ErrorPage(props: ErrorPageProps) {
             brandingRemoved={footer?.brandingRemoved ?? false}
             linktrees={footer?.linktrees ?? []}
             homeHref={homeHref}
+            copy={copy?.footer}
           />
         )
       }

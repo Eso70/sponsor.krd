@@ -145,4 +145,10 @@ describe("ManagementTable pagination", () => {
     expect(screen.getByText("هیچ داتایەک نییە")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("uses caller copy for the mobile and desktop no-results fallback", () => {
+    renderTable({ data: [], noDataLabel: "لا توجد نتائج" });
+    expect(screen.getAllByText("لا توجد نتائج")).toHaveLength(2);
+    expect(screen.queryByText("هیچ داتایەک نەدۆزرایەوە")).not.toBeInTheDocument();
+  });
 });

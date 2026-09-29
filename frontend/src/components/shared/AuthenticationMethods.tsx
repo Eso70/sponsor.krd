@@ -14,6 +14,7 @@ interface AuthenticationMethodsProps {
   emailActionLabel?: string;
   emailCodeTitle?: string;
   emailVerifyActionLabel?: string;
+  copy?: Partial<Record<"google" | "or" | "remember" | "changeEmail" | "codeSent" | "loginCode" | "resend" | "resendIn" | "emailAddress" | "error", string>>;
 }
 
 export function AuthenticationMethods({
@@ -25,6 +26,7 @@ export function AuthenticationMethods({
   emailActionLabel,
   emailCodeTitle,
   emailVerifyActionLabel,
+  copy,
 }: AuthenticationMethodsProps) {
   const [remember, setRemember] = useState(true);
   const googleUrl = useMemo(() => {
@@ -34,11 +36,11 @@ export function AuthenticationMethods({
 
   return (
     <div className="space-y-5">
-      <GoogleAuthenticationButton href={googleUrl} />
+      <GoogleAuthenticationButton href={googleUrl} label={copy?.google} />
       <div className="flex items-center gap-3" aria-hidden="true">
         <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          or
+          {copy?.or ?? "or"}
         </span>
         <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
       </div>
@@ -50,13 +52,14 @@ export function AuthenticationMethods({
         actionLabel={emailActionLabel}
         codeTitle={emailCodeTitle}
         verifyActionLabel={emailVerifyActionLabel}
+        copy={copy}
       />
       {rememberDevice ? (
         <CheckboxField
           bare
           checked={remember}
           onChange={setRemember}
-          label="Keep me signed in on this device"
+          label={copy?.remember ?? "Keep me signed in on this device"}
         />
       ) : null}
     </div>

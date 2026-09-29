@@ -3,11 +3,12 @@
 import { useCallback } from "react";
 import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
 import { useTheme } from "@/lib/contexts/ThemeProvider";
+import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
+import { businessMessages } from "@/features/business/i18n/messages";
 import type { CommunicationNotification } from "./types";
 import { NotificationBell } from "./NotificationBell";
 import {
   isSafeNotificationActionUrl,
-  notificationActionLabel,
 } from "./notification-action";
 import { useNotificationInbox } from "./useNotificationInbox";
 
@@ -22,7 +23,9 @@ function canOpenBusinessNotification(notification: CommunicationNotification) {
 
 export function BusinessCommunicationBell() {
   const { color: businessTheme } = useTheme();
-  const notifications = useNotificationInbox(BUSINESS_COMMUNICATIONS_ENDPOINT);
+  const { locale } = useBusinessLocale();
+  const copy = businessMessages[locale].Notifications;
+  const notifications = useNotificationInbox(BUSINESS_COMMUNICATIONS_ENDPOINT, copy);
 
   useRegisterBusinessDashboardRefresh("notifications", () =>
     notifications.load(true),
@@ -49,6 +52,8 @@ export function BusinessCommunicationBell() {
 
   return (
     <NotificationBell
+      copy={copy}
+      dateLocale={locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ"}
       inbox={notifications.inbox}
       loading={notifications.loading}
       onRefresh={notifications.load}
@@ -56,12 +61,12 @@ export function BusinessCommunicationBell() {
       onDismiss={notifications.dismiss}
       onMarkAllRead={notifications.markAllRead}
       onDeleteAll={notifications.deleteAll}
-      modalDescription="ئاگادارییەکانی پلاتفۆرم"
+      modalDescription={copy.description}
       modalAccentColor={businessTheme.primary}
       sponsorKrdModalTheme={false}
       canOpenAction={canOpenBusinessNotification}
       onOpenAction={openAction}
-      actionLabel={notificationActionLabel}
+      actionLabel={(notification) => notification.sourceType === "conversation" ? copy.reply : copy.view}
     />
   );
 }

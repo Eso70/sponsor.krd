@@ -47,6 +47,7 @@ export const SPONSOR_CATEGORY_THEME: Record<SponsorCategory, AdvertisingPriceTab
 };
 
 interface AdvertisingPriceTableProps {
+  copy?: Partial<Record<"price" | "views" | "remove", string>>;
   rows: readonly AdvertisingPriceRow[];
   theme: AdvertisingPriceTableTheme;
   /** Tighter padding/type scale, and rows become a flat list instead of a padded card grid. Only affects the interactive picker below. */
@@ -69,6 +70,7 @@ interface AdvertisingPriceTableProps {
 const defaultFormatPrice = (price: number) => `${price.toLocaleString("en-US")} IQD`;
 
 export function AdvertisingPriceTable({
+  copy,
   rows,
   theme,
   compact = false,
@@ -87,7 +89,7 @@ export function AdvertisingPriceTable({
     return (
       <div
         role="radiogroup"
-        aria-label="نرخ و بینەر"
+        aria-label={`${copy?.price ?? "نرخ"} ${copy?.views ?? "بینەر"}`}
         className={cn("mx-auto grid w-full max-w-lg grid-cols-2 gap-1.5 sm:gap-2", className)}
       >
         {rows.map((row) => {
@@ -153,8 +155,8 @@ export function AdvertisingPriceTable({
           compact ? "px-3 py-2" : "px-4 py-2.5",
         )}
       >
-        <span className={cn("font-black", theme.text, compact ? "text-[10px]" : "text-xs")}>نرخ</span>
-        <span className={cn("font-black", theme.text, compact ? "text-[10px]" : "text-xs")}>بینەر</span>
+        <span className={cn("font-black", theme.text, compact ? "text-[10px]" : "text-xs")}>{copy?.price ?? "نرخ"}</span>
+        <span className={cn("font-black", theme.text, compact ? "text-[10px]" : "text-xs")}>{copy?.views ?? "بینەر"}</span>
       </div>
 
       <div className={compact ? "divide-y divide-black/6 dark:divide-white/8" : "space-y-1.5 p-2 sm:p-3"}>
@@ -172,7 +174,7 @@ export function AdvertisingPriceTable({
                   value={row.price}
                   step={1000}
                   clearOnFocus
-                  aria-label="نرخ"
+                  aria-label={copy?.price ?? "نرخ"}
                   onValueChange={(price) => onEditPrice?.(row.id, price)}
                   className="w-full min-w-0 bg-transparent text-center text-sm font-bold text-slate-700 outline-none dark:text-white/85"
                 />
@@ -186,7 +188,7 @@ export function AdvertisingPriceTable({
               {editable ? (
                 <input
                   value={row.views}
-                  aria-label="ڕەزی بینەر"
+                  aria-label={copy?.views ?? "ڕەزی بینەر"}
                   onChange={(event) => onEditViews?.(row.id, event.target.value)}
                   placeholder="25K – 35K"
                   className={cn(
@@ -203,7 +205,7 @@ export function AdvertisingPriceTable({
             </ViewsCell>
             {editable && (
               <div className="flex shrink-0 items-center pe-2">
-                <IconActionButton label="سڕینەوەی پاکێج" tone="danger" onClick={() => onRemove?.(row.id)}>
+                <IconActionButton label={copy?.remove ?? "سڕینەوەی پاکێج"} tone="danger" onClick={() => onRemove?.(row.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </IconActionButton>
               </div>

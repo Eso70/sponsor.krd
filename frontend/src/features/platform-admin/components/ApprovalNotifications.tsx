@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -20,6 +21,8 @@ import {
   PendingApprovalNotifications,
   type ApprovalNotification,
 } from "./PendingApprovalNotifications";
+import { useSettingsText } from "./use-settings-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 const PLATFORM_COMMUNICATIONS_ENDPOINT = "/api/platform/communications";
 
@@ -41,8 +44,17 @@ export interface ApprovalNotificationsHandle {
 
 export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
   function ApprovalNotifications(_props, ref) {
+    const t = useSettingsText();
+    const { locale } = usePlatformLocale();
+    const tRef = useRef(t);
+    useEffect(() => { tRef.current = t; }, [t]);
     const notifications = useNotificationInbox(
       PLATFORM_COMMUNICATIONS_ENDPOINT,
+      locale !== "ckb" ? {
+        updateFailed: t("نوێکردنەوە سەرکەوتوو نەبوو"),
+        deleteFailed: t("سڕینەوە سەرکەوتوو نەبوو"),
+        deleteAllFailed: t("سڕینەوەی هەمووی سەرکەوتوو نەبوو"),
+      } : undefined,
     );
     const [approvals, setApprovals] = useState<ApprovalNotification[]>([]);
     const [approvalsLoading, setApprovalsLoading] = useState(true);
@@ -66,7 +78,7 @@ export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
           setApprovals(pending);
         }
       } catch {
-        if (showError) toast.error("بارکردنی ئاگادارییەکان سەرکەوتوو نەبوو");
+        if (showError) toast.error(tRef.current("بارکردنی ئاگادارییەکان سەرکەوتوو نەبوو"));
       } finally {
         setApprovalsLoading(false);
       }
@@ -79,7 +91,7 @@ export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
         if (reviewingId) return;
         const rejectionReason =
           action === "reject"
-            ? window.prompt("هۆکاری ڕەتکردنەوە")?.trim()
+            ? window.prompt(t("هۆکاری ڕەتکردنەوە"))?.trim()
             : undefined;
         if (action === "reject" && !rejectionReason) return;
 
@@ -99,15 +111,15 @@ export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
             current.filter((item) => item.id !== approval.id),
           );
           toast.success(
-            action === "approve" ? "داواکاری پەسەندکرا" : "داواکاری ڕەتکرایەوە",
+            t(action === "approve" ? "داواکاری پەسەندکرا" : "داواکاری ڕەتکرایەوە"),
           );
         } catch {
-          toast.error("پێداچوونەوەی داواکاری سەرکەوتوو نەبوو");
+          toast.error(t("پێداچوونەوەی داواکاری سەرکەوتوو نەبوو"));
         } finally {
           setReviewingId(null);
         }
       },
-      [reviewingId],
+      [reviewingId, t],
     );
 
     const refresh = useCallback(
@@ -134,6 +146,18 @@ export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
 
     return (
       <NotificationBell
+        copy={{
+          title: t("ئاگادارییەکان"),
+          loading: locale === "ar" ? "جارٍ تحميل الإشعارات" : locale === "en" ? "Loading notifications" : "ئاگادارییەکان بار دەکرێن",
+          unread: t("بابەتی نەخوێندراو"),
+          deleteAll: t("سڕینەوەی هەموو ئاگادارییەکان"),
+          close: t("داخستن"),
+          markAllRead: t("هەمووی خوێندراوەتەوە"),
+          delete: t("سڕینەوە"),
+          empty: t("هیچ ئاگادارییەک نییە"),
+          emptyHint: t("کاتێک ئاگادارییەکی نوێ هات، لێرەدا دەردەکەوێت"),
+        }}
+        dateLocale={locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ"}
         inbox={notifications.inbox}
         loading={notifications.loading || approvalsLoading}
         onRefresh={refresh}
@@ -153,10 +177,10 @@ export const ApprovalNotifications = forwardRef<ApprovalNotificationsHandle>(
             />
           ) : null
         }
-        modalDescription="ئاگادارییەکانی پلاتفۆرم"
+        modalDescription={t("ئاگادارییەکانی پلاتفۆرم")}
         canOpenAction={canOpenPlatformNotification}
         onOpenAction={openAction}
-        actionLabel={notificationActionLabel}
+        actionLabel={(notification) => t(notificationActionLabel(notification))}
       />
     );
   },

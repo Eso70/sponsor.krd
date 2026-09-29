@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { BusinessHero } from "@/components/business/BusinessHero";
 import { BusinessPublicLinktreesSection } from "@/components/business/BusinessPublicLinktreesSection";
 import type { PublicBusinessLinktree } from "@/components/business/BusinessPublicLinktreeCard";
@@ -8,6 +11,9 @@ import {
 } from "@/components/business/business-landing-sections";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
+import { PublicBusinessLanguageToggle } from "@/features/business/components/PublicBusinessLanguageToggle";
 
 interface BusinessData {
   id: string;
@@ -32,10 +38,14 @@ function whatsappHref(value?: string | null): string | null {
 export function BusinessLanding({
   business,
   linktrees,
+  initialLocale = "ckb",
 }: {
   business: BusinessData;
   linktrees: PublicBusinessLinktree[];
+  initialLocale?: BusinessLocale;
 }) {
+  const [locale, setLocale] = useState(initialLocale);
+  const copy = businessPublicCopy[locale];
   const accentColor = parseWebsiteColor(
     business.website_color || SPONSOR_KRD_ACCENT_COLOR,
   ).primary;
@@ -52,24 +62,26 @@ export function BusinessLanding({
       }
       accentColor={accentColor}
       homeHref={BUSINESS_LANDING_SECTION_HREFS.home}
+      language={locale}
+      languageControl={<PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />}
+      navbarCopy={copy.navbar}
       navigationItems={[
         ...(linktrees.length > 0
-          ? [{ label: "لینکترییەکان", href: BUSINESS_LANDING_SECTION_HREFS.workspace }]
+          ? [{ label: copy.nav.pages, href: BUSINESS_LANDING_SECTION_HREFS.workspace }]
           : []),
         ...(business.advertising_enabled
-          ? [{ label: "ڕیکلام", href: "/advertising" }]
+          ? [{ label: copy.nav.advertising, href: "/advertising" }]
           : []),
       ]}
       action={
         contactHref
-          ? { label: "پەیوەندی", href: contactHref, external: true }
+          ? { label: copy.nav.contact, href: contactHref, external: true }
           : null
       }
       footer={{
         logo: business.logo || business.default_avatar,
-        description:
-          business.footer_text?.trim() ||
-          `${business.name}'s official public website.`,
+        description: business.footer_text?.trim() || undefined,
+        copy: copy.footer,
         phone: business.footer_phone,
         whatsappEnabled: business.whatsapp_enabled,
         advertisingEnabled: Boolean(business.advertising_enabled),
@@ -80,9 +92,9 @@ export function BusinessLanding({
         })),
       }}
     >
-      <BusinessHero accentColor={accentColor} />
+      <BusinessHero accentColor={accentColor} locale={locale} />
       {linktrees.length > 0 && (
-        <BusinessPublicLinktreesSection linktrees={linktrees} />
+        <BusinessPublicLinktreesSection linktrees={linktrees} locale={locale} />
       )}
     </BusinessPublicSiteShell>
   );

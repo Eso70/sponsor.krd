@@ -14,6 +14,7 @@ import {
 } from "@/features/platform-admin/utils/business-plan";
 import type { PlatformBusiness as Business } from "@linktree/types";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 const PILL_BASE =
   "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-none";
@@ -57,6 +58,7 @@ export const BusinessMetaBadges = memo(function BusinessMetaBadges({
   item,
   className = "",
 }: BusinessMetaBadgesProps) {
+  const copy = usePlatformCopy();
   const isActive = item.status === "active";
   const ageBadge = getRecordAgeBadge(item.created_at);
   // -1 is the unlimited sentinel the entitlement service uses.
@@ -66,11 +68,11 @@ export const BusinessMetaBadges = memo(function BusinessMetaBadges({
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       <BusinessPill
-        label={isActive ? "چالاک" : "ڕاگیراو"}
+        label={isActive ? copy.active : copy.suspended}
         title={
           isActive
-            ? "بزنسەکە چالاکە و پەڕەکانی بەردەستن"
-            : "بزنسەکە ڕاگیراوە و پەڕەکانی بەردەست نین"
+            ? copy.activeDescription
+            : copy.suspendedDescription
         }
         className={
           isActive
@@ -86,27 +88,27 @@ export const BusinessMetaBadges = memo(function BusinessMetaBadges({
         }
       />
       <BusinessPill
-        label={getBusinessPlanLabel(item)}
-        title={`پلانی ئێستا: ${getBusinessPlanLabel(item)}`}
+        label={getBusinessPlanLabel(item) === "No plan" ? copy.noPlan : getBusinessPlanLabel(item)}
+        title={`${copy.currentPlan}: ${getBusinessPlanLabel(item) === "No plan" ? copy.noPlan : getBusinessPlanLabel(item)}`}
         className={getBusinessPlanBadgeClasses(item.plan)}
       />
       <BusinessPill
-        label={`${pageAllowance} پەڕە`}
-        title="زۆرترین ژمارەی پەڕەی لینکتری کە پلانەکە ڕێگەی پێدەدات"
+        label={`${pageAllowance} ${copy.pages}`}
+        title={copy.pageAllowance}
         className="border-slate-200 bg-slate-50 text-slate-600 dark:border-white/15 dark:bg-white/10 dark:text-slate-300"
         icon={<Layers className="h-3 w-3" />}
       />
       {ageBadge && (
         <BusinessPill
-          label={ageBadge.label}
-          title={ageBadge.title}
+          label={ageBadge.tier === "new" ? copy.ageNew : ageBadge.tier === "growing" ? copy.ageGrowing : copy.ageOld}
+          title={ageBadge.tier === "new" ? copy.ageNewDescription : ageBadge.tier === "growing" ? copy.ageGrowingDescription : copy.ageOldDescription}
           className={ageBadge.className}
         />
       )}
       {!item.subdomain && (
         <BusinessPill
-          label="بێ سەب دۆمەین"
-          title="بزنسەکە هێشتا سەب دۆمەینی نییە، بۆیە پەڕەکانی بە ناونیشانی خۆی ناکرێنەوە"
+          label={copy.noSubdomain}
+          title={copy.noSubdomainDescription}
           className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300"
           icon={<TriangleAlert className="h-3 w-3" />}
         />

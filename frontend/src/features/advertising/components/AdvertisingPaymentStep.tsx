@@ -8,6 +8,7 @@ import { copyToClipboard } from "@/lib/utils/clipboard";
 import { Tooltip } from "@/components/shared/Tooltip";
 import type { PaymentProvider } from "../journey-types";
 import type { AdvertisingPaymentProvider } from "../types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 // Every provider that ships a real logo under /images/payment-providers.
 // "cash"/"bankTransfer"/"custom" from the source catalog have no logo asset,
@@ -34,6 +35,7 @@ interface AdvertisingPaymentStepProps {
 }
 
 export function AdvertisingPaymentStep({ selected, onChange, providers }: AdvertisingPaymentStepProps) {
+  const t = usePublicAdvertisingText();
   const list = providers;
 
   // Better to say the business has not published its payment details than to
@@ -45,7 +47,7 @@ export function AdvertisingPaymentStep({ selected, onChange, providers }: Advert
           className="mx-auto max-w-md text-center text-sm leading-7 text-black/48 dark:text-white/48"
           dir="auto"
         >
-          هێشتا شێوازی پارەدان دانەنراوە. تکایە پەیوەندی بە خاوەنی خزمەتگوزارییەکەوە بکە.
+          {t("هێشتا شێوازی پارەدان دانەنراوە. تکایە پەیوەندی بە خاوەنی خزمەتگوزارییەکەوە بکە.")}
         </p>
       </div>
     );
@@ -54,17 +56,17 @@ export function AdvertisingPaymentStep({ selected, onChange, providers }: Advert
   return (
     <div className="w-full">
       <p className="mb-5 text-center text-sm leading-7 text-black/48 dark:text-white/48" dir="auto">
-        شێوازی پارەدان هەڵبژێرە
+        {t("شێوازی پارەدان هەڵبژێرە")}
       </p>
-      <div role="radiogroup" aria-label="شێوازی پارەدان" className="mx-auto flex w-full max-w-md flex-col gap-2.5">
+      <div role="radiogroup" aria-label={t("شێوازی پارەدان")} className="mx-auto flex w-full max-w-md flex-col gap-2.5">
         {list.map((provider) => {
           const isSelected = selected === provider.name;
           const logo = provider.logoUrl || PROVIDER_LOGOS[provider.name];
 
           const copyPhone = async () => {
             const copied = await copyToClipboard(provider.phone);
-            if (copied) toast.success("ژمارە کۆپی کرا");
-            else toast.error("کۆپی نەکرا");
+            if (copied) toast.success(t("ژمارە کۆپی کرا"));
+            else toast.error(t("کۆپی نەکرا"));
           };
 
           return (
@@ -114,15 +116,15 @@ export function AdvertisingPaymentStep({ selected, onChange, providers }: Advert
                   <span className="truncate text-xs tabular-nums text-black/48 dark:text-white/48" dir="ltr">
                     {provider.phone}
                   </span>
-                  <Tooltip content="کۆپیکردنی ژمارە" side="top">
+                  <Tooltip content={t("کۆپیکردنی ژمارە")} side="top">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
                         copyPhone();
                       }}
-                      aria-label={`کۆپیکردنی ژمارەی ${provider.name}`}
-                      title="کۆپیکردنی ژمارە"
+                      aria-label={`${t("کۆپیکردنی ژمارەی")} ${provider.name}`}
+                      title={t("کۆپیکردنی ژمارە")}
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-black/40 transition-colors hover:bg-black/[0.06] hover:text-black/70 dark:text-white/40 dark:hover:bg-white/[0.1] dark:hover:text-white/80 cursor-pointer"
                     >
                       <Copy className="h-3 w-3" />

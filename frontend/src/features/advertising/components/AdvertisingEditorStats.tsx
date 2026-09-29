@@ -6,9 +6,12 @@ import type { AdvertisingServiceConfig } from "../types";
 
 export function AdvertisingEditorStats({
   config,
+  translate = (text) => text,
 }: {
   config: AdvertisingServiceConfig;
+  translate?: (text: string) => string;
 }) {
+  const t = translate;
   const stats = useMemo(() => {
     const sections = Object.values(config.sections);
     return {
@@ -22,15 +25,15 @@ export function AdvertisingEditorStats({
 
   return (
     <StatCardGrid columns={4}>
-      <StatCard icon={Wallet} label="شێوازی پارەدان" value={stats.providers} color="green" />
+      <StatCard icon={Wallet} label={t("شێوازی پارەدان")} value={stats.providers} color="green" />
       <StatCard
         icon={Eye}
-        label="بەشە دەرکەوتووەکان"
+        label={t("بەشە دەرکەوتووەکان")}
         value={`${stats.visibleSections} / ${stats.totalSections}`}
         color="purple"
       />
-      <StatCard icon={Package} label="پاکێجەکان" value={stats.packages} color="blue" />
-      <StatCard icon={TrendingUp} label="ئەنجامەکان" value={stats.results} color="orange" />
+      <StatCard icon={Package} label={t("پاکێجەکان")} value={stats.packages} color="blue" />
+      <StatCard icon={TrendingUp} label={t("ئەنجامەکان")} value={stats.results} color="orange" />
     </StatCardGrid>
   );
 }

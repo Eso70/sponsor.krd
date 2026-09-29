@@ -28,6 +28,7 @@ export interface StatCardProps {
   label: string;
   live?: boolean;
   loading?: boolean;
+  loadingLabel?: string;
   subtitle?: string;
   value: number | string;
   variant?: StatCardVariant;
@@ -141,13 +142,14 @@ export const StatCard = memo(function StatCard({
   label,
   live = false,
   loading = false,
+  loadingLabel = "بارکردن",
   subtitle,
   value,
   variant = "standard",
 }: StatCardProps) {
   if (loading) {
     return (
-      <div role="status" aria-label="بارکردن">
+      <div role="status" aria-label={loadingLabel}>
         <SkeletonStatCard
           className={className}
           compact={compact}

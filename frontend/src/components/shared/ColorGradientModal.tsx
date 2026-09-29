@@ -24,7 +24,7 @@ export interface ColorGradientModalProps {
   title?: string;
   subtitle?: string;
   allowGradient?: boolean;
-  copy?: Partial<Record<"title" | "subtitle" | "unsupported" | "picked" | "pickFailed" | "solid" | "gradient" | "first" | "second" | "color" | "eyedropper" | "pick" | "direction" | "leftRight" | "rightLeft" | "topBottom" | "bottomTop" | "diagonal" | "diagonalReverse" | "topRight" | "topLeft" | "radial" | "quickColors" | "pickedColors" | "apply", string>>;
+  copy?: Partial<Record<"title" | "subtitle" | "unsupported" | "picked" | "pickFailed" | "solid" | "gradient" | "first" | "second" | "color" | "eyedropper" | "pick" | "direction" | "leftRight" | "rightLeft" | "topBottom" | "bottomTop" | "diagonal" | "diagonalReverse" | "topRight" | "topLeft" | "radial" | "quickColors" | "pickedColors" | "apply" | "close", string>>;
 }
 
 declare global {
@@ -186,13 +186,13 @@ export function ColorGradientModal({
   onClose,
   solidFallback = "#000000",
   gradientFallback = "#0066ff",
-  title = "ڕەنگی ئارەزوومەندانەیە",
-  subtitle = "ڕەنگی تاک یان گرادیێنت دروست بکە",
+  title,
+  subtitle,
   allowGradient = true,
   copy,
 }: ColorGradientModalProps) {
-  title = copy?.title ?? title;
-  subtitle = copy?.subtitle ?? subtitle;
+  const modalTitle = title ?? copy?.title ?? "ڕەنگی ئارەزوومەندانەیە";
+  const modalSubtitle = subtitle ?? copy?.subtitle ?? "ڕەنگی تاک یان گرادیێنت دروست بکە";
   const [mounted, setMounted] = useState(false);
   const parsedInitial = useMemo(
     () => parseColorValue(value, solidFallback, gradientFallback),
@@ -327,8 +327,8 @@ export function ColorGradientModal({
                 />
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-700">{title}</h2>
-                <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{subtitle}</p>
+              <h2 className="text-base sm:text-lg font-bold text-slate-700">{modalTitle}</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{modalSubtitle}</p>
               </div>
             </div>
 
@@ -336,7 +336,7 @@ export function ColorGradientModal({
               type="button"
               onClick={onClose}
               className="shrink-0 rounded-xl p-1.5 sm:p-2 bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 text-slate-500 hover:text-slate-700 transition-all duration-300 border border-slate-100 shadow-sm hover:shadow"
-              aria-label="Close"
+              aria-label={copy?.close ?? "داخستن"}
             >
               <X className="h-4 w-4" />
             </button>

@@ -79,6 +79,7 @@ interface LinktreesGridProps {
   sponsorKrdTheme?: boolean;
   listCopy?: Partial<LinktreeListCopy>;
   profitCopy?: Partial<CampaignProfitCopy>;
+  calendarLocale?: "ckb" | "ar" | "en";
 }
 
 function getPublicIdentifier(item: Linktree): string {
@@ -486,6 +487,7 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   sponsorKrdTheme = false,
   listCopy,
   profitCopy,
+  calendarLocale,
 }: LinktreesGridProps) {
   const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
@@ -524,7 +526,7 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   // Cards outlined where the real ones will land, so the grid does not jump
   // when they arrive.
   if (isLoading)
-    return <SkeletonLinktreeGrid count={6} showPageMeta={displaysPageMeta} />;
+    return <SkeletonLinktreeGrid count={6} showPageMeta={displaysPageMeta} loadingLabel={labels.loadingCards} />;
 
   if (data.length === 0) {
     return (
@@ -542,6 +544,11 @@ export const LinktreesGrid = memo(function LinktreesGrid({
         data={data}
         getItemKey={(item) => item.id}
         pagination={pagination}
+        paginationCopy={{
+          of: labels.paginationOf,
+          previous: labels.paginationPrevious,
+          next: labels.paginationNext,
+        }}
         desktopColumns={3}
         renderItem={(item) => (
           <LinktreeCard
@@ -575,6 +582,7 @@ export const LinktreesGrid = memo(function LinktreesGrid({
         pageName={profitTarget?.name || ""}
         sponsorKrdTheme={sponsorKrdTheme}
         copy={profitCopy}
+        calendarLocale={calendarLocale}
       />
     </>
   );

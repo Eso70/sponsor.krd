@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SkeletonTable } from "@/components/shared/Skeleton";
 import { TablePagination } from "@/components/shared/TablePagination";
+import type { TablePaginationCopy } from "@/components/shared/TablePagination";
 
 /**
  * The one list treatment every management screen uses.
@@ -94,6 +95,9 @@ export interface ManagementTableProps<T> {
   minWidth?: string;
   pagination?: ManagementTablePagination;
   skeletonRows?: number;
+  loadingLabel?: string;
+  noDataLabel?: string;
+  paginationCopy?: Partial<TablePaginationCopy>;
   className?: string;
 }
 
@@ -106,6 +110,7 @@ export interface ManagementTableProps<T> {
 export function useManagementPagination<T>(
   data: T[],
   pagination?: ManagementTablePagination,
+  paginationCopy?: Partial<TablePaginationCopy>,
 ) {
   const [clientPage, setClientPage] = useState(1);
   const clientPageSize =
@@ -132,6 +137,7 @@ export function useManagementPagination<T>(
         totalItems={data.length}
         totalPages={clientTotalPages}
         onPageChange={setClientPage}
+        copy={paginationCopy}
       />
     ) : pagination?.mode === "server" ? (
       <TablePagination
@@ -140,6 +146,7 @@ export function useManagementPagination<T>(
         totalItems={pagination.totalItems}
         totalPages={pagination.totalPages}
         onPageChange={pagination.onPageChange}
+        copy={paginationCopy}
       />
     ) : null;
 
@@ -157,16 +164,19 @@ export function ManagementTable<T>({
   minWidth = "min-w-[600px]",
   pagination,
   skeletonRows = 6,
+  loadingLabel,
+  noDataLabel = "هیچ داتایەک نەدۆزرایەوە",
+  paginationCopy,
   className = "",
 }: ManagementTableProps<T>) {
-  const { visibleData, footer } = useManagementPagination(data, pagination);
+  const { visibleData, footer } = useManagementPagination(data, pagination, paginationCopy);
 
   const columnCount = columns.length;
 
   if (isLoading) {
     return (
       <div className={`w-full ${className}`} dir="ltr">
-        <SkeletonTable rows={skeletonRows} columns={columnCount} />
+        <SkeletonTable rows={skeletonRows} columns={columnCount} loadingLabel={loadingLabel} />
       </div>
     );
   }
@@ -189,7 +199,7 @@ export function ManagementTable<T>({
       <div className="md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10">
         {visibleData.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            هیچ داتایەک نەدۆزرایەوە
+            {noDataLabel}
           </div>
         ) : (
           visibleData.map((item) => (
@@ -222,7 +232,7 @@ export function ManagementTable<T>({
                   colSpan={columnCount}
                   className="px-4 py-8 text-center text-xs text-gray-500 sm:text-sm"
                 >
-                  هیچ داتایەک نەدۆزرایەوە
+                  {noDataLabel}
                 </td>
               </tr>
             ) : (

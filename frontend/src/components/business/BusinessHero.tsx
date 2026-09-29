@@ -1,14 +1,17 @@
 import { BusinessMobileShowcase } from "@/components/business/BusinessMobileShowcase";
 import { PublicMarketingHero } from "@/components/public/PublicMarketingHero";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
 
-export function BusinessHero({ accentColor }: { accentColor: string }) {
+export function BusinessHero({ accentColor, locale = "ckb" }: { accentColor: string; locale?: BusinessLocale }) {
+  const copy = businessPublicCopy[locale];
   return (
     <PublicMarketingHero
       accentColor={accentColor}
-      title="لینکترییەکانت بە ئاسانی دروست بکە و بەڕێوەیان ببە"
-      description="پەڕەیەکی گشتی بۆ لینکەکانت دروست بکە و هەموویان لە یەک شوێندا ڕێک بخە."
+      title={copy.hero.title}
+      description={copy.hero.description}
     >
-      <BusinessMobileShowcase accentColor={accentColor} />
+      <BusinessMobileShowcase accentColor={accentColor} copy={copy} />
     </PublicMarketingHero>
   );
 }

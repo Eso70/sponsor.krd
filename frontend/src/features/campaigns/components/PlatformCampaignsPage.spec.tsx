@@ -6,10 +6,37 @@ import {
   summarizeCampaigns,
 } from "./PlatformCampaignsPage";
 import { INITIAL_MOCK_CAMPAIGNS } from "../mock-data";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+
+function renderCampaigns(locale: "ckb" | "ar" = "ckb") {
+  return render(<PlatformLocaleProvider initialLocale={locale}><PlatformCampaignsPage /></PlatformLocaleProvider>);
+}
 
 describe("PlatformCampaignsPage", () => {
+  it("localizes the campaign catalogue and table for Arabic administrators", () => {
+    renderCampaigns("ar");
+
+    expect(screen.getByText("إجمالي الحملات")).toBeInTheDocument();
+    expect(screen.getByText("إدارة الحملات")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "عرض الجدول" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "عرض الجدول" }));
+    expect(screen.getByRole("columnheader", { name: "الفيديو" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "الميزانية / الإنفاق" })).toBeInTheDocument();
+  });
+
+  it("localizes the creation wizard for Arabic administrators", () => {
+    renderCampaigns("ar");
+    fireEvent.click(screen.getByRole("button", { name: "حملة جديدة" }));
+
+    const dialog = screen.getByRole("dialog", { name: "إنشاء حملة جديدة على تيك توك" });
+    expect(within(dialog).getByText("هيكل الحملة")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/اسم الحملة والمجموعة الإعلانية والإعلان/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("radio", { name: "الوصول" })).toBeInTheDocument();
+    expect(within(dialog).getByText("التحسين والمزايدة")).toBeInTheDocument();
+  });
+
   it("renders the shared six-card campaign summary", () => {
-    render(<PlatformCampaignsPage />);
+    renderCampaigns();
 
     expect(screen.getByText("کۆی کەمپەینەکان")).toBeInTheDocument();
     expect(screen.getByText(/کەمپەینی چالاک/)).toBeInTheDocument();
@@ -24,7 +51,7 @@ describe("PlatformCampaignsPage", () => {
   });
 
   it("switches between the campaign grid and shared management table", () => {
-    render(<PlatformCampaignsPage />);
+    renderCampaigns();
 
     fireEvent.click(screen.getByRole("button", { name: "بینینی خشتە" }));
 
@@ -37,7 +64,7 @@ describe("PlatformCampaignsPage", () => {
   });
 
   it("opens the frontend-only campaign creation flow", () => {
-    render(<PlatformCampaignsPage />);
+    renderCampaigns();
 
     fireEvent.click(screen.getByRole("button", { name: "کەمپەینی نوێ" }));
 
@@ -46,10 +73,10 @@ describe("PlatformCampaignsPage", () => {
     });
     expect(createDialog).toBeInTheDocument();
     expect(
-      within(createDialog).getByLabelText(/Campaign, Ad Group & Ad name/),
+      within(createDialog).getByLabelText(/ناوی کەمپەین، گرووپی ڕیکلام و ڕیکلام/),
     ).toHaveValue("");
     expect(
-      within(createDialog).getByRole("radio", { name: /Reach/ }),
+      within(createDialog).getByRole("radio", { name: /گەیشتن/ }),
     ).toHaveAttribute("aria-checked", "true");
     expect(
       within(createDialog).queryByText(
@@ -58,63 +85,63 @@ describe("PlatformCampaignsPage", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.change(
-      within(createDialog).getByLabelText(/Campaign, Ad Group & Ad name/),
+      within(createDialog).getByLabelText(/ناوی کەمپەین، گرووپی ڕیکلام و ڕیکلام/),
       { target: { value: "September campaign" } },
     );
 
     expect(
-      within(createDialog).getByText("Optimization and bidding"),
+      within(createDialog).getByText("باشترکردن و پێشنیاری نرخ"),
     ).toBeInTheDocument();
     expect(
-      within(createDialog).getByRole("button", { name: "Leads" }),
+      within(createDialog).getByRole("button", { name: "کڕیارە شیاوەکان" }),
     ).toBeInTheDocument();
     expect(
-      within(createDialog).queryByText("Data connection"),
+      within(createDialog).queryByText("پەیوەندی داتا"),
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      within(createDialog).getByRole("radio", { name: /Website Lead/ }),
+      within(createDialog).getByRole("radio", { name: /کڕیاری شیاوی وێبسایت/ }),
     );
 
     expect(
-      within(createDialog).getByText("Data connection"),
+      within(createDialog).getByText("پەیوەندی داتا"),
     ).toBeInTheDocument();
     expect(
       within(createDialog).getByRole("button", { name: "Ismail CS" }),
     ).toBeInTheDocument();
     expect(
-      within(createDialog).getByText("Optimization event"),
+      within(createDialog).getByText("ڕووداوی باشترکردن"),
     ).toBeInTheDocument();
 
     fireEvent.click(
       within(createDialog).getByRole("button", { name: "بەردەوام بە" }),
     );
     expect(
-      within(createDialog).getByText("Budget and schedule"),
+      within(createDialog).getByText("بودجە و خشتەی کات"),
     ).toBeInTheDocument();
     expect(
-      within(createDialog).getByText("Audience targeting and placement"),
+      within(createDialog).getByText("ئامانجکردنی بینەر و شوێنی پیشاندان"),
     ).toBeInTheDocument();
 
     fireEvent.click(
       within(createDialog).getByRole("button", { name: "بەردەوام بە" }),
     );
     expect(
-      within(createDialog).getByText("Destination and ad assets"),
+      within(createDialog).getByText("مەبەست و ناوەڕۆکی ڕیکلام"),
     ).toBeInTheDocument();
-    fireEvent.change(within(createDialog).getByLabelText(/Video code/), {
+    fireEvent.change(within(createDialog).getByLabelText(/کۆدی ڤیدیۆ/), {
       target: { value: "TT-VIDEO-001" },
     });
-    fireEvent.change(within(createDialog).getByLabelText(/Ad text/), {
+    fireEvent.change(within(createDialog).getByLabelText(/دەقی ڕیکلام/), {
       target: { value: "Discover the new campaign" },
     });
 
     expect(
       within(createDialog).getByRole("heading", {
-        name: "Interactive add-ons",
+        name: "زیادکراوە کارلێکییەکان",
       }),
     ).toBeInTheDocument();
-    expect(within(createDialog).getByText("Optional")).toBeInTheDocument();
+    expect(within(createDialog).getByText("ئارەزوومەندانە")).toBeInTheDocument();
     expect(
       within(createDialog).getByRole("button", {
         name: "دروستکردنی کەمپەین",
@@ -123,7 +150,7 @@ describe("PlatformCampaignsPage", () => {
   });
 
   it("opens the redesigned campaign analytics details", () => {
-    render(<PlatformCampaignsPage />);
+    renderCampaigns();
 
     fireEvent.click(screen.getAllByRole("button", { name: "وردەکاری" })[0]);
 

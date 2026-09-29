@@ -34,6 +34,7 @@ export interface TemplatesPageCopy {
   previewWhatsapp: string; previewViber: string; previewPhone: string;
   previewSubtitle: string;
   applySearch: string;
+  loadingLabel?: string;
 }
 
 const KURDISH_COPY: TemplatesPageCopy = {
@@ -179,7 +180,7 @@ export function TemplatesPage({ accessMode = "all", copy }: TemplatesPageProps) 
   };
 
   if (enforceTemplateAccess && isEntitlementLoading) {
-    return <SkeletonTemplatePage />;
+    return <SkeletonTemplatePage loadingLabel={labels.loadingLabel} />;
   }
 
   return (

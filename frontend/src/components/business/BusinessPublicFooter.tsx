@@ -25,6 +25,7 @@ export interface BusinessPublicFooterProps {
    * entitlement, so a downgrade puts the badge back.
    */
   brandingRemoved?: boolean;
+  copy?: Partial<Record<"home" | "advertise" | "videoPage" | "pages" | "publicPages" | "contact" | "officialSite" | "rightsReserved" | "poweredBy" | "logoLabel", string>>;
 }
 
 function normalizePhone(value?: string | null) {
@@ -49,27 +50,28 @@ export function BusinessPublicFooter({
   homeHref,
   advertisingEnabled = false,
   brandingRemoved = false,
+  copy,
 }: BusinessPublicFooterProps) {
   const phone = normalizePhone(phoneValue);
   const columns: PublicFooterColumn[] = [];
 
   const pageLinks: BusinessPublicFooterPage[] = [];
-  if (homeHref) pageLinks.push({ name: "Home", href: homeHref });
+  if (homeHref) pageLinks.push({ name: copy?.home ?? "Home", href: homeHref });
   if (advertisingEnabled) {
-    pageLinks.push({ name: "Advertise", href: "/advertising" });
-    pageLinks.push({ name: "Video page", href: "/advertising/video-code" });
+    pageLinks.push({ name: copy?.advertise ?? "Advertise", href: "/advertising" });
+    pageLinks.push({ name: copy?.videoPage ?? "Video page", href: "/advertising/video-code" });
   }
   // Without the advertising links this column can end up empty, and a heading
   // over nothing reads as a rendering fault.
   if (pageLinks.length > 0) {
     columns.push({
-      title: "Pages",
+      title: copy?.pages ?? "Pages",
       links: pageLinks.map((page) => ({ label: page.name, href: page.href })),
     });
   }
   if (linktrees.length > 0) {
     columns.push({
-      title: "Public pages",
+      title: copy?.publicPages ?? "Public pages",
       links: linktrees.slice(0, 5).map((page) => ({
         label: page.name,
         href: page.href,
@@ -78,7 +80,7 @@ export function BusinessPublicFooter({
   }
   if (phone.telHref) {
     columns.push({
-      title: "Contact",
+      title: copy?.contact ?? "Contact",
       links: [
         { label: phone.display, href: phone.telHref },
         ...(whatsappEnabled && phone.whatsappHref
@@ -97,16 +99,18 @@ export function BusinessPublicFooter({
   return (
     <PublicSiteFooter
       showPoweredBy={!brandingRemoved}
+      poweredByLabel={copy?.poweredBy}
+      logoLabel={copy?.logoLabel ? `${businessName} ${copy.logoLabel}` : undefined}
       brandName={businessName}
       logo={logo}
       description={
-        description?.trim() || `${businessName}'s official public website.`
+        description?.trim() || (copy?.officialSite ? `${businessName} ${copy.officialSite}` : `${businessName}'s official public website.`)
       }
       accentColor={accentColor}
       appearance="landing"
       columns={columns}
       homeHref={homeHref}
-      copyrightText={`© ${new Date().getFullYear()} ${businessName}. All rights reserved.`}
+      copyrightText={`© ${new Date().getFullYear()} ${businessName}. ${copy?.rightsReserved ?? "All rights reserved."}`}
     />
   );
 }

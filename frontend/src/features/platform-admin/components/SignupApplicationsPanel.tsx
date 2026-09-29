@@ -5,6 +5,7 @@ import { ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api/request";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 import {
   SignupApplicationCard,
   type SignupApplication,
@@ -18,6 +19,7 @@ export function SignupApplicationsPanel({
   onApproved: () => void;
   reloadToken?: number;
 }) {
+  const copy = usePlatformCopy();
   const [items, setItems] = useState<SignupApplication[]>([]);
   const [plans, setPlans] = useState<SignupPlan[]>([]);
   const [busy, setBusy] = useState("");
@@ -72,15 +74,14 @@ export function SignupApplicationsPanel({
         },
       });
       toast.success(
-        action === "approve" ? "بزنس پەسەند و دروستکرا" : "داواکاری نوێکرایەوە",
+        action === "approve" ? copy.applicationApproved : copy.applicationUpdated,
       );
       await load();
       if (action === "approve") onApproved();
       return true;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "کردارەکە سەرکەوتوو نەبوو",
-      );
+      console.error("Application review failed:", error);
+      toast.error(copy.applicationActionFailed);
       return false;
     } finally {
       setBusy("");
@@ -94,8 +95,8 @@ export function SignupApplicationsPanel({
           <EmptyState
             compact
             icon={ClipboardList}
-            title="هیچ داواکارییەکی چاوەڕوان نییە"
-            description="داواکارییە نوێکان لێرە دەردەکەون و دەتوانیت پشکنین و پەسەندیان بکەیت."
+            title={copy.noPendingApplications}
+            description={copy.noPendingApplicationsDescription}
           />
         ) : (
           <div className="grid grid-cols-1 gap-0 sm:grid-cols-2" dir="ltr">

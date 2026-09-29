@@ -1,15 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { BusinessPublicSiteShell } from "@/components/business/BusinessPublicSiteShell";
 import { BusinessHeroAccentBackdrop } from "@/components/business/BusinessHeroAccentBackdrop";
+import { PublicBusinessLanguageToggle } from "@/features/business/components/PublicBusinessLanguageToggle";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
 import { AdvertisingVideoPlayer } from "./AdvertisingVideoPlayer";
 import type { AdvertisingBusinessBranding, AdvertisingServiceConfig } from "../types";
+import { translatePublicAdvertisingText } from "../public-locale";
 
 interface PublicVideoCodePageProps {
   branding: AdvertisingBusinessBranding;
   /** Always supplied by the server: the route 404s when no published page exists. */
   config: AdvertisingServiceConfig;
   embedded?: boolean;
+  initialLocale?: BusinessLocale;
   footer?: {
     description?: string | null;
     phone?: string | null;
@@ -22,8 +28,11 @@ export function PublicVideoCodePage({
   branding,
   config,
   embedded = false,
+  initialLocale = "ckb",
   footer,
 }: PublicVideoCodePageProps) {
+  const [locale, setLocale] = useState<BusinessLocale>(initialLocale);
+  const copy = businessPublicCopy[locale];
   const accent = branding.accentColor || "#111827";
 
   return (
@@ -33,9 +42,13 @@ export function PublicVideoCodePage({
       logo={branding.logo}
       accentColor={accent}
       homeHref="/"
-      navigationItems={[{ label: "ڕیکلام", href: "/advertising" }]}
-      action={{ label: "گەڕانەوە بۆ پەڕەی ڕیکلام", href: "/advertising" }}
+      navbarCopy={copy.navbar}
+      language={locale}
+      languageControl={<PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />}
+      navigationItems={[{ label: copy.nav.advertising, href: "/advertising" }]}
+      action={{ label: copy.advertising.back, href: "/advertising" }}
       footer={{
+        copy: copy.footer,
         logo: branding.logo,
         description: footer?.description,
         phone: footer?.phone,
@@ -60,7 +73,11 @@ export function PublicVideoCodePage({
 
           <div className="w-full max-w-sm overflow-hidden rounded-[2rem] border border-black/10 shadow-xl dark:border-white/10">
             <div className="aspect-[9/16] w-full">
-              <AdvertisingVideoPlayer size="full" src={config.videoUrl} />
+              <AdvertisingVideoPlayer size="full" src={config.videoUrl} copy={{
+                empty: translatePublicAdvertisingText("هیچ ڤیدیۆیەک دانەنراوە", locale),
+                title: translatePublicAdvertisingText("ڤیدیۆی فێرکاری", locale),
+                play: translatePublicAdvertisingText("لێدانی ڤیدیۆ", locale),
+              }} />
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { BusinessSectionDecorations } from "@/components/business/BusinessSectio
 import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
 import { PublicSection } from "@/components/public/PublicSection";
 import type { AdvertisingResultColor, AdvertisingResultItem } from "../types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 const GLASS_SURFACE_CLASS =
   "bg-slate-950/45 text-white ring-1 ring-white/35 backdrop-blur-md";
@@ -121,14 +122,14 @@ function ResultImagePlaceholder() {
 }
 
 /** The before/after comparison card itself — rendered inside ResultCardFan. */
-function ResultBeforeAfterCard({ item }: { item: AdvertisingResultItem }) {
+function ResultBeforeAfterCard({ item, translate = (text: string) => text }: { item: AdvertisingResultItem; translate?: (text: string) => string }) {
   const [position, setPosition] = useState(45);
   const theme = RESULT_THEME[item.color];
 
   return (
     <div
       role="group"
-      aria-label={`${item.category} — ${item.before} بۆ ${item.after} بینین`}
+      aria-label={`${item.category} — ${item.before} ${translate("بۆ")} ${item.after} ${translate("بینین")}`}
       className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-slate-950 shadow-2xl"
     >
       {item.afterImageUrl ? (
@@ -145,7 +146,7 @@ function ResultBeforeAfterCard({ item }: { item: AdvertisingResultItem }) {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-0.5 p-2.5 text-white">
-        <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">دوای سپۆنسەر</span>
+        <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">{translate("دوای سپۆنسەر")}</span>
         <span className="text-xl font-black tabular-nums">{item.after}</span>
       </div>
 
@@ -167,7 +168,7 @@ function ResultBeforeAfterCard({ item }: { item: AdvertisingResultItem }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-0.5 p-2.5 text-white/80">
-          <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">پێش سپۆنسەر</span>
+          <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">{translate("پێش سپۆنسەر")}</span>
           <span className="text-sm font-bold tabular-nums">{item.before}</span>
         </div>
       </div>
@@ -201,7 +202,7 @@ function ResultBeforeAfterCard({ item }: { item: AdvertisingResultItem }) {
       </span>
 
       <input
-        aria-label={`${item.category}: پێش / دوای سپۆنسەر`}
+        aria-label={`${item.category}: ${translate("پێش / دوای سپۆنسەر")}`}
         type="range"
         min="0"
         max="100"
@@ -234,6 +235,7 @@ export function ResultCardFan({
   onNext,
   renderActions,
   className,
+  translate = (text) => text,
 }: {
   items: readonly AdvertisingResultItem[];
   activeIndex: number;
@@ -242,6 +244,7 @@ export function ResultCardFan({
   /** Overlay rendered on the centre card only (the dashboard's edit/delete controls). */
   renderActions?: (item: AdvertisingResultItem) => ReactNode;
   className?: string;
+  translate?: (text: string) => string;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const total = items.length;
@@ -249,7 +252,7 @@ export function ResultCardFan({
   return (
     <div
       role="group"
-      aria-label="نموونەی ئەنجامەکان"
+      aria-label={translate("نموونەی ئەنجامەکان")}
       className={`relative isolate mx-auto aspect-[25/18] max-w-lg ${className ?? ""}`}
     >
       {items.map((item, itemIndex) => {
@@ -281,7 +284,7 @@ export function ResultCardFan({
               transition={reduceMotion ? { duration: 0 } : CARD_SPRING}
               style={selected ? { filter: `drop-shadow(0 20px 35px ${theme.tone}45)` } : undefined}
             >
-              <ResultBeforeAfterCard item={item} />
+              <ResultBeforeAfterCard item={item} translate={translate} />
               {selected && renderActions?.(item)}
             </motion.div>
           </motion.div>
@@ -293,7 +296,7 @@ export function ResultCardFan({
           <div className="absolute left-1 top-1/2 z-30 -translate-y-1/2">
             <motion.button
               type="button"
-              aria-label="نموونەی پێشوو"
+              aria-label={translate("نموونەی پێشوو")}
               className="grid size-9 place-items-center rounded-full bg-white/80 text-slate-900 shadow-lg shadow-black/10 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 dark:bg-slate-900/75 dark:text-white dark:shadow-black/35"
               whileHover={reduceMotion ? undefined : { scale: 1.06 }}
               whileTap={reduceMotion ? undefined : { scale: 0.94 }}
@@ -306,7 +309,7 @@ export function ResultCardFan({
           <div className="absolute right-1 top-1/2 z-30 -translate-y-1/2">
             <motion.button
               type="button"
-              aria-label="نموونەی داهاتوو"
+              aria-label={translate("نموونەی داهاتوو")}
               className="grid size-9 place-items-center rounded-full bg-white/80 text-slate-900 shadow-lg shadow-black/10 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 dark:bg-slate-900/75 dark:text-white dark:shadow-black/35"
               whileHover={reduceMotion ? undefined : { scale: 1.06 }}
               whileTap={reduceMotion ? undefined : { scale: 0.94 }}
@@ -357,6 +360,7 @@ export function ResultFanDots({
 }
 
 export function AdvertisingResultsShowcaseSection({ items }: { items: readonly AdvertisingResultItem[] }) {
+  const publicT = usePublicAdvertisingText();
   const [activeIndex, setActiveIndex] = useState(0);
   const total = items.length;
 
@@ -381,17 +385,18 @@ export function AdvertisingResultsShowcaseSection({ items }: { items: readonly A
       decorations={
         <BusinessSectionDecorations
           colors={["#ec4899", "#6366f1"]}
-          labels={["نموونەی ئەنجام", "سەرکەوتوو"]}
+          labels={[publicT("نموونەی ئەنجام"), publicT("سەرکەوتوو")]}
           variant={5}
         />
       }
     >
         <PublicSectionHeading
-          title="نموونەی ئەنجامی ڕاستەقینە"
-          description="سلایدەرەکە بجوڵێنە بۆ بەراوردکردنی بینینی پێش و دوای سپۆنسەر"
+          title={publicT("نموونەی ئەنجامی ڕاستەقینە")}
+          description={publicT("سلایدەرەکە بجوڵێنە بۆ بەراوردکردنی بینینی پێش و دوای سپۆنسەر")}
         />
 
         <ResultCardFan
+          translate={publicT}
           items={items}
           activeIndex={activeIndex}
           onPrevious={showPrevious}

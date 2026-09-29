@@ -6,6 +6,7 @@ import { BusinessSectionDecorations } from "@/components/business/BusinessSectio
 import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
 import { PublicSection } from "@/components/public/PublicSection";
 import type { AdvertisingFaq } from "../types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 type FaqColor = "cyan" | "orange" | "violet" | "emerald";
 
@@ -67,6 +68,7 @@ export function FaqCarousel({
   onNext,
   renderActions,
   className,
+  translate = (text) => text,
 }: {
   items: readonly AdvertisingFaq[];
   activeIndex: number;
@@ -75,6 +77,7 @@ export function FaqCarousel({
   onNext: () => void;
   renderActions?: (faq: AdvertisingFaq) => ReactNode;
   className?: string;
+  translate?: (text: string) => string;
 }) {
   const active = items[activeIndex];
   const theme = faqThemeAt(activeIndex);
@@ -90,7 +93,7 @@ export function FaqCarousel({
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black transition-colors ${theme.soft} ${theme.text}`}
             >
-              <CircleHelp className="h-3.5 w-3.5" /> پرسیار {activeIndex + 1} / {items.length}
+              <CircleHelp className="h-3.5 w-3.5" /> {translate("پرسیار")} {activeIndex + 1} / {items.length}
             </span>
           </div>
           <h3
@@ -109,7 +112,7 @@ export function FaqCarousel({
             <button
               type="button"
               onClick={onPrevious}
-              aria-label="پرسیاری پێشوو"
+              aria-label={translate("پرسیاری پێشوو")}
               className={`flex !h-9 !w-9 !min-h-0 !min-w-0 shrink-0 items-center justify-center rounded-full transition hover:opacity-75 active:scale-90 ${theme.soft} ${theme.text}`}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -137,7 +140,7 @@ export function FaqCarousel({
             <button
               type="button"
               onClick={onNext}
-              aria-label="پرسیاری داهاتوو"
+              aria-label={translate("پرسیاری داهاتوو")}
               className={`flex !h-9 !w-9 !min-h-0 !min-w-0 shrink-0 items-center justify-center rounded-full transition hover:opacity-75 active:scale-90 ${theme.soft} ${theme.text}`}
             >
               <ChevronRight className="h-5 w-5" />
@@ -150,6 +153,7 @@ export function FaqCarousel({
 }
 
 export function AdvertisingFaqSection({ items }: { items: readonly AdvertisingFaq[] }) {
+  const publicT = usePublicAdvertisingText();
   const [index, setIndex] = useState(0);
 
   if (items.length === 0) return null;
@@ -163,14 +167,14 @@ export function AdvertisingFaqSection({ items }: { items: readonly AdvertisingFa
       decorations={
         <BusinessSectionDecorations
           colors={["#22d3ee", "#f97316"]}
-          labels={["وەڵامی ڕوون", "پێش داواکاری"]}
+          labels={[publicT("وەڵامی ڕوون"), publicT("پێش داواکاری")]}
           variant={3}
         />
       }
     >
         <PublicSectionHeading
-          title="پرسیارە باوەکان"
-          description="وەڵامی هەموو ئەو پرسیارانەی پێش دەستپێکردنی سپۆنسەر پێویستە بیزانیت"
+          title={publicT("پرسیارە باوەکان")}
+          description={publicT("وەڵامی هەموو ئەو پرسیارانەی پێش دەستپێکردنی سپۆنسەر پێویستە بیزانیت")}
         />
 
         <FaqCarousel
@@ -180,6 +184,7 @@ export function AdvertisingFaqSection({ items }: { items: readonly AdvertisingFa
           onPrevious={() => setIndex((current) => (current - 1 + items.length) % items.length)}
           onNext={() => setIndex((current) => (current + 1) % items.length)}
           className="mt-10"
+          translate={publicT}
         />
     </PublicSection>
   );

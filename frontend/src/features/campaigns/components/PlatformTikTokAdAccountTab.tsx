@@ -21,8 +21,10 @@ import { Tooltip } from "@/components/shared/Tooltip";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { ConnectTikTokAdModal } from "@/features/campaigns/components/ConnectTikTokAdModal";
 import type { TikTokAdAccount } from "@/features/campaigns/types";
+import { useSettingsText } from "@/features/platform-admin/components/use-settings-text";
 
 export function PlatformTikTokAdAccountTab() {
+  const t = useSettingsText();
   const localStorageKey = "platform_tiktok_ad_account";
   const eventName = "platform:tiktok-ad-account-updated";
 
@@ -60,7 +62,7 @@ export function PlatformTikTokAdAccountTab() {
       const error = params.get("error");
 
       if (error) {
-        toast.error("هەڵە لە بەستنەوەی TikTok Ads", { description: error });
+        toast.error(t("هەڵە لە بەستنەوەی TikTok Ads"), { description: error });
         window.history.replaceState({}, "", window.location.pathname);
       } else if (connected || authCode) {
         const newAccount: TikTokAdAccount = {
@@ -68,7 +70,7 @@ export function PlatformTikTokAdAccountTab() {
           advertiserId: advId || "",
           advertiserName:
             advName ||
-            ("هەژماری ڕیکلامی پلاتفۆرم"),
+            t("هەژماری ڕیکلامی پلاتفۆرم"),
           currency: params.get("currency") || "USD",
           timezone: params.get("timezone") || "Asia/Baghdad",
           status: "connected",
@@ -76,12 +78,12 @@ export function PlatformTikTokAdAccountTab() {
           accountType: "AUCTION",
         };
         saveAccount(newAccount);
-        toast.success("هەژماری TikTok Ads بە سەرکەوتوویی بەسترایەوە!");
+        toast.success(t("هەژماری TikTok Ads بە سەرکەوتوویی بەسترایەوە!"));
         window.history.replaceState({}, "", window.location.pathname);
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [saveAccount]);
+  }, [saveAccount, t]);
 
   // Load account from storage
   useEffect(() => {
@@ -118,7 +120,7 @@ export function PlatformTikTokAdAccountTab() {
     if (!account?.advertiserId) return;
     void navigator.clipboard.writeText(account.advertiserId);
     setCopiedId(true);
-    toast.success("Advertiser ID کۆپیکرا");
+    toast.success(t("Advertiser ID کۆپیکرا"));
     setTimeout(() => setCopiedId(false), 2000);
   };
 
@@ -128,7 +130,7 @@ export function PlatformTikTokAdAccountTab() {
 
     try {
       if (!account.accessToken || !account.advertiserId) {
-        toast.error("Access Token یان Advertiser ID بەردەست نییە بۆ نوێکردنەوە لە تیکتۆک");
+        toast.error(t("Access Token یان Advertiser ID بەردەست نییە بۆ نوێکردنەوە لە تیکتۆک"));
         return;
       }
 
@@ -149,14 +151,14 @@ export function PlatformTikTokAdAccountTab() {
           ...result.data,
           lastSyncedAt: new Date().toISOString(),
         });
-        toast.success("دۆخ و بالانسی هەژمار بە سەرکەوتوویی لە تیکتۆک نوێکرایەوە");
+        toast.success(t("دۆخ و بالانسی هەژمار بە سەرکەوتوویی لە تیکتۆک نوێکرایەوە"));
       } else {
-        toast.error("نوێکردنەوە لە تیکتۆک سەرکەوتوو نەبوو", {
-          description: result.error || "وەڵام لە تیکتۆک وەرنەگیرا",
+        toast.error(t("نوێکردنەوە لە تیکتۆک سەرکەوتوو نەبوو"), {
+          description: result.error || t("وەڵام لە تیکتۆک وەرنەگیرا"),
         });
       }
     } catch (err) {
-      toast.error("نوێکردنەوەی هەژمار لە تیکتۆک سەرکەوتوو نەبوو", {
+      toast.error(t("نوێکردنەوەی هەژمار لە تیکتۆک سەرکەوتوو نەبوو"), {
         description: err instanceof Error ? err.message : undefined,
       });
     } finally {
@@ -167,7 +169,7 @@ export function PlatformTikTokAdAccountTab() {
   const handleDisconnectConfirm = () => {
     saveAccount(null);
     setIsDisconnectModalOpen(false);
-    toast.info("هەژماری TikTok Ads پچڕێنرا");
+    toast.info(t("هەژماری TikTok Ads پچڕێنرا"));
   };
 
   const isConnected = account && account.status === "connected";
@@ -177,20 +179,20 @@ export function PlatformTikTokAdAccountTab() {
       {/* Consistent Page Header matching other tabs */}
       <PageHeader
         icon={Megaphone}
-        title="هەژماری ڕیکلامی تیکتۆک"
+        title={t("هەژماری ڕیکلامی تیکتۆک")}
         description={
-          "بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی تیکتۆک بۆ بەڕێوەبردنی کەمپەینەکانی پلاتفۆرم."
+          t("بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی تیکتۆک بۆ بەڕێوەبردنی کەمپەینەکانی پلاتفۆرم.")
         }
         action={
           isConnected ? (
-            <Tooltip content="نوێکردنەوەی دۆخی هەژمار" side="bottom">
+            <Tooltip content={t("نوێکردنەوەی دۆخی هەژمار")} side="bottom">
               <button
                 type="button"
                 onClick={handleSyncConnection}
                 disabled={isSyncing}
                 aria-busy={isSyncing}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200 cursor-pointer"
-                aria-label="نوێکردنەوە"
+                aria-label={t("نوێکردنەوە")}
               >
                 <MotionSpinner active={isSyncing}>
                   <RefreshCw className="h-4 w-4" />
@@ -206,16 +208,16 @@ export function PlatformTikTokAdAccountTab() {
         <div>
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              {isConnected ? "زانیارییەکانی هەژماری بەستراوە" : "بەستنەوەی هەژمار"}
+              {t(isConnected ? "زانیارییەکانی هەژماری بەستراوە" : "بەستنەوەی هەژمار")}
             </p>
             <span className="sa-soft sa-soft-border inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold">
-              ١ لە ١ هەژمار
+              {t("١ لە ١ هەژمار")}
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {isConnected
+            {t(isConnected
               ? "تەنها ١ هەژماری ڕیکلام بەستراوەتەوە (سنووری دیاریکراو: تەنها ١ هەژمار)."
-              : "تەنها ١ هەژماری ڕیکلامی تیکتۆک دەتوانرێت بۆ پلاتفۆرم ببەسترێتەوە."}
+              : "تەنها ١ هەژماری ڕیکلامی تیکتۆک دەتوانرێت بۆ پلاتفۆرم ببەسترێتەوە.")}
           </p>
         </div>
 
@@ -226,21 +228,21 @@ export function PlatformTikTokAdAccountTab() {
               onClick={() => setIsConnectModalOpen(true)}
               className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 cursor-pointer"
             >
-              گۆڕینی هەژمار
+              {t("گۆڕینی هەژمار")}
             </button>
-            <Tooltip content="پچڕاندنی پەیوەندی ئەم هەژمارە" side="bottom">
+            <Tooltip content={t("پچڕاندنی پەیوەندی ئەم هەژمارە")} side="bottom">
               <button
                 type="button"
                 onClick={() => setIsDisconnectModalOpen(true)}
                 className="flex h-10 items-center gap-2 rounded-xl border border-rose-200/80 bg-rose-50/70 px-4 text-xs font-bold text-rose-600 shadow-sm transition hover:bg-rose-100 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-400 dark:hover:bg-rose-950/40 cursor-pointer"
               >
                 <Unlink className="h-3.5 w-3.5" />
-                پچڕاندن
+                {t("پچڕاندن")}
               </button>
             </Tooltip>
           </div>
         ) : (
-          <Tooltip content="بەستنەوەی ١ هەژماری ڕیکلام لە ڕێگەی مۆدال" side="bottom">
+          <Tooltip content={t("بەستنەوەی ١ هەژماری ڕیکلام لە ڕێگەی مۆدال")} side="bottom">
             <button
               type="button"
               onClick={() => setIsConnectModalOpen(true)}
@@ -249,7 +251,7 @@ export function PlatformTikTokAdAccountTab() {
               }
             >
               <Link2 className="h-4 w-4" />
-              بەستنەوە بە TikTok Ads
+              {t("بەستنەوە بە TikTok Ads")}
             </button>
           </Tooltip>
         )}
@@ -272,15 +274,15 @@ export function PlatformTikTokAdAccountTab() {
                     </h4>
                     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-400">
                       <CheckCircle2 className="h-3 w-3" />
-                      چالاکە
+                      {t("چالاکە")}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                    <span>Advertiser ID:</span>
+                    <span>{t("Advertiser ID:")}</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200">
                       {account.advertiserId}
                     </span>
-                    <Tooltip content={copiedId ? "کۆپیکرا!" : "کۆپیکردنی ID"} side="top">
+                    <Tooltip content={t(copiedId ? "کۆپیکرا!" : "کۆپیکردنی ID")} side="top">
                       <button
                         type="button"
                         onClick={handleCopyAdvertiserId}
@@ -302,18 +304,18 @@ export function PlatformTikTokAdAccountTab() {
                 {account.connectionMethod && (
                   <span className="sa-soft sa-soft-border rounded-lg border px-2 py-0.5 text-[11px] font-bold">
                     {account.connectionMethod === "direct_token"
-                      ? "Direct API Token"
+                      ? t("Direct API Token")
                       : "OAuth 2.0"}
                   </span>
                 )}
                 {typeof account.balance === "number" && (
                   <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                    بالانس: {account.balance.toLocaleString()} {account.currency || "USD"}
+                    {t("بالانس:")} {account.balance.toLocaleString()} {account.currency || "USD"}
                   </span>
                 )}
                 {account.businessCenterId && (
                   <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300 font-mono">
-                    BC: {account.businessCenterId}
+                    {t("Business Center ID:")} {account.businessCenterId}
                   </span>
                 )}
                 <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">
@@ -333,8 +335,8 @@ export function PlatformTikTokAdAccountTab() {
           <EmptyState
             compact
             icon={CircleOff}
-            title="هیچ هەژمارێکی ڕیکلامی تیکتۆک نەبەستراوەتەوە"
-            description="هەژماری ڕیکلامەکەت ببەستەرەوە بۆ بەڕێوەبردنی ڕیکلام و کەمپەینەکان. تەنها ١ هەژمار پشتیوانی دەکرێت."
+            title={t("هیچ هەژمارێکی ڕیکلامی تیکتۆک نەبەستراوەتەوە")}
+            description={t("هەژماری ڕیکلامەکەت ببەستەرەوە بۆ بەڕێوەبردنی ڕیکلام و کەمپەینەکان. تەنها ١ هەژمار پشتیوانی دەکرێت.")}
           />
           <button
             type="button"
@@ -344,7 +346,7 @@ export function PlatformTikTokAdAccountTab() {
             }
           >
             <Link2 className="h-4 w-4" />
-            بەستنەوە بە تیکتۆک
+            {t("بەستنەوە بە تیکتۆک")}
           </button>
         </div>
       )}
@@ -354,9 +356,10 @@ export function PlatformTikTokAdAccountTab() {
         isOpen={isConnectModalOpen}
         onClose={() => setIsConnectModalOpen(false)}
         sponsorKrdTheme
+        translate={t}
         onConnect={(newAcc) => {
           saveAccount(newAcc);
-          toast.success("هەژماری ڕیکلام بە سەرکەوتوویی بەسترایەوە");
+          toast.success(t("هەژماری ڕیکلام بە سەرکەوتوویی بەسترایەوە"));
         }}
         initialAccount={account}
       />
@@ -368,10 +371,12 @@ export function PlatformTikTokAdAccountTab() {
         onConfirm={async () => {
           handleDisconnectConfirm();
         }}
-        title="پچڕاندنی هەژماری ڕیکلامی تیکتۆک"
-        confirmLabel="پچڕاندن"
+        title={t("پچڕاندنی هەژماری ڕیکلامی تیکتۆک")}
+        confirmLabel={t("پچڕاندن")}
+        cancelLabel={t("پاشگەزبوونەوە")}
+        closeLabel={t("داخستن")}
         message={
-          "ئایا دڵنیایت لە پچڕاندنی پەیوەندیی ئەم هەژمارە لە پلاتفۆرم؟ پچڕاندنی ئەم هەژمارە پەیوەندی نێوان پلاتفۆرم و TikTok Marketing API دەپچڕێنێت."
+          t("ئایا دڵنیایت لە پچڕاندنی پەیوەندیی ئەم هەژمارە لە پلاتفۆرم؟ پچڕاندنی ئەم هەژمارە پەیوەندی نێوان پلاتفۆرم و TikTok Marketing API دەپچڕێنێت.")
         }
         tone="danger"
       />

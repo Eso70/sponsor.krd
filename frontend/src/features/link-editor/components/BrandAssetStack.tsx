@@ -29,6 +29,7 @@ interface BrandAssetStackProps {
    * session.
    */
   lockedAssets?: boolean;
+  copy?: Partial<Record<"stack" | "avatar" | "favicon" | "logo" | "uploadAvatar" | "uploadFavicon" | "uploadLogo" | "unlockAvatar" | "unlockFavicon" | "websiteColor", string>>;
 }
 
 export function BrandAssetStack({
@@ -41,6 +42,7 @@ export function BrandAssetStack({
   onDefaultAvatarChange,
   onChooseColor,
   lockedAssets = false,
+  copy,
 }: BrandAssetStackProps) {
   const [faviconUnlocked, setFaviconUnlocked] = useState(false);
   const [avatarUnlocked, setAvatarUnlocked] = useState(false);
@@ -51,15 +53,15 @@ export function BrandAssetStack({
       <div className="relative flex w-full max-w-sm flex-col items-center">
         <div
           className="relative h-44 w-72 sm:h-48 sm:w-80"
-          aria-label="Brand image stack"
+          aria-label={copy?.stack ?? "Brand image stack"}
         >
           <BrandAssetTile
             src={defaultAvatar || DEFAULT_AVATAR}
-            alt="Default avatar"
-            caption="ئەڤاتار"
+            alt={copy?.avatar ?? "Default avatar"}
+            caption={copy?.avatar ?? "ئەڤاتار"}
             captionClassName="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white"
             accept={AVATAR_ACCEPT}
-            inputLabel="Upload default avatar"
+            inputLabel={copy?.uploadAvatar ?? "Upload default avatar"}
             onChange={onDefaultAvatarChange}
             className="group absolute left-5 top-7 z-30 h-24 w-24 rotate-[-8deg] cursor-pointer overflow-hidden rounded-full border-4 border-white bg-white shadow-xl ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161b22] dark:bg-[#161b22] dark:ring-white/10"
             imageClassName="h-full w-full object-cover"
@@ -68,16 +70,16 @@ export function BrandAssetStack({
             height={112}
             locked={lockedAssets && !avatarUnlocked}
             onUnlock={() => setAvatarUnlocked(true)}
-            unlockLabel="Unlock default avatar"
+            unlockLabel={copy?.unlockAvatar ?? "Unlock default avatar"}
           />
 
           <BrandAssetTile
             src={favicon || BUSINESS_FAVICON_PLACEHOLDER}
-            alt="Favicon"
-            caption="فایڤ"
+            alt={copy?.favicon ?? "Favicon"}
+            caption={copy?.favicon ?? "فایڤ"}
             captionClassName="absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-medium text-white"
             accept={FAVICON_ACCEPT}
-            inputLabel="Upload favicon"
+            inputLabel={copy?.uploadFavicon ?? "Upload favicon"}
             onChange={onFaviconChange}
             className="group absolute right-6 top-4 z-30 h-20 w-20 rotate-[10deg] cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-lg ring-1 ring-gray-200 transition hover:rotate-0 hover:scale-105 dark:border-[#161b22] dark:bg-[#161b22] dark:ring-white/10"
             imageClassName="h-full w-full object-contain"
@@ -86,16 +88,16 @@ export function BrandAssetStack({
             height={96}
             locked={lockedAssets && !faviconUnlocked}
             onUnlock={() => setFaviconUnlocked(true)}
-            unlockLabel="Unlock favicon"
+            unlockLabel={copy?.unlockFavicon ?? "Unlock favicon"}
           />
 
           <BrandAssetTile
             src={logoSource}
-            alt="Logo"
-            caption="لۆگۆ"
+            alt={copy?.logo ?? "Logo"}
+            caption={copy?.logo ?? "لۆگۆ"}
             captionClassName="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-2.5 py-0.5 text-[10px] font-semibold text-white"
             accept={LOGO_ACCEPT}
-            inputLabel="Upload logo"
+            inputLabel={copy?.uploadLogo ?? "Upload logo"}
             onChange={onLogoChange}
             className="group absolute left-1/2 top-12 z-20 h-32 w-32 -translate-x-1/2 cursor-pointer overflow-hidden rounded-3xl border-4 border-white bg-white p-3 shadow-2xl ring-1 ring-gray-200 transition hover:scale-105 dark:border-[#161b22] dark:bg-[#161b22] dark:ring-white/10"
             imageClassName="h-full w-full object-contain"
@@ -111,11 +113,11 @@ export function BrandAssetStack({
             className="h-2 w-2 rounded-full"
             style={{ background: websiteColor }}
           />
-          <span>Logo</span>
+          <span>{copy?.logo ?? "Logo"}</span>
           <span className="h-1 w-1 rounded-full bg-gray-300 dark:bg-white/20" />
-          <span>Avatar</span>
+          <span>{copy?.avatar ?? "Avatar"}</span>
           <span className="h-1 w-1 rounded-full bg-gray-300 dark:bg-white/20" />
-          <span>Favicon</span>
+          <span>{copy?.favicon ?? "Favicon"}</span>
         </div>
         <button
           type="button"
@@ -128,7 +130,7 @@ export function BrandAssetStack({
           >
             <Palette className="h-3.5 w-3.5" />
           </span>
-          ڕەنگی وێبسایت
+          {copy?.websiteColor ?? "ڕەنگی وێبسایت"}
         </button>
       </div>
     </div>

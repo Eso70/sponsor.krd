@@ -5,6 +5,7 @@ import type { CampaignObjective } from "../types";
 import { CampaignChoiceField } from "./CampaignChoiceField";
 import { CampaignChoiceGroup } from "./CampaignChoiceGroup";
 import { CampaignStepIntro } from "./CampaignStepIntro";
+import { useCampaignText } from "../use-campaign-text";
 
 export function CampaignIdentityStep({
   campaignName,
@@ -17,31 +18,32 @@ export function CampaignIdentityStep({
   onCampaignNameChange: (value: string) => void;
   onObjectiveChange: (value: CampaignObjective) => void;
 }) {
+  const t = useCampaignText();
   const objectives = (Object.keys(OBJECTIVE_LABELS) as CampaignObjective[]).map(
-    (value) => ({ value, label: OBJECTIVE_LABELS[value].label }),
+    (value) => ({ value, label: t(OBJECTIVE_LABELS[value].label) }),
   );
 
   return (
     <div className="space-y-5">
       <CampaignStepIntro
-        title="Campaign structure"
-        description="یەک ناوی یەکگرتوو بۆ Campaign، Ad Group و Ad بەکاربهێنە"
+        title={t("Campaign structure")}
+        description={t("یەک ناوی یەکگرتوو بۆ Campaign، Ad Group و Ad بەکاربهێنە")}
       />
 
       <EditorField
-        label="Campaign, Ad Group & Ad name"
-        hint="One unified name"
+        label={t("Campaign, Ad Group & Ad name")}
+        hint={t("One unified name")}
         required
       >
         <input
           value={campaignName}
           onChange={(event) => onCampaignNameChange(event.target.value)}
-          placeholder="September sales campaign"
+          placeholder={t("September sales campaign")}
           className={modalInputClass()}
         />
       </EditorField>
 
-      <CampaignChoiceField label="Campaign type" required>
+      <CampaignChoiceField label={t("Campaign type")} required>
         <CampaignChoiceGroup
           value={objective}
           options={objectives}

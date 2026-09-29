@@ -1,5 +1,6 @@
 ﻿import { render, screen, fireEvent, act } from "@testing-library/react";
 import { CreateBusinessModal } from "./CreateBusinessModal";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -55,12 +56,14 @@ describe("CreateBusinessModal - single step", () => {
     let view!: ReturnType<typeof render>;
     act(() => {
       view = render(
-        <CreateBusinessModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onSubmit={mockOnSubmit}
-          {...props}
-        />
+        <PlatformLocaleProvider initialLocale="ckb">
+          <CreateBusinessModal
+            isOpen={true}
+            onClose={mockOnClose}
+            onSubmit={mockOnSubmit}
+            {...props}
+          />
+        </PlatformLocaleProvider>
       );
     });
     return view;
@@ -135,5 +138,18 @@ describe("CreateBusinessModal - single step", () => {
     const backdrop = document.querySelector("[class*='bg-black']");
     if (backdrop) fireEvent.click(backdrop);
     expect(mockOnClose).toHaveBeenCalled();
+  });
+
+  it("shows Arabic edit labels and shared form fields", () => {
+    render(<PlatformLocaleProvider initialLocale="ar"><CreateBusinessModal
+      isOpen
+      onClose={mockOnClose}
+      onSubmit={mockOnSubmit}
+      editData={{ id: "b1", username: "testuser", name: "Test Business", status: "active", created_at: "", updated_at: "" }}
+    /></PlatformLocaleProvider>);
+    expect(screen.getByText("تعديل النشاط التجاري")).toBeInTheDocument();
+    expect(screen.getByLabelText(/اسم النشاط التجاري/)).toBeInTheDocument();
+    expect(screen.getByText("لون الموقع")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تحديث" })).toBeInTheDocument();
   });
 });

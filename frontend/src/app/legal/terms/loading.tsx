@@ -1,5 +1,8 @@
 import { SkeletonMarketingPage } from "@/components/shared/SkeletonMarketingPage";
+import { cookies } from "next/headers";
+import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
 
-export default function TermsLoading() {
-  return <SkeletonMarketingPage body="article" />;
+export default async function TermsLoading() {
+  const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  return <SkeletonMarketingPage body="article" loadingLabel={locale === "ar" ? "جارٍ تحميل شروط الاستخدام" : locale === "en" ? "Loading terms of use" : "مەرجەکان بار دەکرێن"} />;
 }

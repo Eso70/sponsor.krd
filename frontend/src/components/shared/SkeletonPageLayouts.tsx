@@ -95,17 +95,19 @@ export function SkeletonLinktreeGrid({
   count = 6,
   showPageMeta = true,
   announce = true,
+  loadingLabel = "Loading page cards",
 }: {
   count?: number;
   showPageMeta?: boolean;
   announce?: boolean;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className="grid grid-cols-1 gap-0 lg:grid-cols-2 xl:grid-cols-3"
       role={announce ? "status" : undefined}
       aria-busy={announce ? "true" : undefined}
-      aria-label={announce ? "Loading page cards" : undefined}
+      aria-label={announce ? loadingLabel : undefined}
       dir="ltr"
     >
       {Array.from({ length: count }).map((_, index) => (
@@ -118,11 +120,13 @@ export function SkeletonLinktreeGrid({
 /** Exact initial layout shared by public-page management screens. */
 export function SkeletonPageManagement({
   showTabs = false,
+  loadingLabel = "Loading page management",
 }: {
   showTabs?: boolean;
+  loadingLabel?: string;
 }) {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading page management">
+    <div role="status" aria-busy="true" aria-label={loadingLabel}>
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <SkeletonStatCard key={index} />
@@ -144,12 +148,12 @@ export function SkeletonPageManagement({
   );
 }
 
-export function SkeletonSettingsPage({ tabCount = 4 }: { tabCount?: number }) {
+export function SkeletonSettingsPage({ tabCount = 4, loadingLabel = "Loading settings" }: { tabCount?: number; loadingLabel?: string }) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading settings"
+      aria-label={loadingLabel}
       className="space-y-5"
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -188,12 +192,12 @@ export function SkeletonSettingsPage({ tabCount = 4 }: { tabCount?: number }) {
   );
 }
 
-export function SkeletonAdvertisingEditor() {
+export function SkeletonAdvertisingEditor({ loadingLabel = "Loading advertising editor" }: { loadingLabel?: string } = {}) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading advertising editor"
+      aria-label={loadingLabel}
       className="space-y-5"
     >
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -230,13 +234,14 @@ export function SkeletonAdvertisingEditor() {
 
 export function SkeletonTikTokPixelConfig({
   announce = true,
-}: { announce?: boolean } = {}) {
+  loadingLabel = "Loading TikTok configuration",
+}: { announce?: boolean; loadingLabel?: string } = {}) {
   return (
     <div
       className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025] sm:p-6"
       role={announce ? "status" : undefined}
       aria-busy={announce ? "true" : undefined}
-      aria-label={announce ? "Loading TikTok configuration" : undefined}
+      aria-label={announce ? loadingLabel : undefined}
     >
       <SkeletonPageHeader actions={0} />
       <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-white/5">
@@ -274,12 +279,12 @@ export function SkeletonTikTokPixelConfig({
   );
 }
 
-export function SkeletonTikTokPage() {
+export function SkeletonTikTokPage({ loadingLabel = "Loading TikTok settings" }: { loadingLabel?: string } = {}) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading TikTok settings"
+      aria-label={loadingLabel}
       className="space-y-5"
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -296,12 +301,12 @@ export function SkeletonTikTokPage() {
   );
 }
 
-export function SkeletonTikTokDelivery() {
+export function SkeletonTikTokDelivery({ loadingLabel = "Loading TikTok delivery" }: { loadingLabel?: string } = {}) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading TikTok delivery"
+      aria-label={loadingLabel}
       className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025] sm:p-6"
     >
       <SkeletonPageHeader actions={1} />
@@ -327,9 +332,9 @@ export function SkeletonTikTokDelivery() {
   );
 }
 
-export function SkeletonBusinessDirectoryPage() {
+export function SkeletonBusinessDirectoryPage({ loadingLabel = "Loading business directory" }: { loadingLabel?: string } = {}) {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading business directory">
+    <div role="status" aria-busy="true" aria-label={loadingLabel}>
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <SkeletonStatCard key={index} />

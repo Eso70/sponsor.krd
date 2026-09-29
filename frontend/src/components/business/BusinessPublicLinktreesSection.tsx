@@ -3,11 +3,15 @@ import type { PublicBusinessLinktree } from "@/components/business/BusinessPubli
 import { BUSINESS_LANDING_SECTION_IDS } from "@/components/business/business-landing-sections";
 import { PublicSection } from "@/components/public/PublicSection";
 import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
 
 export function BusinessPublicLinktreesSection({
   linktrees,
+  locale = "ckb",
 }: {
   linktrees: PublicBusinessLinktree[];
+  locale?: BusinessLocale;
 }) {
   return (
     <PublicSection
@@ -19,11 +23,11 @@ export function BusinessPublicLinktreesSection({
     >
       <PublicSectionHeading
         id="business-public-linktrees-title"
-        title="لینکترییە بڵاوکراوەکان"
+        title={businessPublicCopy[locale].publishedPages}
       />
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {linktrees.map((linktree) => (
-          <BusinessPublicLinktreeCard key={linktree.id} linktree={linktree} />
+          <BusinessPublicLinktreeCard key={linktree.id} linktree={linktree} locale={locale} />
         ))}
       </div>
     </PublicSection>

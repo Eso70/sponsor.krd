@@ -14,6 +14,7 @@ import { SessionService } from './session.service';
 import { GoogleIdentityService } from './google-identity.service';
 import { ImpersonationService } from './impersonation.service';
 import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
+import { PlatformLocaleService } from './platform-locale.service';
 
 @Module({
   imports: [BillingModule, StorageModule],
@@ -30,6 +31,7 @@ import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
     GoogleIdentityService,
     ImpersonationService,
     TikTokPixelConfigService,
+    PlatformLocaleService,
   ],
   exports: [
     SessionService,

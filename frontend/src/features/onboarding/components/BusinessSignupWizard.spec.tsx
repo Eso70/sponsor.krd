@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessSignupWizard } from "./BusinessSignupWizard";
+import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
 
 const { apiRequest, toast } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -36,10 +37,10 @@ describe("BusinessSignupWizard application status", () => {
         requestedSubdomain: "sponsor-krd",
       });
 
-    render(<BusinessSignupWizard />);
+    render(<RootPublicLocaleProvider initialLocale="ckb"><BusinessSignupWizard /></RootPublicLocaleProvider>);
 
     const refresh = await screen.findByRole("button", {
-      name: "Refresh application status",
+      name: "نوێکردنەوەی دۆخی داواکاری",
     });
     fireEvent.click(refresh);
 
@@ -47,10 +48,26 @@ describe("BusinessSignupWizard application status", () => {
     await waitFor(() =>
       expect(
         screen.queryByRole("button", {
-          name: "Refresh application status",
+          name: "نوێکردنەوەی دۆخی داواکاری",
         }),
       ).not.toBeInTheDocument(),
     );
-    expect(toast.success).toHaveBeenCalledWith("Application status updated.");
+    expect(toast.success).toHaveBeenCalledWith("دۆخی داواکاری نوێکرایەوە.");
+  });
+
+  it("updates validation messages when switching the root visitor language", async () => {
+    apiRequest.mockResolvedValueOnce({
+      status: "draft",
+      ownerEmail: "owner@example.com",
+      businessName: "",
+      phone: "",
+      requestedSubdomain: null,
+    });
+    render(<RootPublicLocaleProvider initialLocale="ckb"><BusinessSignupWizard /></RootPublicLocaleProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "ناردنی داواکاری" }));
+    expect(screen.getByText("ناوی بزنس دەبێت لە ٢ تا ١٥٠ پیت بێت")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
+    expect(screen.getByText("يجب أن يتكون اسم النشاط التجاري من حرفين إلى 150 حرفًا")).toBeInTheDocument();
+    expect(screen.queryByText("ناوی بزنس دەبێت لە ٢ تا ١٥٠ پیت بێت")).not.toBeInTheDocument();
   });
 });

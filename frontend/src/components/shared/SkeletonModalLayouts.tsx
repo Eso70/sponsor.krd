@@ -81,29 +81,33 @@ function ModalFrame({
 /** Mirrors the complete first step of the shared Linktree editor. */
 export function SkeletonLinktreeEditorModal({
   platformAdminTheme = false,
+  loadingLabel = "Loading Linktree editor",
+  informationLabel = "Loading Linktree information",
 }: {
   platformAdminTheme?: boolean;
+  loadingLabel?: string;
+  informationLabel?: string;
 } = {}) {
   return (
     <ModalFrame
-      label="Loading Linktree editor"
+      label={loadingLabel}
       progress
       footer
       maxWidth="max-w-2xl"
       platformAdminTheme={platformAdminTheme}
     >
-      <SkeletonLinktreeBasicInfo />
+      <SkeletonLinktreeBasicInfo loadingLabel={informationLabel} />
     </ModalFrame>
   );
 }
 
-export function SkeletonLinktreeBasicInfo() {
+export function SkeletonLinktreeBasicInfo({ loadingLabel = "Loading Linktree information" }: { loadingLabel?: string } = {}) {
   return (
     <div
       className="max-h-[58vh] space-y-5 overflow-hidden"
       role="status"
       aria-busy="true"
-      aria-label="Loading Linktree information"
+      aria-label={loadingLabel}
     >
       <div className="flex items-center gap-4">
         <Skeleton className="size-20 shrink-0" rounded="rounded-full" />
@@ -152,31 +156,37 @@ export function SkeletonLinktreeBasicInfo() {
 export function SkeletonPageAnalyticsModal({
   summaryOnly = false,
   platformAdminTheme = false,
+  loadingLabel = "Loading page analytics",
+  dataLabel = "Loading page analytics data",
 }: {
   summaryOnly?: boolean;
   platformAdminTheme?: boolean;
+  loadingLabel?: string;
+  dataLabel?: string;
 }) {
   return (
     <ModalFrame
-      label="Loading page analytics"
+      label={loadingLabel}
       platformAdminTheme={platformAdminTheme}
     >
-      <SkeletonPageAnalyticsContent summaryOnly={summaryOnly} />
+      <SkeletonPageAnalyticsContent summaryOnly={summaryOnly} loadingLabel={dataLabel} />
     </ModalFrame>
   );
 }
 
 export function SkeletonPageAnalyticsContent({
   summaryOnly = false,
+  loadingLabel = "Loading page analytics data",
 }: {
   summaryOnly?: boolean;
+  loadingLabel?: string;
 }) {
   return (
     <div
       className="max-h-[64vh] space-y-5 overflow-hidden"
       role="status"
       aria-busy="true"
-      aria-label="Loading page analytics data"
+      aria-label={loadingLabel}
     >
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, index) => (
@@ -212,26 +222,30 @@ export function SkeletonPageAnalyticsContent({
 
 export function SkeletonBusinessAnalyticsModal({
   platformAdminTheme = false,
+  loadingLabel = "Loading business analytics",
+  contentLoadingLabel,
 }: {
   platformAdminTheme?: boolean;
+  loadingLabel?: string;
+  contentLoadingLabel?: string;
 } = {}) {
   return (
     <ModalFrame
-      label="Loading business analytics"
+      label={loadingLabel}
       platformAdminTheme={platformAdminTheme}
     >
-      <SkeletonBusinessAnalyticsContent />
+      <SkeletonBusinessAnalyticsContent loadingLabel={contentLoadingLabel} />
     </ModalFrame>
   );
 }
 
-export function SkeletonBusinessAnalyticsContent() {
+export function SkeletonBusinessAnalyticsContent({ loadingLabel = "Loading business analytics data" }: { loadingLabel?: string } = {}) {
   return (
     <div
       className="max-h-[64vh] space-y-5 overflow-hidden"
       role="status"
       aria-busy="true"
-      aria-label="Loading business analytics data"
+      aria-label={loadingLabel}
     >
       <div className="grid grid-cols-2 gap-4">
         <SkeletonStatCard />
@@ -277,12 +291,12 @@ export function SkeletonBusinessAnalyticsContent() {
 }
 
 /** Mirrors BusinessInfoStep while an existing business record is fetched. */
-export function SkeletonBusinessInfoForm() {
+export function SkeletonBusinessInfoForm({ loadingLabel = "Loading business information" }: { loadingLabel?: string } = {}) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading business information"
+      aria-label={loadingLabel}
       className="min-h-[50vh] space-y-6"
     >
       <div className="flex items-center justify-center gap-4 sm:gap-6">

@@ -1,61 +1,17 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { LEGAL_PRIVACY_VERSION } from "@linktree/types";
-import { LegalDocumentPage } from "@/components/shared/LegalDocumentPage";
+import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
+import { RootLegalDocument } from "@/features/public-site/RootLegalDocument";
+import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
+import { privacyCopy } from "@/features/public-site/legal-copy";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | Sponsor.krd",
-  description: "سیاسەتی تایبەتمەندی Sponsor.krd",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  return { title: `${privacyCopy[locale].title} | Sponsor.krd`, description: privacyCopy[locale].title };
+}
 
-export default function PrivacyPage() {
-  return (
-    <LegalDocumentPage
-      title="سیاسەتی تایبەتمەندی"
-      version={LEGAL_PRIVACY_VERSION}
-      sections={[
-        {
-          title: "1. زانیارییە کۆکراوەکان",
-          paragraphs: [
-            "ناسنامەی Google، ئیمەیڵی پشتڕاستکراو، ناو، وێنەی هەژمار، زانیاری بزنس، ژمارەی مۆبایل، وێنەکانی براند، ساب‌دۆمەین، پڕۆفایلی کۆمەڵایەتی، پەسەندکردنی یاسایی، دانیشتن و تۆماری ئاسایش کۆدەکرێنەوە.",
-          ],
-        },
-        {
-          title: "2. مەبەستی بەکارهێنان",
-          paragraphs: [
-            "زانیاری بۆ پشتڕاستکردنەوەی ناسنامە، پێداچوونەوەی داواکاری، دروستکردن و بەڕێوەبردنی هەژمار، پاراستنی ئاسایش، پشتیوانی، پابەندبوون بە یاسا و باشترکردنی خزمەتگوزاری بەکاردێت.",
-          ],
-        },
-        {
-          title: "3. هاوبەشکردن",
-          paragraphs: [
-            "زانیاری بە Google، TikTok و دابینکەرانی پێویستی ژێرخان، هەڵگرتن و ئاسایش بە قەدەر پێویست هاوبەش دەکرێت. لە پەڕە گشتییە ڕێگەپێدراوەکاندا TikTok Pixel و Events API بە شێوەی خۆکار کار دەکەن و دەتوانن زانیاریی سەردان و کردار، IP، جۆری وێبگەڕ و ئامێر، کوکی و ناسێنەرەکانی ڕیکلام و زانیاریی بەستنەوەی ڕیکلام وەربگرن. زانیاری کەسی نافرۆشرێت. لە داواکاری یاسایی ڕەوادا زانیاری دەکرێت بدرێت.",
-          ],
-        },
-        {
-          title: "4. پاراستن و ماوە",
-          paragraphs: [
-            "کۆنترۆڵی دەستگەیشتن، جیاکردنەوەی tenant، توکنی کورتخایەن و یەکجارە، کوکی پارێزراو، هاشکردن و تۆماری پشکنین بەکاردێن. داواکارییە ڕەتکراو یان جێهێڵراوەکان دەبێت دوای ماوەی یاسایی و کارگێڕی پێویست بسڕدرێنەوە یان بێ‌ناسنامە بکرێن.",
-          ],
-        },
-        {
-          title: "5. مافەکانت",
-          paragraphs: [
-            "بەپێی یاسای جێبەجێبوو، دەتوانیت داوای بینین، ڕاستکردنەوە، سنووردارکردن یان سڕینەوەی زانیارییەکەت بکەیت. هەندێک تۆماری ئاسایشی و یاسایی بۆ ماوەی پێویست دەپارێزرێن.",
-          ],
-        },
-        {
-          title: "6. گواستنەوە و منداڵان",
-          paragraphs: [
-            "خزمەتگوزاری بۆ کەسانی خوار تەمەنی یاسایی نییە. ئەگەر زانیاری لە دەرەوەی وڵات هەڵگیرێت، پاراستنی گونجاوی یاسایی دەبێت جێبەجێ بکرێت.",
-          ],
-        },
-        {
-          title: "7. پەیوەندی و گۆڕانکاری",
-          paragraphs: [
-            "زانیاری پەیوەندیی فەرمی پلاتفۆرم دەبێت پێش بڵاوکردنەوە زیاد بکرێت. گۆڕانکارییەکان بە ژمارەی وەشان و بەروار تۆمار دەکرێن.",
-          ],
-        },
-      ]}
-    />
-  );
+export default async function PrivacyPage() {
+  const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  return <RootPublicLocaleProvider initialLocale={locale}><RootLegalDocument kind="privacy" version={LEGAL_PRIVACY_VERSION} /></RootPublicLocaleProvider>;
 }

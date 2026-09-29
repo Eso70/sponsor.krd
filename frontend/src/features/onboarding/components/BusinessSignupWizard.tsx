@@ -14,6 +14,8 @@ import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { toast } from "sonner";
+import { RootPublicLanguageToggle, useRootPublicLocale } from "@/features/public-site/RootPublicLocaleProvider";
+import { rootOnboardingCopy } from "../root-onboarding-copy";
 import {
   buildSignupApplicationPayload,
   validateSignupApplication,
@@ -39,6 +41,8 @@ function slug(value: string) {
 }
 
 export function BusinessSignupWizard() {
+  const { locale } = useRootPublicLocale();
+  const copy = rootOnboardingCopy[locale];
   const [application, setApplication] = useState<Application | null>(null);
   const [form, setForm] = useState({
     businessName: "",
@@ -52,6 +56,13 @@ export function BusinessSignupWizard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<SignupFieldErrors>({});
+  const [errorsLocale, setErrorsLocale] = useState(locale);
+  const visibleErrors = errorsLocale === locale || Object.keys(errors).length === 0
+    ? errors
+    : validateSignupApplication(form, available, locale);
+  const displayedError = error === "SIGNUP_SESSION_EXPIRED" ? copy.sessionExpired
+    : error === "SIGNUP_SUBMIT_FAILED" ? copy.submitFailed
+    : error === "SIGNUP_REFRESH_FAILED" ? copy.refreshFailed : error;
 
   useEffect(() => {
     void apiRequest<Application>("/api/signup/application")
@@ -64,7 +75,7 @@ export function BusinessSignupWizard() {
         });
       })
       .catch(() =>
-        setError("Signup session expired. Request a new invitation."),
+        setError("SIGNUP_SESSION_EXPIRED"),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -76,16 +87,13 @@ export function BusinessSignupWizard() {
       const latest = await apiRequest<Application>("/api/signup/application");
       setApplication(latest);
       if (latest.status === "pending") {
-        toast.info("Your application is still pending review.");
+        toast.info(copy.stillPending);
       } else {
-        toast.success("Application status updated.");
+        toast.success(copy.statusUpdated);
       }
-    } catch (cause) {
-      const message =
-        cause instanceof Error
-          ? cause.message
-          : "Application status could not be refreshed.";
-      setError(message);
+    } catch {
+      const message = copy.refreshFailed;
+      setError("SIGNUP_REFRESH_FAILED");
       toast.error(message);
     } finally {
       setRefreshing(false);
@@ -105,8 +113,9 @@ export function BusinessSignupWizard() {
   }, [form.requestedSubdomain]);
 
   async function submit() {
-    const nextErrors = validateSignupApplication(form, available);
+    const nextErrors = validateSignupApplication(form, available, locale);
     setErrors(nextErrors);
+    setErrorsLocale(locale);
     if (Object.keys(nextErrors).length > 0) return;
     setBusy(true);
     setError("");
@@ -120,12 +129,8 @@ export function BusinessSignupWizard() {
           method: "POST",
         }),
       );
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Application could not be submitted.",
-      );
+    } catch {
+      setError("SIGNUP_SUBMIT_FAILED");
     } finally {
       setBusy(false);
     }
@@ -133,15 +138,15 @@ export function BusinessSignupWizard() {
 
   if (loading || !application) {
     return (
-      <AuthenticationShell brandDescription="هەژماری بزنسەکەت بە پاراستن تەواو بکە">
+      <AuthenticationShell brandDescription={copy.wizardBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
         <AuthenticationCard
-          title={loading ? "ئامادەکردنی داواکاری" : "داواکاری بەردەست نییە"}
-          description={loading ? "زانیارییەکانت بار دەکرێن" : error}
+          title={loading ? copy.preparing : copy.unavailable}
+          description={loading ? copy.loadingData : displayedError}
         >
           {loading ? (
             <LoadingState
-              title="زانیارییەکانت بار دەکرێن"
-              description="داواکارییە پارێزراوەکەت ئامادە دەکەین."
+              title={copy.loadingData}
+              description={copy.preparingDescription}
             />
           ) : null}
         </AuthenticationCard>
@@ -154,31 +159,39 @@ export function BusinessSignupWizard() {
     const pending = application.status === "pending";
     return (
       <AuthenticationShell
-        brandDescription="پشکنین بۆ داواکارییەکەت دەکەین"
+        brandDescription={copy.wizardReviewBrand}
+        backLabel={copy.back}
+        previewTitle={copy.preview}
+        themeCopy={copy.theme}
+        language={locale}
         headerAction={
-          pending ? (
+          <div className="flex items-center gap-2">
+            <RootPublicLanguageToggle />
+            {pending ? (
             <AuthenticationRefreshButton
               refreshing={refreshing}
               onRefresh={() => void refreshStatus()}
+              label={copy.refreshStatus}
             />
-          ) : undefined
+            ) : null}
+          </div>
         }
       >
         <AuthenticationCard
           title={
             pending
-              ? "داواکارییەکەت نێردرا"
+              ? copy.pendingTitle
               : approved
-                ? "داواکارییەکەت پەسەندکرا"
-                : "داواکارییەکەت ڕەتکرایەوە"
+                ? copy.approvedTitle
+                : copy.rejectedTitle
           }
           description={
             application.reviewReason ||
             (pending
-              ? "بەزووترین کات داواکارییەکەت وەڵام ئەدرێتەوە، تکایە دوای سێ خولەک پەنجە لە دوگمەی ڕیفرێش بدە"
+              ? copy.pendingDescription
               : approved
-                ? "ئێستا دەتوانیت بچیتە ژوورەوە و ڕێکخستنی سەرەتایی تەواو بکەیت"
-                : "بۆ زانیاری زیاتر پەیوەندی بە بەڕێوەبەرەوە بکە.")
+                ? copy.approvedDescription
+                : copy.rejectedDescription)
           }
         >
           <div className="flex justify-center py-3">
@@ -200,7 +213,7 @@ export function BusinessSignupWizard() {
               }}
               className="mt-4 h-12 w-full rounded-xl bg-[var(--sponsor-krd-accent)] text-sm font-bold text-[var(--sponsor-krd-accent-ink)]"
             >
-              چوونەژوورەوەی بزنس
+              {copy.businessLogin}
             </button>
           ) : null}
         </AuthenticationCard>
@@ -209,10 +222,10 @@ export function BusinessSignupWizard() {
   }
 
   return (
-    <AuthenticationShell brandDescription="بزنسەکەت بە سێ زانیاریی سەرەکی تۆمار بکە">
+    <AuthenticationShell brandDescription={copy.wizardFormBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
       <AuthenticationCard
-        title="دروستکردنی هەژماری بزنس"
-        description="ناوی بزنس، ژمارەی مۆبایل و ساب‌دۆمەین دیاری بکە"
+        title={copy.title}
+        description={copy.formDescription}
       >
         <div className="space-y-4" dir="ltr">
           {error ? (
@@ -220,8 +233,8 @@ export function BusinessSignupWizard() {
               error={{
                 code: "SIGNUP_ERROR",
                 status: null,
-                title: "Application could not be submitted",
-                message: error,
+                title: copy.submitFailed,
+                message: displayedError,
               }}
             />
           ) : null}
@@ -230,13 +243,13 @@ export function BusinessSignupWizard() {
               {application.reviewReason}
             </div>
           ) : null}
-          <EditorField label="ناوی بزنس" required error={errors.businessName}>
+          <EditorField label={copy.businessName} required error={visibleErrors.businessName}>
             <input
               autoFocus
-              className={modalInputClass(Boolean(errors.businessName))}
-              aria-invalid={Boolean(errors.businessName)}
+              className={modalInputClass(Boolean(visibleErrors.businessName))}
+              aria-invalid={Boolean(visibleErrors.businessName)}
               value={form.businessName}
-              placeholder="Store Name"
+              placeholder={copy.namePlaceholder}
               onChange={(event) => {
                 const businessName = event.target.value;
                 setAvailable(null);
@@ -250,12 +263,12 @@ export function BusinessSignupWizard() {
               }}
             />
           </EditorField>
-          <EditorField label="ژمارەی مۆبایل" required error={errors.phone}>
+          <EditorField label={copy.phone} required error={visibleErrors.phone}>
             <input
               type="tel"
               autoComplete="tel"
-              className={modalInputClass(Boolean(errors.phone))}
-              aria-invalid={Boolean(errors.phone)}
+              className={modalInputClass(Boolean(visibleErrors.phone))}
+              aria-invalid={Boolean(visibleErrors.phone)}
               value={form.phone}
               placeholder="750 000 0000"
               onChange={(event) =>
@@ -264,23 +277,23 @@ export function BusinessSignupWizard() {
             />
           </EditorField>
           <EditorField
-            label="ساب‌دۆمەین"
+            label={copy.subdomain}
             required
             hint={
-              available === null ? "" : available ? "بەردەستە" : "بەردەست نییە"
+              available === null ? "" : available ? copy.available : copy.unavailableSubdomain
             }
-            error={errors.requestedSubdomain || errors.subdomainAvailability}
+            error={visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability}
           >
             <div className="flex items-center gap-2">
               <input
                 className={modalInputClass(
                   available === false ||
                     Boolean(
-                      errors.requestedSubdomain || errors.subdomainAvailability,
+                      visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
                     ),
                 )}
                 aria-invalid={Boolean(
-                  errors.requestedSubdomain || errors.subdomainAvailability,
+                  visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
                 )}
                 value={form.requestedSubdomain}
                 placeholder="electronics-shop"
@@ -307,22 +320,22 @@ export function BusinessSignupWizard() {
                 <Loader2 className="h-5 w-5" />
               </MotionSpinner>
             ) : (
-              "ناردنی داواکاری"
+              copy.submit
             )}
           </button>
           <p
             className="text-center text-[11px] leading-5 text-slate-400"
             dir="rtl"
           >
-            بە ناردنی داواکاری، ڕەزامەندی لەسەر{" "}
+            {copy.submitConsentBefore}{" "}
             <Link href="/legal/terms" target="_blank" className="underline">
-              مەرجەکان
+              {copy.terms}
             </Link>{" "}
-            و{" "}
+            {copy.and}{" "}
             <Link href="/legal/privacy" target="_blank" className="underline">
-              سیاسەتی تایبەتمەندی
+              {copy.privacy}
             </Link>{" "}
-            دەدەیت.
+            {copy.consentAfter}
           </p>
         </div>
       </AuthenticationCard>

@@ -44,6 +44,7 @@ interface ManagementModalProps {
    * inside (checkboxes, selects, wizard actions) follows along untouched.
    */
   accentColor?: string | null;
+  closeLabel?: string;
 }
 
 export function ManagementModal({
@@ -63,6 +64,7 @@ export function ManagementModal({
   sponsorKrdTheme = true,
   locked = false,
   accentColor = null,
+  closeLabel = "داخستن",
 }: ManagementModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -141,12 +143,12 @@ export function ManagementModal({
           <div className="flex shrink-0 items-center gap-2">
             {headerAction}
             {!locked ? (
-              <Tooltip content="داخستن" side="bottom">
+              <Tooltip content={closeLabel} side="bottom">
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={busy}
-                  aria-label="داخستن"
+                  aria-label={closeLabel}
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 cursor-pointer ${createBusinessStyle ? "shadow-sm" : ""}`}
                 >
                   <X className={createBusinessStyle ? "h-5 w-5" : "h-4 w-4"} />

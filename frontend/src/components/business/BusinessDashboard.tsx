@@ -41,6 +41,7 @@ import { useTranslations } from "next-intl";
 import { BusinessLanguageSelector } from "@/features/business/components/BusinessLanguageSelector";
 import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
 import { businessMessages } from "@/features/business/i18n/messages";
+import { arabicEditorCopy, englishEditorCopy } from "@/features/link-editor/editor-copy";
 import {
   DashboardSidebar,
   type DashboardSidebarItem,
@@ -61,23 +62,14 @@ import {
 import { apiRequest, isApiRequestError } from "@/lib/api/request";
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
 import { businessErrorTheme } from "@/components/error-pages/error-theme";
-import { ERROR_PAGE_COPY } from "@/components/error-pages/copy";
+import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
 import { DEFAULT_BUSINESS_ACCENT } from "@/lib/utils/business-error-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { businessTabTitle } from "@/lib/utils/tab-title";
 import {
   SkeletonDashboardPage,
-  SkeletonTemplatePage,
 } from "@/components/shared/Skeleton";
-import {
-  SkeletonSettingsPage,
-  SkeletonAdvertisingEditor,
-  SkeletonTikTokPage,
-} from "@/components/shared/SkeletonPageLayouts";
-import {
-  SkeletonLinktreeEditorModal,
-  SkeletonPageAnalyticsModal,
-} from "@/components/shared/SkeletonModalLayouts";
+import { BusinessLoadingSkeleton } from "@/features/business/components/BusinessLoadingSkeleton";
 import {
   BusinessDashboardRefreshProvider,
   useBusinessDashboardRefreshController,
@@ -93,7 +85,7 @@ const LinktreeEditorModal = dynamic(
     })),
   {
     ssr: false,
-    loading: () => <SkeletonLinktreeEditorModal />,
+    loading: () => <BusinessLoadingSkeleton kind="linktreeEditor" />,
     // Preload on hover/focus for better UX
   },
 );
@@ -105,7 +97,7 @@ const BusinessSettingsPage = dynamic(
     })),
   {
     ssr: false,
-    loading: () => <SkeletonSettingsPage tabCount={4} />,
+    loading: () => <BusinessLoadingSkeleton kind="settings" />,
   },
 );
 
@@ -114,7 +106,7 @@ const TemplatesPage = dynamic(
     import("@/features/templates/components/TemplatesPage").then((mod) => ({
       default: mod.TemplatesPage,
     })),
-  { ssr: false, loading: () => <SkeletonTemplatePage /> },
+  { ssr: false, loading: () => <BusinessLoadingSkeleton kind="templates" /> },
 );
 
 const BusinessLinktreeAnalyticsModal = dynamic(
@@ -122,7 +114,7 @@ const BusinessLinktreeAnalyticsModal = dynamic(
     import("@/components/business/BusinessLinktreeAnalyticsModal").then(
       (mod) => ({ default: mod.BusinessLinktreeAnalyticsModal }),
     ),
-  { ssr: false, loading: () => <SkeletonPageAnalyticsModal /> },
+  { ssr: false, loading: () => <BusinessLoadingSkeleton kind="pageAnalytics" /> },
 );
 
 const BusinessTikTokConfigPage = dynamic(
@@ -134,7 +126,7 @@ const BusinessTikTokConfigPage = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <SkeletonTikTokPage />,
+    loading: () => <BusinessLoadingSkeleton kind="tiktok" />,
   },
 );
 
@@ -145,7 +137,7 @@ const AdvertisingServicePage = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <SkeletonAdvertisingEditor />,
+    loading: () => <BusinessLoadingSkeleton kind="advertising" />,
   },
 );
 
@@ -195,16 +187,19 @@ function getBusinessPage(pathname: string): BusinessDashboardPage {
 
 function LockedBusinessContent({
   locked,
+  title,
   reason,
   children,
 }: {
   locked: boolean;
+  title: string;
   reason: string;
   children: ReactNode;
 }) {
   return (
     <LockedContent
       locked={locked}
+      title={title}
       description={reason}
       className="min-h-0 flex-1"
     >
@@ -342,19 +337,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
   // Set browser tab title and favicon dynamically for this business
   useEffect(() => {
-    const sectionTitles: Record<
-      BusinessDashboardPage,
-      Parameters<typeof businessTabTitle>[1]
-    > = {
-      linktrees: "Pages",
-      "tiktok-config": "TikTok Config",
-      advertising: "Ads",
-      templates: "Templates",
-      profile: "Profile",
-      settings: "Settings",
+    const sectionTitles: Record<BusinessDashboardPage, string> = {
+      linktrees: t("linktrees"),
+      "tiktok-config": t("tiktokSettings"),
+      advertising: t("advertising"),
+      templates: t("templates"),
+      profile: t("profile"),
+      settings: t("settings"),
     };
     document.title = businessTabTitle(
-      name || currentUsername || "Business",
+      name || currentUsername || t("businessFallback"),
       sectionTitles[activeTab],
     );
     if (favicon) {
@@ -368,7 +360,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       }
       link.href = favicon;
     }
-  }, [name, favicon, currentUsername, activeTab]);
+  }, [name, favicon, currentUsername, activeTab, t]);
 
   // Last payloads seen, so an unchanged response costs nothing. Previously every
   // tick re-set state and dispatched events, re-rendering the whole dashboard
@@ -1145,7 +1137,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               errorMessage,
               errorData ?? undefined,
             );
-            toast.error(errorMessage);
+            toast.error(locale === "ckb" ? errorMessage : actionT("updateFailed"));
             throw new Error(errorMessage);
           }
 
@@ -1459,7 +1451,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         isSubmittingRef.current = false;
       }
     },
-    [handleModalClose, mergeLinktree, prependLinktree, actionT],
+    [handleModalClose, mergeLinktree, prependLinktree, actionT, locale],
   );
 
   // Don't render anything if not authenticated (after all hooks)
@@ -1467,7 +1459,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   if (badGateway) {
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.badGateway}
+        {...businessErrorPageCopy(locale, "badGateway")}
         theme={businessErrorTheme({
           websiteColor: parseWebsiteColor(
             wColor || websiteColor || DEFAULT_BUSINESS_ACCENT,
@@ -1486,7 +1478,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   if (serviceUnavailable) {
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.serviceUnavailable}
+        {...businessErrorPageCopy(locale, "serviceUnavailable")}
         theme={businessErrorTheme({
           websiteColor: parseWebsiteColor(
             wColor || websiteColor || DEFAULT_BUSINESS_ACCENT,
@@ -1505,7 +1497,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   if (gatewayTimeout) {
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.gatewayTimeout}
+        {...businessErrorPageCopy(locale, "gatewayTimeout")}
         theme={businessErrorTheme({
           websiteColor: parseWebsiteColor(
             wColor || websiteColor || DEFAULT_BUSINESS_ACCENT,
@@ -1524,7 +1516,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   if (accessForbidden) {
     return (
       <ErrorPage
-        {...ERROR_PAGE_COPY.forbidden}
+        {...businessErrorPageCopy(locale, "forbidden")}
         theme={businessErrorTheme({
           websiteColor: parseWebsiteColor(
             wColor || websiteColor || DEFAULT_BUSINESS_ACCENT,
@@ -1648,6 +1640,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 <BusinessAnnouncementBanners />
                 <LockedBusinessContent
                   locked={pageLocked}
+                  title={actionT("lockedTitle")}
                   reason={pageLockReason}
                 >
                   {/*
@@ -1660,7 +1653,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                   panel is the content here; there is nothing to fetch.
                 */}
                   {pageLocked ? (
-                    <SkeletonDashboardPage statCount={4} body="analytics" />
+                    <SkeletonDashboardPage statCount={4} body="analytics" loadingLabel={locale === "ar" ? "جارٍ تحميل بيانات لوحة التحكم" : locale === "en" ? "Loading dashboard data" : "داتای داشبۆرد بار دەکرێت"} />
                   ) : activeTab === "linktrees" ? (
                     <BusinessLinktreesPage
                       linktrees={filteredLinktrees}
@@ -1696,12 +1689,12 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                       onToggleStatus={handleToggleStatus}
                     />
                   ) : activeTab === "tiktok-config" ? (
-                    <BusinessTikTokConfigPage pixelCopy={locale === "ar" ? businessMessages.ar.TikTokPixel : undefined} />
+                    <BusinessTikTokConfigPage pixelCopy={locale === "ckb" ? undefined : businessMessages[locale].TikTokPixel} />
                   ) : activeTab === "templates" ? (
                     <TemplatesPage accessMode="entitlement" copy={businessMessages[locale].TemplatesPage} />
                   ) : activeTab === "advertising" ? (
                     <AdvertisingServicePage
-                      name={name || currentUsername || "Business"}
+                      name={name || currentUsername || t("businessFallback")}
                       logo={logo}
                       accentColor={parseWebsiteColor(wColor).primary}
                       phone={phone}
@@ -1738,6 +1731,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               onClose={handleDeleteModalClose}
               onConfirm={handleDeleteConfirm}
               title={t("deletePage")}
+              confirmLabel={t("confirmDelete")}
+              loadingLabel={t("deleting")}
+              cancelLabel={t("cancel")}
+              closeLabel={t("close")}
               isDeleting={isDeleting}
               message={
                 <p>
@@ -1762,6 +1759,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             confirmLabel={t("confirmClear")}
             loadingLabel={t("clearing")}
             cancelLabel={t("cancel")}
+            closeLabel={t("close")}
             isDeleting={isClearingAnalytics}
             message={
               <p>{t("clearAnalyticsQuestion")}</p>
@@ -1771,6 +1769,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           {/* Create/Edit Modal */}
           {isModalOpen && (
             <LinktreeEditorModal
+              copy={locale === "ar" ? arabicEditorCopy : locale === "en" ? englishEditorCopy : undefined}
+              colorCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsColorPicker}
               isOpen={isModalOpen}
               onClose={handleModalClose}
               onSubmit={handleSubmit}
@@ -1788,7 +1788,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               onClose={() => setAnalyticsModalLinktree(null)}
               linktreeId={analyticsModalLinktree.id}
               linktreeName={analyticsModalLinktree.name}
-              copy={locale === "ar" ? businessMessages.ar.PageAnalytics : undefined}
+              copy={locale === "ckb" ? undefined : businessMessages[locale].PageAnalytics}
               canClearAnalytics={
                 liveEffectiveAccess?.permissions[
                   "business:analytics:clear-linktree"
@@ -1828,7 +1828,14 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           />
         </div>
         {onboardingRequired ? (
-          <BusinessGettingStarted initialStep={onboardingStep} />
+          <BusinessGettingStarted
+            initialStep={onboardingStep}
+            copy={locale === "ckb" ? undefined : businessMessages[locale].Onboarding}
+            brandCopy={locale === "ckb" ? undefined : businessMessages[locale].OnboardingBrand}
+            tikTokCopy={locale === "ckb" ? undefined : businessMessages[locale].OnboardingTikTok}
+            identityCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsPage}
+            colorCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsColorPicker}
+          />
         ) : null}
       </BusinessDashboardRefreshProvider>
     </ThemeProvider>

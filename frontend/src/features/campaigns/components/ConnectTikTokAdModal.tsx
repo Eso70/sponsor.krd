@@ -17,6 +17,7 @@ interface ConnectTikTokAdModalProps {
   onConnect: (account: TikTokAdAccount) => void;
   initialAccount?: TikTokAdAccount | null;
   sponsorKrdTheme?: boolean;
+  translate?: (source: string) => string;
 }
 
 type ConnectionTab = "direct_token" | "oauth";
@@ -27,6 +28,7 @@ export function ConnectTikTokAdModal({
   onConnect,
   initialAccount,
   sponsorKrdTheme = false,
+  translate: t = (source) => source,
 }: ConnectTikTokAdModalProps) {
   const [activeTab, setActiveTab] = useState<ConnectionTab>("direct_token");
 
@@ -52,7 +54,7 @@ export function ConnectTikTokAdModal({
 
   const handleDirectSubmit = async () => {
     if (!advertiserId.trim() || !accessToken.trim()) {
-      toast.error("تکایە Advertiser ID و Access Token بنووسە");
+      toast.error(t("تکایە Advertiser ID و Access Token بنووسە"));
       return;
     }
 
@@ -74,16 +76,16 @@ export function ConnectTikTokAdModal({
       const result = await response.json();
       if (result.success && result.data) {
         onConnect(result.data);
-        toast.success(`هەژماری "${result.data.advertiserName}" بە سەرکەوتوویی بەسترایەوە!`);
+        toast.success(`${t("هەژماری")} "${result.data.advertiserName}" ${t("بە سەرکەوتوویی بەسترایەوە!")}`);
         onClose();
       } else {
-        toast.error("پەیوەندی سەرکەوتوو نەبوو", {
-          description: result.error || "تکایە دڵنیابە لە دروستی زانیارییەکان",
+        toast.error(t("پەیوەندی سەرکەوتوو نەبوو"), {
+          description: result.error || t("تکایە دڵنیابە لە دروستی زانیارییەکان"),
         });
       }
     } catch (err) {
-      toast.error("هەڵە لە پەیوەندی بە تیکتۆک", {
-        description: err instanceof Error ? err.message : "تکایە دووبارە هەوڵبدەرەوە",
+      toast.error(t("هەڵە لە پەیوەندی بە تیکتۆک"), {
+        description: err instanceof Error ? err.message : t("تکایە دووبارە هەوڵبدەرەوە"),
       });
     } finally {
       setIsSubmitting(false);
@@ -92,7 +94,7 @@ export function ConnectTikTokAdModal({
 
   const handleOAuthSubmit = () => {
     if (!appId.trim()) {
-      toast.error("تکایە TikTok App ID بنووسە");
+      toast.error(t("تکایە TikTok App ID بنووسە"));
       return;
     }
 
@@ -114,21 +116,21 @@ export function ConnectTikTokAdModal({
       isOpen={isOpen}
       onClose={onClose}
       sponsorKrdTheme={sponsorKrdTheme}
-      title="بەستنەوەی هەژماری تیکتۆک (TikTok Ads)"
-      description="شێوازی بەستنەوەی هەژمارەکەت هەڵبژێرە بۆ بەڕێوەبردنی کەمپەین و بینینی ئامارەکان."
+      title={t("بەستنەوەی هەژماری تیکتۆک (TikTok Ads)")}
+      description={t("شێوازی بەستنەوەی هەژمارەکەت هەڵبژێرە بۆ بەڕێوەبردنی کەمپەین و بینینی ئامارەکان.")}
       footer={
         <ModalFooterActions
           submitLabel={
             activeTab === "direct_token"
               ? isSubmitting
-                ? "پشکنین و بەستنەوە..."
-                : "تێست و بەستنەوەی هەژمار"
+                ? t("پشکنین و بەستنەوە...")
+                : t("تێست و بەستنەوەی هەژمار")
               : isSubmitting
-                ? "دەبەسترێتەوە..."
-                : "بەستنەوە لە تیکتۆک"
+                ? t("دەبەسترێتەوە...")
+                : t("بەستنەوە لە تیکتۆک")
           }
-          submittingLabel="دەبەسترێتەوە..."
-          cancelLabel="پاشگەزبوونەوە"
+          submittingLabel={t("دەبەسترێتەوە...")}
+          cancelLabel={t("پاشگەزبوونەوە")}
           submitDisabled={
             activeTab === "direct_token" ? !isDirectFormValid : !isOAuthFormValid
           }
@@ -151,7 +153,7 @@ export function ConnectTikTokAdModal({
             }`}
           >
             <KeyRound className="h-3.5 w-3.5" />
-            تۆکن و ناسنامەی ڕاستەوخۆ
+            {t("تۆکن و ناسنامەی ڕاستەوخۆ")}
           </button>
           <button
             type="button"
@@ -163,7 +165,7 @@ export function ConnectTikTokAdModal({
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            ڕێگەی فەرمی (OAuth 2.0)
+            {t("ڕێگەی فەرمی (OAuth 2.0)")}
           </button>
         </div>
 
@@ -173,56 +175,55 @@ export function ConnectTikTokAdModal({
             <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-3 text-xs text-sky-800 dark:border-sky-900/30 dark:bg-sky-950/20 dark:text-sky-300">
               <div className="flex items-center gap-1.5 font-bold">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
-                <span>شێوازی خێرا و ڕاستەوخۆ بە Access Token</span>
+                <span>{t("شێوازی خێرا و ڕاستەوخۆ بە Access Token")}</span>
               </div>
               <p className="mt-1 leading-5 opacity-90">
-                دەتوانیت Access Token لە بەشی TikTok Developer Portal یان App Details کۆپی
-                بکەیت و ڕاستەوخۆ پەیوەست ببی بە Marketing API v2.0.
+                {t("دەتوانیت Access Token لە بەشی TikTok Developer Portal یان App Details کۆپی بکەیت و ڕاستەوخۆ پەیوەست ببی بە Marketing API v2.0.")}
               </p>
             </div>
 
             <EditorField
-              label="Advertiser ID (ناسنامەی هەژماری ڕیکلام)"
-              hint="ژمارەی هەژمارەکەت لە تیکتۆک"
+              label={t("Advertiser ID (ناسنامەی هەژماری ڕیکلام)")}
+              hint={t("ژمارەی هەژمارەکەت لە تیکتۆک")}
               required
             >
               <ModalTextInput
                 type="text"
                 value={advertiserId}
                 onChange={(e) => setAdvertiserId(e.target.value)}
-                placeholder="نموونە: 7123456789012345678"
+                placeholder={t("نموونە: 7123456789012345678")}
                 className="font-mono text-xs"
               />
             </EditorField>
 
             <EditorField
-              label="Long-Term Access Token"
-              hint="تۆکنی هەمیشەیی تیکتۆک بۆ ئەپەکەت"
+              label={t("Long-Term Access Token")}
+              hint={t("تۆکنی هەمیشەیی تیکتۆک بۆ ئەپەکەت")}
               required
             >
               <ModalTextInput
                 type="password"
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
-                placeholder="Access Token لێرە بنووسە..."
+                placeholder={t("Access Token لێرە بنووسە...")}
                 className="font-mono text-xs"
               />
             </EditorField>
 
             <EditorField
-              label="Business Center ID (ئارەزوومەندانە)"
-              hint="ناسنامەی Business Center ئەگەر هەبێت"
+              label={t("Business Center ID (ئارەزوومەندانە)")}
+              hint={t("ناسنامەی Business Center ئەگەر هەبێت")}
             >
               <div className="relative">
                 <ModalTextInput
                   type="text"
                   value={businessCenterId}
                   onChange={(e) => setBusinessCenterId(e.target.value)}
-                  placeholder="نموونە: 7123456789012345679"
+                  placeholder={t("نموونە: 7123456789012345679")}
                   className="font-mono text-xs"
                 />
                 <Tooltip
-                  content="ئەگەر هەژمارەکەت سەر بە Business Center بێت، دەتوانیت لێرە بینوسیت"
+                  content={t("ئەگەر هەژمارەکەت سەر بە Business Center بێت، دەتوانیت لێرە بینوسیت")}
                   side="top"
                 >
                   <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 opacity-60" />
@@ -236,28 +237,33 @@ export function ConnectTikTokAdModal({
         {activeTab === "oauth" && (
           <div className="space-y-3.5 pt-1">
             <CopyValueField
-              label="Advertiser redirect URL (بۆ دانان لە TikTok Developer Portal):"
+              label={t("Advertiser redirect URL (بۆ دانان لە TikTok Developer Portal):")}
               value={redirectUrl}
               copyName="Advertiser redirect URL"
+              copyText={{
+                action: t("کۆپیکردنی بەستەری ڕەوانەکردن"),
+                success: t("بەستەری ڕەوانەکردن کۆپی کرا"),
+                failure: t("کۆپیکردنی بەستەری ڕەوانەکردن سەرکەوتوو نەبوو"),
+              }}
               monospace
             />
 
-            <EditorField label="TikTok App ID" required>
+            <EditorField label={t("TikTok App ID")} required>
               <ModalTextInput
                 type="text"
                 value={appId}
                 onChange={(e) => setAppId(e.target.value)}
-                placeholder="TikTok App ID لێرە بنووسە..."
+                placeholder={t("TikTok App ID لێرە بنووسە...")}
                 className="font-mono text-xs"
               />
             </EditorField>
 
-            <EditorField label="TikTok App Secret">
+            <EditorField label={t("TikTok App Secret")}>
               <ModalTextInput
                 type="password"
                 value={appSecret}
                 onChange={(e) => setAppSecret(e.target.value)}
-                placeholder="TikTok App Secret لێرە بنووسە..."
+                placeholder={t("TikTok App Secret لێرە بنووسە...")}
                 className="font-mono text-xs"
               />
             </EditorField>

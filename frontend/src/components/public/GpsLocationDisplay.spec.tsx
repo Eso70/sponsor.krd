@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { GpsLocationDisplay } from "./GpsLocationDisplay";
+import { PublicLinktreeLocaleProvider } from "@/features/business/i18n/public-linktree";
 
 const gpsLink = {
   id: "gps-link-id",
@@ -9,6 +10,16 @@ const gpsLink = {
 };
 
 describe("GpsLocationDisplay", () => {
+  it.each([
+    { locale: "ar" as const, location: "موقع GPS", open: "افتح في Google Maps", preview: "معاينة Google Maps" },
+    { locale: "en" as const, location: "GPS location", open: "Open in Google Maps", preview: "Google Maps preview" },
+  ])("uses $locale labels on public pages", ({ locale, location, open, preview }) => {
+    render(<PublicLinktreeLocaleProvider locale={locale}><GpsLocationDisplay gpsLink={gpsLink} /></PublicLinktreeLocaleProvider>);
+    expect(screen.getByLabelText(location)).toBeInTheDocument();
+    expect(screen.getByText(location)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: open })).toBeInTheDocument();
+    expect(screen.getByTitle(preview)).toBeInTheDocument();
+  });
   it("uses Kurdish interface copy while preserving the Google Maps brand", () => {
     render(
       <GpsLocationDisplay

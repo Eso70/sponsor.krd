@@ -20,7 +20,7 @@ export function BusinessSidebarFooter({
   onUpgrade,
 }: BusinessSidebarFooterProps) {
   const t = useTranslations("Sidebar");
-  const displayPlanName = planName?.trim() || "Plan";
+  const displayPlanName = planName?.trim() || t("planFallback");
   const canUpgrade = Boolean(planCode && planCode.toLowerCase() !== "ultra");
 
   return (

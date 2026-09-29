@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { Fragment, memo, type CSSProperties, type ReactNode } from "react";
+import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
+import { publicLinktreeCopy } from "@/features/business/i18n/public-linktree-copy";
 
-const DEFAULT_FALLBACK_DESCRIPTION = "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە";
 const DEFAULT_AVATAR = "/images/DefaultAvatar.png";
 
 export const STANDARD_TEMPLATE_HEADER_CLASSES = {
@@ -108,7 +109,7 @@ export const TemplateHeader = memo(function TemplateHeader({
   name,
   subtitle,
   description,
-  fallbackDescription = DEFAULT_FALLBACK_DESCRIPTION,
+  fallbackDescription,
   image,
   textColor = "#ffffff",
   textSecondaryColor = "rgba(255, 255, 255, 0.8)",
@@ -139,9 +140,13 @@ export const TemplateHeader = memo(function TemplateHeader({
   descriptionStyle,
   children,
 }: TemplateHeaderProps) {
+  const copy = usePublicLinktreeCopy();
   const imageSrc = image || DEFAULT_AVATAR;
   const trimmedSubtitle = subtitle?.trim() || "";
-  const resolvedDescription = description?.trim() || fallbackDescription;
+  const descriptionText = description?.trim();
+  const resolvedDescription = !descriptionText || descriptionText === publicLinktreeCopy.ckb.description
+    ? fallbackDescription || copy.description
+    : descriptionText;
   const resolvedSubtitleColor = subtitleColor || textSecondaryColor;
 
   const Wrapper = as;

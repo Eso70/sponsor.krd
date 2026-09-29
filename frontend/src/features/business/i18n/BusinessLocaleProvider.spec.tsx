@@ -40,8 +40,8 @@ describe("business language preference", () => {
 
     expect(screen.getByText("الإعدادات")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "التبديل إلى الكردية" }),
-    ).toHaveTextContent("KU");
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    ).toHaveTextContent("EN");
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(container.firstElementChild).toHaveAttribute("dir", "ltr");
     await waitFor(() =>
@@ -71,8 +71,8 @@ describe("business language preference", () => {
     expect(toastError).toHaveBeenCalledOnce();
   });
 
-  it("toggles back from Arabic to Kurdish", async () => {
-    apiRequest.mockResolvedValue({ locale: "ckb" });
+  it("switches from Arabic to English and then Kurdish", async () => {
+    apiRequest.mockResolvedValue({ locale: "en" });
     render(
       <BusinessLocaleProvider initialLocale="ar">
         <BusinessLanguageSelector />
@@ -81,19 +81,22 @@ describe("business language preference", () => {
     );
 
     const toggle = screen.getByRole("button", {
-      name: "التبديل إلى الكردية",
+      name: "التبديل إلى الإنجليزية",
     });
-    expect(toggle).toHaveTextContent("KU");
+    expect(toggle).toHaveTextContent("EN");
     fireEvent.click(toggle);
 
-    expect(screen.getByText("ڕێکخستنەکان")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" })).toHaveTextContent("AR");
+    expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Switch to Kurdish" })).toHaveTextContent("KU");
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
         method: "PATCH",
-        json: { locale: "ckb" },
+        json: { locale: "en" },
       }),
     );
+    apiRequest.mockResolvedValue({ locale: "ckb" });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Kurdish" }));
+    await waitFor(() => expect(screen.getByText("ڕێکخستنەکان")).toBeInTheDocument());
   });
 
   it("starts in the saved Arabic language and hides the control for borrowed sessions", () => {
@@ -106,7 +109,7 @@ describe("business language preference", () => {
 
     expect(screen.getByText("الإعدادات")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "التبديل إلى الكردية" }),
+      screen.queryByRole("button", { name: "التبديل إلى الإنجليزية" }),
     ).not.toBeInTheDocument();
   });
 });

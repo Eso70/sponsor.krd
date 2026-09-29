@@ -271,6 +271,23 @@ no separators on either route; only the shared footer retains its top boundary.
 The tenant homepage has one hero, with mobile template mockups inside it, and,
 when public Linktrees exist, one gallery section. Former About Us and
 digital-presence sections and their navigation anchors are removed.
+The homepage's fixed interface text has a visitor-controlled AR/EN/KU switch in
+the shared navbar. The selection is immediate and stored in the host-only
+`business_public_locale` cookie, independently of the private Dashboard
+language. Server-rendered homepage metadata reads this cookie on subsequent
+requests. Business-authored names, subtitles, and footer descriptions remain
+unchanged; the visitor switch translates only application-owned text.
+The same visitor preference now applies to the public advertising page,
+video-code guide, and published business Linktrees. Their navigation, footer,
+guide controls, default Linktree copy, WhatsApp question defaults, loading
+announcements, metadata fallbacks, and business-host error pages follow AR/EN/KU.
+Dismiss controls in the optional homepage communications component follow the
+root visitor locale.
+The Platform's own Linktrees keep their existing defaults. Persisted advertising
+content, custom Linktree descriptions, link labels, payment provider details,
+and owner-authored WhatsApp questions remain exactly as published; localization
+does not silently rewrite them. This public preference is never used as an
+authentication or tracking input.
 
 Both public hero sections render `BusinessHeroAccentBackdrop`. It provides the
 same tenant-colored radial atmosphere and restrained top highlight while
@@ -550,39 +567,147 @@ future segments remain visible at reduced opacity.
 
 ### Business dashboard language
 
-The authenticated business dashboard has a member-owned `ckb`/`ar` language
+The authenticated business dashboard has a member-owned `ckb`/`ar`/`en` language
 preference. The dashboard layout reads it from the business session response and
 mounts `BusinessLocaleProvider` around business content only. The header uses a
-single toggle button that shows the destination language code (AR or KU) and
-remains available on mobile; the platform console
-does not display a nonfunctional selector. A change updates client text at once,
+single cycling button that shows the destination language code (AR, EN, or KU) and
+remains available on mobile. A change updates client text at once,
 persists through `PATCH /api/auth/preferred-locale`, and rolls back with feedback
 if the request fails. The control is hidden for impersonated or legacy sessions
-without a member identity. The Business dashboard stays LTR in both languages; the
+without a member identity. The Business dashboard stays LTR in all three languages; the
 Business subtree carries the selected `lang` for assistive technology.
+The selected language is also mirrored to a host-only, non-sensitive
+`business_dashboard_locale` cookie. It is a UI hint only, never an
+authentication or authorization input. The pre-sign-in Business workspace,
+handoff loading state, and dashboard error pages use it before a member
+session can be read. The sign-in screen has its own AR/EN/KU toggle that changes
+only this cookie; successful dashboard changes still persist to the member
+profile through the API. A fresh browser defaults to Kurdish. Shared
+authentication and error components receive optional Business copy, leaving
+Platform and root-domain defaults unchanged.
 
 Translation messages live in `features/business/i18n/messages.ts`. Dashboard
 chrome, sidebar plan/support controls, dashboard-owned dialogs and action
-feedback, and the Linktree management summary/actions use the Business locale.
+feedback, locked-feature notices, and the Linktree management summary/actions
+use the Business locale.
 The shared Linktree management page receives typed copy from its Business
-adapter while Platform retains its Kurdish defaults. The Business adapter also
+and Platform adapters. The Business adapter also
 supplies localized copy to the shared Linktree grid, table, and status badges,
-including action tooltips, accessibility labels, and copy-link feedback. The
-Business page search, duplicate, campaign-profit, and analytics dialogs also
-receive localized copy. The Business TikTok route now translates its delivery
-history, Pixel configuration, and Pixel-group controls; shared configuration
+including action tooltips, pagination, loading announcements, accessibility
+labels, and copy-link feedback. The page grid and table's lazy-chunk loading
+announcements use that same copy, rather than the shared skeleton's English
+default; the Platform screen supplies its own localized announcement. The
+Business page search, duplicate, campaign-profit, analytics, delete, and
+clear-analytics dialogs also receive localized copy. The campaign-profit calendar
+receives the active Business locale, including English. Public Linktree GPS controls
+and Google Maps labels use the visitor locale; the saved location title itself
+remains user-authored. The shared Linktree editor receives Arabic and English
+Business copy for its wizard, validation, template, pattern,
+color, icon, and country pickers; Platform supplies Arabic and English copy while
+keeping Kurdish as its default. Stored
+page names, descriptions, questions, and link labels remain user-authored content
+and are not rewritten when the dashboard language changes. The Business TikTok
+route now translates its delivery history, Pixel configuration, and Pixel-group controls; shared configuration
 components receive Business-only copy and keep their Platform defaults. The
+shared Pixel test result translates the Request ID label in all three languages.
+The TikTok delivery-status panel accepts the same three locales for its status,
+explanations, and timestamps; API-provided error bodies remain unchanged.
 Business Settings profile, defaults, security, and message tabs translate their
 page labels, account identity, save control, sessions, conversations, template
-selector, and color picker.
-The Linktree editor and advertising route still contain hard-coded Kurdish
-copy, so Arabic is not yet complete. Shared business/platform UI should
+selector, and color picker. Session confirmation controls, dates, brand upload
+errors, cooldown dates, and accessible brand-image labels also follow Arabic or English when selected. The Business advertising editor translates its
+navigation tabs, forms, action controls, dialogs, and editor-only previews;
+saved advertising content and the public advertising page are not translated
+by the dashboard preference. The Business notification bell, inbox actions,
+detail dialog, dates, loading announcement, feedback, and announcement dismiss control also follow
+the Business locale; notification titles, bodies, and banner content remain
+author-authored. Platform notifications keep their Kurdish defaults. Shared business/platform UI should
 receive translated labels or use an explicitly business-scoped provider, not
 be forked.
+The platform-administrator impersonation warning follows the Business
+member's saved language even though it sits outside the dashboard provider.
+Business loading screens use localized screen-reader announcements; shared
+skeleton components keep their existing defaults in the Platform console.
+
+The required first-time Business setup modal also uses the saved dashboard
+locale for its fields, validation, brand asset controls, color picker, verified
+owner identity, and TikTok group editor. Shared controls retain their existing
+Kurdish defaults on other surfaces.
 
 The Business Templates catalogue uses the same typed-copy boundary: summary,
 search, preview captions, sample contact links, and locked-template labels
-switch with the Business locale. Platform template views retain their defaults.
+switch with the Business locale. The Platform catalogue uses the same shared
+Arabic or English copy when its administrator selects that language, while
+keeping Kurdish as its default. Template product names and stable IDs are not translated.
+
+### Platform administrator language
+
+The platform console has its own administrator-owned `ckb`/`ar`/`en` preference,
+independent of business members. The header's AR/EN/KU cycling button displays the next
+language, immediately switches the console shell and localized page copy,
+and persists through guarded `PATCH /api/platform/auth/preferred-locale`.
+The profile response restores the saved preference on sign-in; a host-only
+`platform_dashboard_locale` cookie prevents a Kurdish flash while it loads.
+On failure, the control restores the previous language and reports an error.
+Platform controls use localized fallback text when an API supplies an
+untranslated failure message; the original API details remain available in
+Kurdish mode.
+The console keeps its existing LTR layout. The translated Businesses page now
+includes navigation, dashboard summary, directory grid/table and badges,
+search, delete confirmation, the applications cards and rejection dialog,
+the invitation wizard, business analytics, business editing, and session
+management. The shared edit fields, brand controls, color picker, TikTok
+settings, session panel, and loading announcements receive platform-specific
+copy without changing their Business integrations. The Platform Linktrees page
+also supplies Arabic and English labels to the shared manager, grid/table, search, editor,
+duplication, campaign-profit, and analytics dialogs, plus its platform-specific
+empty states, confirmations, loading announcements, and action feedback. The
+Arabic copy shared with Business lives in `features/link-editor/shared-arabic-copy.ts`;
+the shared English dashboard catalogue lives in `features/shared/i18n/english-messages.ts`.
+Surface-specific copy remains in each adapter. The Platform Templates page passes
+Arabic copy or the shared English catalogue to the templates, including its
+search dialog and sample phone preview. The Platform Campaigns catalogue and
+its grid/table, creation wizard, details, performance metrics, and action
+confirmations use the administrator language. The campaign editor's English-source
+fields, choices, and helper text also have Kurdish equivalents instead of falling
+back to English. Campaign names and other saved
+campaign content remain unmodified. The Access Control page and its permission table,
+descriptions, profile actions, editor/view/delete dialogs, and policy simulator
+also respond to the platform language. Known permission categories and displayed
+descriptions use the selected language; internal permission keys, action codes,
+and administrator-authored profile names remain unchanged. Billing's plan and business
+subscription views, status badges, filters, search, details, and plan editor
+also use the platform language, including date formatting in every supported
+locale; stored plan names and descriptions are not
+rewritten when the language changes. New plan description presets follow the
+selected language. The Communications center translates its overview,
+announcement catalogue, message thread, publishing editor, status filters,
+empty-table descriptions, and confirmation dialogs while leaving administrator-authored messages
+untouched. Conversation-category labels are shared with the Business messages
+panel and follow the selected language. Announcement history and message timestamps use the selected locale
+instead of the browser default. Platform Settings translates general branding, security sessions,
+data retention, media policy, cleanup confirmations, and the TikTok Pixel and
+ad-account panels. Its general, upload, and security-session feedback and
+accessibility labels also use Kurdish in Kurdish mode rather than English source text.
+The platform notification bell, approval review actions,
+and sign-in and console error screens also follow the saved language. The
+administrator email-code sign-in controls have Kurdish, Arabic, and English
+copy instead of relying on the shared form's English defaults. The
+console and sign-in loading announcements follow that cookie as well. The
+announcement editor's shared date picker receives an Arabic or English calendar locale
+without changing its ISO values. The shared TikTok Pixel
+editor receives the common Arabic or English copy through its typed adapter;
+the shared TikTok ad-account modal accepts a translation callback so other
+surfaces keep their own defaults.
+The shared notification bell's loading announcement follows either dashboard's
+selected language. The shared campaign-profit calendar receives the active Business or Platform
+Arabic or English locale; platform search and copy-value controls receive localized
+action, success, failure, and accessibility labels.
+Shared stat-card loading announcements and the Platform Linktree list fallback
+also follow the selected language. The management-table fallback accepts the
+surface's translated no-results label.
+The reusable time picker accepts an explicit Kurdish, Arabic, or English locale
+for its labels, validation message, and popover controls.
 
 The authenticated business dashboard is available at `/business` on the
 business's own subdomain. It provides:
@@ -784,6 +909,19 @@ brand-only; Business authentication remains a tenant subdomain concern and is
 not linked from the root-domain website. The terms and privacy routes remain
 as compliance documents required by active onboarding flows; they are not
 marketing pages.
+
+Root-domain visitors can cycle between Sorani Kurdish (`ckb`, the default),
+Arabic (`ar`), and English (`en`) without changing page direction. The host-only
+`sponsor_public_locale` cookie is a presentation preference, not an identity or
+authorization signal; it is separate from both `platform_dashboard_locale`
+and `business_public_locale`. It carries through the homepage, invitation and
+signup flow, legal documents, platform-owned public Linktrees, metadata,
+loading states, and root error pages. User-authored Linktree content and
+administrator-provided review reasons remain in their authored language.
+Invitation, signup, and administrator sign-in routes also expose localized
+browser metadata instead of inheriting the generic English site description.
+The Arabic and English legal text mirrors the existing Kurdish policy and requires normal
+legal review before publication of any substantive policy change.
 
 Homepage content is authored in the dedicated root hero. Do not invent prices,
 customer counts, testimonials, endorsements, or other claims.

@@ -23,6 +23,7 @@ import { InlineRequestError } from "@/components/shared/InlineRequestError";
 import {
   createUploadFailureError,
   inlineRequestErrorFromResponse,
+  localizeInlineRequestError,
   type InlineRequestErrorData,
   validateUploadFile,
 } from "@/lib/api/inline-request-error";
@@ -32,6 +33,8 @@ import {
   FAVICON_MIME_TYPES,
   LOGO_MIME_TYPES,
 } from "@/lib/brand/brand-assets";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformEditCopy } from "@/features/platform-admin/i18n/edit-copy";
 
 type Business = Pick<
   PlatformBusiness,
@@ -110,6 +113,8 @@ export const CreateBusinessModal = memo(function CreateBusinessModal({
   isLoadingEditData = false,
   existingBusinesses = [],
 }: CreateBusinessModalProps) {
+  const { locale } = usePlatformLocale();
+  const copy = platformEditCopy[locale];
   const [businessName, setBusinessName] = useState("");
   const [username, setUsername] = useState("");
   const [subdomain, setSubdomain] = useState("");
@@ -149,6 +154,7 @@ export const CreateBusinessModal = memo(function CreateBusinessModal({
 
   const isEditMode = !!editData;
   const initializedBusinessIdRef = useRef<string | null>(null);
+  const validationLocaleRef = useRef(locale);
 
   const allFieldsValid = useMemo(() => {
     if (isEditMode) return true;
@@ -166,59 +172,71 @@ export const CreateBusinessModal = memo(function CreateBusinessModal({
   const validateBusinessName = useCallback(
     (value: string): string | undefined => {
       const trimmed = value.trim();
-      if (!trimmed || trimmed.length < 2) return "Business name must be at least 2 characters";
+      if (!trimmed || trimmed.length < 2) return copy.validation.nameShort;
       const exists = existingBusinesses.some(
         (business) => business.id !== editData?.id && business.name.trim().toLowerCase() === trimmed.toLowerCase(),
       );
-      if (exists) return "Business name is already in use";
+      if (exists) return copy.validation.nameUsed;
       return undefined;
     },
-    [existingBusinesses, editData?.id],
+    [existingBusinesses, editData?.id, copy],
   );
 
   const validateUsername = useCallback(
     (value: string): string | undefined => {
       const trimmed = sanitizeHandle(value);
-      if (!trimmed) return "Username is required";
-      if (!HANDLE_PATTERN.test(trimmed)) return "Username must be 3-32 lowercase letters, numbers, hyphens or underscores";
+      if (!trimmed) return copy.validation.usernameRequired;
+      if (!HANDLE_PATTERN.test(trimmed)) return copy.validation.usernameInvalid;
       const exists = existingBusinesses.some(
         (business) => business.id !== editData?.id && business.username.toLowerCase() === trimmed,
       );
-      if (exists) return "Username is already in use";
+      if (exists) return copy.validation.usernameUsed;
       return undefined;
     },
-    [existingBusinesses, editData?.id],
+    [existingBusinesses, editData?.id, copy],
   );
 
   const validateBusinessPhone = useCallback(
     (value: string): string | undefined => {
       const trimmed = sanitizeLocalPhone(value);
-      if (!trimmed) return "Phone number is required";
-      if (!/^\d{7,15}$/.test(trimmed)) return "Phone number must be 7 to 15 digits without 964";
+      if (!trimmed) return copy.validation.phoneRequired;
+      if (!/^\d{7,15}$/.test(trimmed)) return copy.validation.phoneInvalid;
       return undefined;
     },
-    [],
+    [copy],
   );
 
   const validateSubdomain = useCallback(
     (value: string): string | undefined => {
       const trimmed = sanitizeHandle(value);
-      if (!trimmed) return "Subdomain is required";
+      if (!trimmed) return copy.validation.subdomainRequired;
       if (!HANDLE_PATTERN.test(trimmed))
-        return "Subdomain must be 3-32 lowercase letters, numbers, hyphens or underscores";
+        return copy.validation.subdomainInvalid;
       const exists = existingBusinesses.some(
         (business) => business.id !== editData?.id && (business.subdomain || "").toLowerCase() === trimmed,
       );
-      if (exists) return "Subdomain is already in use";
+      if (exists) return copy.validation.subdomainUsed;
       return undefined;
     },
-    [existingBusinesses, editData?.id],
+    [existingBusinesses, editData?.id, copy],
   );
 
   const validateWebsiteColor = useCallback(
-    (value: string): string | undefined => isValidColorValue(value) ? undefined : "Choose a valid website color",
-    [],
+    (value: string): string | undefined => isValidColorValue(value) ? undefined : copy.validation.colorInvalid,
+    [copy],
   );
+
+  useEffect(() => {
+    if (validationLocaleRef.current === locale) return;
+    validationLocaleRef.current = locale;
+    setBusinessErrors({
+      name: businessTouched.name ? validateBusinessName(businessName) : undefined,
+      username: businessTouched.username ? validateUsername(username) : undefined,
+      subdomain: businessTouched.subdomain ? validateSubdomain(subdomain) : undefined,
+      phone: businessTouched.phone ? validateBusinessPhone(businessPhone) : undefined,
+      websiteColor: businessTouched.websiteColor ? validateWebsiteColor(websiteColor) : undefined,
+    });
+  }, [locale, businessTouched, businessName, username, subdomain, businessPhone, websiteColor, validateBusinessName, validateUsername, validateSubdomain, validateBusinessPhone, validateWebsiteColor]);
 
   const debouncedBusinessNameValidation = useMemo(
     () =>
@@ -632,13 +650,14 @@ setUploadError(null);
           <div className="flex items-center justify-between border-b border-gray-100/50 p-4 sm:p-5 md:p-6 bg-linear-to-r from-white to-slate-50/30" dir="ltr">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-700 truncate">
-                {isEditMode ? "دەستکاریکردنی بزنس" : "زیادکردنی بزنسی نوێ"}
+                {isEditMode ? copy.title : copy.createTitle}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">زانیارییە سەرەکییەکان و وێنەکانی بڕاند</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">{copy.description}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
+              aria-label={copy.close}
               className="flex items-center justify-center rounded-xl p-2 bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 text-slate-500 hover:text-slate-700 transition-all duration-300 border border-slate-100 shadow-sm hover:shadow"
             >
               <X className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -650,12 +669,13 @@ setUploadError(null);
             style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}
           >
             {uploadError && (
-              <InlineRequestError className="mb-4" error={uploadError} />
+              <InlineRequestError className="mb-4" error={localizeInlineRequestError(uploadError, locale)} />
             )}
             {isLoadingEditData ? (
-              <SkeletonBusinessInfoForm />
+              <SkeletonBusinessInfoForm loadingLabel={copy.loading} />
             ) : (
               <BusinessInfoStep
+                copy={copy.form}
                 name={businessName}
                 ownerName={editData?.ownerName || editData?.name}
                 ownerEmail={editData?.ownerEmail || editData?.email}
@@ -711,7 +731,7 @@ setUploadError(null);
               onClick={onClose}
               className="w-full sm:w-auto px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-xl bg-linear-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100 border border-slate-100 text-slate-600 hover:text-slate-700 text-xs sm:text-sm font-medium transition-all duration-300 shadow-sm hover:shadow"
             >
-              هەڵوەشاندنەوە
+              {copy.cancel}
             </button>
             <button
                 type="submit"
@@ -721,10 +741,10 @@ setUploadError(null);
                 {isSubmitting ? (
                   <>
                     <MotionSpinner><Loader2 className="h-4 w-4 "  /></MotionSpinner>
-                    <span>پاشەکەوتکردن...</span>
+                    <span>{copy.saving}</span>
                   </>
                 ) : (
-                  <span>{isEditMode ? "نوێکردنەوە" : "دروستکردن"}</span>
+                  <span>{isEditMode ? copy.update : copy.create}</span>
                 )}
               </button>
           </div>

@@ -7,6 +7,7 @@ import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
 import { PublicSection } from "@/components/public/PublicSection";
 import { AdvertisingPriceTable, SPONSOR_CATEGORY_THEME } from "./AdvertisingPriceTable";
 import type { AdvertisingPriceRow, SponsorCategory } from "../pricing-data";
+import { usePublicAdvertisingText } from "../public-locale";
 
 interface AdvertisingPackagesSectionProps {
   packageTiers?: Record<SponsorCategory, AdvertisingPriceRow[]>;
@@ -17,9 +18,8 @@ const CATEGORIES: Record<SponsorCategory, { icon: LucideIcon; badge: number; lab
   business: { icon: Building2, badge: 2, label: "تایبەت بە ئیش و کار و بازرگانی" },
 };
 
-const formatThousandDinar = (price: number) => `${price / 1000} هەزار دینار`;
-
 export function AdvertisingPackagesSection({ packageTiers }: AdvertisingPackagesSectionProps) {
+  const t = usePublicAdvertisingText();
   const [category, setCategory] = useState<SponsorCategory>("personal");
   const theme = SPONSOR_CATEGORY_THEME[category];
   const rows = packageTiers?.[category] ?? [];
@@ -30,20 +30,20 @@ export function AdvertisingPackagesSection({ packageTiers }: AdvertisingPackages
       decorations={
         <BusinessSectionDecorations
           colors={["#25F4EE", "#a78bfa"]}
-          labels={["پاکێجی گونجاو", "نرخی ڕوون"]}
+          labels={[t("پاکێجی گونجاو"), t("نرخی ڕوون")]}
           variant={2}
         />
       }
     >
         <PublicSectionHeading
-          title="نرخی سپۆنسەر"
-          description="ژمارەی بینینەکان مەزەندەییە و بە جۆری ناوەڕۆک دەگۆڕێت"
+          title={t("نرخی سپۆنسەر")}
+          description={t("ژمارەی بینینەکان مەزەندەییە و بە جۆری ناوەڕۆک دەگۆڕێت")}
         />
 
         <div className="mx-auto mt-10 max-w-2xl">
           <div
             role="tablist"
-            aria-label="جۆری پاکێج"
+            aria-label={t("جۆری پاکێج")}
             className="flex gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-white/5"
           >
             {(Object.keys(CATEGORIES) as SponsorCategory[]).map((id) => {
@@ -64,7 +64,7 @@ export function AdvertisingPackagesSection({ packageTiers }: AdvertisingPackages
                   }`}
                 >
                   <item.icon className="h-4 w-4" />
-                  {item.label}
+                  {t(item.label)}
                 </button>
               );
             })}
@@ -74,12 +74,13 @@ export function AdvertisingPackagesSection({ packageTiers }: AdvertisingPackages
             className="mt-4"
             rows={rows}
             theme={theme}
-            formatPrice={formatThousandDinar}
+            formatPrice={(price) => `${price / 1000} ${t("هەزار دینار")}`}
+            copy={{ price: t("نرخ"), views: t("بینەر") }}
           />
         </div>
 
         <p className="mx-auto mt-8 max-w-3xl text-center text-xs leading-6 text-black/45 dark:text-white/40">
-          ژمارەی بینەرەکان (قیو) نزیکەیی و خەملێنراون؛ ئەنجامی کۆتایی پەیوەندی بە ناوەڕۆکی ڤیدیۆ، ئامانجی سپۆنسەر و ڕەفتاری بینەران جیاواز دەبێت.
+          {t("ژمارەی بینەرەکان (قیو) نزیکەیی و خەملێنراون؛ ئەنجامی کۆتایی پەیوەندی بە ناوەڕۆکی ڤیدیۆ، ئامانجی سپۆنسەر و ڕەفتاری بینەران جیاواز دەبێت.")}
         </p>
     </PublicSection>
   );

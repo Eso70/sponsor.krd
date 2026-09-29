@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
 export interface PublicBusinessLinktree {
   id: string;
   name: string;
@@ -12,15 +14,17 @@ export interface PublicBusinessLinktree {
 
 export function BusinessPublicLinktreeCard({
   linktree,
+  locale = "ckb",
 }: {
   linktree: PublicBusinessLinktree;
+  locale?: BusinessLocale;
 }) {
   return (
     <Link
       href={`/linktree/${linktree.seo_name || linktree.uid}`}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${linktree.name} — لە تابێکی نوێدا دەکرێتەوە`}
+      aria-label={`${linktree.name} — ${businessPublicCopy[locale].opensNewTab}`}
       className="group overflow-hidden rounded-2xl border border-black/10 bg-white/70 shadow-sm transition-[border-color,transform,box-shadow] hover:-translate-y-1 hover:border-black/20 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/45 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:focus-visible:ring-white/60"
     >
       {linktree.image ? (

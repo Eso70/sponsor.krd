@@ -1,3 +1,5 @@
+"use client";
+
 import {
   BadgeDollarSign,
   CircleDollarSign,
@@ -13,6 +15,8 @@ import {
   formatCostPerConversion,
 } from "../campaign-metrics";
 import type { TikTokCampaign } from "../types";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { campaignCopy } from "../campaign-copy";
 
 interface PerformanceMetric {
   label: string;
@@ -27,46 +31,48 @@ export function CampaignPerformanceOverview({
 }: {
   campaign: TikTokCampaign;
 }) {
+  const { locale } = usePlatformLocale();
+  const copy = campaignCopy[locale];
   const metrics: PerformanceMetric[] = [
     {
-      label: "پیشاندان",
+      label: copy.list.impressions,
       value: campaign.impressions.toLocaleString(),
-      detail: "Impressions",
+      detail: copy.list.impressions,
       icon: Eye,
       iconClassName: "text-sky-500",
     },
     {
-      label: "کلیک",
+      label: copy.list.clicks,
       value: campaign.clicks.toLocaleString(),
-      detail: `CTR ${campaign.ctr.toFixed(2)}%`,
+      detail: `${copy.list.clickRate} ${campaign.ctr.toFixed(2)}%`,
       icon: MousePointerClick,
       iconClassName: "text-emerald-500",
     },
     {
-      label: "گۆڕان",
+      label: copy.list.conversions,
       value: campaign.conversions.toLocaleString(),
-      detail: `ڕێژەی گۆڕان ${formatConversionRate(campaign)}`,
+      detail: `${copy.detail.conversionRate} ${formatConversionRate(campaign)}`,
       icon: TrendingUp,
       iconClassName: "text-violet-500",
     },
     {
-      label: "خەرجی گشتی",
+      label: copy.totalSpent,
       value: `$${campaign.totalSpent.toFixed(2)}`,
-      detail: "Total spend",
+      detail: copy.totalSpent,
       icon: CircleDollarSign,
       iconClassName: "text-amber-500",
     },
     {
-      label: "تێچووی هەر کلیکێک",
+      label: copy.detail.costPerClick,
       value: `$${campaign.cpc.toFixed(3)}`,
-      detail: "Cost per click",
+      detail: copy.detail.costPerClick,
       icon: BadgeDollarSign,
       iconClassName: "text-rose-500",
     },
     {
-      label: "تێچووی هەر گۆڕانێک",
+      label: copy.costPerConversion,
       value: formatCostPerConversion(campaign),
-      detail: "Cost per conversion",
+      detail: copy.costPerConversion,
       icon: Zap,
       iconClassName: "text-indigo-500",
     },
@@ -80,14 +86,14 @@ export function CampaignPerformanceOverview({
             id="campaign-performance-title"
             className="text-sm font-bold text-slate-800 dark:text-slate-100"
           >
-            ئەنجامی کەمپەین
+            {copy.detail.performance}
           </h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            پوختەی ئەنجام و تێچووی ڕیکلامەکە
+            {copy.detail.performanceDescription}
           </p>
         </div>
         <span className="hidden text-[11px] font-medium text-slate-400 sm:block">
-          ئاماری ڕاستەوخۆ
+          {copy.detail.liveMetrics}
         </span>
       </div>
 

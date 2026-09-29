@@ -18,19 +18,28 @@ export type CompactTemplateOption = {
   previewGradient: string;
 };
 
+export interface CompactTemplateSelectorCopy {
+  title: string;
+  count: string;
+  close: string;
+  locked: string;
+}
+
 const CompactTemplateCard = memo(function CompactTemplateCard({
   template,
   selected,
   disabled,
   onSelect,
+  copy,
 }: {
   template: CompactTemplateOption;
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
+  copy?: CompactTemplateSelectorCopy;
 }) {
   return (
-    <Tooltip content={disabled ? `${template.name} (قوفڵکراوە)` : template.name} side="top">
+    <Tooltip content={disabled ? `${template.name} (${copy?.locked ?? "قوفڵکراوە"})` : template.name} side="top">
       <motion.button
         type="button"
         onClick={disabled ? undefined : onSelect}
@@ -80,6 +89,7 @@ const CompactTemplateCard = memo(function CompactTemplateCard({
 });
 
 export function CompactTemplateSelectorModal({
+  copy,
   isOpen,
   onClose,
   templates,
@@ -87,6 +97,7 @@ export function CompactTemplateSelectorModal({
   onSelectTemplate,
   isAllowed,
 }: {
+  copy?: CompactTemplateSelectorCopy;
   isOpen: boolean;
   onClose: () => void;
   templates: readonly CompactTemplateOption[];
@@ -151,22 +162,22 @@ export function CompactTemplateSelectorModal({
                   id="template-selector-title"
                   className="text-base font-bold text-slate-700 sm:text-lg"
                 >
-                  شێوازی پەڕە هەڵبژێرە
+                  {copy?.title ?? "شێوازی پەڕە هەڵبژێرە"}
                 </h2>
                 <p
                   className="mt-0.5 text-[10px] sm:text-xs"
                   style={{ color: "var(--theme-primary, #64748b)" }}
                 >
-                  {templates.length} شێواز
+                  {templates.length} {copy?.count ?? "شێواز"}
                 </p>
               </div>
             </div>
-            <Tooltip content="داخستن" side="bottom">
+            <Tooltip content={copy?.close ?? "داخستن"} side="bottom">
               <button
                 type="button"
                 onClick={onClose}
                 className="shrink-0 rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 p-1.5 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow sm:p-2 cursor-pointer"
-                aria-label="Close"
+                aria-label={copy?.close ?? "Close"}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -191,6 +202,7 @@ export function CompactTemplateSelectorModal({
                   transition={{ duration: 0.3, delay: index * 0.03 }}
                 >
                   <CompactTemplateCard
+                    copy={copy}
                     template={template}
                     selected={selectedTemplate === template.id}
                     disabled={!isAllowed(template.id)}

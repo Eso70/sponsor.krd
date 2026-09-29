@@ -6,6 +6,7 @@ import { Check, Globe2, Mail, Phone, UserRound, X } from "lucide-react";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import { ManagementModal } from "@/components/shared/ManagementModal";
 import { SPONSOR_KRD_ACCENT_VALUE } from "@/lib/sponsor-krd-theme";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 export type SignupApplication = {
   id: string;
@@ -72,6 +73,7 @@ export function SignupApplicationCard({
   onPlanChange,
   onReview,
 }: SignupApplicationCardProps) {
+  const copy = usePlatformCopy();
   const [imageFailed, setImageFailed] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -140,21 +142,21 @@ export function SignupApplicationCard({
       </div>
 
       <div className="mt-4 grid gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 dark:border-white/10 dark:bg-white/[0.025] sm:grid-cols-3">
-        <ApplicantFact icon={Mail} label="ئیمەیڵ" value={item.ownerEmail} />
-        <ApplicantFact icon={Phone} label="مۆبایل" value={item.phone} />
+        <ApplicantFact icon={Mail} label={copy.email} value={item.ownerEmail} />
+        <ApplicantFact icon={Phone} label={copy.mobile} value={item.phone} />
         <ApplicantFact
           icon={Globe2}
-          label="ساب‌دۆمەین"
+          label={copy.subdomain}
           value={item.requestedSubdomain}
         />
       </div>
 
       <div className="mt-4 space-y-1.5">
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 sm:text-sm">
-          پلانی بەشداربوون
+          {copy.applicationPlan}
         </label>
         <CustomSelect
-          label="پلانی بەشداربوون"
+          label={copy.applicationPlan}
           value={selectedPlanId}
           options={
             plans.length
@@ -162,7 +164,7 @@ export function SignupApplicationCard({
                   value: plan.id,
                   label: plan.name,
                 }))
-              : [{ value: "", label: "هیچ پلانێکی چالاک نییە" }]
+              : [{ value: "", label: copy.noActivePlans }]
           }
           onChange={onPlanChange}
           disabled={busy || !plans.length}
@@ -180,7 +182,7 @@ export function SignupApplicationCard({
           className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-rose-300/80 bg-rose-50/70 px-3 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-40 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
         >
           <X className="h-4 w-4" />
-          ڕەتکردنەوە
+          {copy.reject}
         </button>
         <button
           type="button"
@@ -190,14 +192,15 @@ export function SignupApplicationCard({
           className="theme-fill flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-transparent px-3 text-xs font-bold text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-40"
         >
           <Check className="h-4 w-4" />
-          پەسەندکردن
+          {copy.approve}
         </button>
       </div>
 
       <ManagementModal
         isOpen={rejectOpen}
         onClose={closeReviewModal}
-        title="ڕەتکردنەوەی داواکاری"
+        title={copy.rejectApplication}
+        closeLabel={copy.close}
         description={item.businessName || item.ownerName}
         busy={busy}
         createBusinessStyle
@@ -210,7 +213,7 @@ export function SignupApplicationCard({
               onClick={closeReviewModal}
               className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
             >
-              هەڵوەشاندنەوە
+              {copy.cancel}
             </button>
             <button
               type="button"
@@ -218,7 +221,7 @@ export function SignupApplicationCard({
               onClick={() => void submitReview()}
               className="h-10 rounded-xl bg-rose-600 px-4 text-xs font-black text-white transition hover:bg-rose-700 disabled:opacity-50"
             >
-              ڕەتکردنەوە
+              {copy.reject}
             </button>
           </>
         }
@@ -228,7 +231,7 @@ export function SignupApplicationCard({
             htmlFor={`application-review-reason-${item.id}`}
             className="text-xs font-black text-slate-700 dark:text-slate-200"
           >
-            هۆکار
+            {copy.reviewReason}
           </label>
           <textarea
             id={`application-review-reason-${item.id}`}
@@ -243,7 +246,7 @@ export function SignupApplicationCard({
                 ? `application-review-reason-error-${item.id}`
                 : undefined
             }
-            placeholder="هۆکاری بڕیارەکە بە ڕوونی بنووسە..."
+            placeholder={copy.reviewReasonPlaceholder}
             className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-[var(--sponsor-krd-accent)] dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
           />
           {reasonTouched && !reasonValid ? (
@@ -252,7 +255,7 @@ export function SignupApplicationCard({
               role="alert"
               className="mt-2 text-xs font-bold text-rose-600 dark:text-rose-400"
             >
-              هۆکار پێویستە.
+              {copy.reviewReasonRequired}
             </p>
           ) : null}
         </div>

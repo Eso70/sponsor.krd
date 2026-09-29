@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PlatformSelectionStep } from "./PlatformSelectionStep";
 import type { SocialLink } from "@/features/link-editor/types";
+import { arabicEditorCopy } from "../editor-copy";
 
 function socialLink(id: string, platform: string, order: number): SocialLink {
   return {
@@ -57,5 +58,18 @@ describe("PlatformSelectionStep", () => {
     );
 
     expect(screen.getByText("1 پلاتفۆڕم هەڵبژێردراوە")).toBeInTheDocument();
+  });
+
+  it("shows Business platform selection in Arabic without changing the default", () => {
+    render(
+      <PlatformSelectionStep
+        copy={arabicEditorCopy}
+        socialLinks={[socialLink("telegram-1", "telegram", 0)]}
+        onTogglePlatform={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1 منصة محددة")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تيليجرام" })).toBeInTheDocument();
   });
 });

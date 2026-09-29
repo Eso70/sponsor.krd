@@ -38,6 +38,7 @@ export interface TikTokPixelConfigCopy {
   addTooltip: string; limitTooltip: string; addGroup: string; emptyTitle: string;
   emptyDescription: string; saving: string; requiredFields: string;
   saveTooltip: string; save: string; group: Partial<TikTokPixelGroupCopy>;
+  loadingLabel: string;
 }
 
 const KURDISH_COPY: TikTokPixelConfigCopy = {
@@ -52,6 +53,7 @@ const KURDISH_COPY: TikTokPixelConfigCopy = {
   emptyDescription: "گرووپێک زیاد بکە، Pixel ID دابنێ و ئەگەر دەتەوێت گەیاندنی ڕاژەکار چالاک بێت Events API token زیاد بکە.",
   saving: "پاشەکەوت دەکرێت...", requiredFields: "تکایە هەموو خانە پێویستەکان پڕبکەرەوە",
   saveTooltip: "پاشەکەوتکردنی ڕێکخستنەکانی TikTok", save: "پاشەکەوتکردن",
+  loadingLabel: "ڕێکخستنەکانی تیکتۆک بار دەکرێن",
   group: {},
 };
 
@@ -206,7 +208,7 @@ export function BusinessTikTokPixelConfigPage({
   };
 
   if (loading) {
-    return <SkeletonTikTokPixelConfig />;
+    return <SkeletonTikTokPixelConfig loadingLabel={labels.loadingLabel} />;
   }
 
   return (

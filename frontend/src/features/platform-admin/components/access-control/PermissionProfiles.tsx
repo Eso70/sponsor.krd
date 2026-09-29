@@ -23,7 +23,10 @@ import type {
   PermissionProfile,
   PermissionProfileConfiguration,
 } from "./types";
-import { getKurdishPermissionDescription } from "./permission-descriptions";
+import { getPermissionCategory, getPermissionDescription } from "./permission-descriptions";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { useAccessText } from "./use-access-text";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 const REQUIRED_PERMISSION_KEYS = new Set([
   "business:dashboard:view",
@@ -71,6 +74,8 @@ export function PermissionProfiles({
   onCreateOpenChange: (open: boolean) => void;
   onChanged: () => void;
 }) {
+  const t = useAccessText();
+  const { locale } = usePlatformLocale();
   const [viewing, setViewing] = useState<{
     profile: PermissionProfile;
     configuration: PermissionProfileConfiguration;
@@ -97,7 +102,7 @@ export function PermissionProfiles({
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(
-          result.message || "زانیاری پڕۆفایلی مۆڵەت بار نەکرا",
+          platformRequestError(result.message, t("زانیاری پڕۆفایلی مۆڵەت بار نەکرا"), locale),
         );
       }
       const value = {
@@ -108,9 +113,7 @@ export function PermissionProfiles({
       else setEditing(value);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "زانیاری پڕۆفایلی مۆڵەت بار نەکرا",
+        platformRequestError(error instanceof Error ? error.message : null, t("زانیاری پڕۆفایلی مۆڵەت بار نەکرا"), locale),
       );
     } finally {
       setLoadingAction(null);
@@ -132,16 +135,16 @@ export function PermissionProfiles({
       if (!response.ok) {
         toast.error(
           response.status === 409
-            ? "ئەم پڕۆفایلە بنەڕەتییە یان لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە."
-            : result.message || "سڕینەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو",
+            ? t("ئەم پڕۆفایلە بنەڕەتییە یان لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە.")
+            : platformRequestError(result.message, t("سڕینەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"), locale),
         );
         throw new Error(result.message || "Delete failed");
       }
-      toast.success("پڕۆفایلی مۆڵەت سڕایەوە");
+      toast.success(t("پڕۆفایلی مۆڵەت سڕایەوە"));
       onChanged();
     } catch (error) {
       if (error instanceof TypeError) {
-        toast.error("سڕینەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو");
+        toast.error(t("سڕینەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"));
       }
       throw error;
     } finally {
@@ -162,7 +165,7 @@ export function PermissionProfiles({
                 "کارەکان",
               ].map((header) => (
                 <th key={header} className="px-3 py-3 font-semibold">
-                  {header}
+                  {t(header)}
                 </th>
               ))}
             </tr>
@@ -176,7 +179,7 @@ export function PermissionProfiles({
                 <td className="px-3 py-3">
                   <p className="font-bold">{profile.name}</p>
                   <p className="mt-0.5 text-[10px] text-slate-400">
-                    پڕۆفایلی مۆڵەتی بەشداربوون
+                    {t("پڕۆفایلی مۆڵەتی بەشداربوون")}
                   </p>
                 </td>
                 <td className="px-3 py-3 font-mono text-[11px]">
@@ -185,13 +188,13 @@ export function PermissionProfiles({
                 <td className="px-3 py-3">{profile.permissionCount}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-1">
-                    <Tooltip content="بینین" side="top">
+                    <Tooltip content={t("بینین")} side="top">
                       <button
                         type="button"
                         onClick={() => void loadProfile(profile, "view")}
                         disabled={loadingAction !== null}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 disabled:opacity-50 dark:hover:bg-sky-500/10 cursor-pointer"
-                        aria-label={`بینینی ${profile.name}`}
+                        aria-label={`${t("بینینی")} ${profile.name}`}
                       >
                         {loadingAction === `view:${profile.id}` ? (
                           <MotionSpinner><Loader2 className="h-4 w-4 "  /></MotionSpinner>
@@ -200,13 +203,13 @@ export function PermissionProfiles({
                         )}
                       </button>
                     </Tooltip>
-                    <Tooltip content="دەستکاریکردن" side="top">
+                    <Tooltip content={t("دەستکاریکردن")} side="top">
                       <button
                         type="button"
                         onClick={() => void loadProfile(profile, "edit")}
                         disabled={loadingAction !== null}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-violet-600 transition hover:bg-violet-50 disabled:opacity-50 dark:hover:bg-violet-500/10 cursor-pointer"
-                        aria-label={`دەستکاریکردنی ${profile.name}`}
+                        aria-label={`${t("دەستکاریکردنی")} ${profile.name}`}
                       >
                         {loadingAction === `edit:${profile.id}` ? (
                           <MotionSpinner><Loader2 className="h-4 w-4 "  /></MotionSpinner>
@@ -215,26 +218,26 @@ export function PermissionProfiles({
                         )}
                       </button>
                     </Tooltip>
-                    <Tooltip content="سڕینەوە" side="top">
+                    <Tooltip content={t("سڕینەوە")} side="top">
                       <button
                         type="button"
                         onClick={() => {
                           if (profile.isDefault) {
                             toast.error(
-                              "پڕۆفایلی بنەڕەتی ناتوانرێت بسڕدرێتەوە.",
+                              t("پڕۆفایلی بنەڕەتی ناتوانرێت بسڕدرێتەوە."),
                             );
                             return;
                           }
                           if (profile.subscriberCount > 0) {
                             toast.error(
-                              "ئەم پڕۆفایلە لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە.",
+                              t("ئەم پڕۆفایلە لەلایەن بزنسێکەوە بەکاردێت و ناتوانرێت بسڕدرێتەوە."),
                             );
                             return;
                           }
                           setDeletingProfile(profile);
                         }}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer"
-                        aria-label={`سڕینەوەی ${profile.name}`}
+                        aria-label={`${t("سڕینەوەی")} ${profile.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -291,12 +294,14 @@ export function PermissionProfiles({
         }}
         onConfirm={deleteProfile}
         isDeleting={isDeleting}
-        title="سڕینەوەی پڕۆفایلی مۆڵەت"
+        title={t("سڕینەوەی پڕۆفایلی مۆڵەت")}
+        confirmLabel={t("سڕینەوە")}
+        cancelLabel={t("هەڵوەشاندنەوە")}
+        closeLabel={t("داخستن")}
         message={
           <span>
-            دڵنیایت لە سڕینەوەی پڕۆفایلی{" "}
-            <strong>{deletingProfile?.name}</strong>؟ ئەم کردارە
-            ناگەڕێندرێتەوە.
+            {t("دڵنیایت لە سڕینەوەی پڕۆفایلی")} {" "}
+            <strong>{deletingProfile?.name}</strong>؟ {t("ئەم کردارە ناگەڕێندرێتەوە.")}
           </span>
         }
         zIndexClassName="z-[160]"
@@ -320,6 +325,8 @@ function ProfileEditorModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useAccessText();
   const isEditing = !!profile;
   const [name, setName] = useState(profile?.name || "");
   const [saving, setSaving] = useState(false);
@@ -397,7 +404,7 @@ function ProfileEditorModal({
                 }
               : {
                   name: name.trim(),
-                  description: `پڕۆفایلی مۆڵەتی ${name.trim()}`,
+                  description: `${t("پڕۆفایلی مۆڵەتی")} ${name.trim()}`,
                   status: "active",
                   currency: "USD",
                   yearlyPriceMinor: 0,
@@ -413,29 +420,29 @@ function ProfileEditorModal({
         const result = await response.json().catch(() => ({}));
         if (response.status === 409) {
           toast.error(
-            "ئەم ناوە پێشتر بەکارهاتووە. ناوەکە بگۆڕە یان ژمارەیەکی وەک 1 زیاد بکە.",
+            t("ئەم ناوە پێشتر بەکارهاتووە. ناوەکە بگۆڕە یان ژمارەیەکی وەک 1 زیاد بکە."),
           );
           return;
         }
         toast.error(
-          result.message ||
-            (isEditing
-              ? "دەستکاریکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"
-              : "دروستکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"),
+          platformRequestError(result.message,
+            isEditing
+              ? t("دەستکاریکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو")
+              : t("دروستکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"), locale),
         );
         return;
       }
       toast.success(
         isEditing
-          ? "پڕۆفایلی مۆڵەت نوێکرایەوە"
-          : "پڕۆفایلی مۆڵەت دروستکرا",
+          ? t("پڕۆفایلی مۆڵەت نوێکرایەوە")
+          : t("پڕۆفایلی مۆڵەت دروستکرا"),
       );
       onSaved();
     } catch {
       toast.error(
         isEditing
-          ? "دەستکاریکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"
-          : "دروستکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو",
+          ? t("دەستکاریکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو")
+          : t("دروستکردنی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"),
       );
     } finally {
       setSaving(false);
@@ -456,7 +463,7 @@ function ProfileEditorModal({
     >
       <button
         type="button"
-        aria-label="داخستن"
+        aria-label={t("داخستن")}
         className="absolute inset-0 bg-black/40 backdrop-blur-md   duration-300"
         onClick={onClose}
       />
@@ -485,20 +492,20 @@ function ProfileEditorModal({
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-lg font-bold text-slate-700 sm:text-xl md:text-2xl">
                 {isEditing
-                  ? "دەستکاریکردنی پڕۆفایلی مۆڵەت"
-                  : "پڕۆفایلی مۆڵەتی نوێ"}
+                  ? t("دەستکاریکردنی پڕۆفایلی مۆڵەت")
+                  : t("پڕۆفایلی مۆڵەتی نوێ")}
               </h2>
               <p className="mt-0.5 text-xs text-slate-500 sm:mt-1 sm:text-sm">
                 {isEditing
-                  ? "ناو و مۆڵەتەکانی پڕۆفایلەکە نوێ بکەرەوە"
-                  : "ناو و مۆڵەتەکانی پڕۆفایلە نوێیەکە دیاری بکە"}
+                  ? t("ناو و مۆڵەتەکانی پڕۆفایلەکە نوێ بکەرەوە")
+                  : t("ناو و مۆڵەتەکانی پڕۆفایلە نوێیەکە دیاری بکە")}
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
               className="ml-3 flex shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 p-2 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow"
-              aria-label="داخستن"
+              aria-label={t("داخستن")}
             >
               <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -518,7 +525,7 @@ function ProfileEditorModal({
                     htmlFor="permission-profile-name"
                     className="block text-xs font-medium text-gray-700 sm:text-sm"
                   >
-                    ناوی پڕۆفایل <RequiredMark />
+                    {t("ناوی پڕۆفایل")} <RequiredMark />
                   </label>
                   <input
                     id="permission-profile-name"
@@ -526,13 +533,12 @@ function ProfileEditorModal({
                     className={modalInputClass(duplicateName)}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="بۆ نموونە: Basic یان Basic 1"
+                    placeholder={t("بۆ نموونە: Basic یان Basic 1")}
                     required
                   />
                   {duplicateName ? (
                     <p className="mt-1.5 text-xs font-medium text-red-500">
-                      ئەم ناوە پێشتر بەکارهاتووە. ناوێکی تر هەڵبژێرە، بۆ
-                      نموونە:{" "}
+                      {t("ئەم ناوە پێشتر بەکارهاتووە. ناوێکی تر هەڵبژێرە، بۆ نموونە:")} {" "}
                       <button
                         type="button"
                         onClick={() => setName(suggestedName)}
@@ -543,7 +549,7 @@ function ProfileEditorModal({
                     </p>
                   ) : (
                     <p className="mt-1.5 text-[11px] text-slate-400">
-                      کۆدی ناوخۆی پڕۆفایل بە شێوەی خۆکار دروست دەکرێت.
+                      {t("کۆدی ناوخۆی پڕۆفایل بە شێوەی خۆکار دروست دەکرێت.")}
                     </p>
                   )}
                 </div>
@@ -553,16 +559,15 @@ function ProfileEditorModal({
                 <div className="flex flex-col gap-3 border-b border-gray-100 bg-linear-to-r from-white to-slate-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-slate-700 sm:text-base">
-                      مۆڵەتەکانی پڕۆفایل
+                      {t("مۆڵەتەکانی پڕۆفایل")}
                     </h3>
                     <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-xs">
-                      مۆڵەتە بنەڕەتییەکان هەمیشە چالاکن و ناتوانرێت
-                      لاببرێن.
+                      {t("مۆڵەتە بنەڕەتییەکان هەمیشە چالاکن و ناتوانرێت لاببرێن.")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-auto">
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-500 shadow-sm">
-                      {selectedPermissionIds.size} مۆڵەت
+                      {selectedPermissionIds.size} {t("مۆڵەت")}
                     </span>
                     <button
                       type="button"
@@ -575,7 +580,7 @@ function ProfileEditorModal({
                       }
                       className="sa-soft sa-soft-border rounded-xl border px-3 py-2 text-[10px] font-bold shadow-sm transition-all duration-300 hover:brightness-95 hover:shadow"
                     >
-                      هەمووی دیاری بکە
+                      {t("هەمووی دیاری بکە")}
                     </button>
                   </div>
                 </div>
@@ -616,18 +621,15 @@ function ProfileEditorModal({
                             <span className="block break-all font-mono text-[10px] font-bold leading-4 text-slate-700">
                               {permission.key}
                             </span>
-                            <span className="mt-1 block text-[10px] leading-4 text-slate-500">
-                              {permission.description}
-                            </span>
                             <span
                               className="mt-1 block text-[10px] font-medium leading-4 text-slate-600"
-                              dir="rtl"
+                              dir={locale === "en" ? "ltr" : "rtl"}
                             >
-                              {getKurdishPermissionDescription(permission.key)}
+                              {getPermissionDescription(permission.key, locale)}
                             </span>
                             {required && (
                               <span className="sa-soft sa-soft-border mt-2 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold">
-                                بنەڕەتی
+                                {t("بنەڕەتی")}
                               </span>
                             )}
                           </span>
@@ -646,7 +648,11 @@ function ProfileEditorModal({
             isFinalStep
             isSubmitting={saving}
             canContinue={canCreate}
-            submitLabel={isEditing ? "نوێکردنەوە" : "دروستکردن"}
+            submitLabel={isEditing ? t("نوێکردنەوە") : t("دروستکردن")}
+            cancelLabel={t("هەڵوەشاندنەوە")}
+            cancelTooltip={t("داخستن و هەڵوەشاندنەوەی گۆڕانکارییەکان")}
+            requiredTooltip={t("تکایە خانە پێویستەکان پڕبکەرەوە")}
+            savingLabel={t("پاشەکەوتکردن...")}
             onBack={() => undefined}
             onCancel={onClose}
             onNext={() => undefined}
@@ -670,6 +676,8 @@ function ProfileViewModal({
   configuration: PermissionProfileConfiguration;
   onClose: () => void;
 }) {
+  const { locale } = usePlatformLocale();
+  const t = useAccessText();
   const selectedIds = new Set(
     Object.entries(configuration.permissions)
       .filter(([, rule]) => rule.accessMode !== "deny")
@@ -685,20 +693,20 @@ function ProfileViewModal({
       wide
       onClose={onClose}
       title={profile.name}
-      subtitle="وردەکاری پڕۆفایلی مۆڵەت"
+      subtitle={t("وردەکاری پڕۆفایلی مۆڵەت")}
       icon={Layers3}
       iconClassName="sa-soft sa-soft-border sa-accent-text"
       fields={[
         {
-          label: "ژمارەی مۆڵەتەکان",
-          value: `${selectedPermissions.length} مۆڵەت`,
+          label: t("ژمارەی مۆڵەتەکان"),
+          value: `${selectedPermissions.length} ${t("مۆڵەت")}`,
         },
         {
-          label: "بزنسە بەشداربووەکان",
-          value: `${configuration.subscriberCount} بزنس`,
+          label: t("بزنسە بەشداربووەکان"),
+          value: `${configuration.subscriberCount} ${t("بزنس")}`,
         },
         {
-          label: "مۆڵەتەکان",
+          label: t("مۆڵەتەکان"),
           fullWidth: true,
           value: (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white divide-y divide-slate-100 dark:border-white/10 dark:bg-white/[0.02] dark:divide-white/5">
@@ -714,16 +722,13 @@ function ProfileViewModal({
                       </p>
                       <p
                         className="mt-1 text-[10px] font-medium leading-4 text-slate-600 dark:text-slate-300"
-                        dir="rtl"
+                        dir={locale === "en" ? "ltr" : "rtl"}
                       >
-                        {getKurdishPermissionDescription(permission.key)}
-                      </p>
-                      <p className="mt-1 text-[10px] leading-4 text-slate-400">
-                        {permission.description}
+                        {getPermissionDescription(permission.key, locale)}
                       </p>
                     </div>
                     <span className="mt-1 shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                      {permission.category}
+                      {getPermissionCategory(permission.category, locale)}
                     </span>
                   </div>
                 </div>

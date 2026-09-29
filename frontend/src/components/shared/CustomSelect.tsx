@@ -33,6 +33,7 @@ interface CustomSelectProps<T extends string> {
   required?: boolean;
   showRequirement?: boolean;
   accent?: string;
+  emptyLabel?: string;
 }
 
 export function CustomSelect<T extends string>({
@@ -48,6 +49,7 @@ export function CustomSelect<T extends string>({
   required = false,
   showRequirement = false,
   accent,
+  emptyLabel = "هیچ هەڵبژاردەیەک نییە",
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
@@ -168,7 +170,7 @@ export function CustomSelect<T extends string>({
         aria-expanded={isOpen}
       >
         <span className="truncate">
-          {selected?.label ?? "هیچ هەڵبژاردەیەک نییە"}
+          {selected?.label ?? emptyLabel}
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}

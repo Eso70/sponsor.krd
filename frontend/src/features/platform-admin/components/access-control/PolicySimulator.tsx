@@ -3,16 +3,21 @@ import { toast } from "sonner";
 import { CheckCircle2, Clock3, FlaskConical, XCircle } from "lucide-react";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import type { Overview } from "./types";
+import { useAccessText } from "./use-access-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
-function reasonLabel(reason: string) {
-  if (reason === "GRANTED") return "مۆڵەت پێدراوە";
-  if (reason === "NO_PERMISSION") return "مۆڵەت لەم پڕۆفایلەدا نییە";
-  if (reason === "FIELD_DENIED") return "یەکێک لە خانەکان ڕەتکراوەتەوە";
-  if (reason === "APPROVAL_REQUIRED") return "پێویستی بە پەسەندکردن هەیە";
+function reasonLabel(reason: string, t: (source: string) => string) {
+  if (reason === "GRANTED") return t("مۆڵەت پێدراوە");
+  if (reason === "NO_PERMISSION") return t("مۆڵەت لەم پڕۆفایلەدا نییە");
+  if (reason === "FIELD_DENIED") return t("یەکێک لە خانەکان ڕەتکراوەتەوە");
+  if (reason === "APPROVAL_REQUIRED") return t("پێویستی بە پەسەندکردن هەیە");
   return reason;
 }
 
 export function PolicySimulator({ data }: { data: Overview }) {
+  const t = useAccessText();
+  const { locale } = usePlatformLocale();
   const [profileId, setProfileId] = useState(data.profiles[0]?.id || "");
   const [permission, setPermission] = useState(data.permissions[0]?.key || "");
   const [result, setResult] = useState<{
@@ -44,7 +49,7 @@ export function PolicySimulator({ data }: { data: Overview }) {
     });
     const payload = await response.json();
     if (!response.ok) {
-      toast.error(payload.message || "تاقیکردنەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو");
+      toast.error(platformRequestError(payload.message, t("تاقیکردنەوەی پڕۆفایلی مۆڵەت سەرکەوتوو نەبوو"), locale));
       return;
     }
     setResult(payload.data);
@@ -54,7 +59,8 @@ export function PolicySimulator({ data }: { data: Overview }) {
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <CustomSelect
-          label="پڕۆفایلی مۆڵەت"
+          label={t("پڕۆفایلی مۆڵەت")}
+          emptyLabel={t("هیچ هەڵبژاردەیەک نییە")}
           value={effectiveProfileId}
           options={data.profiles.map((profile) => ({
             value: profile.id,
@@ -66,7 +72,8 @@ export function PolicySimulator({ data }: { data: Overview }) {
           }}
         />
         <CustomSelect
-          label="مۆڵەت"
+          label={t("مۆڵەت")}
+          emptyLabel={t("هیچ هەڵبژاردەیەک نییە")}
           value={permission}
           options={data.permissions.map((item) => ({
             value: item.key,
@@ -85,7 +92,7 @@ export function PolicySimulator({ data }: { data: Overview }) {
         className="sa-gradient sa-gradient-hover flex h-10 w-fit items-center gap-2 rounded-xl px-4 text-xs font-bold"
       >
         <FlaskConical className="h-4 w-4" />
-        تاقیکردنەوە
+        {t("تاقیکردنەوە")}
       </button>
 
       {result && (
@@ -107,25 +114,25 @@ export function PolicySimulator({ data }: { data: Overview }) {
               <XCircle className="h-5 w-5" />
             )}
             {result.outcome === "allow"
-              ? "ڕێگەپێدراوە"
+              ? t("ڕێگەپێدراوە")
               : result.outcome === "approval"
-                ? "پێویستی بە پەسەندکردنە"
-                : "ڕەتکرایەوە"}
+                ? t("پێویستی بە پەسەندکردنە")
+                : t("ڕەتکرایەوە")}
           </div>
           <p className="mt-1 text-xs">
-            {result.profile.name} · {reasonLabel(result.reason)}
+            {result.profile.name} · {reasonLabel(result.reason, t)}
           </p>
           <p className="mt-2 text-[10px]">
-            مۆڵەتە کاریگەرەکان: {result.effectivePermissions.length}
+            {t("مۆڵەتە کاریگەرەکان:")} {result.effectivePermissions.length}
           </p>
           {!!result.deniedFields.length && (
             <p className="mt-1 text-[10px]">
-              گۆڕەپانی ڕەتکراو: {result.deniedFields.join(", ")}
+              {t("گۆڕەپانی ڕەتکراو:")} {result.deniedFields.join(", ")}
             </p>
           )}
           {!!result.approvalFields.length && (
             <p className="mt-1 text-[10px]">
-              گۆڕەپانی پەسەندکردن: {result.approvalFields.join(", ")}
+              {t("گۆڕەپانی پەسەندکردن:")} {result.approvalFields.join(", ")}
             </p>
           )}
         </div>

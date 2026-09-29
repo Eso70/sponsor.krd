@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import dynamicImport from "next/dynamic";
-import { SkeletonPublicLinktreePage } from "@/components/shared/Skeleton";
+import { PublicLinktreeLoading } from "@/components/public/PublicLinktreeLoading";
 import type {
   LinktreeLink as Link,
   PublicLinktree as Linktree,
@@ -25,6 +25,13 @@ import {
   BUSINESS_LOGO_PLACEHOLDER,
 } from "@/lib/brand/brand-assets";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
+import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
+import { publicLinktreeCopy } from "@/features/business/i18n/public-linktree-copy";
+import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
+import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
+import { RootPublicLinktreeError } from "@/features/public-site/RootErrorPage";
 
 // Dynamically import LinktreePage to reduce initial bundle size
 const LinktreePage = dynamicImport(
@@ -33,7 +40,7 @@ const LinktreePage = dynamicImport(
       default: mod.LinktreePage,
     })),
   {
-    loading: () => <SkeletonPublicLinktreePage />,
+    loading: PublicLinktreeLoading,
     ssr: true,
   },
 );
@@ -57,6 +64,16 @@ interface PublicLinktreeResponse extends PublicLinktreeBody {
 
 /** No pixel and no registered actions, for a response that carried neither. */
 const NO_ANALYTICS: PublicPageAnalytics = { pixelIds: [], actions: {} };
+
+async function publicVisitorLocale(): Promise<BusinessLocale> {
+  const host = (await headers()).get("host")?.split(":")[0].toLowerCase() || "";
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost").split(":")[0].toLowerCase();
+  const cookieStore = await cookies();
+  if (resolveLinktreeHost(host, rootDomain).isPlatformRoot) {
+    return parseRootPublicLocale(cookieStore.get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  }
+  return publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+}
 
 async function fetchLinktreeData(uid: string): Promise<
   | {
@@ -142,23 +159,33 @@ async function fetchLinktreeData(uid: string): Promise<
 
 export default async function LinktreePublicPage({ params }: PageProps) {
   const { uid } = await params;
+  const visitorLocale = await publicVisitorLocale();
 
   const result = await fetchLinktreeData(uid);
 
+  if (result === "service-unavailable" || result === "bad-gateway" || result === "gateway-timeout" || result === "gone" || result === "inactive") {
+    const host = (await headers()).get("host")?.split(":")[0].toLowerCase() || "";
+    const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost").split(":")[0].toLowerCase();
+    if (resolveLinktreeHost(host, rootDomain).isPlatformRoot) {
+      const kind = { "service-unavailable": "serviceUnavailable", "bad-gateway": "badGateway", "gateway-timeout": "gatewayTimeout", gone: "gone", inactive: "inactive" } as const;
+      return <RootPublicLocaleProvider initialLocale={parseRootPublicLocale(visitorLocale)}><RootPublicLinktreeError kind={kind[result]} /></RootPublicLocaleProvider>;
+    }
+  }
+
   if (result === "service-unavailable") {
-    return <BusinessServiceUnavailablePage />;
+    return <BusinessServiceUnavailablePage pageCopy={businessErrorPageCopy(visitorLocale, "serviceUnavailable")} />;
   }
   if (result === "bad-gateway") {
-    return <BusinessBadGatewayPage />;
+    return <BusinessBadGatewayPage pageCopy={businessErrorPageCopy(visitorLocale, "badGateway")} />;
   }
   if (result === "gateway-timeout") {
-    return <BusinessGatewayTimeoutPage />;
+    return <BusinessGatewayTimeoutPage pageCopy={businessErrorPageCopy(visitorLocale, "gatewayTimeout")} />;
   }
   if (result === "gone") {
-    return <BusinessGonePage />;
+    return <BusinessGonePage pageCopy={businessErrorPageCopy(visitorLocale, "gone")} />;
   }
   if (result === "inactive") {
-    return <BusinessInactivePage />;
+    return <BusinessInactivePage pageCopy={businessErrorPageCopy(visitorLocale, "inactive")} />;
   }
 
   if (!result || !result.linktree) {
@@ -166,6 +193,7 @@ export default async function LinktreePublicPage({ params }: PageProps) {
   }
 
   const { linktree, links, analytics } = result;
+  const locale = visitorLocale ?? "ckb";
 
   // A template for the page the pixel belongs to, in the HTML itself: TikTok's
   // verifier reads the served document, and the base code has to be there at
@@ -182,6 +210,9 @@ export default async function LinktreePublicPage({ params }: PageProps) {
         links={links}
         analytics={analytics}
         enableMarketingTracking
+        initialLocale={locale}
+        showLanguageToggle
+        rootVisitorLocale={result.isPlatformRoot}
       />
     </>
   );
@@ -189,32 +220,35 @@ export default async function LinktreePublicPage({ params }: PageProps) {
 
 export async function generateMetadata({ params }: PageProps) {
   const { uid } = await params;
+  const visitorLocale = await publicVisitorLocale();
 
   // Redirect /id to root in metadata as well
   if (uid === "id") {
     return {
       title: "Sponsor.krd",
-      description: "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە",
+      description: publicLinktreeCopy[visitorLocale ?? "ckb"].description,
     };
   }
 
   const result = await fetchLinktreeData(uid);
 
   if (result === "service-unavailable") {
-    return { title: "Unavailable" };
+    return { title: visitorLocale === "ar" ? "الخدمة غير متاحة" : "Unavailable" };
   }
-  if (result === "bad-gateway") return { title: "Upstream Error" };
-  if (result === "gateway-timeout") return { title: "Timeout" };
-  if (result === "gone") return { title: "Gone" };
-  if (result === "inactive") return { title: "Inactive" };
+  if (result === "bad-gateway") return { title: visitorLocale === "ar" ? "تعذّر الاتصال بالخدمة" : "Upstream Error" };
+  if (result === "gateway-timeout") return { title: visitorLocale === "ar" ? "انتهت مهلة الاتصال" : "Timeout" };
+  if (result === "gone") return { title: visitorLocale === "ar" ? "المحتوى لم يعد متاحًا" : "Gone" };
+  if (result === "inactive") return { title: visitorLocale === "ar" ? "هذه الصفحة معطلة" : "Inactive" };
 
   if (!result || !result.linktree) {
     return {
-      title: "Not Found",
+      title: visitorLocale === "ar" ? "الصفحة غير موجودة" : "Not Found",
     };
   }
 
   const { linktree } = result;
+  const locale = visitorLocale ?? "ckb";
+  const defaultDescription = publicLinktreeCopy[locale].description;
 
   // Only the business's own favicon is offered as a tab icon: a larger
   // `sizes` entry beside it (the logo, the default avatar) is a candidate the
@@ -232,9 +266,9 @@ export async function generateMetadata({ params }: PageProps) {
   return {
     title: shortTabTitle(linktree.name),
     description:
-      linktree.description ||
-      linktree.subtitle ||
-      "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە",
+      linktree.description && linktree.description !== publicLinktreeCopy.ckb.description
+        ? linktree.description
+        : linktree.subtitle || defaultDescription,
     icons: {
       icon: iconEntries,
       apple:
@@ -246,7 +280,7 @@ export async function generateMetadata({ params }: PageProps) {
     openGraph: {
       title: linktree.name,
       description:
-        linktree.subtitle || "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە",
+        linktree.subtitle || defaultDescription,
       images: linktree.image ? [linktree.image] : [],
     },
   };

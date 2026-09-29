@@ -40,6 +40,9 @@ import {
 } from "@/features/platform-admin/business-backup-transfer";
 import { toast } from "sonner";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
+import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 type BusinessManagementSection = "businesses" | "applications";
 
@@ -84,6 +87,8 @@ export function PlatformBusinessesPage({
   onManageSessions,
   onOpenDashboard,
 }: PlatformBusinessesPageProps) {
+  const copy = usePlatformCopy();
+  const { locale } = usePlatformLocale();
   const [section, setSection] =
     useState<BusinessManagementSection>("businesses");
   const [applicationReloadToken, setApplicationReloadToken] = useState(0);
@@ -95,11 +100,11 @@ export function PlatformBusinessesPage({
     setImporting(true);
     try {
       await uploadBusinessBackup("/api/platform/businesses/import", file);
-      toast.success("بزنسەکان و هەموو لینکترییەکانیان هاوردە کران");
+      toast.success(copy.importSuccess);
       onRefresh();
     } catch (error) {
-      toast.error("هاوردەکردنی بزنسەکە سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : "Import failed",
+      toast.error(copy.importFailure, {
+        description: platformRequestError(error instanceof Error ? error.message : null, copy.importFailure, locale),
       });
     } finally {
       setImporting(false);
@@ -114,10 +119,10 @@ export function PlatformBusinessesPage({
         "/api/platform/businesses/export",
         "sponsor-krd-businesses.json",
       );
-      toast.success("باکەپی تەواوی هەموو بزنسەکان دابەزێنرا");
+      toast.success(copy.exportSuccess);
     } catch (error) {
-      toast.error("هەناردەکردنی بزنسەکە سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : "Export failed",
+      toast.error(copy.exportFailure, {
+        description: platformRequestError(error instanceof Error ? error.message : null, copy.exportFailure, locale),
       });
     } finally {
       setExporting(false);
@@ -126,12 +131,12 @@ export function PlatformBusinessesPage({
   const tabs: SegmentedTab<BusinessManagementSection>[] = [
     {
       id: "businesses",
-      label: "بزنسەکان",
+      label: copy.businesses,
       icon: Users,
     },
     {
       id: "applications",
-      label: "داواکارییەکان",
+      label: copy.applications,
       icon: ClipboardList,
     },
   ];
@@ -141,37 +146,37 @@ export function PlatformBusinessesPage({
       <StatCardGrid columns={3} className="mb-8">
         <StatCard
           icon={Users}
-          label="کۆی بزنسەکان"
+          label={copy.totalBusinesses}
           value={summary.total}
           color="blue"
         />
         <StatCard
           icon={UserCheck}
-          label="چالاک"
+          label={copy.active}
           value={summary.active}
           color="green"
         />
         <StatCard
           icon={Clock3}
-          label="ڕاگیراو"
+          label={copy.suspended}
           value={summary.suspended}
           color="orange"
         />
         <StatCard
           icon={ClipboardList}
-          label="داواکاری چاوەڕوان"
+          label={copy.pendingApplications}
           value={summary.pendingApplications}
           color="purple"
         />
         <StatCard
           icon={ClipboardList}
-          label="کۆی داواکارییەکان"
+          label={copy.totalApplications}
           value={summary.totalApplications}
           color="slate"
         />
         <StatCard
           icon={Link2}
-          label="بانگهێشتنامەی چالاک"
+          label={copy.activeInvitations}
           value={summary.activeInvitations}
           color="pink"
         />
@@ -188,11 +193,11 @@ export function PlatformBusinessesPage({
 
       <DashboardSurface as="div" className="space-y-6">
         <PageHeader
-          title={section === "businesses" ? "بزنسەکان" : "داواکارییەکان"}
+          title={section === "businesses" ? copy.businesses : copy.applications}
           description={
             section === "businesses"
-              ? "بزنسەکان دروست و بەڕێوە ببە، زانیاری و دۆخیان ببینە و چالاکییەکانیان کۆنترۆڵ بکە."
-              : "بزنسەکان، داواکارییە نوێکان و بانگهێشتنامەکان لە یەک شوێن بەڕێوە ببە."
+              ? copy.businessesDescription
+              : copy.applicationsDescription
           }
           icon={Users}
           action={
@@ -210,7 +215,7 @@ export function PlatformBusinessesPage({
                     }}
                   />
                   <Tooltip
-                    content="هاوردەکردنی باکەپی تەواوی بزنس"
+                    content={copy.importBackup}
                     side="bottom"
                   >
                     <button
@@ -218,7 +223,7 @@ export function PlatformBusinessesPage({
                       onClick={() => importInputRef.current?.click()}
                       disabled={importing || exporting}
                       className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer"
-                      aria-label="هاوردەکردنی باکەپی بزنس"
+                      aria-label={copy.importBackup}
                     >
                       {importing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -227,13 +232,13 @@ export function PlatformBusinessesPage({
                       )}
                     </button>
                   </Tooltip>
-                  <Tooltip content="هەناردەکردنی هەموو بزنسەکان" side="bottom">
+                  <Tooltip content={copy.exportBackup} side="bottom">
                     <button
                       type="button"
                       onClick={() => void handleExport()}
                       disabled={importing || exporting}
                       className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer"
-                      aria-label="هەناردەکردنی باکەپی هەموو بزنسەکان"
+                      aria-label={copy.exportBackup}
                     >
                       {exporting ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -245,8 +250,8 @@ export function PlatformBusinessesPage({
                   <Tooltip
                     content={
                       searchQuery.trim()
-                        ? "پاککردنەوەی گەڕان"
-                        : "گەڕان (Ctrl+K)"
+                        ? copy.clearSearch
+                        : `${copy.search} (Ctrl+K)`
                     }
                     side="bottom"
                   >
@@ -258,7 +263,7 @@ export function PlatformBusinessesPage({
                           : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-750 dark:text-gray-400 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-white/10"
                       }`}
                       aria-label={
-                        searchQuery.trim() ? "Clear search" : "Search"
+                        searchQuery.trim() ? copy.clearSearch : copy.search
                       }
                     >
                       {searchQuery.trim() ? (
@@ -268,7 +273,7 @@ export function PlatformBusinessesPage({
                           <div className="flex items-center gap-2 min-w-0">
                             <Search className="h-4 w-4 shrink-0 text-slate-400 dark:text-gray-500 group-hover:scale-110 transition-transform" />
                             <span className="hidden sm:inline text-xs font-semibold text-slate-400 dark:text-gray-500 group-hover:text-slate-650 dark:group-hover:text-gray-300 transition-colors truncate">
-                              گەڕان...
+                              {copy.searchPlaceholder}
                             </span>
                           </div>
                           <kbd className="hidden sm:inline-flex items-center gap-0.5 font-sans font-bold text-[8px] text-slate-400 dark:text-gray-500 bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded select-none">
@@ -281,22 +286,22 @@ export function PlatformBusinessesPage({
                   </Tooltip>
 
                   <div className="flex items-center h-10 p-1 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm shrink-0">
-                    <Tooltip content="بینینی گرید" side="bottom">
+                    <Tooltip content={copy.gridView} side="bottom">
                       <button
                         onClick={() => onViewModeChange("grid")}
                         className={`flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-300 cursor-pointer ${viewMode === "grid" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-white/5"}`}
-                        aria-label="Grid view"
-                        title="بینینی گرید"
+                        aria-label={copy.gridView}
+                        title={copy.gridView}
                       >
                         <LayoutGrid className="h-4 w-4 shrink-0" />
                       </button>
                     </Tooltip>
-                    <Tooltip content="بینینی خشتە" side="bottom">
+                    <Tooltip content={copy.tableView} side="bottom">
                       <button
                         onClick={() => onViewModeChange("table")}
                         className={`flex items-center justify-center h-8 w-8 rounded-lg transition-all duration-300 cursor-pointer ${viewMode === "table" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-white/5"}`}
-                        aria-label="Table view"
-                        title="بینینی خشتە"
+                        aria-label={copy.tableView}
+                        title={copy.tableView}
                       >
                         <Table2 className="h-4 w-4 shrink-0" />
                       </button>
@@ -305,7 +310,7 @@ export function PlatformBusinessesPage({
                 </>
               ) : null}
 
-              <Tooltip content="نوێکردنەوە" side="bottom">
+              <Tooltip content={copy.refresh} side="bottom">
                 <button
                   type="button"
                   onClick={() => {
@@ -314,8 +319,8 @@ export function PlatformBusinessesPage({
                   }}
                   disabled={section === "businesses" && isRefreshing}
                   className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 cursor-pointer"
-                  title="نوێکردنەوە"
-                  aria-label="نوێکردنەوە"
+                  title={copy.refresh}
+                  aria-label={copy.refresh}
                 >
                   <MotionSpinner
                     active={section === "businesses" && isRefreshing}

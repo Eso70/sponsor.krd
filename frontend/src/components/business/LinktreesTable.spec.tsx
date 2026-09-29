@@ -27,6 +27,28 @@ function columnCounts() {
 }
 
 describe("LinktreesTable column alignment", () => {
+  it("shows Arabic Business pagination in the table", () => {
+    render(
+      <LinktreesTable
+        data={Array.from({ length: 25 }, (_, index) => item({ id: `page-${index}`, uid: `page-${index}` }))}
+        pagination={{ mode: "client" }}
+        listCopy={businessMessages.ar.LinktreeList}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "الصفحة التالية" })).toBeInTheDocument();
+    expect(screen.getByText(/من 25/)).toBeInTheDocument();
+  });
+
+  it("uses the Business loading announcement without changing the shared default", () => {
+    const { rerender } = render(
+      <LinktreesTable isLoading listCopy={businessMessages.ar.LinktreeList} />,
+    );
+    expect(screen.getByRole("status", { name: "جارٍ تحميل جدول الصفحات" })).toBeInTheDocument();
+
+    rerender(<LinktreesTable isLoading />);
+    expect(screen.getByRole("status", { name: "Loading table" })).toBeInTheDocument();
+  });
+
   it("localizes Business headers and keeps Kurdish Platform defaults", () => {
     const { rerender } = render(
       <LinktreesTable data={[item()]} listCopy={businessMessages.ar.LinktreeList} />,

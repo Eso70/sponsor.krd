@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useMemo } from "react";
+import { memo, useState, useMemo, type ComponentProps } from "react";
 import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
 import { TikTokConfigModal } from "../TikTokConfigModal";
 import { modalInputClass } from "../modal-input-styles";
@@ -37,6 +37,12 @@ export function validateSubdomain(subdomain: string): string | undefined {
 // Props
 
 export interface BusinessInfoStepProps {
+  copy?: Partial<Record<"businessName" | "businessNamePlaceholder" | "username" | "subdomain" | "subdomainPlaceholder" | "randomSubdomain" | "phone" | "tiktok" | "tiktokGroups" | "addTiktok" | "plan" | "loadingPlans" | "noPlans", string>> & {
+    brand?: ComponentProps<typeof BrandAssetStack>["copy"];
+    owner?: ComponentProps<typeof BusinessOwnerIdentityFields>["copy"];
+    color?: ComponentProps<typeof ColorGradientModal>["copy"];
+    tiktokModal?: ComponentProps<typeof TikTokConfigModal>["copy"];
+  };
   name: string;
   username: string;
   subdomain: string;
@@ -89,6 +95,7 @@ export interface BusinessInfoStepProps {
 }
 
 export const BusinessInfoStep = memo(function BusinessInfoStep({
+  copy,
   name,
   username,
   subdomain,
@@ -135,6 +142,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
   return (
     <div className="space-y-6 min-h-[50vh]">
       <BrandAssetStack
+        copy={copy?.brand}
         logo={logoPreview}
         favicon={faviconPreview}
         defaultAvatar={defaultAvatarPreview}
@@ -150,6 +158,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
 
       <div className="space-y-3">
         <BusinessOwnerIdentityFields
+          copy={copy?.owner}
           ownerName={ownerName}
           ownerEmail={ownerEmail}
         />
@@ -159,7 +168,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               htmlFor="business-name"
               className="block text-xs sm:text-sm font-medium text-gray-700"
             >
-              ناوی بزنس <RequiredMark />
+              {copy?.businessName ?? "ناوی بزنس"} <RequiredMark />
             </label>
             <input
               id="business-name"
@@ -169,7 +178,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               onBlur={onNameBlur}
               required
               className={modalInputClass(!!(errors.name && touched.name))}
-              placeholder="ناوی بزنس بنووسە"
+              placeholder={copy?.businessNamePlaceholder ?? "ناوی بزنس بنووسە"}
             />
             {errors.name && touched.name && (
               <p className="mt-1 text-xs text-red-500 font-kurdish">
@@ -183,7 +192,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               htmlFor="business-username"
               className="block text-xs sm:text-sm font-medium text-gray-700"
             >
-              ناوی بەکارهێنەر <RequiredMark />
+              {copy?.username ?? "ناوی بەکارهێنەر"} <RequiredMark />
             </label>
             <input
               id="business-username"
@@ -195,7 +204,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               className={modalInputClass(
                 !!(errors.username && touched.username),
               )}
-              placeholder="ناوی بەکارهێنەر"
+              placeholder={copy?.username ?? "ناوی بەکارهێنەر"}
             />
           </div>
 
@@ -204,7 +213,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               htmlFor="business-subdomain"
               className="block text-xs sm:text-sm font-medium text-gray-700"
             >
-              سەب دۆمەین
+              {copy?.subdomain ?? "سەب دۆمەین"}
               <RequiredMark />
             </label>
             <div className="relative">
@@ -218,15 +227,15 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
                   !!(errors.subdomain && touched.subdomain),
                   "pr-11",
                 )}
-                placeholder="سەب دۆمەین بنووسە"
+                placeholder={copy?.subdomainPlaceholder ?? "سەب دۆمەین بنووسە"}
                 required
               />
-              <Tooltip content="دروستکردنی سەب دۆمەینی هەڕەمەکی" side="top">
+              <Tooltip content={copy?.randomSubdomain ?? "دروستکردنی سەب دۆمەینی هەڕەمەکی"} side="top">
                 <button
                   type="button"
                   onClick={onGenerateSubdomain}
                   className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300 cursor-pointer"
-                  aria-label="Generate random subdomain"
+                  aria-label={copy?.randomSubdomain ?? "Generate random subdomain"}
                 >
                   <svg
                     className="h-3.5 w-3.5"
@@ -259,7 +268,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               htmlFor="business-phone"
               className="block text-xs sm:text-sm font-medium text-gray-700"
             >
-              ژمارەی مۆبایل
+              {copy?.phone ?? "ژمارەی مۆبایل"}
               <RequiredMark />
             </label>
             <input
@@ -268,7 +277,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               value={phone}
               onChange={(e) => onPhoneChange(e.target.value)}
               className={modalInputClass(!!(errors.phone && touched.phone))}
-              placeholder="ژمارەی مۆبایل"
+              placeholder={copy?.phone ?? "ژمارەی مۆبایل"}
             />
             {errors.phone && touched.phone && (
               <p className="mt-1 text-xs text-red-500 font-kurdish">
@@ -279,7 +288,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
 
           <div className="space-y-1.5">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-              ڕێکخستنی تیکتۆک <RequiredMark />
+              {copy?.tiktok ?? "ڕێکخستنی تیکتۆک"} <RequiredMark />
             </label>
             <button
               type="button"
@@ -288,8 +297,8 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
             >
               <span>
                 {filledTikTokConfigs.length > 0
-                  ? `${filledTikTokConfigs.length} گرووپی تیکتۆک`
-                  : "زیادکردنی پیکسڵ و Events API"}
+                  ? `${filledTikTokConfigs.length} ${copy?.tiktokGroups ?? "گرووپی تیکتۆک"}`
+                  : copy?.addTiktok ?? "زیادکردنی پیکسڵ و Events API"}
               </span>
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">
                 {filledTikTokConfigs.length}/3
@@ -299,20 +308,20 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
 
           <div className="space-y-1.5">
             <label className="block text-xs sm:text-sm font-medium text-gray-700">
-              پلانی بەشداربوون
+              {copy?.plan ?? "پلانی بەشداربوون"}
             </label>
             <CustomSelect
-              label="پلانی بەشداربوون"
+              label={copy?.plan ?? "پلانی بەشداربوون"}
               value={subscriptionPlanId}
               options={
                 subscriptionPlansLoading
-                  ? [{ value: "", label: "بارکردنی پلانەکان..." }]
+                  ? [{ value: "", label: copy?.loadingPlans ?? "بارکردنی پلانەکان..." }]
                   : subscriptionPlans.length
                     ? subscriptionPlans.map((plan) => ({
                         value: plan.id,
                         label: plan.name,
                       }))
-                    : [{ value: "", label: "هیچ پلانێکی چالاک نییە" }]
+                    : [{ value: "", label: copy?.noPlans ?? "هیچ پلانێکی چالاک نییە" }]
               }
               onChange={onSubscriptionPlanChange}
               disabled={subscriptionPlansLoading || !subscriptionPlans.length}
@@ -330,6 +339,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
       </div>
 
       <ColorGradientModal
+        copy={copy?.color}
         isOpen={showGradientPicker}
         value={websiteColor}
         onChange={onWebsiteColorChange}
@@ -339,6 +349,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
       />
 
       <TikTokConfigModal
+        copy={copy?.tiktokModal}
         isOpen={showTikTokModal}
         configs={tiktokConfigs}
         onChange={onTikTokConfigsChange}

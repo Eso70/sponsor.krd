@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { persistAppTheme, readAppTheme } from "@/lib/app-theme";
 import { Tooltip } from "@/components/shared/Tooltip";
 
-export function ThemeToggleButton({ className = "" }: { className?: string }) {
+export function ThemeToggleButton({ className = "", copy }: { className?: string; copy?: { label: string; light: string; dark: string } }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -26,12 +26,12 @@ export function ThemeToggleButton({ className = "" }: { className?: string }) {
   }, []);
 
   return (
-    <Tooltip content={isDark ? "دۆخی ڕووناک" : "دۆخی تاریک"} side="bottom">
+    <Tooltip content={isDark ? copy?.light ?? "دۆخی ڕووناک" : copy?.dark ?? "دۆخی تاریک"} side="bottom">
       <button
         type="button"
         onClick={toggleTheme}
         className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-500 shadow-sm backdrop-blur transition hover:text-slate-900 dark:border-white/10 dark:bg-[#171a20]/90 dark:text-slate-400 dark:hover:text-white cursor-pointer ${className}`}
-        aria-label="Change theme"
+        aria-label={copy?.label ?? "Change theme"}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </button>

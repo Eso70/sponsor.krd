@@ -24,7 +24,8 @@ export type SessionManagementCopy = Partial<Record<
   "refresh" | "empty" | "current" | "remembered" | "unknownIp" | "expires" |
   "revokeSession" | "revokeAllTooltip" | "signOutOthers" | "revokeAll" |
   "dialogTitle" | "dialogConfirm" | "dialogLoading" | "dialogMessage" |
-  "unknownDevice" | "unknownTime" | "browserOn",
+  "dialogCancel" | "dialogClose" |
+  "unknownDevice" | "unknownTime" | "browserOn" | "loading",
   string
 >>;
 
@@ -32,10 +33,12 @@ export function SessionManagementPanel({
   endpoint,
   administratorMode = false,
   copy,
+  dateLocale,
 }: {
   endpoint: string;
   administratorMode?: boolean;
   copy?: SessionManagementCopy;
+  dateLocale?: string;
 }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,7 +171,7 @@ export function SessionManagementPanel({
 
         <div className="space-y-3">
           {loading && sessions.length === 0 ? (
-            <SkeletonSessionList rows={3} />
+            <SkeletonSessionList rows={3} loadingLabel={copy?.loading} />
           ) : sessions.length === 0 ? (
             <p className="py-8 text-center text-xs text-slate-400">
               {copy?.empty ?? "No active sessions found."}
@@ -198,8 +201,8 @@ export function SessionManagementPanel({
                   </div>
                   <p className="mt-1 truncate text-[11px] text-slate-400">
                     {session.ip_address || copy?.unknownIp || "Unknown IP"} ·{" "}
-                    {formatDate(session.created_at, copy)} · {copy?.expires ?? "expires"}{" "}
-                    {formatDate(session.session_expires_at, copy)}
+                    {formatDate(session.created_at, copy, dateLocale)} · {copy?.expires ?? "expires"}{" "}
+                    {formatDate(session.session_expires_at, copy, dateLocale)}
                   </p>
                 </div>
                 {(administratorMode || !session.is_current) && (
@@ -252,6 +255,8 @@ export function SessionManagementPanel({
         title={copy?.dialogTitle ?? "Revoke session access"}
         confirmLabel={copy?.dialogConfirm ?? "Revoke access"}
         loadingLabel={copy?.dialogLoading ?? "Revoking…"}
+        cancelLabel={copy?.dialogCancel}
+        closeLabel={copy?.dialogClose}
         message={copy?.dialogMessage ?? "This device will immediately lose access."}
         zIndexClassName="z-[80]"
       />
@@ -284,7 +289,7 @@ function describeUserAgent(userAgent: string | null, copy?: SessionManagementCop
   return `${browser} ${copy?.browserOn ?? "on"} ${platform}`;
 }
 
-function formatDate(value: string, copy?: SessionManagementCopy): string {
+function formatDate(value: string, copy?: SessionManagementCopy, locale?: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? copy?.unknownTime ?? "Unknown time" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? copy?.unknownTime ?? "Unknown time" : date.toLocaleString(locale);
 }

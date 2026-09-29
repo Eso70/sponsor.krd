@@ -743,6 +743,12 @@ export const LinktreesTable = memo(function LinktreesTable({
       columns={columns}
       getRowKey={(item) => item.id}
       isLoading={isLoading}
+      loadingLabel={labels.loadingTable}
+      paginationCopy={{
+        of: labels.paginationOf,
+        previous: labels.paginationPrevious,
+        next: labels.paginationNext,
+      }}
       minWidth="min-w-180"
       pagination={pagination}
       empty={{

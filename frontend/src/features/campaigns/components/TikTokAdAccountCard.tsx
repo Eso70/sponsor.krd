@@ -11,6 +11,7 @@ import {
 import { TbBrandTiktok } from "react-icons/tb";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import type { TikTokAdAccount } from "../types";
+import { useCampaignText } from "../use-campaign-text";
 
 interface TikTokAdAccountCardProps {
   account: TikTokAdAccount | null;
@@ -27,6 +28,7 @@ export function TikTokAdAccountCard({
   onSyncClick,
   isSyncing = false,
 }: TikTokAdAccountCardProps) {
+  const t = useCampaignText();
   const isConnected = account && account.status === "connected";
 
   if (!isConnected) {
@@ -40,15 +42,15 @@ export function TikTokAdAccountCard({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  بەستنەوەی هەژماری ڕیکلامی تیکتۆک
+                  {t("بەستنەوەی هەژماری ڕیکلامی تیکتۆک")}
                 </h3>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
                   <AlertCircle className="size-3.5" />
-                  نەبەستراوەتەوە
+                  {t("نەبەستراوەتەوە")}
                 </span>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                هەژماری ڕیکلامی تیکتۆک بە وێبسایتەکەتەوە ببەستەرەوە بۆ ئەوەی ڕاستەوخۆ کەمپەینەکانی ڕیکلام دروست بکەیت و بینەران ڕەوانەی لاپەڕەی لینکەکانت بکەیت بە ئامار و تۆماری ورد.
+                {t("هەژماری ڕیکلامی تیکتۆک بە وێبسایتەکەتەوە ببەستەرەوە بۆ ئەوەی ڕاستەوخۆ کەمپەینەکانی ڕیکلام دروست بکەیت و بینەران ڕەوانەی لاپەڕەی لینکەکانت بکەیت بە ئامار و تۆماری ورد.")}
               </p>
             </div>
           </div>
@@ -59,7 +61,7 @@ export function TikTokAdAccountCard({
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-md active:scale-95 shrink-0"
           >
             <Link2 className="size-4" />
-            بەستنەوە بە تیکتۆک
+            {t("بەستنەوە بە تیکتۆک")}
           </button>
         </div>
       </DashboardSurface>
@@ -83,16 +85,16 @@ export function TikTokAdAccountCard({
               </h3>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="size-3.5" />
-                چالاک و بەستراوەتەوە
+                {t("چالاک و بەستراوەتەوە")}
               </span>
               <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-mono">
                 {account.accountType}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
-              <span>Advertiser ID: <span className="text-slate-700 dark:text-slate-300 font-bold">{account.advertiserId}</span></span>
+              <span>{t("Advertiser ID:")} <span className="text-slate-700 dark:text-slate-300 font-bold">{account.advertiserId}</span></span>
               <span>•</span>
-              <span>کاتی ڕێکخستن: {account.timezone}</span>
+              <span>{t("کاتی ڕێکخستن:")} {account.timezone}</span>
             </div>
           </div>
         </div>
@@ -102,21 +104,21 @@ export function TikTokAdAccountCard({
             type="button"
             onClick={onSyncClick}
             disabled={isSyncing}
-            title="نوێکردنەوەی داتای ئەکاونت"
+            title={t("نوێکردنەوەی داتای ئەکاونت")}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`size-3.5 ${isSyncing ? "animate-spin text-slate-900 dark:text-white" : ""}`} />
-            {isSyncing ? "نوێدەکرێتەوە..." : "نوێکردنەوە"}
+            {isSyncing ? t("نوێدەکرێتەوە...") : t("نوێکردنەوە")}
           </button>
 
           <button
             type="button"
             onClick={onDisconnectClick}
-            title="پچڕاندنی هەژمار"
+            title={t("پچڕاندنی هەژمار")}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
           >
             <Unlink className="size-3.5" />
-            پچڕاندن
+            {t("پچڕاندن")}
           </button>
         </div>
       </div>
@@ -126,7 +128,7 @@ export function TikTokAdAccountCard({
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Wallet className="size-4 text-emerald-500" />
-            باڵانسی ئەکاونت (Balance)
+            {t("باڵانسی ئەکاونت (Balance)")}
           </div>
           <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
             ${(account.balance ?? 0).toFixed(2)}{" "}
@@ -137,7 +139,7 @@ export function TikTokAdAccountCard({
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Layers className="size-4 text-sky-500" />
-            پیکسڵی بەستراوە (Connected Pixel)
+            {t("پیکسڵی بەستراوە (Connected Pixel)")}
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
@@ -152,11 +154,11 @@ export function TikTokAdAccountCard({
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <ShieldCheck className="size-4 text-indigo-500" />
-            سنووری خەرجی ڕۆژانە (Daily Cap)
+            {t("سنووری خەرجی ڕۆژانە (Daily Cap)")}
           </div>
           <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
             ${(account.dailySpendCap ?? 0).toFixed(2)}{" "}
-            <span className="text-xs font-normal text-slate-500 font-sans">لە ڕۆژێکدا</span>
+            <span className="text-xs font-normal text-slate-500 font-sans">{t("لە ڕۆژێکدا")}</span>
           </p>
         </div>
       </div>

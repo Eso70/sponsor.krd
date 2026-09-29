@@ -21,8 +21,11 @@ import {
   createLinktreeTemplatePreview,
   LINKTREE_TEMPLATE_PREVIEW_THEMES,
 } from "@/components/templates/preview-fixtures";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
 interface BusinessMobileShowcaseProps {
   accentColor: string;
+  copy: (typeof businessPublicCopy)[BusinessLocale];
 }
 
 type ShowcaseScreen = {
@@ -56,19 +59,6 @@ const PHONE_SLOT_WIDTH =
  */
 const STAGE_ASPECT = "aspect-[1/0.86] sm:aspect-[1/0.77] lg:aspect-[1/0.68]";
 
-const TEMPLATE_PREVIEW_LINKS = createBusinessContactPreviewLinks();
-
-const SHOWCASE_SCREENS: ShowcaseScreen[] = [
-  ...TEMPLATE_OPTIONS.map((template) => ({
-    id: `linktree-${template.id}`,
-    label: `${template.name} Linktree`,
-    templateId: template.id as TemplateKey,
-    linktree: createLinktreeTemplatePreview({
-      templateId: template.id as TemplateKey,
-    }),
-  })),
-];
-
 const PHONE_SPRING = {
   type: "spring",
   stiffness: 165,
@@ -94,12 +84,16 @@ const getPhoneScale = (distanceFromCenter: number) => {
 
 const ShowcasePhoneContent = memo(function ShowcasePhoneContent({
   screen,
+  copy,
+  links,
 }: {
   screen: ShowcaseScreen;
+  copy: BusinessMobileShowcaseProps["copy"];
+  links: ReturnType<typeof createBusinessContactPreviewLinks>;
 }) {
   return (
     <PhoneMockup
-      ariaLabel={`${screen.label} mobile preview`}
+      ariaLabel={`${screen.label} ${copy.mobilePreview}`}
       name={screen.label}
       statusBarClassName="!text-white mix-blend-difference"
     >
@@ -108,7 +102,7 @@ const ShowcasePhoneContent = memo(function ShowcasePhoneContent({
       <div className="pointer-events-none min-h-full">
         <DynamicTemplate
           linktree={screen.linktree}
-          links={TEMPLATE_PREVIEW_LINKS}
+          links={links}
           theme={LINKTREE_TEMPLATE_PREVIEW_THEMES[screen.templateId]}
           onLinkClick={() => undefined}
         />
@@ -119,10 +113,21 @@ const ShowcasePhoneContent = memo(function ShowcasePhoneContent({
 
 export function BusinessMobileShowcase({
   accentColor,
+  copy,
 }: BusinessMobileShowcaseProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(0);
-  const screens = SHOWCASE_SCREENS;
+  const links = useMemo(() => createBusinessContactPreviewLinks(undefined, copy.previewLinks), [copy]);
+  const screens = useMemo<ShowcaseScreen[]>(() => TEMPLATE_OPTIONS.map((template) => ({
+    id: `linktree-${template.id}`,
+    label: `${template.name} Linktree`,
+    templateId: template.id as TemplateKey,
+    linktree: createLinktreeTemplatePreview({
+      templateId: template.id as TemplateKey,
+      subtitle: copy.previewSubtitle,
+      description: copy.previewDescription,
+    }),
+  })), [copy]);
   const stackOffsets = STACK_OFFSETS;
   const centerLayoutIndex = Math.floor(stackOffsets.length / 2);
   const visibleScreens = useMemo(
@@ -147,7 +152,7 @@ export function BusinessMobileShowcase({
     <div className="px-5 pb-16 sm:px-8 sm:pb-20 lg:pb-24">
         <div
           role="group"
-          aria-label="Mobile template carousel"
+          aria-label={copy.carousel}
           className={`relative isolate mx-auto mt-20 flex max-w-6xl items-end justify-center sm:mt-24 ${STAGE_ASPECT}`}
         >
           {visibleScreens.map(({ screenIndex, layoutIndex }) => {
@@ -184,7 +189,7 @@ export function BusinessMobileShowcase({
                     animate={{ scale: getPhoneScale(distanceFromCenter) }}
                     transition={reduceMotion ? { duration: 0 } : PHONE_SPRING}
                   >
-                    <ShowcasePhoneContent screen={screen} />
+                    <ShowcasePhoneContent screen={screen} copy={copy} links={links} />
                   </motion.div>
               </motion.div>
             );
@@ -192,7 +197,7 @@ export function BusinessMobileShowcase({
           <div className="absolute left-1 top-1/2 z-30 -translate-y-1/2 sm:left-3">
             <motion.button
               type="button"
-              aria-label="Previous template"
+              aria-label={copy.previousTemplate}
               className="grid size-10 place-items-center rounded-full bg-white/80 text-slate-900 shadow-lg shadow-black/10 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 dark:bg-slate-900/75 dark:text-white dark:shadow-black/35 min-[381px]:size-11 sm:size-12"
               style={{ "--tw-ring-color": accentColor } as CSSProperties}
               whileHover={reduceMotion ? undefined : { scale: 1.06 }}
@@ -206,7 +211,7 @@ export function BusinessMobileShowcase({
           <div className="absolute right-1 top-1/2 z-30 -translate-y-1/2 sm:right-3">
             <motion.button
               type="button"
-              aria-label="Next template"
+              aria-label={copy.nextTemplate}
               className="grid size-10 place-items-center rounded-full bg-white/80 text-slate-900 shadow-lg shadow-black/10 backdrop-blur-md focus-visible:outline-none focus-visible:ring-2 dark:bg-slate-900/75 dark:text-white dark:shadow-black/35 min-[381px]:size-11 sm:size-12"
               style={{ "--tw-ring-color": accentColor } as CSSProperties}
               whileHover={reduceMotion ? undefined : { scale: 1.06 }}

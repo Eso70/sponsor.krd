@@ -4,10 +4,12 @@ import { useState } from "react";
 import { ShieldAlert, LogOut } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { exitBusinessImpersonation } from "@/features/business/api";
+import type { businessMessages } from "@/features/business/i18n/messages";
 
 interface BusinessImpersonationBannerProps {
   businessName: string;
   platformAdminName: string;
+  copy?: Partial<Record<keyof typeof businessMessages.ar.Impersonation, string>>;
 }
 
 /**
@@ -22,6 +24,7 @@ interface BusinessImpersonationBannerProps {
 export function BusinessImpersonationBanner({
   businessName,
   platformAdminName,
+  copy,
 }: BusinessImpersonationBannerProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +40,7 @@ export function BusinessImpersonationBanner({
       })
       .catch((cause: unknown) => {
         setIsExiting(false);
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Failed to exit impersonation",
-        );
+        setError(copy?.exitFailed ?? (cause instanceof Error ? cause.message : "Failed to exit impersonation"));
       });
   };
 
@@ -58,17 +57,18 @@ export function BusinessImpersonationBanner({
           aria-hidden="true"
         />
         <p className="min-w-0 flex-1 text-xs font-medium text-amber-950 sm:text-sm dark:text-amber-50">
-          Signed in as <span className="font-semibold">{businessName}</span> by
-          platform administrator{" "}
-          <span className="font-semibold">{platformAdminName}</span>. Every
-          action is recorded against this business.
+          {copy?.signedInAs ?? "Signed in as"}{" "}
+          <span className="font-semibold">{businessName}</span>{" "}
+          {copy?.byAdministrator ?? "by platform administrator"}{" "}
+          <span className="font-semibold">{platformAdminName}</span>.{" "}
+          {copy?.auditNotice ?? "Every action is recorded against this business."}
         </p>
         {error && (
           <span className="text-xs text-red-700 dark:text-red-300">
             {error}
           </span>
         )}
-        <Tooltip content="Exit impersonation and return to platform console" side="bottom">
+        <Tooltip content={copy?.exitTooltip ?? "Exit impersonation and return to platform console"} side="bottom">
           <button
             type="button"
             onClick={handleExit}
@@ -76,7 +76,7 @@ export function BusinessImpersonationBanner({
             className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-amber-600/30 bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-950 shadow-sm transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-200/20 dark:bg-amber-200 dark:text-amber-950 dark:hover:bg-amber-100 dark:focus-visible:ring-amber-200 dark:focus-visible:ring-offset-[#211b10]"
           >
             <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-            {isExiting ? "Exiting…" : "Exit impersonation"}
+            {isExiting ? copy?.exiting ?? "Exiting…" : copy?.exit ?? "Exit impersonation"}
           </button>
         </Tooltip>
       </div>

@@ -8,15 +8,17 @@ export type SkeletonMarketingBody =
 /** Shared public-site chrome with a body matching the destination page type. */
 export function SkeletonMarketingPage({
   body = "cards",
+  loadingLabel = "Loading page",
 }: {
   body?: SkeletonMarketingBody;
+  loadingLabel?: string;
 }) {
   return (
     <main
       className="min-h-screen bg-[#f8f9fa] text-slate-900 dark:bg-[#0b0d0e] dark:text-white"
       role="status"
       aria-busy="true"
-      aria-label="Loading page"
+      aria-label={loadingLabel}
     >
       <header className="h-[60px] border-b border-black/5 dark:border-white/10">
         <div className="mx-auto flex h-full max-w-[75rem] items-center justify-between px-5 sm:px-6">

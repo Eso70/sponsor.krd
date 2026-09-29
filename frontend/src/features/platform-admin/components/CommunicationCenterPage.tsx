@@ -38,6 +38,8 @@ import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonStatCards } from "@/components/shared/Skeleton";
 import { communicationRequest } from "@/features/communications/api";
+import { formatNotificationDate } from "@/features/communications/format";
+import { conversationCategoryLabel } from "@/features/communications/conversation-categories";
 import { usePolling } from "@/lib/utils/usePolling";
 import { ChatComposer } from "@/features/communications/ChatComposer";
 import type {
@@ -46,6 +48,11 @@ import type {
 } from "@/features/communications/types";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { useCommunicationText } from "./use-communication-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { platformIntlLocale } from "@/features/platform-admin/i18n/locale";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 
 type CenterTab =
   | "overview"
@@ -101,6 +108,12 @@ const initialForm = {
 };
 
 export function CommunicationCenterPage() {
+  const t = useCommunicationText();
+  const { locale } = usePlatformLocale();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
+  const localeRef = useRef(locale);
+  useEffect(() => { localeRef.current = locale; }, [locale]);
   const [tab, setTab] = useState<CenterTab>(() => {
     if (typeof window === "undefined") return "overview";
     const queryTab = new URLSearchParams(window.location.search).get("tab");
@@ -168,8 +181,8 @@ export function CommunicationCenterPage() {
         setTab("messages");
       }
     } catch (error) {
-      toast.error("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو", {
-        description: error instanceof Error ? error.message : undefined,
+      toast.error(tRef.current("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو"), {
+        description: platformRequestError(error instanceof Error ? error.message : null, tRef.current("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو"), localeRef.current),
       });
     } finally {
       setLoading(false);
@@ -257,7 +270,7 @@ export function CommunicationCenterPage() {
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پەیامەکە نەکرایەوە",
+        platformRequestError(error instanceof Error ? error.message : null, t("پەیامەکە نەکرایەوە"), locale),
       );
     }
   };
@@ -265,37 +278,35 @@ export function CommunicationCenterPage() {
   if (loading && !overview) {
     return (
       <div className="min-h-[55vh] py-4">
-        <SkeletonStatCards count={4} className="grid-cols-2 lg:grid-cols-4" />
+        <SkeletonStatCards count={4} className="grid-cols-2 lg:grid-cols-4" loadingLabel={platformLoadingCopy[locale].loading} />
       </div>
     );
   }
 
   const contentMeta = {
     overview: {
-      title: "پوختەی پەیوەندییەکان",
-      description:
-        "دوایین ڕاگەیاندن و ئەو پەیامانەی پێویستیان بە وەڵامی پلاتفۆرم هەیە.",
+      title: t("پوختەی پەیوەندییەکان"),
+      description: t("دوایین ڕاگەیاندن و ئەو پەیامانەی پێویستیان بە وەڵامی پلاتفۆرم هەیە."),
       icon: Inbox,
     },
     announcements: {
-      title: "ڕاگەیاندنەکان",
-      description: "ڕەشنووس، ڕێکخراو و ڕاگەیاندنە بڵاوکراوەکان بەڕێوەببە.",
+      title: t("ڕاگەیاندنەکان"),
+      description: t("ڕەشنووس، ڕێکخراو و ڕاگەیاندنە بڵاوکراوەکان بەڕێوەببە."),
       icon: Megaphone,
     },
     messages: {
-      title: "پەیامەکانی بزنس",
-      description:
-        "گفتوگۆ و داواکارییەکانی نێوان بزنسەکان و پلاتفۆرم بەڕێوەببە.",
+      title: t("پەیامەکانی بزنس"),
+      description: t("گفتوگۆ و داواکارییەکانی نێوان بزنسەکان و پلاتفۆرم بەڕێوەببە."),
       icon: MessageSquare,
     },
     homepage: {
-      title: "پەیوەندییەکانی ماڵپەڕ",
-      description: "بانەر و ناساندنی تایبەتمەندییەکانی ماڵپەڕ بەڕێوەببە.",
+      title: t("پەیوەندییەکانی ماڵپەڕ"),
+      description: t("بانەر و ناساندنی تایبەتمەندییەکانی ماڵپەڕ بەڕێوەببە."),
       icon: Globe2,
     },
     history: {
-      title: "مێژووی گەیاندن",
-      description: "دۆخی گەیاندن، خوێندنەوە و ئەرشیفی ڕاگەیاندنەکان ببینە.",
+      title: t("مێژووی گەیاندن"),
+      description: t("دۆخی گەیاندن، خوێندنەوە و ئەرشیفی ڕاگەیاندنەکان ببینە."),
       icon: History,
     },
   }[tab];
@@ -322,32 +333,32 @@ export function CommunicationCenterPage() {
       <StatCardGrid>
         <StatCard
           icon={Megaphone}
-          label="ڕاگەیاندنی چالاک"
+          label={t("ڕاگەیاندنی چالاک")}
           value={overview?.announcements.active || 0}
           color="blue"
         />
         <StatCard
           icon={CalendarClock}
-          label="ڕێکخراو"
+          label={t("ڕێکخراو")}
           value={overview?.announcements.scheduled || 0}
           color="purple"
         />
         <StatCard
           icon={MessageSquare}
-          label="پەیامی نەخوێندراو"
+          label={t("پەیامی نەخوێندراو")}
           value={overview?.conversations.unreadMessages || 0}
           color="orange"
         />
         <StatCard
           icon={Globe2}
-          label="لە ماڵپەڕ"
+          label={t("لە ماڵپەڕ")}
           value={overview?.announcements.homepage || 0}
           color="green"
         />
       </StatCardGrid>
 
       <SegmentedTabs
-        tabs={tabs}
+        tabs={tabs.map((item) => ({ ...item, label: t(item.label) }))}
         value={tab}
         onChange={setTab}
         accent="var(--sponsor-krd-accent)"
@@ -360,13 +371,13 @@ export function CommunicationCenterPage() {
           icon={contentMeta.icon}
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Tooltip content="نوێکردنەوە" side="bottom">
+              <Tooltip content={t("نوێکردنەوە")} side="bottom">
                 <button
                   type="button"
                   onClick={() => void load()}
                   disabled={loading}
                   className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 cursor-pointer"
-                  aria-label="نوێکردنەوە"
+                  aria-label={t("نوێکردنەوە")}
                 >
                   <MotionSpinner active={loading}><RefreshCw
                     className="h-4 w-4 -transform"
@@ -375,7 +386,7 @@ export function CommunicationCenterPage() {
               </Tooltip>
               {tab === "announcements" && (
                 <>
-                  <Tooltip content="گەڕان و پاڵاوتن (Ctrl+K)" side="top">
+                  <Tooltip content={t("گەڕان و پاڵاوتن (Ctrl+K)")} side="top">
                     <button
                       type="button"
                       onClick={() => setAnnouncementSearchOpen(true)}
@@ -384,13 +395,13 @@ export function CommunicationCenterPage() {
                           ? "sa-soft sa-soft-border"
                           : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                       }`}
-                      title="گەڕان و پاڵاوتن (Ctrl+K)"
-                      aria-label="گەڕان و پاڵاوتن"
+                      title={t("گەڕان و پاڵاوتن (Ctrl+K)")}
+                      aria-label={t("گەڕان و پاڵاوتن")}
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:scale-110 dark:text-gray-500" />
                         <span className="truncate text-xs font-semibold">
-                          گەڕان و پاڵاوتن
+                          {t("گەڕان و پاڵاوتن")}
                         </span>
                       </div>
                     {announcementFilterCount > 0 ? (
@@ -405,12 +416,12 @@ export function CommunicationCenterPage() {
                   </button>
                 </Tooltip>
                   {announcementFilterCount > 0 && (
-                    <Tooltip content="پاککردنەوەی پاڵاوتنەکان" side="bottom">
+                    <Tooltip content={t("پاککردنەوەی پاڵاوتنەکان")} side="bottom">
                       <button
                         type="button"
                         onClick={clearAnnouncementFilters}
                         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 shadow-sm transition hover:border-red-300 hover:bg-red-100 hover:text-red-600 hover:shadow dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/35 dark:hover:text-red-300 cursor-pointer"
-                        aria-label="پاککردنەوەی پاڵاوتنەکان"
+                        aria-label={t("پاککردنەوەی پاڵاوتنەکان")}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -426,7 +437,7 @@ export function CommunicationCenterPage() {
                 className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                {tab === "homepage" ? "زیادکردنی ماڵپەڕ" : "ڕاگەیاندنی نوێ"}
+                {tab === "homepage" ? t("زیادکردنی ماڵپەڕ") : t("ڕاگەیاندنی نوێ")}
               </button>
             </div>
           }
@@ -484,22 +495,26 @@ export function CommunicationCenterPage() {
         isOpen={tab === "announcements" && announcementSearchOpen}
         onClose={() => setAnnouncementSearchOpen(false)}
         wide
-        placeholder="بە ناونیشان یان ناوەڕۆکی ڕاگەیاندن بگەڕێ..."
+        placeholder={t("بە ناونیشان یان ناوەڕۆکی ڕاگەیاندن بگەڕێ...")}
+        clearLabel={t("پاککردنەوەی هەموو")}
+        applyLabel={t("داخستن")}
+        clearAriaLabel={t("پاککردنەوەی هەموو")}
+        applyAriaLabel={t("داخستن")}
         searchQuery={announcementSearch}
         onSearchQueryChange={setAnnouncementSearch}
       >
         <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              پاڵاوتنی ورد
+              {t("پاڵاوتنی ورد")}
             </p>
-            <Tooltip content="پاککردنەوەی هەموو" side="bottom">
+            <Tooltip content={t("پاککردنەوەی هەموو")} side="bottom">
               <button
                 type="button"
                 onClick={clearAnnouncementFilters}
                 disabled={announcementFilterCount === 0}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition hover:border-red-300 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/35 dark:hover:text-red-300 cursor-pointer"
-                aria-label="پاککردنەوەی هەموو"
+                aria-label={t("پاککردنەوەی هەموو")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -507,14 +522,14 @@ export function CommunicationCenterPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <CustomSelect
-              label="دۆخی ڕاگەیاندن"
+              label={t("دۆخی ڕاگەیاندن")}
               value={announcementStatus}
               onChange={setAnnouncementStatus}
               options={[
-                { value: "all", label: "هەموو دۆخەکان" },
-                { value: "draft", label: "ڕەشنووس" },
-                { value: "scheduled", label: "ڕێکخراو" },
-                { value: "published", label: "بڵاوکراوە" },
+                { value: "all", label: t("هەموو دۆخەکان") },
+                { value: "draft", label: t("ڕەشنووس") },
+                { value: "scheduled", label: t("ڕێکخراو") },
+                { value: "published", label: t("بڵاوکراوە") },
               ]}
             />
           </div>
@@ -525,11 +540,11 @@ export function CommunicationCenterPage() {
               <MotionPulseIcon>
                 <Search className="sa-accent-text h-5 w-5 opacity-40" />
               </MotionPulseIcon>
-              <span>بگەڕێ یان دۆخێک هەڵبژێرە.</span>
+              <span>{t("بگەڕێ یان دۆخێک هەڵبژێرە.")}</span>
             </div>
           ) : filteredAnnouncements.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400 dark:text-gray-500">
-              هیچ ئەنجامێک نەدۆزرایەوە
+              {t("هیچ ئەنجامێک نەدۆزرایەوە")}
             </div>
           ) : (
             <div className="flex flex-col gap-0.5">
@@ -583,18 +598,20 @@ export function CommunicationCenterPage() {
         onClose={() => setConfirmation(null)}
         title={
           confirmation?.type === "publish"
-            ? "بڵاوکردنەوەی ڕاگەیاندن"
-            : "ئەرشیفکردنی ڕاگەیاندن"
+            ? t("بڵاوکردنەوەی ڕاگەیاندن")
+            : t("ئەرشیفکردنی ڕاگەیاندن")
         }
         message={
           confirmation
-            ? `دڵنیایت لە ${confirmation.type === "publish" ? "بڵاوکردنەوەی" : "ئەرشیفکردنی"} «${confirmation.item.title}»؟`
+            ? `${t("دڵنیایت لە")} ${confirmation.type === "publish" ? t("بڵاوکردنەوەی") : t("ئەرشیفکردنی")} «${confirmation.item.title}»؟`
             : ""
         }
         confirmLabel={
-          confirmation?.type === "publish" ? "بڵاوکردنەوە" : "ئەرشیفکردن"
+          confirmation?.type === "publish" ? t("بڵاوکردنەوە") : t("ئەرشیفکردن")
         }
-        loadingLabel="جێبەجێکردن..."
+        loadingLabel={t("جێبەجێکردن...")}
+        cancelLabel={t("هەڵوەشاندنەوە")}
+        closeLabel={t("داخستن")}
         isDeleting={confirming}
         zIndexClassName="z-[150]"
         tone={confirmation?.type === "publish" ? "accent" : "danger"}
@@ -608,15 +625,13 @@ export function CommunicationCenterPage() {
             );
             toast.success(
               confirmation.type === "publish"
-                ? "ڕاگەیاندنەکە بڵاوکرایەوە"
-                : "خرایە ئەرشیف",
+                ? t("ڕاگەیاندنەکە بڵاوکرایەوە")
+                : t("خرایە ئەرشیف"),
             );
             await load();
           } catch (error) {
             toast.error(
-              error instanceof Error
-                ? error.message
-                : "کردارەکە سەرکەوتوو نەبوو",
+              platformRequestError(error instanceof Error ? error.message : null, t("کردارەکە سەرکەوتوو نەبوو"), locale),
             );
             throw error;
           } finally {
@@ -641,6 +656,7 @@ function OverviewTab({
   onAnnouncement: () => void;
   onConversation: (item: Conversation) => void;
 }) {
+  const t = useCommunicationText();
   const recentAnnouncements = announcements.slice(0, 4);
   const attention = conversations
     .filter(
@@ -654,23 +670,22 @@ function OverviewTab({
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
           <ShieldAlert className="h-5 w-5" />
           <div>
-            <p className="text-sm font-black">گەیاندنی سەرنەکەوتوو هەیە</p>
+            <p className="text-sm font-black">{t("گەیاندنی سەرنەکەوتوو هەیە")}</p>
             <p className="text-xs">
-              {overview?.announcements.failed} گەیاندن پێویستی بە پێداچوونەوە
-              هەیە.
+              {overview?.announcements.failed} {t("گەیاندن پێویستی بە پێداچوونەوە هەیە.")}
             </p>
           </div>
         </div>
       )}
       <div className="grid divide-y divide-slate-100 border-t border-slate-100 dark:divide-white/5 dark:border-white/5 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
         <Panel
-          title="دوایین ڕاگەیاندنەکان"
+          title={t("دوایین ڕاگەیاندنەکان")}
           action={
             <button
               onClick={onAnnouncement}
               className="sa-gradient sa-gradient-hover rounded-lg px-3 py-2 text-xs font-bold"
             >
-              نوێ دروست بکە
+              {t("نوێ دروست بکە")}
             </button>
           }
         >
@@ -680,12 +695,12 @@ function OverviewTab({
                 <AnnouncementRow key={item.id} item={item} />
               ))
             ) : (
-              <Empty label="هیچ ڕاگەیاندنێک نییە" />
+              <Empty label={t("هیچ ڕاگەیاندنێک نییە")} />
             )}
           </div>
         </Panel>
         <Panel
-          title="پێویستی بە وەڵام"
+          title={t("پێویستی بە وەڵام")}
           action={
             <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
               {attention.length}
@@ -712,7 +727,7 @@ function OverviewTab({
                 </button>
               ))
             ) : (
-              <Empty label="هیچ پەیامێکی چاوەڕوان نییە" />
+              <Empty label={t("هیچ پەیامێکی چاوەڕوان نییە")} />
             )}
           </div>
         </Panel>
@@ -730,10 +745,11 @@ function AnnouncementsTab({
   onEdit: (item: Announcement) => void;
   onPublish: (item: Announcement) => void;
 }) {
+  const t = useCommunicationText();
   const columns: DataTableColumn<Announcement>[] = [
     {
       id: "announcement",
-      header: "ڕاگەیاندن",
+      header: t("ڕاگەیاندن"),
       cell: (item) => (
         <div className="max-w-sm">
           <p className="font-bold text-slate-700 dark:text-slate-200">
@@ -747,28 +763,28 @@ function AnnouncementsTab({
     },
     {
       id: "status",
-      header: "دۆخ",
+      header: t("دۆخ"),
       cell: (item) => <StatusBadge status={item.status} />,
     },
     {
       id: "audience",
-      header: "بینەر",
+      header: t("بینەر"),
       cell: (item) =>
         item.audienceType === "all"
-          ? "هەموو بزنسەکان"
+          ? t("هەموو بزنسەکان")
           : item.audienceType === "plans"
-            ? "پلانەکان"
-            : "بزنسەکان",
+            ? t("پلانەکان")
+            : t("بزنسەکان"),
     },
     {
       id: "delivered",
-      header: "گەیەندراو",
+      header: t("گەیەندراو"),
       cell: (item) => item.deliveredCount,
     },
-    { id: "read", header: "خوێندراوەتەوە", cell: (item) => item.readCount },
+    { id: "read", header: t("خوێندراوەتەوە"), cell: (item) => item.readCount },
     {
       id: "actions",
-      header: "کردارەکان",
+      header: t("کردارەکان"),
       cell: (item) =>
         ["draft", "scheduled"].includes(item.status) ? (
           <div className="flex items-center gap-2">
@@ -777,14 +793,14 @@ function AnnouncementsTab({
               onClick={() => onEdit(item)}
               className="rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
             >
-              دەستکاری
+              {t("دەستکاری")}
             </button>
             <button
               type="button"
               onClick={() => onPublish(item)}
               className="sa-gradient sa-gradient-hover rounded-lg px-3 py-2 text-[11px] font-black"
             >
-              بڵاوکردنەوە
+              {t("بڵاوکردنەوە")}
             </button>
           </div>
         ) : (
@@ -798,7 +814,8 @@ function AnnouncementsTab({
         items={announcements}
         columns={columns}
         rowKey={(item) => item.id}
-        emptyTitle="هیچ ئەنجامێک نەدۆزرایەوە"
+        emptyTitle={t("هیچ ئەنجامێک نەدۆزرایەوە")}
+        emptyDescription={t("هیچ داتایەک بۆ پیشاندان نییە.")}
         minWidthClassName="min-w-[880px]"
       />
     </div>
@@ -806,6 +823,7 @@ function AnnouncementsTab({
 }
 
 function HomepageTab({ announcements }: { announcements: Announcement[] }) {
+  const t = useCommunicationText();
   return (
     <div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -816,10 +834,10 @@ function HomepageTab({ announcements }: { announcements: Announcement[] }) {
               className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c222b]"
             >
               <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-2 text-[10px] font-bold text-slate-500 dark:border-white/5 dark:bg-white/[0.03]">
-                پێشبینین •{" "}
+                {t("پێشبینین")} •{" "}
                 {item.homepagePlacement === "feature_card"
-                  ? "کارتی تایبەتمەندی"
-                  : "بانەری سەرەوە"}
+                  ? t("کارتی تایبەتمەندی")
+                  : t("بانەری سەرەوە")}
               </div>
               <div className="p-5">
                 <div className="flex items-start gap-3">
@@ -843,13 +861,13 @@ function HomepageTab({ announcements }: { announcements: Announcement[] }) {
               </div>
               <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[10px] text-slate-500 dark:border-white/5">
                 <StatusBadge status={item.status} />
-                <span>ڕیزبەندی {item.homepagePriority || 0}</span>
+                <span>{t("ڕیزبەندی")} {item.homepagePriority || 0}</span>
               </div>
             </div>
           ))
         ) : (
           <div className="lg:col-span-2">
-            <Empty label="هیچ پەیامێکی ماڵپەڕ نییە" />
+            <Empty label={t("هیچ پەیامێکی ماڵپەڕ نییە")} />
           </div>
         )}
       </div>
@@ -864,10 +882,13 @@ function HistoryTab({
   announcements: Announcement[];
   onArchive: (item: Announcement) => void;
 }) {
+  const t = useCommunicationText();
+  const { locale } = usePlatformLocale();
+  const dateLocale = platformIntlLocale(locale);
   const columns: DataTableColumn<Announcement>[] = [
     {
       id: "announcement",
-      header: "ڕاگەیاندن",
+      header: t("ڕاگەیاندن"),
       cell: (item) => (
         <div>
           <p className="font-bold text-slate-700 dark:text-slate-200">
@@ -881,35 +902,33 @@ function HistoryTab({
     },
     {
       id: "status",
-      header: "دۆخ",
+      header: t("دۆخ"),
       cell: (item) => <StatusBadge status={item.status} />,
     },
     {
       id: "delivered",
-      header: "گەیەندراو",
+      header: t("گەیەندراو"),
       cell: (item) => item.deliveredCount,
     },
-    { id: "read", header: "خوێندراوەتەوە", cell: (item) => item.readCount },
-    { id: "channels", header: "کەناڵ", cell: (item) => item.channels.length },
+    { id: "read", header: t("خوێندراوەتەوە"), cell: (item) => item.readCount },
+    { id: "channels", header: t("کەناڵ"), cell: (item) => item.channels.length },
     {
       id: "time",
-      header: "کات",
+      header: t("کات"),
       className: "text-slate-500 whitespace-nowrap",
       cell: (item) =>
-        new Date(
-          item.publishedAt || item.publishAt || item.createdAt,
-        ).toLocaleString(),
+        formatNotificationDate(item.publishedAt || item.publishAt || item.createdAt, dateLocale),
     },
     {
       id: "actions",
-      header: "کردارەکان",
+      header: t("کردارەکان"),
       cell: (item) =>
         item.status !== "archived" ? (
           <button
             type="button"
             onClick={() => onArchive(item)}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/5"
-            aria-label="ئەرشیف"
+            aria-label={t("ئەرشیف")}
           >
             <Archive className="h-4 w-4" />
           </button>
@@ -923,7 +942,8 @@ function HistoryTab({
       items={announcements}
       columns={columns}
       rowKey={(item) => item.id}
-      emptyTitle="هیچ مێژوویەک نییە"
+      emptyTitle={t("هیچ مێژوویەک نییە")}
+      emptyDescription={t("هیچ داتایەک بۆ پیشاندان نییە.")}
       minWidthClassName="min-w-[880px]"
     />
   );
@@ -942,6 +962,9 @@ function MessagesTab({
   onRefresh: () => Promise<void>;
   onSelectedChange: (item: Conversation | null) => void;
 }) {
+  const t = useCommunicationText();
+  const { locale } = usePlatformLocale();
+  const dateLocale = platformIntlLocale(locale);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
@@ -963,7 +986,7 @@ function MessagesTab({
       requestAnimationFrame(() => replyRef.current?.focus());
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "ناردن سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("ناردن سەرکەوتوو نەبوو"), locale),
       );
     } finally {
       setSending(false);
@@ -981,10 +1004,10 @@ function MessagesTab({
       );
       onSelectedChange(detail);
       await onRefresh();
-      toast.success("دۆخی گفتوگۆ نوێکرایەوە");
+      toast.success(t("دۆخی گفتوگۆ نوێکرایەوە"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "نوێکردنەوە سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("نوێکردنەوە سەرکەوتوو نەبوو"), locale),
       );
     }
   };
@@ -995,10 +1018,10 @@ function MessagesTab({
       >
         <div className="shrink-0 border-b border-slate-100 px-4 py-3.5 dark:border-white/5">
           <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">
-            پەیامەکان
+            {t("پەیامەکان")}
           </h3>
           <p className="mt-1 text-[10px] text-slate-400">
-            {conversations.length} گفتوگۆ
+            {conversations.length} {t("گفتوگۆ")}
           </p>
         </div>
         <div className="custom-scrollbar brand-custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -1028,7 +1051,7 @@ function MessagesTab({
               </button>
             ))
           ) : (
-            <Empty label="هیچ گفتوگۆیەک نییە" />
+            <Empty label={t("هیچ گفتوگۆیەک نییە")} />
           )}
         </div>
       </div>
@@ -1050,21 +1073,21 @@ function MessagesTab({
                     {selected.subject}
                   </p>
                   <p className="mt-1 text-[10px] text-slate-400">
-                    {selected.businessName} • {selected.category}
+                    {selected.businessName} • {conversationCategoryLabel(selected.category, locale)}
                   </p>
                 </div>
               </div>
               <CustomSelect
-                label="دۆخی گفتوگۆ"
+                label={t("دۆخی گفتوگۆ")}
                 hideLabel
                 value={selected.status}
                 onChange={(value) => void updateStatus(value)}
                 options={[
-                  { value: "open", label: "کراوە" },
-                  { value: "waiting_business", label: "چاوەڕێی بزنس" },
-                  { value: "waiting_platform", label: "چاوەڕێی پلاتفۆرم" },
-                  { value: "resolved", label: "چارەسەرکراو" },
-                  { value: "archived", label: "ئەرشیف" },
+                  { value: "open", label: t("کراوە") },
+                  { value: "waiting_business", label: t("چاوەڕێی بزنس") },
+                  { value: "waiting_platform", label: t("چاوەڕێی پلاتفۆرم") },
+                  { value: "resolved", label: t("چارەسەرکراو") },
+                  { value: "archived", label: t("ئەرشیف") },
                 ]}
                 fullWidth={false}
                 triggerClassName="h-9 min-w-36 text-[10px]"
@@ -1086,7 +1109,7 @@ function MessagesTab({
                       {message.body}
                     </p>
                     <p className="mt-1 text-[9px] opacity-60">
-                      {new Date(message.createdAt).toLocaleString()}
+                      {formatNotificationDate(message.createdAt, dateLocale)}
                     </p>
                   </div>
                 </div>
@@ -1096,7 +1119,7 @@ function MessagesTab({
             <div className="shrink-0 border-t border-slate-100 bg-white p-3 dark:border-white/5 dark:bg-[#161B22] sm:p-4">
               {["resolved", "archived"].includes(selected.status) ? (
                 <p className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                  ئەم گفتوگۆیە داخراوە
+                  {t("ئەم گفتوگۆیە داخراوە")}
                 </p>
               ) : (
                 <ChatComposer
@@ -1104,14 +1127,15 @@ function MessagesTab({
                   value={reply}
                   onChange={setReply}
                   onSubmit={() => void send()}
-                  placeholder="وەڵام بنووسە... (Enter بۆ ناردن، Shift+Enter بۆ دێڕی نوێ)"
+                  placeholder={t("وەڵام بنووسە... (Enter بۆ ناردن، Shift+Enter بۆ دێڕی نوێ)")}
+                  sendLabel={t("ناردن")}
                   sending={sending}
                 />
               )}
             </div>
           </>
         ) : (
-          <Empty label="گفتوگۆیەک هەڵبژێرە" />
+          <Empty label={t("گفتوگۆیەک هەڵبژێرە")} />
         )}
       </div>
     </div>
@@ -1133,6 +1157,8 @@ function AnnouncementComposer({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const t = useCommunicationText();
+  const { locale } = usePlatformLocale();
   const [form, setForm] = useState(() =>
     initial
       ? {
@@ -1167,15 +1193,15 @@ function AnnouncementComposer({
     }));
   const save = async (publishNow: boolean) => {
     if (!form.title.trim() || !form.message.trim()) {
-      toast.error("ناونیشان و پەیام پێویستن");
+      toast.error(t("ناونیشان و پەیام پێویستن"));
       return;
     }
     if (!form.channels.length) {
-      toast.error("لانیکەم یەک کەناڵ هەڵبژێرە");
+      toast.error(t("لانیکەم یەک کەناڵ هەڵبژێرە"));
       return;
     }
     if (form.audienceType !== "all" && !form.audienceValues.length) {
-      toast.error("لانیکەم یەک بینەر هەڵبژێرە");
+      toast.error(t("لانیکەم یەک بینەر هەڵبژێرە"));
       return;
     }
     if (
@@ -1183,7 +1209,7 @@ function AnnouncementComposer({
       form.expiresAt &&
       new Date(form.expiresAt) <= new Date(form.publishAt)
     ) {
-      toast.error("کاتی کۆتایی دەبێت دوای کاتی بڵاوکردنەوە بێت");
+      toast.error(t("کاتی کۆتایی دەبێت دوای کاتی بڵاوکردنەوە بێت"));
       return;
     }
     setSaving(true);
@@ -1210,15 +1236,15 @@ function AnnouncementComposer({
         );
       toast.success(
         publishNow
-          ? "ڕاگەیاندنەکە بڵاوکرایەوە"
+          ? t("ڕاگەیاندنەکە بڵاوکرایەوە")
           : saved.status === "scheduled"
-            ? "ڕاگەیاندنەکە ڕێکخرا"
-            : "ڕەشنووسەکە پاشەکەوتکرا",
+            ? t("ڕاگەیاندنەکە ڕێکخرا")
+            : t("ڕەشنووسەکە پاشەکەوتکرا"),
       );
       await onSaved();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پاشەکەوتکردن سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("پاشەکەوتکردن سەرکەوتوو نەبوو"), locale),
       );
     } finally {
       setSaving(false);
@@ -1232,8 +1258,8 @@ function AnnouncementComposer({
     <ManagementModal
       isOpen
       onClose={onClose}
-      title={initial ? "دەستکاری ڕاگەیاندن" : "ڕاگەیاندنی نوێ"}
-      description="بینەر، کەناڵ و کاتی بڵاوکردنەوە بە وردی دیاری بکە."
+      title={t(initial ? "دەستکاری ڕاگەیاندن" : "ڕاگەیاندنی نوێ")}
+      description={t("بینەر، کەناڵ و کاتی بڵاوکردنەوە بە وردی دیاری بکە.")}
       wide
       busy={saving}
       createBusinessStyle
@@ -1245,7 +1271,7 @@ function AnnouncementComposer({
             disabled={saving}
             className="h-11 w-full rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 px-5 text-sm font-medium text-slate-600 shadow-sm transition hover:from-slate-100 hover:to-gray-100 disabled:opacity-50 dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:text-slate-300 sm:flex-1"
           >
-            هەڵوەشاندنەوە
+            {t("هەڵوەشاندنەوە")}
           </button>
           <button
             type="button"
@@ -1254,8 +1280,8 @@ function AnnouncementComposer({
             className="h-11 w-full rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:from-slate-100 hover:to-gray-100 disabled:opacity-50 dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:text-slate-300 sm:flex-1"
           >
             {form.publishAt && new Date(form.publishAt) > new Date()
-              ? "ڕێکخستن"
-              : "پاشەکەوتی ڕەشنووس"}
+              ? t("ڕێکخستن")
+              : t("پاشەکەوتی ڕەشنووس")}
           </button>
           <button
             type="button"
@@ -1271,46 +1297,46 @@ function AnnouncementComposer({
             ) : (
               <Send className="h-4 w-4" />
             )}
-            بڵاوکردنەوەی ئێستا
+            {t("بڵاوکردنەوەی ئێستا")}
           </button>
         </>
       }
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <FormSection
-          title="ناوەڕۆکی ڕاگەیاندن"
-          description="ناونیشان و پەیامێکی کورت و ڕوون بنووسە."
+          title={t("ناوەڕۆکی ڕاگەیاندن")}
+          description={t("ناونیشان و پەیامێکی کورت و ڕوون بنووسە.")}
         >
           <div className="contents">
-            <Field label="ناونیشان">
+            <Field label={t("ناونیشان")}>
               <input
                 className={inputClass}
                 value={form.title}
                 onChange={(event) =>
                   setForm({ ...form, title: event.target.value })
                 }
-                placeholder="ناونیشانی ڕاگەیاندن بنووسە"
+                placeholder={t("ناونیشانی ڕاگەیاندن بنووسە")}
                 maxLength={160}
               />
             </Field>
             <CustomSelect
-              label="جۆری ڕاگەیاندن"
+              label={t("جۆری ڕاگەیاندن")}
               value={form.announcementType}
               onChange={(value) =>
                 setForm({ ...form, announcementType: value })
               }
               options={[
-                { value: "general", label: "گشتی" },
-                { value: "feature", label: "تایبەتمەندی نوێ" },
-                { value: "maintenance", label: "چاکسازی" },
-                { value: "billing", label: "پارەدان" },
-                { value: "security", label: "ئاسایش" },
-                { value: "urgent", label: "پەلەدار" },
+                { value: "general", label: t("گشتی") },
+                { value: "feature", label: t("تایبەتمەندی نوێ") },
+                { value: "maintenance", label: t("چاکسازی") },
+                { value: "billing", label: t("پارەدان") },
+                { value: "security", label: t("ئاسایش") },
+                { value: "urgent", label: t("پەلەدار") },
               ]}
               triggerClassName="h-11"
             />
             <div className="sm:col-span-2">
-              <Field label="پەیام">
+              <Field label={t("پەیام")}>
                 <textarea
                   className={`${inputClass} h-32 resize-y py-3`}
                   rows={5}
@@ -1318,45 +1344,45 @@ function AnnouncementComposer({
                   onChange={(event) =>
                     setForm({ ...form, message: event.target.value })
                   }
-                  placeholder="دەقی پەیامەکە بە ڕوونی بنووسە"
+                  placeholder={t("دەقی پەیامەکە بە ڕوونی بنووسە")}
                   maxLength={5000}
                 />
               </Field>
             </div>
             <CustomSelect
-              label="گرنگی"
+              label={t("گرنگی")}
               value={form.priority}
               onChange={(value) => setForm({ ...form, priority: value })}
               options={[
-                { value: "normal", label: "ئاسایی" },
-                { value: "important", label: "گرنگ" },
-                { value: "critical", label: "زۆر گرنگ" },
+                { value: "normal", label: t("ئاسایی") },
+                { value: "important", label: t("گرنگ") },
+                { value: "critical", label: t("زۆر گرنگ") },
               ]}
               triggerClassName="h-11"
             />
           </div>
         </FormSection>
         <FormSection
-          title="بینەر و کەناڵەکان"
-          description="دیاری بکە کێ پەیامەکە دەبینێت و لە کوێ پیشان دەدرێت."
+          title={t("بینەر و کەناڵەکان")}
+          description={t("دیاری بکە کێ پەیامەکە دەبینێت و لە کوێ پیشان دەدرێت.")}
         >
           <div className="contents">
             <CustomSelect
-              label="بینەر"
+              label={t("بینەر")}
               value={form.audienceType}
               onChange={(value) =>
                 setForm({ ...form, audienceType: value, audienceValues: [] })
               }
               options={[
-                { value: "all", label: "هەموو بزنسە چالاکەکان" },
-                { value: "plans", label: "پلانە دیاریکراوەکان" },
-                { value: "businesses", label: "بزنسە دیاریکراوەکان" },
+                { value: "all", label: t("هەموو بزنسە چالاکەکان") },
+                { value: "plans", label: t("پلانە دیاریکراوەکان") },
+                { value: "businesses", label: t("بزنسە دیاریکراوەکان") },
               ]}
               triggerClassName="h-11"
             />
             {form.audienceType !== "all" && (
               <div className="sm:col-span-2">
-                <Field label="هەڵبژاردنی بینەر">
+                <Field label={t("هەڵبژاردنی بینەر")}>
                   <div className="grid max-h-44 gap-2 overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-white/10 sm:grid-cols-2">
                     {audienceOptions.map((item) => (
                       <CheckboxField
@@ -1374,23 +1400,23 @@ function AnnouncementComposer({
               </div>
             )}
             <div className="sm:col-span-2">
-              <Field label="کەناڵەکانی گەیاندن">
+              <Field label={t("کەناڵەکانی گەیاندن")}>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     {
                       value: "business_bell",
-                      label: "زەنگی بزنس",
-                      description: "لە لیستی ئاگادارییەکانی بزنس دەردەکەوێت",
+                      label: t("زەنگی بزنس"),
+                      description: t("لە لیستی ئاگادارییەکانی بزنس دەردەکەوێت"),
                     },
                     {
                       value: "dashboard_banner",
-                      label: "بانەری داشبۆرد",
-                      description: "لە سەرەوەی داشبۆردی بزنس پیشان دەدرێت",
+                      label: t("بانەری داشبۆرد"),
+                      description: t("لە سەرەوەی داشبۆردی بزنس پیشان دەدرێت"),
                     },
                     {
                       value: "homepage",
-                      label: "ماڵپەڕ",
-                      description: "لە ماڵپەڕی گشتی پیشان دەدرێت",
+                      label: t("ماڵپەڕ"),
+                      description: t("لە ماڵپەڕی گشتی پیشان دەدرێت"),
                     },
                   ].map((item) => (
                     <CheckboxField
@@ -1407,66 +1433,68 @@ function AnnouncementComposer({
           </div>
         </FormSection>
         <FormSection
-          title="دوگمە و کاتبەندی"
-          description="بەستەری کردار و ماوەی پیشاندانی ڕاگەیاندنەکە دیاری بکە."
+          title={t("دوگمە و کاتبەندی")}
+          description={t("بەستەری کردار و ماوەی پیشاندانی ڕاگەیاندنەکە دیاری بکە.")}
         >
           <div className="contents">
-            <Field label="دەقی دوگمە">
+            <Field label={t("دەقی دوگمە")}>
               <input
                 className={inputClass}
                 value={form.ctaLabel}
                 onChange={(event) =>
                   setForm({ ...form, ctaLabel: event.target.value })
                 }
-                placeholder="بۆ نموونە: زیاتر بزانە"
+                placeholder={t("بۆ نموونە: زیاتر بزانە")}
               />
             </Field>
-            <Field label="بەستەری دوگمە">
+            <Field label={t("بەستەری دوگمە")}>
               <input
                 className={inputClass}
                 value={form.ctaUrl}
                 onChange={(event) =>
                   setForm({ ...form, ctaUrl: event.target.value })
                 }
-                placeholder="بەستەر بنووسە؛ بۆ نموونە /business"
+                placeholder={t("بەستەر بنووسە؛ بۆ نموونە /business")}
                 dir="auto"
               />
             </Field>
             <DateTimeInput
-              label="کاتی بڵاوکردنەوە"
+              locale={locale}
+              label={t("کاتی بڵاوکردنەوە")}
               value={form.publishAt}
               onChange={(value) => setForm({ ...form, publishAt: value })}
               min={toLocalInput(new Date().toISOString())}
-              hint="بە بەتاڵی جێبهێڵە بۆ پاشەکەوتکردن و بڵاوکردنەوەی دواتر."
+              hint={t("بە بەتاڵی جێبهێڵە بۆ پاشەکەوتکردن و بڵاوکردنەوەی دواتر.")}
             />
             <DateTimeInput
-              label="کاتی کۆتایی"
+              locale={locale}
+              label={t("کاتی کۆتایی")}
               value={form.expiresAt}
               onChange={(value) => setForm({ ...form, expiresAt: value })}
               min={form.publishAt || toLocalInput(new Date().toISOString())}
-              hint="بە بەتاڵی جێبهێڵە ئەگەر کاتی کۆتایی نییە."
+              hint={t("بە بەتاڵی جێبهێڵە ئەگەر کاتی کۆتایی نییە.")}
             />
           </div>
         </FormSection>
         {form.channels.includes("homepage") && (
           <FormSection
-            title="ڕێکخستنی ماڵپەڕ"
-            description="شوێن و ڕیزبەندی پیشاندانی ناوەڕۆکەکە لە ماڵپەڕ دیاری بکە."
+            title={t("ڕێکخستنی ماڵپەڕ")}
+            description={t("شوێن و ڕیزبەندی پیشاندانی ناوەڕۆکەکە لە ماڵپەڕ دیاری بکە.")}
           >
             <div className="contents">
               <CustomSelect
-                label="شوێنی ماڵپەڕ"
+                label={t("شوێنی ماڵپەڕ")}
                 value={form.homepagePlacement}
                 onChange={(value) =>
                   setForm({ ...form, homepagePlacement: value })
                 }
                 options={[
-                  { value: "top_banner", label: "بانەری سەرەوە" },
-                  { value: "feature_card", label: "کارتی تایبەتمەندی" },
+                  { value: "top_banner", label: t("بانەری سەرەوە") },
+                  { value: "feature_card", label: t("کارتی تایبەتمەندی") },
                 ]}
                 triggerClassName="h-11"
               />
-              <Field label="ڕیزبەندی">
+              <Field label={t("ڕیزبەندی")}>
                 <input
                   type="number"
                   min={0}
@@ -1478,7 +1506,7 @@ function AnnouncementComposer({
                       homepagePriority: Number(event.target.value),
                     })
                   }
-                  placeholder="ڕیزبەندی پیشاندان بنووسە"
+                  placeholder={t("ڕیزبەندی پیشاندان بنووسە")}
                 />
               </Field>
               <div className="sm:col-span-2">
@@ -1487,8 +1515,8 @@ function AnnouncementComposer({
                   onChange={(checked) =>
                     setForm({ ...form, homepageDismissible: checked })
                   }
-                  label="ڕێگەدان بە داخستن"
-                  description="بەکارهێنەر دەتوانێت بانەرەکە لە ماڵپەڕ دابخات."
+                  label={t("ڕێگەدان بە داخستن")}
+                  description={t("بەکارهێنەر دەتوانێت بانەرەکە لە ماڵپەڕ دابخات.")}
                 />
               </div>
             </div>
@@ -1500,6 +1528,9 @@ function AnnouncementComposer({
 }
 
 function AnnouncementRow({ item }: { item: Announcement }) {
+  const t = useCommunicationText();
+  const { locale } = usePlatformLocale();
+  const dateLocale = platformIntlLocale(locale);
   return (
     <div className="flex min-w-0 flex-1 items-start gap-3 py-3">
       <div className="sa-soft sa-soft-border flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border">
@@ -1518,17 +1549,15 @@ function AnnouncementRow({ item }: { item: Announcement }) {
         <div className="mt-2 flex flex-wrap items-center gap-3 text-[9px] text-slate-400">
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            {item.deliveredCount} گەیەندراو
+            {item.deliveredCount} {t("گەیەندراو")}
           </span>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3" />
-            {item.readCount} خوێندراوەتەوە
+            {item.readCount} {t("خوێندراوەتەوە")}
           </span>
           <span className="flex items-center gap-1">
             <Clock3 className="h-3 w-3" />
-            {new Date(
-              item.publishedAt || item.publishAt || item.createdAt,
-            ).toLocaleString()}
+            {formatNotificationDate(item.publishedAt || item.publishAt || item.createdAt, dateLocale)}
           </span>
         </div>
       </div>
@@ -1536,6 +1565,7 @@ function AnnouncementRow({ item }: { item: Announcement }) {
   );
 }
 function StatusBadge({ status }: { status: Announcement["status"] }) {
+  const t = useCommunicationText();
   const styles: Record<string, string> = {
     draft: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300",
     scheduled:
@@ -1557,7 +1587,7 @@ function StatusBadge({ status }: { status: Announcement["status"] }) {
     <span
       className={`rounded-full px-2 py-0.5 text-[9px] font-black ${styles[status]}`}
     >
-      {labels[status]}
+      {t(labels[status])}
     </span>
   );
 }
@@ -1608,8 +1638,9 @@ function FormSection({
   return children;
 }
 function Empty({ label }: { label: string }) {
+  const t = useCommunicationText();
   return (
-    <EmptyState compact icon={Inbox} title={label} description="هەر کات داتای نوێ زیاد بکرێت، لێرە پیشان دەدرێت." />
+    <EmptyState compact icon={Inbox} title={label} description={t("هەر کات داتای نوێ زیاد بکرێت، لێرە پیشان دەدرێت.")} />
   );
 }
 function toLocalInput(value: string) {

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessGettingStarted } from "./BusinessGettingStarted";
+import { businessMessages } from "@/features/business/i18n/messages";
 
 const { apiRequest, enqueueImageUpload } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -46,6 +47,36 @@ describe("BusinessGettingStarted", () => {
     ...onboarding,
     logo: "/images/upload/businesses/example/branding/logo/logo.png",
   };
+
+  it("shows Arabic setup and nested controls when Business selects Arabic", async () => {
+    apiRequest.mockResolvedValueOnce(onboardingWithLogo);
+
+    render(
+      <BusinessGettingStarted
+        copy={businessMessages.ar.Onboarding}
+        brandCopy={businessMessages.ar.OnboardingBrand}
+        tikTokCopy={businessMessages.ar.OnboardingTikTok}
+        identityCopy={businessMessages.ar.SettingsPage}
+        colorCopy={businessMessages.ar.SettingsColorPicker}
+      />,
+    );
+
+    expect(await screen.findByText("مرحبًا بك في Sponsor.krd")).toBeInTheDocument();
+    expect(screen.getByLabelText("رفع الشعار")).toBeInTheDocument();
+    expect(screen.getByText("اسم الحساب")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("إضافة Pixel وEvents API").closest("button")!);
+    expect(await screen.findByText("تحتوي كل مجموعة على Pixel ID وEvents API. الحد الأقصى 3 مجموعات.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إضافة مجموعة" })).toBeInTheDocument();
+  });
+
+  it("keeps the existing Kurdish setup controls without Arabic copy", async () => {
+    apiRequest.mockResolvedValueOnce(onboardingWithLogo);
+    render(<BusinessGettingStarted />);
+
+    fireEvent.click((await screen.findByText("زیادکردنی Pixel و Events API")).closest("button")!);
+    expect(await screen.findByRole("heading", { name: "ڕێکخستنی تیکتۆک" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "زیادکردنی گرووپ" })).toBeInTheDocument();
+  });
 
   it("blocks completion until a logo is uploaded", async () => {
     apiRequest.mockResolvedValueOnce(onboarding);

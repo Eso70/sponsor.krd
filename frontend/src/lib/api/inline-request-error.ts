@@ -90,3 +90,38 @@ export function inlineRequestErrorFromResponse(
     ? createInlineRequestError(response.status as InlineRequestErrorStatus)
     : createUploadFailureError();
 }
+
+const ARABIC_ERROR_COPY: Record<string, { title: string; message: string }> = {
+  BAD_REQUEST: { title: "الطلب غير صالح", message: "تحقق من البيانات وحاول مجددًا." },
+  CONFLICT: { title: "تعارض في البيانات", message: "حدّث البيانات ثم حاول مجددًا." },
+  PAYLOAD_TOO_LARGE: { title: "حجم الملف كبير", message: "اختر ملفًا أصغر وحاول مجددًا." },
+  UNSUPPORTED_MEDIA_TYPE: { title: "نوع الملف غير مدعوم", message: "اختر ملفًا من الأنواع المسموح بها." },
+  UNPROCESSABLE_ENTITY: { title: "تعذّر معالجة الملف", message: "تحقق من الملف واختر ملفًا صالحًا." },
+  UPLOAD_FAILED: { title: "تعذّر الرفع", message: "تحقق من اتصالك وحاول مجددًا." },
+};
+
+const ENGLISH_ERROR_COPY: Record<string, { title: string; message: string }> = {
+  BAD_REQUEST: { title: "Invalid request", message: "Check your information and try again." },
+  CONFLICT: { title: "Conflicting information", message: "Refresh the data and try again." },
+  PAYLOAD_TOO_LARGE: { title: "File too large", message: "Choose a smaller file and try again." },
+  UNSUPPORTED_MEDIA_TYPE: { title: "Unsupported file type", message: "Choose an allowed file type." },
+  UNPROCESSABLE_ENTITY: { title: "Couldn't process file", message: "Check the file and choose a valid one." },
+  UPLOAD_FAILED: { title: "Upload failed", message: "Check your connection and try again." },
+};
+
+export function localizeInlineRequestError(
+  error: InlineRequestErrorData,
+  locale: "ckb" | "ar" | "en",
+): InlineRequestErrorData {
+  if (locale === "ckb") return error;
+  const translated = locale === "ar" ? ARABIC_ERROR_COPY[error.code] : ENGLISH_ERROR_COPY[error.code];
+  if (!translated) return error;
+  const maxMb = error.message.match(/(\d+)MB/);
+  return {
+    ...error,
+    title: translated.title,
+    message: maxMb && error.code === "PAYLOAD_TOO_LARGE"
+      ? locale === "ar" ? `يجب ألا يتجاوز حجم الملف ${maxMb[1]}MB.` : `File size must not exceed ${maxMb[1]}MB.`
+      : translated.message,
+  };
+}

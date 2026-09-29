@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
-import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
+import { ColorGradientModal, type ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 export interface BackgroundColorOption {
@@ -30,6 +30,11 @@ export const RAINBOW_BACKGROUND_COLORS: BackgroundColorOption[] = [
 ];
 
 interface BackgroundColorPickerProps {
+  customLabel?: string;
+  imageLabel?: string;
+  imageRemoveLabel?: string;
+  colorNames?: Record<string, string>;
+  colorCopy?: ColorGradientModalProps["copy"];
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
@@ -67,6 +72,11 @@ function customSwatchStyle(value: string): CSSProperties {
 }
 
 export function BackgroundColorPicker({
+  customLabel = "ئارەزوومەندانەیە",
+  imageLabel = IMAGE_TILE_LABEL,
+  imageRemoveLabel = IMAGE_REMOVE_LABEL,
+  colorNames,
+  colorCopy,
   value,
   onChange,
   onBlur,
@@ -92,7 +102,7 @@ export function BackgroundColorPicker({
       <div className="flex flex-wrap gap-2">
         {showCustom && (
           <div className="flex flex-col items-center gap-0.5">
-            <Tooltip content="ئارەزوومەندانەیە" side="top">
+            <Tooltip content={customLabel} side="top">
               <button
                 type="button"
                 onClick={() => setShowGradientPicker(true)}
@@ -101,20 +111,20 @@ export function BackgroundColorPicker({
                     ? "theme-soft border-transparent scale-110 shadow-sm z-10"
                     : "border-gray-300 hover:border-gray-400 hover:scale-105"
                 }`}
-                title="ئارەزوومەندانەیە"
-                aria-label="ئارەزوومەندانەیە"
+                title={customLabel}
+                aria-label={customLabel}
               >
                 <span className="absolute inset-0" style={customSwatchStyle(value)} />
               </button>
             </Tooltip>
-            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">ئارەزوومەندانەیە</span>
+            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{customLabel}</span>
           </div>
         )}
 
         {onImageChange && (
           <div className="flex flex-col items-center gap-0.5">
             <div className="relative">
-              <Tooltip content={IMAGE_TILE_LABEL} side="top">
+              <Tooltip content={imageLabel} side="top">
                 <label
                   className={`relative flex h-6 w-6 cursor-pointer items-center justify-center overflow-hidden rounded-md border-2 transition-all duration-200 ${
                     hasImage
@@ -131,7 +141,7 @@ export function BackgroundColorPicker({
                     <ImagePlus className="h-3.5 w-3.5 text-gray-500" />
                   )}
                   <input
-                    aria-label={IMAGE_TILE_LABEL}
+                    aria-label={imageLabel}
                     type="file"
                     accept="image/png,image/jpeg"
                     onChange={onImageChange}
@@ -140,11 +150,11 @@ export function BackgroundColorPicker({
                 </label>
               </Tooltip>
               {hasImage && onImageRemove && (
-                <Tooltip content={IMAGE_REMOVE_LABEL} side="top">
+                <Tooltip content={imageRemoveLabel} side="top">
                   <button
                     type="button"
                     onClick={onImageRemove}
-                    aria-label={IMAGE_REMOVE_LABEL}
+                    aria-label={imageRemoveLabel}
                     className="absolute -right-1.5 -top-1.5 z-20 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gray-700 text-white shadow-sm transition hover:bg-gray-900 cursor-pointer"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -152,13 +162,13 @@ export function BackgroundColorPicker({
                 </Tooltip>
               )}
             </div>
-            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{IMAGE_TILE_LABEL}</span>
+            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{imageLabel}</span>
           </div>
         )}
 
         {colors.map((color) => (
           <div key={color.id} className="flex flex-col items-center gap-0.5">
-            <Tooltip content={color.name} side="top">
+            <Tooltip content={colorNames?.[color.id] ?? color.name} side="top">
               <button
                 type="button"
                 onClick={() => {
@@ -174,8 +184,8 @@ export function BackgroundColorPicker({
                     ? "theme-soft border-transparent scale-110 shadow-sm z-10"
                     : "border-gray-300 hover:border-gray-400 hover:scale-105"
                 }`}
-                title={color.name}
-                aria-label={color.name}
+                title={colorNames?.[color.id] ?? color.name}
+                aria-label={colorNames?.[color.id] ?? color.name}
               >
                 {color.isSolid ? (
                   <span className="absolute inset-0 transition-opacity duration-200" style={{ backgroundColor: color.value }} />
@@ -189,13 +199,14 @@ export function BackgroundColorPicker({
                 )}
               </button>
             </Tooltip>
-            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{color.name}</span>
+            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{colorNames?.[color.id] ?? color.name}</span>
           </div>
         ))}
       </div>
 
       {showCustom && (
         <ColorGradientModal
+          copy={colorCopy}
           isOpen={showGradientPicker}
           value={value}
           onChange={(next) => {

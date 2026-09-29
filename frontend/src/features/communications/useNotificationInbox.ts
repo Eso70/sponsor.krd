@@ -8,7 +8,10 @@ import type { NotificationInbox } from "./types";
 
 const EMPTY_INBOX: NotificationInbox = { items: [], unreadCount: 0 };
 
-export function useNotificationInbox(endpointBase: string) {
+export function useNotificationInbox(
+  endpointBase: string,
+  errorCopy?: Partial<Record<"updateFailed" | "deleteFailed" | "deleteAllFailed", string>>,
+) {
   const [inbox, setInbox] = useState<NotificationInbox>(EMPTY_INBOX);
   const [loading, setLoading] = useState(true);
   const lastInboxRef = useRef("");
@@ -55,12 +58,15 @@ export function useNotificationInbox(endpointBase: string) {
         }));
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "نوێکردنەوە سەرکەوتوو نەبوو",
+          errorCopy?.updateFailed ??
+            (error instanceof Error
+              ? error.message
+              : "نوێکردنەوە سەرکەوتوو نەبوو"),
         );
         throw error;
       }
     },
-    [endpointBase],
+    [endpointBase, errorCopy],
   );
 
   const dismiss = useCallback(
@@ -79,12 +85,15 @@ export function useNotificationInbox(endpointBase: string) {
         }));
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "سڕینەوە سەرکەوتوو نەبوو",
+          errorCopy?.deleteFailed ??
+            (error instanceof Error
+              ? error.message
+              : "سڕینەوە سەرکەوتوو نەبوو"),
         );
         throw error;
       }
     },
-    [endpointBase],
+    [endpointBase, errorCopy],
   );
 
   const markAllRead = useCallback(async () => {
@@ -100,10 +109,10 @@ export function useNotificationInbox(endpointBase: string) {
         })),
       }));
     } catch (error) {
-      toast.error("نوێکردنەوە سەرکەوتوو نەبوو");
+      toast.error(errorCopy?.updateFailed ?? "نوێکردنەوە سەرکەوتوو نەبوو");
       throw error;
     }
-  }, [endpointBase]);
+  }, [endpointBase, errorCopy]);
 
   const deleteAll = useCallback(async () => {
     try {
@@ -113,13 +122,14 @@ export function useNotificationInbox(endpointBase: string) {
       setInbox(EMPTY_INBOX);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "سڕینەوەی هەمووی سەرکەوتوو نەبوو",
+        errorCopy?.deleteAllFailed ??
+          (error instanceof Error
+            ? error.message
+            : "سڕینەوەی هەمووی سەرکەوتوو نەبوو"),
       );
       throw error;
     }
-  }, [endpointBase]);
+  }, [endpointBase, errorCopy]);
 
   return {
     inbox,

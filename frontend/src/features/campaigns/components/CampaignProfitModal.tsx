@@ -36,6 +36,7 @@ interface CampaignProfitModalProps {
   apiBasePath: string;
   pageName: string;
   sponsorKrdTheme?: boolean;
+  calendarLocale?: "ckb" | "ar" | "en";
   copy?: Partial<CampaignProfitCopy>;
 }
 
@@ -122,6 +123,7 @@ export function CampaignProfitModal({
   apiBasePath,
   pageName,
   sponsorKrdTheme = false,
+  calendarLocale = "ckb",
   copy,
 }: CampaignProfitModalProps) {
   const labels = { ...KURDISH_COPY, ...copy };
@@ -287,6 +289,7 @@ export function CampaignProfitModal({
           }
           submitDisabled={!canSave}
           isSubmitting={isSaving}
+          submittingLabel={editingRecordId ? labels.saveEdit : labels.saveAnother}
           cancelLabel={labels.close}
           onCancel={onClose}
           onSubmit={() => void saveRecord()}
@@ -355,6 +358,7 @@ export function CampaignProfitModal({
 
             <DateInput
               key={`start-${startDate}`}
+              locale={calendarLocale}
               label={labels.startDate}
               value={startDate}
               onChange={updateStartDate}
@@ -362,6 +366,7 @@ export function CampaignProfitModal({
             />
             <DateInput
               key={`end-${endDate}`}
+              locale={calendarLocale}
               label={labels.endDate}
               value={endDate}
               min={startDate}

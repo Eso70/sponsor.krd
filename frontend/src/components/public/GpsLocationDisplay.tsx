@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import type { LinktreePresentationLink as Link } from "@linktree/types";
+import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
 
 export const GPS_PLATFORM_ID = "gps";
 
@@ -78,21 +79,21 @@ export function splitGpsLinks(links: Link[]): { gpsLink?: Link; regularLinks: Li
   return { gpsLink, regularLinks };
 }
 
-function getGpsLabel(link: Link): { label: string; coords: string } | null {
+function getGpsLabel(link: Link, fallbackLabel: string): { label: string; coords: string } | null {
   const metadata = link.metadata as Record<string, unknown> | null;
   const rawInput = typeof metadata?.original_input === "string" ? metadata?.original_input : undefined;
   const raw = rawInput || link.url || "";
   const coords = parseGpsCoordinates(raw);
   if (coords) {
     return {
-      label: link.display_name || "شوێنی GPS",
+      label: link.display_name || fallbackLabel,
       coords: `${coords.lat}, ${coords.lng}`,
     };
   }
 
   if (isGoogleMapsUrl(raw)) {
     return {
-      label: link.display_name || "شوێنی GPS",
+      label: link.display_name || fallbackLabel,
       coords: formatMapsLabel(raw),
     };
   }
@@ -130,9 +131,10 @@ export const GpsLocationDisplay = memo(function GpsLocationDisplay({
     defaultMessage?: string | null,
   ) => void;
 }) {
+  const copy = usePublicLinktreeCopy();
   if (!gpsLink) return null;
 
-  const label = getGpsLabel(gpsLink);
+  const label = getGpsLabel(gpsLink, copy.gpsLocation);
   if (!label) return null;
 
   const raw = (gpsLink.metadata as Record<string, unknown> | null)?.original_input as string | undefined;
@@ -150,7 +152,7 @@ export const GpsLocationDisplay = memo(function GpsLocationDisplay({
     <div
       className={`mt-6 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-sm ${className || ""}`}
       style={{ color: primaryColor }}
-      aria-label="شوێنی GPS"
+      aria-label={copy.gpsLocation}
     >
       <div className="flex items-center gap-2">
         <FaMapMarkerAlt className="h-4 w-4" aria-hidden="true" />
@@ -162,7 +164,7 @@ export const GpsLocationDisplay = memo(function GpsLocationDisplay({
       {embedUrl && (
         <div className="mt-3 overflow-hidden rounded-xl border border-white/20 bg-white/10">
           <iframe
-            title="پێشبینینی Google Maps"
+            title={copy.mapsPreview}
             src={embedUrl}
             className="h-48 w-full"
             loading="lazy"
@@ -189,7 +191,7 @@ export const GpsLocationDisplay = memo(function GpsLocationDisplay({
           className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/30 px-3 py-1 text-xs font-semibold transition hover:bg-white/10"
           style={{ color: primaryColor }}
         >
-          لە Google Maps بیکەرەوە
+          {copy.openInMaps}
         </a>
       )}
     </div>

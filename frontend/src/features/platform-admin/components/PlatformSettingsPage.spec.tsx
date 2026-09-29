@@ -1,5 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PlatformSettingsPage } from "./PlatformSettingsPage";
+import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+
+function renderSettings(locale: "ckb" | "ar" = "ckb") {
+  return render(<PlatformLocaleProvider initialLocale={locale}><PlatformSettingsPage /></PlatformLocaleProvider>);
+}
 
 vi.mock("next/image", () => ({
   default: ({
@@ -45,6 +50,76 @@ describe("PlatformSettingsPage General tab", () => {
     vi.unstubAllGlobals();
   });
 
+  it("localizes general and security settings in Arabic", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input) =>
+      String(input) === "/api/platform/settings/sessions"
+        ? jsonResponse({ success: true, data: { sessions: [] } })
+        : jsonResponse({ success: true, data: savedSettings }),
+    ));
+    renderSettings("ar");
+
+    expect(await screen.findByRole("heading", { name: "الإعدادات العامة" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "حفظ" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "تسجيل الدخول والجلسات" }));
+    expect(await screen.findByRole("heading", { name: "تسجيل الدخول باستخدام Google" })).toBeInTheDocument();
+    expect(screen.getByText("لا توجد جلسات نشطة.")).toBeInTheDocument();
+  });
+
+  it("uses the shared Arabic copy in the platform TikTok Pixel panel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input) =>
+      String(input) === "/api/platform/settings/tiktok"
+        ? jsonResponse({ success: true, data: { tiktok_configs: [] } })
+        : jsonResponse({ success: true, data: savedSettings }),
+    ));
+    renderSettings("ar");
+    await screen.findByDisplayValue("Saved SponsorKrd");
+    fireEvent.click(screen.getByRole("tab", { name: "إعدادات تيك توك" }));
+    expect(await screen.findByRole("heading", { name: "ربط تيك توك" })).toBeInTheDocument();
+    expect(screen.getByText("لا توجد مجموعات تيك توك")).toBeInTheDocument();
+  });
+
+  it("localizes the TikTok ad-account empty state and connect modal", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ success: true, data: savedSettings })));
+    renderSettings("ar");
+    await screen.findByDisplayValue("Saved SponsorKrd");
+    fireEvent.click(screen.getByRole("tab", { name: "حساب إعلانات تيك توك" }));
+    expect(await screen.findByText("لا يوجد حساب إعلانات تيك توك مرتبط")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "الربط بتيك توك" }));
+    expect(screen.getByText("ربط حساب تيك توك (الإعلانات)")).toBeInTheDocument();
+    expect(screen.getByText("رمز ومعرّف مباشر")).toBeInTheDocument();
+  });
+
+  it("localizes retention and media controls and cleanup confirmations", async () => {
+    const retention = {
+      policy: { communication_history_days: 365, automatic_cleanup: true, cleanup_hour_utc: 2, batch_size: 1000, updated_at: new Date().toISOString() },
+      eligible: { communications: 5 },
+      last_run: null,
+    };
+    const media = {
+      policy: { max_upload_size_mb: 5, allowed_formats: ["jpeg", "png", "ico"], optimize_images: true, image_quality: 82, max_image_dimension: 2048, auto_cleanup_unused: true, unused_grace_hours: 72, updated_at: new Date().toISOString() },
+      stats: { asset_count: 12, stored_bytes: 2048, saved_bytes: 1024 },
+      unused_assets: 2,
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input) => {
+      if (String(input) === "/api/platform/settings/data-retention") return jsonResponse({ data: retention });
+      if (String(input) === "/api/platform/settings/media") return jsonResponse({ data: media });
+      return jsonResponse({ data: savedSettings });
+    }));
+    renderSettings("ar");
+    await screen.findByDisplayValue("Saved SponsorKrd");
+
+    fireEvent.click(screen.getByRole("tab", { name: "البيانات والاحتفاظ" }));
+    expect(await screen.findByText("الرسائل والإعلانات المؤرشفة")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "تنظيف الآن" }));
+    expect(screen.getByText("تنظيف البيانات القديمة")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "إلغاء" }));
+
+    fireEvent.click(screen.getByRole("tab", { name: "الوسائط والرفع" }));
+    expect(await screen.findByText("صيغ الملفات المسموح بها")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "تنظيف الملفات غير المستخدمة" }));
+    expect(screen.getByText("ستُحذف فقط الملفات القديمة غير المستخدمة في أي ملف نشاط تجاري أو صفحة روابط أو طلب تغيير.")).toBeInTheDocument();
+  });
+
   it("loads settings from the database API and saves profile and branding", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (_input, init) => {
       if (!init?.method || init.method === "GET") {
@@ -54,7 +129,7 @@ describe("PlatformSettingsPage General tab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<PlatformSettingsPage />);
+    renderSettings();
 
     await screen.findByDisplayValue("Saved SponsorKrd");
     expect(screen.getByDisplayValue("operator")).toBeInTheDocument();
@@ -63,7 +138,7 @@ describe("PlatformSettingsPage General tab", () => {
     expect(
       screen.getByDisplayValue("https://sponsor-krd.example"),
     ).toBeInTheDocument();
-    expect(screen.getByAltText("Logo")).toHaveAttribute(
+    expect(screen.getByAltText("لۆگۆ")).toHaveAttribute(
       "src",
       "/images/upload/sponsor-krd/logo.png",
     );
@@ -94,7 +169,7 @@ describe("PlatformSettingsPage General tab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<PlatformSettingsPage />);
+    renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
     expect(screen.queryByText("Google OAuth چالاکە")).not.toBeInTheDocument();
 
@@ -111,6 +186,8 @@ describe("PlatformSettingsPage General tab", () => {
         expect.objectContaining({ method: "GET" }),
       );
     });
+    expect(screen.getByText("هیچ دانیشتنێکی چالاک نەدۆزرایەوە.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "نوێکردنەوەی دانیشتنەکان" })).toBeInTheDocument();
   });
 
   it("loads the database-backed data retention tab", async () => {
@@ -131,7 +208,7 @@ describe("PlatformSettingsPage General tab", () => {
         : jsonResponse({ success: true, data: savedSettings }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<PlatformSettingsPage />);
+    renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
 
     fireEvent.click(screen.getByRole("tab", { name: "داتا و ماوەی هەڵگرتن" }));
@@ -167,7 +244,7 @@ describe("PlatformSettingsPage General tab", () => {
         : jsonResponse({ success: true, data: savedSettings }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<PlatformSettingsPage />);
+    renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
 
     fireEvent.click(screen.getByRole("tab", { name: "میدیا و بارکردن" }));
@@ -202,7 +279,7 @@ describe("PlatformSettingsPage General tab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<PlatformSettingsPage />);
+    renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
 
     expect(
@@ -235,7 +312,7 @@ describe("PlatformSettingsPage General tab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<PlatformSettingsPage />);
+    renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
 
     fireEvent.click(

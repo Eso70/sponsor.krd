@@ -24,6 +24,7 @@ interface EmailCodeAuthenticationFormProps {
   actionLabel?: string;
   codeTitle?: string;
   verifyActionLabel?: string;
+  copy?: Partial<Record<"changeEmail" | "codeSent" | "loginCode" | "resend" | "resendIn" | "emailAddress" | "error", string>>;
 }
 
 function errorMessage(error: unknown): string {
@@ -40,6 +41,7 @@ export function EmailCodeAuthenticationForm({
   actionLabel = "Continue with email",
   codeTitle = "Enter your login code",
   verifyActionLabel = "Sign in",
+  copy,
 }: EmailCodeAuthenticationFormProps) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -70,7 +72,7 @@ export function EmailCodeAuthenticationForm({
       setCode("");
       setResendIn(result.resendAfterSeconds);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(copy?.error ?? errorMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -88,7 +90,7 @@ export function EmailCodeAuthenticationForm({
       });
       window.location.assign(result.redirectUrl);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(copy?.error ?? errorMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -107,14 +109,14 @@ export function EmailCodeAuthenticationForm({
           className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Change email
+          {copy?.changeEmail ?? "Change email"}
         </button>
         <div>
           <p className="text-sm font-bold text-slate-900 dark:text-white">
             {codeTitle}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            We sent a 6-digit code to {email}. It expires in 10 minutes.
+            {copy?.codeSent?.replace("{email}", email) ?? `We sent a 6-digit code to ${email}. It expires in 10 minutes.`}
           </p>
         </div>
         <input
@@ -124,7 +126,7 @@ export function EmailCodeAuthenticationForm({
           maxLength={6}
           required
           autoFocus
-          aria-label="Login code"
+          aria-label={copy?.loginCode ?? "Login code"}
           value={code}
           onChange={(event) =>
             setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
@@ -158,7 +160,7 @@ export function EmailCodeAuthenticationForm({
           onClick={() => void requestCode()}
           className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:text-white"
         >
-          {resendIn > 0 ? `Send again in ${resendIn}s` : "Send code again"}
+          {resendIn > 0 ? copy?.resendIn?.replace("{seconds}", String(resendIn)) ?? `Send again in ${resendIn}s` : copy?.resend ?? "Send code again"}
         </button>
       </form>
     );
@@ -174,7 +176,7 @@ export function EmailCodeAuthenticationForm({
           required
           maxLength={254}
           suppressHydrationWarning
-          aria-label="Email address"
+          aria-label={copy?.emailAddress ?? "Email address"}
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder={emailPlaceholder}

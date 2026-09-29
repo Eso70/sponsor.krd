@@ -1,7 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { ColorGradientModal } from "./ColorGradientModal";
+import { arabicColorGradientCopy } from "./color-gradient-arabic-copy";
 
 describe("ColorGradientModal", () => {
+  it("uses an Arabic accessible close label when Arabic copy is supplied", async () => {
+    render(<ColorGradientModal isOpen value="#123456" onChange={vi.fn()} onClose={vi.fn()} copy={arabicColorGradientCopy} />);
+    expect(await screen.findByRole("button", { name: "إغلاق" })).toBeInTheDocument();
+  });
   it("uses the active business theme for portal action controls", async () => {
     render(
       <ColorGradientModal

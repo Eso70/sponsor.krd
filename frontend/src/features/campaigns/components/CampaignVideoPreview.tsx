@@ -1,6 +1,10 @@
+"use client";
+
 import { Film, Play } from "lucide-react";
 
 import type { TikTokCampaign } from "../types";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { campaignCopy } from "../campaign-copy";
 
 const TONE_CLASSES: Record<TikTokCampaign["video"]["tone"], string> = {
   cyan: "from-cyan-300 via-sky-400 to-indigo-500 dark:from-cyan-900 dark:via-sky-800 dark:to-indigo-900",
@@ -20,10 +24,12 @@ export function CampaignVideoPreview({
   campaign,
   compact = false,
 }: CampaignVideoPreviewProps) {
+  const { locale } = usePlatformLocale();
+  const copy = campaignCopy[locale].detail;
   return (
     <div
       className={`group/video relative shrink-0 overflow-hidden bg-linear-to-br shadow-inner ring-1 ring-inset ring-white/30 ${TONE_CLASSES[campaign.video.tone]} ${compact ? "h-14 w-20 rounded-xl" : "aspect-video w-full rounded-2xl"}`}
-      aria-label={`ڤیدیۆی ${campaign.name}`}
+      aria-label={`${copy.videoOf} ${campaign.name}`}
     >
       <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/30 blur-2xl" />
       <div className="absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-slate-950/20 blur-2xl" />
@@ -43,7 +49,7 @@ export function CampaignVideoPreview({
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white/75">
               <Film className="h-3 w-3" />
-              TikTok creative
+              {copy.creative}
             </div>
             <p className="truncate text-xs font-semibold">
               {campaign.video.title}

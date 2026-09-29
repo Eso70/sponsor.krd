@@ -11,8 +11,12 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorPagePanel } from "@/components/error-pages/ErrorPage";
 import { ERROR_PAGE_COPY } from "@/components/error-pages/copy";
 import { SPONSOR_KRD_ERROR_THEME } from "@/components/error-pages/error-theme";
+import { RootPublicLanguageToggle, useRootPublicLocale } from "@/features/public-site/RootPublicLocaleProvider";
+import { rootOnboardingCopy } from "../root-onboarding-copy";
 
 export function InvitationEntryPage() {
+  const { locale } = useRootPublicLocale();
+  const copy = rootOnboardingCopy[locale];
   const search = useSearchParams();
   const [token] = useState(() => search.get("token") || "");
   const [state, setState] = useState<
@@ -45,9 +49,9 @@ export function InvitationEntryPage() {
 
   if (state === "expired") {
     return (
-      <AuthenticationShell brandDescription="هەژماری بزنسەکەت دروست بکە">
+      <AuthenticationShell brandDescription={copy.brand} previewTitle={copy.preview} backLabel={copy.back} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
         <ErrorPagePanel
-          {...ERROR_PAGE_COPY.invitationExpired}
+          {...(locale === "ar" ? { code: "410", title: "انتهت صلاحية الدعوة", description: "انتهت المدة الآمنة لهذه الدعوة. اطلب دعوة جديدة من مسؤول Sponsor.krd.", language: "ar", copy: { retry: "حاول مرة أخرى", home: "الصفحة الرئيسية", errorCode: "رمز الخطأ" } } : locale === "en" ? { code: "410", title: "Invitation expired", description: "This invitation's secure period has ended. Request a new invitation from a Sponsor.krd administrator.", language: "en", copy: { retry: "Try again", home: "Home page", errorCode: "Error code" } } : ERROR_PAGE_COPY.invitationExpired)}
           theme={SPONSOR_KRD_ERROR_THEME}
           homeHref="/"
         />
@@ -56,15 +60,15 @@ export function InvitationEntryPage() {
   }
 
   return (
-    <AuthenticationShell brandDescription="هەژماری بزنسەکەت دروست بکە">
+    <AuthenticationShell brandDescription={copy.brand} previewTitle={copy.preview} backLabel={copy.back} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
       <AuthenticationCard
-        title="دروستکردنی هەژماری بزنس"
-        description="بانگێشت نامەکەت پشتڕاست بکەوە بە گوگڵ یاخود ئیمەیڵ"
+        title={copy.title}
+        description={copy.entryDescription}
       >
         {state === "loading" ? (
           <LoadingState
-            title="بانگهێشتنامەکە پشتڕاست دەکرێتەوە"
-            description="تکایە چاوەڕێ بکە تا بەستەرە پارێزراوەکەت بپشکنین."
+            title={copy.verifying}
+            description={copy.verifyingDescription}
           />
         ) : state === "invalid" ? (
           <div
@@ -73,11 +77,10 @@ export function InvitationEntryPage() {
           >
             <ShieldCheck className="h-9 w-9 text-red-500" />
             <h3 className="mt-4 font-bold text-red-700 dark:text-red-300">
-              بانگهێشتنامە دروست نییە
+              {copy.invalid}
             </h3>
             <p className="mt-2 text-sm leading-6 text-red-600/80 dark:text-red-300/80">
-              بەستەرەکە بەسەرچووە، بەکارهاتووە یان هەڵوەشێنراوەتەوە.
-              بانگهێشتنامەی نوێ لە بەڕێوەبەر داوا بکە.
+              {copy.invalidDescription}
             </p>
           </div>
         ) : (
@@ -86,32 +89,33 @@ export function InvitationEntryPage() {
               googleHref={`/api/signup/google/start?invite=${encodeURIComponent(token)}`}
               requestEndpoint={`/api/signup/email/request?invite=${encodeURIComponent(token)}`}
               verifyEndpoint="/api/signup/email/verify"
-              emailPlaceholder="Enter your invited email"
-              emailActionLabel="Continue signup with email"
-              emailCodeTitle="Enter your verification code"
-              emailVerifyActionLabel="Continue signup"
+              emailPlaceholder={copy.emailPlaceholder}
+              emailActionLabel={copy.emailAction}
+              emailCodeTitle={copy.emailCodeTitle}
+              emailVerifyActionLabel={copy.emailVerifyAction}
+              copy={copy.auth}
             />
             <p
               className="text-center text-xs leading-5 text-slate-400"
               dir="rtl"
             >
-              بە بەردەوامبوون، ڕەزامەندی لەسەر{" "}
+              {copy.consentBefore}{" "}
               <Link
                 href="/legal/terms"
                 target="_blank"
                 className="underline hover:text-slate-600"
               >
-                مەرجەکان
+                {copy.terms}
               </Link>{" "}
-              و{" "}
+              {copy.and}{" "}
               <Link
                 href="/legal/privacy"
                 target="_blank"
                 className="underline hover:text-slate-600"
               >
-                سیاسەتی تایبەتمەندی
+                {copy.privacy}
               </Link>{" "}
-              دەدەیت.
+              {copy.consentAfter}
             </p>
           </div>
         )}

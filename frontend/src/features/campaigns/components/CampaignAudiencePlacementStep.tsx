@@ -13,6 +13,7 @@ import type { CampaignPlacement } from "../types";
 import { CampaignChoiceField } from "./CampaignChoiceField";
 import { CampaignChoiceGroup } from "./CampaignChoiceGroup";
 import { CampaignStepIntro } from "./CampaignStepIntro";
+import { useCampaignText } from "../use-campaign-text";
 
 const AGE_GROUPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
@@ -32,6 +33,7 @@ export function CampaignAudiencePlacementStep({
     value: CreateCampaignFormState[K],
   ) => void;
 }) {
+  const t = useCampaignText();
   const toggleAge = (age: string) => {
     onChange(
       "ageGroups",
@@ -44,42 +46,42 @@ export function CampaignAudiencePlacementStep({
   return (
     <div className="space-y-5">
       <CampaignStepIntro
-        title="Audience targeting and placement"
-        description="شوێن، تەمەن، ڕەگەز و شوێنی پیشاندانی ڕیکلامەکە دیاری بکە"
+        title={t("Audience targeting and placement")}
+        description={t("شوێن، تەمەن، ڕەگەز و شوێنی پیشاندانی ڕیکلامەکە دیاری بکە")}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <EditorField label="Target location" required>
+        <EditorField label={t("Target location")} required>
           <input
             value={location}
             onChange={(event) => onChange("location", event.target.value)}
-            placeholder="Erbil, Sulaymaniyah, Duhok"
+            placeholder={t("Erbil, Sulaymaniyah, Duhok")}
             className={modalInputClass()}
           />
         </EditorField>
-        <EditorField label="Languages">
+        <EditorField label={t("Languages")}>
           <input
             value={languages}
             onChange={(event) => onChange("languages", event.target.value)}
-            placeholder="Kurdish, Arabic"
+            placeholder={t("Kurdish, Arabic")}
             className={modalInputClass()}
           />
         </EditorField>
       </div>
 
-      <CampaignChoiceField label="Gender">
+      <CampaignChoiceField label={t("Gender")}>
         <CampaignChoiceGroup<CampaignGender>
           value={gender}
           options={[
-            { value: "ALL", label: "All" },
-            { value: "MALE", label: "Male" },
-            { value: "FEMALE", label: "Female" },
+            { value: "ALL", label: t("All") },
+            { value: "MALE", label: t("Male") },
+            { value: "FEMALE", label: t("Female") },
           ]}
           onChange={(value) => onChange("gender", value)}
         />
       </CampaignChoiceField>
 
-      <CampaignChoiceField label="Age groups" required>
+      <CampaignChoiceField label={t("Age groups")} required>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {AGE_GROUPS.map((age) => {
             const selected = ageGroups.includes(age);
@@ -111,17 +113,17 @@ export function CampaignAudiencePlacementStep({
         </div>
       </CampaignChoiceField>
 
-      <CampaignChoiceField label="Placement" required>
+      <CampaignChoiceField label={t("Placement")} required>
         <CampaignChoiceGroup<CampaignPlacement>
           value={placement}
           options={[
             {
               value: "AUTOMATIC",
-              label: "Automatic placement",
-              description: "TikTok باشترین شوێنەکان هەڵدەبژێرێت",
+              label: t("Automatic placement"),
+              description: t("TikTok باشترین شوێنەکان هەڵدەبژێرێت"),
             },
-            { value: "TIKTOK_ONLY", label: "TikTok only" },
-            { value: "SELECTED", label: "Select placement" },
+            { value: "TIKTOK_ONLY", label: t("TikTok only") },
+            { value: "SELECTED", label: t("Select placement") },
           ]}
           onChange={(value) => onChange("placement", value)}
         />

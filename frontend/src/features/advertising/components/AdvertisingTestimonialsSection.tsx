@@ -5,6 +5,7 @@ import { BusinessSectionDecorations } from "@/components/business/BusinessSectio
 import { PublicSectionHeading } from "@/components/public/PublicSectionHeading";
 import { PublicSection } from "@/components/public/PublicSection";
 import type { AdvertisingTestimonial } from "../types";
+import { usePublicAdvertisingText } from "../public-locale";
 import {
   TestimonialStackCard,
   TestimonialStackDots,
@@ -17,6 +18,7 @@ export { TESTIMONIAL_THEME };
 const AUTO_ADVANCE_MS = 5000;
 
 export function AdvertisingTestimonialsSection({ items }: { items: readonly AdvertisingTestimonial[] }) {
+  const t = usePublicAdvertisingText();
   const [index, setIndex] = useState(0);
   const total = items.length;
 
@@ -42,14 +44,14 @@ export function AdvertisingTestimonialsSection({ items }: { items: readonly Adve
       decorations={
         <BusinessSectionDecorations
           colors={["#f97316", "#22c55e"]}
-          labels={["ڕای کڕیار", "متمانەی ڕاستەقینە"]}
+          labels={[t("ڕای کڕیار"), t("متمانەی ڕاستەقینە")]}
           variant={0}
         />
       }
     >
         <PublicSectionHeading
-          title="ڕای ئەوانەی تاقیان کردووەتەوە"
-          description="ئەزموونی کڕیارانمان لەگەڵ خزمەتگوزاری سپۆنسەری تیکتۆک"
+          title={t("ڕای ئەوانەی تاقیان کردووەتەوە")}
+          description={t("ئەزموونی کڕیارانمان لەگەڵ خزمەتگوزاری سپۆنسەری تیکتۆک")}
         />
 
         <TestimonialStackCard
@@ -59,10 +61,12 @@ export function AdvertisingTestimonialsSection({ items }: { items: readonly Adve
           onPrevious={goPrev}
           onNext={goNext}
           className="mt-14"
+          translate={t}
         />
 
         {total > 1 && (
           <TestimonialStackDots
+          translate={t}
             items={items}
             activeIndex={activeIndex}
             onSelect={setIndex}

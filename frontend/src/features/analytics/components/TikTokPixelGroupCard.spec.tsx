@@ -63,6 +63,8 @@ describe("TikTokPixelGroupCard", () => {
     expect(screen.getByText("مجموعة تيك توك #1")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "يجب إبقاء مجموعة واحدة على الأقل" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "اختبار" })).toBeInTheDocument();
+    expect(businessMessages.ar.TikTokPixel.group.requestIdLabel).toBe("معرّف الطلب:");
+    expect(businessMessages.en.TikTokPixel.group.requestIdLabel).toBe("Request ID:");
   });
 
   it("copies Pixel ID to clipboard", async () => {

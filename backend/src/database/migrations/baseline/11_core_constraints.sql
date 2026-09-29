@@ -290,6 +290,9 @@ ALTER TABLE ONLY public.platform_admin_sessions
 ALTER TABLE ONLY public.platform_admins
     ADD CONSTRAINT platform_admins_pkey PRIMARY KEY (id);
 
+ALTER TABLE ONLY public.platform_admins
+    ADD CONSTRAINT platform_admins_preferred_locale_check CHECK (preferred_locale IN ('ckb', 'ar', 'en'));
+
 
 --
 -- Name: platform_admins platform_admins_username_key; Type: CONSTRAINT; Schema: public; Owner: -

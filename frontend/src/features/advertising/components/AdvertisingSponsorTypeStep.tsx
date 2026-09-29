@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { SPONSOR_CATEGORY_THEME } from "./AdvertisingPriceTable";
 import { AdvertisingSelectionCheck } from "./AdvertisingSelectionCheck";
 import type { SponsorType } from "../journey-types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 const SPONSOR_TYPES = [
   {
@@ -29,6 +30,7 @@ interface AdvertisingSponsorTypeStepProps {
 }
 
 export function AdvertisingSponsorTypeStep({ selected, onChange }: AdvertisingSponsorTypeStepProps) {
+  const t = usePublicAdvertisingText();
   return (
     <div className="grid w-full grid-cols-2 gap-3 sm:gap-4">
       {SPONSOR_TYPES.map((item) => {
@@ -57,13 +59,13 @@ export function AdvertisingSponsorTypeStep({ selected, onChange }: AdvertisingSp
               <AdvertisingSelectionCheck selected={isSelected} selectedClassName={theme.solid} />
             </div>
             <p className="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-black/35 dark:text-white/35 sm:mt-6">
-              {item.englishLabel}
+              {t(item.englishLabel)}
             </p>
             <h4 className="mt-2 break-words text-lg font-black leading-7" dir="auto">
-              {item.title}
+              {t(item.title)}
             </h4>
             <p className="mt-2 break-words text-sm leading-7 text-black/48 dark:text-white/48" dir="auto">
-              {item.description}
+              {t(item.description)}
             </p>
           </button>
         );

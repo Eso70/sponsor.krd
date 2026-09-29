@@ -8,6 +8,9 @@ import { buildTikTokApiPayload } from "../tiktok-payload-builder";
 import { CampaignPerformanceOverview } from "./CampaignPerformanceOverview";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
 import { CampaignVideoPreview } from "./CampaignVideoPreview";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { campaignCopy } from "../campaign-copy";
+import { useCampaignText } from "../use-campaign-text";
 
 interface CampaignDetailsModalProps {
   campaign: TikTokCampaign | null;
@@ -22,6 +25,9 @@ export function CampaignDetailsModal({
   onClose,
   sponsorKrdTheme = false,
 }: CampaignDetailsModalProps) {
+  const { locale } = usePlatformLocale();
+  const copy = campaignCopy[locale];
+  const t = useCampaignText();
   if (!campaign) return null;
 
   const objectiveInfo = OBJECTIVE_LABELS[campaign.objective] || {
@@ -63,7 +69,7 @@ export function CampaignDetailsModal({
       onClose={onClose}
       sponsorKrdTheme={sponsorKrdTheme}
       title={campaign.name}
-      description="وردەکاری ئەنجام و زانیارییەکانی کەمپەین لە تیکتۆک"
+      description={copy.detail.description}
       headerAction={<CampaignStatusBadge status={campaign.status} />}
       extraWide
       footer={
@@ -73,7 +79,7 @@ export function CampaignDetailsModal({
             onClick={onClose}
             className="rounded-xl border border-slate-200/70 bg-slate-50/70 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
           >
-            داخستن
+            {copy.close}
           </button>
         </div>
       }
@@ -86,7 +92,7 @@ export function CampaignDetailsModal({
               <Video className="mt-0.5 size-4 shrink-0 text-sky-500" />
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  ڤیدیۆی ڕیکلام
+                  {copy.detail.adVideo}
                 </p>
                 <bdi className="mt-1 block truncate font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {campaign.video.title}
@@ -101,13 +107,13 @@ export function CampaignDetailsModal({
               <Target className="mt-0.5 size-4 shrink-0 text-violet-500" />
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  ئامانجی کەمپەین
+                  {copy.detail.objective}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {objectiveInfo.label}
+                  {t(objectiveInfo.label)}
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                  {objectiveInfo.description}
+                  {t(objectiveInfo.description)}
                 </p>
               </div>
             </div>
@@ -115,7 +121,7 @@ export function CampaignDetailsModal({
               <MapPin className="mt-0.5 size-4 shrink-0 text-emerald-500" />
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  پەیجی ئامانج
+                  {copy.detail.destination}
                 </p>
                 <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {campaign.destinationPage.title}
@@ -134,32 +140,32 @@ export function CampaignDetailsModal({
           <div className="mb-3 flex items-center gap-2">
             <CalendarDays className="size-4 text-slate-400" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              ڕێکخستنەکانی کەمپەین
+              {copy.detail.settings}
             </h3>
           </div>
 
           <dl className="grid grid-cols-1 text-xs sm:grid-cols-2 sm:gap-x-8">
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                ئامانج:
+                {copy.detail.objectiveLabel}
               </span>
               <span className="text-left font-semibold text-slate-800 dark:text-slate-200">
-                {objectiveInfo.label}
+                {t(objectiveInfo.label)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                بودجەی ڕۆژانە:
+                {copy.detail.dailyBudget}
               </span>
               <bdi className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                ${campaign.dailyBudget.toFixed(2)} / ڕۆژ
+                ${campaign.dailyBudget.toFixed(2)} / {copy.list.perDay}
               </bdi>
             </div>
 
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                پەیجی ئامانج:
+                {copy.detail.destinationLabel}
               </span>
               <bdi className="truncate font-mono font-semibold text-slate-800 dark:text-slate-200">
                 /{campaign.destinationPage.slug}
@@ -168,16 +174,16 @@ export function CampaignDetailsModal({
 
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                دوگمەی بانگەواز:
+                {copy.detail.callToAction}
               </span>
               <span className="text-left font-semibold text-slate-800 dark:text-slate-200">
-                {campaign.callToAction}
+                {t(campaign.callToAction)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                ناوچەی نیشانکراو:
+                {copy.detail.targetedLocation}
               </span>
               <span className="text-left font-semibold text-slate-800 dark:text-slate-200">
                 {campaign.targetAudience.location}
@@ -186,10 +192,10 @@ export function CampaignDetailsModal({
 
             <div className="flex items-center justify-between gap-4 border-b border-slate-200/50 py-3 dark:border-white/7">
               <span className="text-slate-500 dark:text-slate-400">
-                ڕێکەوتی دەستپێکردن:
+                {copy.detail.startDate}
               </span>
               <bdi className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                {new Date(campaign.createdAt).toLocaleDateString()}
+                {new Date(campaign.createdAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ")}
               </bdi>
             </div>
           </dl>
@@ -203,7 +209,7 @@ export function CampaignDetailsModal({
                 TikTok Marketing API v2.0
               </span>
               <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Exact Production JSON Structure
+                {copy.detail.jsonStructure}
               </h3>
             </div>
             <button
@@ -213,7 +219,7 @@ export function CampaignDetailsModal({
               }}
               className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 cursor-pointer"
             >
-              Copy Full JSON
+              {copy.detail.copyJson}
             </button>
           </div>
 

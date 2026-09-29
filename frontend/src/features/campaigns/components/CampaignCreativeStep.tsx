@@ -5,6 +5,7 @@ import {
   modalTextareaClass,
 } from "@/features/link-editor/modal-input-styles";
 import { CampaignStepIntro } from "./CampaignStepIntro";
+import { useCampaignText } from "../use-campaign-text";
 
 export function CampaignCreativeStep({
   destinationUrl,
@@ -27,15 +28,16 @@ export function CampaignCreativeStep({
   onAdTextChange: (value: string) => void;
   onCallToActionChange: (value: string) => void;
 }) {
+  const t = useCampaignText();
   return (
     <div className="space-y-5">
       <CampaignStepIntro
-        title="Destination and ad assets"
-        description="بەستەر، کۆدی ڤیدیۆ، دەقی ڕیکلام و دوگمەی بانگەواز زیاد بکە"
+        title={t("Destination and ad assets")}
+        description={t("بەستەر، کۆدی ڤیدیۆ، دەقی ڕیکلام و دوگمەی بانگەواز زیاد بکە")}
       />
 
       <EditorField
-        label="Website destination URL"
+        label={t("Website destination URL")}
         required
         error={destinationError}
       >
@@ -50,46 +52,46 @@ export function CampaignCreativeStep({
       </EditorField>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <EditorField label="Video code" hint="TikTok video code" required>
+        <EditorField label={t("Video code")} hint={t("TikTok video code")} required>
           <input
             value={videoCode}
             onChange={(event) => onVideoCodeChange(event.target.value)}
-            placeholder="Enter an authorized video code"
+            placeholder={t("Enter an authorized video code")}
             className={modalInputClass()}
             dir="ltr"
           />
         </EditorField>
-        <EditorField label="Call to action" required>
+        <EditorField label={t("Call to action")} required>
           <CustomSelect
-            label="Call to action"
+            label={t("Call to action")}
             hideLabel
             value={callToAction}
             onChange={onCallToActionChange}
             options={[
               {
                 value: "DYNAMIC",
-                label: "Dynamic (TikTok AI هەڵبژاردنی زیرەک)",
+                label: t("Dynamic (TikTok AI هەڵبژاردنی زیرەک)"),
               },
-              { value: "LEARN_MORE", label: "Learn more" },
-              { value: "SHOP_NOW", label: "Shop now" },
-              { value: "ORDER_NOW", label: "Order now" },
-              { value: "SIGN_UP", label: "Sign up" },
-              { value: "CONTACT_US", label: "Contact us" },
-              { value: "GET_QUOTE", label: "Get quote" },
-              { value: "WATCH_NOW", label: "Watch now" },
+              { value: "LEARN_MORE", label: t("Learn more") },
+              { value: "SHOP_NOW", label: t("Shop now") },
+              { value: "ORDER_NOW", label: t("Order now") },
+              { value: "SIGN_UP", label: t("Sign up") },
+              { value: "CONTACT_US", label: t("Contact us") },
+              { value: "GET_QUOTE", label: t("Get quote") },
+              { value: "WATCH_NOW", label: t("Watch now") },
             ]}
             triggerClassName={modalInputClass()}
           />
         </EditorField>
       </div>
 
-      <EditorField label="Ad text" hint={`${adText.length} / 100`} required>
+      <EditorField label={t("Ad text")} hint={`${adText.length} / 100`} required>
         <textarea
           value={adText}
           maxLength={100}
           rows={4}
           onChange={(event) => onAdTextChange(event.target.value)}
-          placeholder="Write the primary text shown with your ad"
+          placeholder={t("Write the primary text shown with your ad")}
           className={modalTextareaClass()}
         />
       </EditorField>

@@ -6,7 +6,7 @@ import { Trash2, Plus, ChevronUp, ChevronDown, Palette } from "lucide-react";
 import { SOCIAL_PLATFORMS, getPlatformNameKurdish } from "../modal-constants";
 import { IconPicker } from "@/components/ui/IconPicker";
 import { CUSTOM_ICONS_MAP } from "@/lib/config/icons";
-import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
+import { ColorGradientModal, type ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { modalInputClass } from "../modal-input-styles";
 import { StandardPlatformInput } from "./StandardPlatformInput";
 import { IconActionButton } from "@/components/shared/IconActionButton";
@@ -17,8 +17,11 @@ import type { SocialLink } from "@/features/link-editor/types";
 import { parseUploadedIconValue } from "@/features/link-editor/custom-icon-value";
 import { PlatformIcon } from "@/lib/brand/PlatformVisuals";
 import { markFillsChip } from "@/lib/brand/platform-brands";
+import { arabicIconPickerCopy, englishIconPickerCopy, getEditorPlatformName, localizeEditorUploadError, type EditorCopy } from "../editor-copy";
 
 interface LinkItemProps {
+  copy?: EditorCopy;
+  colorCopy?: ColorGradientModalProps["copy"];
   linkId: string;
   platform: typeof SOCIAL_PLATFORMS[0];
   isGps: boolean;
@@ -44,6 +47,8 @@ interface LinkItemProps {
 }
 
 const LinkItem = memo(function LinkItem({
+  copy,
+  colorCopy,
   linkId,
   platform,
   isGps,
@@ -88,11 +93,12 @@ const LinkItem = memo(function LinkItem({
 
   const handleToggleDisplayName = useCallback(() => {
     const kurdishName = getPlatformNameKurdish(platform.id);
+    const localizedName = getEditorPlatformName(platform.id, copy);
     const englishName = platform.name;
     const currentName = (displayName || "").trim();
-    const nextName = currentName === kurdishName ? englishName : kurdishName;
+    const nextName = currentName === localizedName || currentName === kurdishName ? englishName : localizedName;
     onUpdateDisplayName(linkId, nextName);
-  }, [linkId, platform.id, platform.name, displayName, onUpdateDisplayName]);
+  }, [linkId, platform.id, platform.name, displayName, onUpdateDisplayName, copy]);
 
   const handleCustomColorChange = useCallback((value: string) => {
     onUpdateCustomColor(linkId, value);
@@ -121,20 +127,20 @@ const LinkItem = memo(function LinkItem({
             <IconActionButton
               onClick={onMoveUp}
               disabled={!canMoveUp}
-              label="بەرزکردنەوە"
+              label={copy?.moveUp ?? "بەرزکردنەوە"}
             >
               <ChevronUp className="h-3.5 w-3.5" />
             </IconActionButton>
             <IconActionButton
               onClick={onMoveDown}
               disabled={!canMoveDown}
-              label="نزمکردنەوە"
+              label={copy?.moveDown ?? "نزمکردنەوە"}
             >
               <ChevronDown className="h-3.5 w-3.5" />
             </IconActionButton>
           </div>
           <label className="block text-xs sm:text-sm font-medium text-gray-900 select-none flex-1">
-            {platform.name}
+            {copy ? getEditorPlatformName(platform.id, copy) : platform.name}
             <RequiredMark />
           </label>
         </div>
@@ -142,14 +148,14 @@ const LinkItem = memo(function LinkItem({
           <IconActionButton
             onClick={handleRemove}
             tone="danger"
-            label={`سڕینەوەی ${platform.name}`}
+            label={`${copy?.removeLink ?? "سڕینەوەی"} ${copy ? getEditorPlatformName(platform.id, copy) : platform.name}`}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </IconActionButton>
           {!isGps && (
             <IconActionButton
               onClick={handleAdd}
-              label={`زیادکردنی لینکی تر بۆ ${platform.name}`}
+              label={`${copy?.addAnother ?? "زیادکردنی لینکی تر بۆ"} ${copy ? getEditorPlatformName(platform.id, copy) : platform.name}`}
             >
               <Plus className="h-3.5 w-3.5" />
             </IconActionButton>
@@ -166,6 +172,8 @@ const LinkItem = memo(function LinkItem({
       <div className="flex items-center gap-2 sm:gap-3 w-full">
         {/* Custom Color Background overlay or just static icon container */}
         <IconPicker
+          copy={copy?.language === "en" ? englishIconPickerCopy : copy ? arabicIconPickerCopy : undefined}
+          localizeError={copy ? (error) => localizeEditorUploadError(error, copy) : undefined}
           value={customIcon || ""}
           onChange={(icon) => onUpdateCustomIcon(linkId, icon)}
           uploadUrl={iconUploadUrl}
@@ -220,6 +228,7 @@ const LinkItem = memo(function LinkItem({
           {/* URL/Phone Input Row */}
           <div className="w-full">
             <StandardPlatformInput
+              copy={copy}
               platform={platform.id}
               value={currentValue}
               onChange={handleUpdate}
@@ -234,7 +243,7 @@ const LinkItem = memo(function LinkItem({
           <div className="flex items-center gap-2 w-full">
             <Tooltip
               content={
-                colorDisabled ? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : "ڕەنگی دوگمە"
+                colorDisabled ? copy?.imageHasBackground ?? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : copy?.buttonColor ?? "ڕەنگی دوگمە"
               }
               side="top"
             >
@@ -243,8 +252,8 @@ const LinkItem = memo(function LinkItem({
                 onClick={() => setIsColorPickerOpen(true)}
                 disabled={colorDisabled}
                 className="theme-soft-hover theme-input-focus relative shrink-0 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 lg:w-12 lg:h-12 overflow-hidden rounded-lg sm:rounded-xl md:rounded-2xl border border-gray-300 bg-white shadow-sm transition-all duration-200 cursor-pointer group hover:border-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-45 dark:border-white/10 dark:bg-[#161B22]"
-                title={colorDisabled ? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : "ڕەنگی دوگمە"}
-                aria-label={colorDisabled ? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : "ڕەنگی دوگمە"}
+                title={colorDisabled ? copy?.imageHasBackground ?? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : copy?.buttonColor ?? "ڕەنگی دوگمە"}
+                aria-label={colorDisabled ? copy?.imageHasBackground ?? "ئەم وێنەیە پاشبنەمای خۆی هەیە" : copy?.buttonColor ?? "ڕەنگی دوگمە"}
               >
                 {!colorDisabled && customColor ? (
                   <span className="absolute inset-0" style={{ background: customColor }} />
@@ -256,6 +265,7 @@ const LinkItem = memo(function LinkItem({
               </button>
             </Tooltip>
             <ColorGradientModal
+              copy={colorCopy}
               isOpen={isColorPickerOpen}
               value={customColor || "#000000"}
               onChange={handleCustomColorChange}
@@ -267,17 +277,17 @@ const LinkItem = memo(function LinkItem({
               type="text"
               value={displayName || ""}
               onChange={handleDisplayNameChange}
-              placeholder="ئەگەر بەتاڵ بێت ناوی ئینگلیزی بەکاردێت"
+              placeholder={copy?.linkLabelPlaceholder ?? "ئەگەر بەتاڵ بێت ناوی ئینگلیزی بەکاردێت"}
               className={modalInputClass(!!error, "flex-1 md:rounded-2xl md:px-5 md:py-3.5 text-xs sm:text-sm md:text-base font-kurdish")}
             />
-            <Tooltip content="گۆڕینی زمان (کوردی / ئینگلیزی)" side="top">
+            <Tooltip content={copy?.toggleLanguage ?? "گۆڕینی زمان (کوردی / ئینگلیزی)"} side="top">
               <button
                 type="button"
                 onClick={handleToggleDisplayName}
                 className="shrink-0 px-2 sm:px-3 py-2.5 sm:py-3 md:py-3.5 rounded-lg sm:rounded-xl md:rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors text-xs sm:text-sm md:text-base font-kurdish cursor-pointer"
-                aria-label="Kurdish/English"
+                aria-label={copy?.toggleLanguage ?? "Kurdish/English"}
               >
-                {((displayName || "").trim() === getPlatformNameKurdish(platform.id)) ? "English" : "کوردی"}
+                {((displayName || "").trim() === getEditorPlatformName(platform.id, copy)) ? copy?.english ?? "English" : copy?.arabic ?? "کوردی"}
               </button>
             </Tooltip>
           </div>
@@ -288,6 +298,8 @@ const LinkItem = memo(function LinkItem({
 });
 
 interface LinksStepProps {
+  copy?: EditorCopy;
+  colorCopy?: ColorGradientModalProps["copy"];
   selectedPlatforms: string[];
   socialLinks: SocialLink[];
   linkErrors: Record<string, string>;
@@ -306,6 +318,8 @@ interface LinksStepProps {
 }
 
 export const LinksStep = memo(function LinksStep({
+  copy,
+  colorCopy,
   selectedPlatforms,
   socialLinks,
   linkErrors,
@@ -352,7 +366,7 @@ export const LinksStep = memo(function LinksStep({
     return (
       <div className="space-y-2">
         <p className="text-center text-xs sm:text-sm text-gray-600 py-8">
-          هیچ پلاتفۆڕمەکانێک هەڵنەبژێردراوە
+          {copy?.noPlatforms ?? "هیچ پلاتفۆڕمەکانێک هەڵنەبژێردراوە"}
         </p>
         {error && touched && (
           <p className="text-xs text-red-600 text-center font-kurdish">{error}</p>
@@ -365,10 +379,10 @@ export const LinksStep = memo(function LinksStep({
     <div className="space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-gray-600 sm:text-sm">
-          لینک بۆ پلاتفۆڕمە هەڵبژێردراوەکان زیاد بکە
+          {copy?.addLinksHint ?? "لینک بۆ پلاتفۆڕمە هەڵبژێردراوەکان زیاد بکە"}
         </p>
         <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-          {sortedLinks.length} لینک
+          {sortedLinks.length} {copy?.linkCount ?? "لینک"}
         </span>
       </div>
       
@@ -382,6 +396,8 @@ export const LinksStep = memo(function LinksStep({
 
           return (
             <LinkItem
+              copy={copy}
+              colorCopy={colorCopy}
               key={linkId}
               linkId={linkId}
               platform={platform}

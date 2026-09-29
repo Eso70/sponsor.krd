@@ -1,6 +1,7 @@
 import {
   createUploadFailureError,
   inlineRequestErrorFromResponse,
+  localizeInlineRequestError,
   validateUploadFile,
 } from "./inline-request-error";
 
@@ -45,6 +46,15 @@ describe("inline request errors", () => {
     expect(createUploadFailureError()).toMatchObject({
       code: "UPLOAD_FAILED",
       status: null,
+    });
+  });
+
+  it("localizes upload errors without changing the Kurdish default", () => {
+    const error = createUploadFailureError();
+    expect(localizeInlineRequestError(error, "ckb")).toBe(error);
+    expect(localizeInlineRequestError(error, "ar")).toMatchObject({
+      title: "تعذّر الرفع",
+      message: "تحقق من اتصالك وحاول مجددًا.",
     });
   });
 });

@@ -20,6 +20,21 @@ import { TimeColumn } from "./TimeColumn";
 
 const MINUTE_STEP = 5;
 
+const TIME_INPUT_COPY = {
+  ckb: {
+    optional: "ئارەزوومەندانە", open: "کردنەوەی", invalid: "کاتەکە بە شێوەی 09:30 AM بنووسە.",
+    hour: "کاتژمێر", minute: "خولەک", now: "ئێستا", done: "تەواو",
+  },
+  ar: {
+    optional: "اختياري", open: "فتح", invalid: "أدخل الوقت بصيغة 09:30 AM.",
+    hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم",
+  },
+  en: {
+    optional: "Optional", open: "Open", invalid: "Enter the time as 09:30 AM.",
+    hour: "Hour", minute: "Minute", now: "Now", done: "Done",
+  },
+} as const;
+
 /**
  * The business's own website colour, falling back to the dashboard theme and
  * then to a neutral slate. Mirrors what other public-page surfaces use, so
@@ -91,6 +106,7 @@ export function TimeInput({
   className = "",
   required = false,
   accent = BUSINESS_ACCENT,
+  locale = "ckb",
 }: {
   /** 24-hour `HH:MM`. */
   value: string;
@@ -102,7 +118,9 @@ export function TimeInput({
   required?: boolean;
   /** Highlight colour for the field and the wheels. */
   accent?: string;
+  locale?: keyof typeof TIME_INPUT_COPY;
 }) {
+  const copy = TIME_INPUT_COPY[locale];
   const [isOpen, setIsOpen] = useState(false);
   // Only held while the field is being typed in. The rest of the time the text
   // is derived from `value`, so an outside change — the "same hours every day"
@@ -218,7 +236,7 @@ export function TimeInput({
         <span className="mb-1.5 block text-[11px] font-black text-slate-600 dark:text-slate-300">
           {label}
           <span className="ms-1" style={{ color: accent }}>
-            {required ? "*" : "(ئارەزوومەندانە)"}
+            {required ? "*" : `(${copy.optional})`}
           </span>
         </span>
       )}
@@ -256,7 +274,7 @@ export function TimeInput({
             updatePosition();
             setIsOpen((open) => !open);
           }}
-          aria-label={`کردنەوەی ${label}`}
+          aria-label={`${copy.open} ${label}`}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           className="flex h-full w-10 shrink-0 items-center justify-center rounded-r-xl border-l border-slate-200 text-slate-400 transition hover:bg-slate-50 hover:text-[var(--time-accent)] disabled:cursor-not-allowed dark:border-white/10 dark:hover:bg-white/5"
@@ -270,7 +288,7 @@ export function TimeInput({
           role="alert"
           className="mt-1.5 block text-[10px] font-semibold leading-4 text-red-500"
         >
-          کاتەکە بە شێوەی 09:30 AM بنووسە.
+          {copy.invalid}
         </span>
       )}
 
@@ -303,7 +321,7 @@ export function TimeInput({
                 accent={accent}
                 accentInk="#FFFFFF"
                 scrollbarClassName="theme-custom-scrollbar"
-                label="کاتژمێر"
+                label={copy.hour}
                 selected={String(hour12).padStart(2, "0")}
                 values={Array.from({ length: 12 }, (_, index) =>
                   String(index + 1).padStart(2, "0"),
@@ -319,7 +337,7 @@ export function TimeInput({
                 accent={accent}
                 accentInk="#FFFFFF"
                 scrollbarClassName="theme-custom-scrollbar"
-                label="خولەک"
+                label={copy.minute}
                 selected={String(current.minutes).padStart(2, "0")}
                 values={minuteValues}
                 onSelect={(next) => commit(current.hours, Number(next))}
@@ -354,14 +372,14 @@ export function TimeInput({
                 style={{ color: accent }}
                 className="rounded-lg px-2 py-1.5 text-[10px] font-bold transition hover:bg-[color-mix(in_srgb,var(--time-accent)_10%,transparent)]"
               >
-                ئێستا
+                {copy.now}
               </button>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 className="rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
               >
-                تەواو
+                {copy.done}
               </button>
             </div>
           </section>,

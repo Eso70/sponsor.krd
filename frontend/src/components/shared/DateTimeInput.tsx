@@ -39,6 +39,8 @@ interface DateTimeInputProps {
    * `aria-label`, so hiding it changes the look and nothing else.
    */
   hideLabel?: boolean;
+  /** Localizes calendar chrome without changing the stored ISO value. */
+  locale?: "ckb" | "ar" | "en";
 }
 
 const BUSINESS_ACCENT =
@@ -67,6 +69,13 @@ const MONTH_SHORT = [
 ];
 
 const WEEKDAY_NAMES = ["ی", "د", "س", "چ", "پ", "ه", "ش"];
+const ARABIC_MONTH_NAMES = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+const ARABIC_WEEKDAY_NAMES = ["ح", "ن", "ث", "ر", "خ", "ج", "س"];
+const ENGLISH_MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const ENGLISH_WEEKDAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 function parseLocalDateTime(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
@@ -181,7 +190,12 @@ export function DateTimeInput({
   required = false,
   accent = BUSINESS_ACCENT,
   hideLabel = false,
+  locale = "ckb",
 }: DateTimeInputProps) {
+  const arabic = locale === "ar";
+  const english = locale === "en";
+  const monthNames = arabic ? ARABIC_MONTH_NAMES : english ? ENGLISH_MONTH_NAMES : MONTH_NAMES;
+  const weekdayNames = arabic ? ARABIC_WEEKDAY_NAMES : english ? ENGLISH_WEEKDAY_NAMES : WEEKDAY_NAMES;
   const [isOpen, setIsOpen] = useState(false);
   const errorId = useId();
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -328,15 +342,15 @@ export function DateTimeInput({
     }
     const parsed = parseTypedDateTime(inputValue);
     if (!parsed) {
-      setValidationError("بەروارەکە بە شێوەی ساڵ/مانگ/ڕۆژ بنووسە؛ بۆ نموونە 26/03/09.");
+      setValidationError(arabic ? "اكتب التاريخ بصيغة سنة/شهر/يوم؛ مثل 26/03/09." : english ? "Enter the date as year/month/day, for example 26/03/09." : "بەروارەکە بە شێوەی ساڵ/مانگ/ڕۆژ بنووسە؛ بۆ نموونە 26/03/09.");
       return false;
     }
     if (minimum && parsed < minimum) {
-      setValidationError(`بەروارەکە نابێت پێش ${formatTypedDateTime(minimum)} بێت.`);
+      setValidationError(arabic ? `لا يمكن أن يكون التاريخ قبل ${formatTypedDateTime(minimum)}.` : english ? `Date cannot be before ${formatTypedDateTime(minimum)}.` : `بەروارەکە نابێت پێش ${formatTypedDateTime(minimum)} بێت.`);
       return false;
     }
     if (maximum && parsed > maximum) {
-      setValidationError(`بەروارەکە نابێت لە ${formatTypedDateTime(maximum)} دواتر بێت.`);
+      setValidationError(arabic ? `لا يمكن أن يكون التاريخ بعد ${formatTypedDateTime(maximum)}.` : english ? `Date cannot be after ${formatTypedDateTime(maximum)}.` : `بەروارەکە نابێت لە ${formatTypedDateTime(maximum)} دواتر بێت.`);
       return false;
     }
     commit(parsed);
@@ -382,7 +396,7 @@ export function DateTimeInput({
         <span className="mb-2 block text-xs font-bold text-slate-600 dark:text-slate-300">
           {label}
           <span className="ms-1" style={{ color: accent }}>
-            {required ? "*" : "(ئارەزوومەندانە)"}
+            {required ? "*" : arabic ? "(اختياري)" : english ? "(optional)" : "(ئارەزوومەندانە)"}
           </span>
         </span>
       )}
@@ -420,7 +434,7 @@ export function DateTimeInput({
           type="button"
           disabled={disabled}
           onClick={openPicker}
-          aria-label={`کردنەوەی ${label}`}
+          aria-label={arabic ? `فتح ${label}` : english ? `Open ${label}` : `کردنەوەی ${label}`}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
           className="flex h-full w-11 shrink-0 items-center justify-center rounded-r-xl border-l border-slate-200 text-slate-400 transition hover:bg-slate-50 hover:text-[var(--date-accent)] disabled:cursor-not-allowed dark:border-white/10 dark:hover:bg-white/5"
@@ -467,7 +481,7 @@ export function DateTimeInput({
                       onClick={() => setHeaderSelector((c) => c === "month" ? null : "month")}
                       className="flex min-w-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[0.07]"
                     >
-                      <span className="truncate">{MONTH_NAMES[visibleMonth.getMonth()]}</span>
+                      <span className="truncate">{monthNames[visibleMonth.getMonth()]}</span>
                       <ChevronDown className={`h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200 ${headerSelector === "month" ? "rotate-180" : ""}`} />
                     </button>
                     <button
@@ -485,7 +499,7 @@ export function DateTimeInput({
                       type="button"
                       disabled={atFirstAllowedMonth}
                       onClick={() => setVisibleMonth((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
-                      aria-label="مانگی پێشوو"
+                      aria-label={arabic ? "الشهر السابق" : english ? "Previous month" : "مانگی پێشوو"}
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
@@ -494,7 +508,7 @@ export function DateTimeInput({
                       type="button"
                       disabled={atLastAllowedMonth}
                       onClick={() => setVisibleMonth((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
-                      aria-label="مانگی داهاتوو"
+                      aria-label={arabic ? "الشهر التالي" : english ? "Next month" : "مانگی داهاتوو"}
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -502,7 +516,7 @@ export function DateTimeInput({
                     <button
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      aria-label="داخستن"
+                      aria-label={arabic ? "إغلاق" : english ? "Close" : "داخستن"}
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/[0.07] dark:hover:text-slate-300"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -518,7 +532,7 @@ export function DateTimeInput({
                   >
                     {headerSelector === "month" ? (
                       <div className="grid grid-cols-4 gap-1 p-2.5">
-                        {MONTH_NAMES.map((name, i) => {
+                        {monthNames.map((name, i) => {
                           const dis = isMonthDisabled(visibleMonth.getFullYear(), i);
                           const sel = visibleMonth.getMonth() === i;
                           return (
@@ -538,7 +552,7 @@ export function DateTimeInput({
                                 }`}
                                 style={sel ? { background: "var(--date-accent)" } : undefined}
                               >
-                                {MONTH_SHORT[i]}
+                                {arabic ? name : MONTH_SHORT[i]}
                               </button>
                             </Tooltip>
                           );
@@ -591,7 +605,7 @@ export function DateTimeInput({
 
                 {/* Weekday headers */}
                 <div className="grid grid-cols-7 px-2.5 pt-3 pb-1">
-                  {WEEKDAY_NAMES.map((day, i) => (
+                  {weekdayNames.map((day, i) => (
                     <span key={`${day}-${i}`} className="flex h-7 items-center justify-center text-[9px] font-bold text-slate-400 dark:text-slate-500">
                       {day}
                     </span>
@@ -648,7 +662,7 @@ export function DateTimeInput({
                     }}
                     className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/[0.07] dark:hover:text-slate-300"
                   >
-                    پاککردنەوە
+                    {arabic ? "مسح" : english ? "Clear" : "پاککردنەوە"}
                   </button>
                   <button
                     type="button"
@@ -661,7 +675,7 @@ export function DateTimeInput({
                     className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[color-mix(in_srgb,var(--date-accent)_10%,transparent)]"
                     style={{ color: "var(--date-accent)" }}
                   >
-                    ئەمڕۆ
+                    {arabic ? "اليوم" : english ? "Today" : "ئەمڕۆ"}
                   </button>
                 </div>
               </div>

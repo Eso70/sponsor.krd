@@ -2,12 +2,12 @@
 
 import { Skeleton } from "@/components/shared/Skeleton";
 
-export function SkeletonNotificationList({ rows = 4 }: { rows?: number }) {
+export function SkeletonNotificationList({ rows = 4, loadingLabel = "Loading notifications" }: { rows?: number; loadingLabel?: string }) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading notifications"
+      aria-label={loadingLabel}
       className="divide-y divide-slate-100 dark:divide-white/5"
     >
       {Array.from({ length: rows }).map((_, index) => (
@@ -25,12 +25,12 @@ export function SkeletonNotificationList({ rows = 4 }: { rows?: number }) {
   );
 }
 
-export function SkeletonSessionList({ rows = 3 }: { rows?: number }) {
+export function SkeletonSessionList({ rows = 3, loadingLabel = "Loading sessions" }: { rows?: number; loadingLabel?: string }) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading sessions"
+      aria-label={loadingLabel}
       className="space-y-3"
     >
       {Array.from({ length: rows }).map((_, index) => (

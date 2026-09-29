@@ -17,6 +17,9 @@ interface BusinessPublicSiteShellProps {
   navigationItems?: ReadonlyArray<{ label: string; href: string }>;
   action?: { label: string; href: string; external?: boolean } | null;
   emphasizeFirstNavItem?: boolean;
+  navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  language?: string;
+  languageControl?: ReactNode;
 }
 
 export function BusinessPublicSiteShell({
@@ -31,6 +34,9 @@ export function BusinessPublicSiteShell({
   navigationItems,
   action,
   emphasizeFirstNavItem = true,
+  navbarCopy,
+  language,
+  languageControl,
 }: BusinessPublicSiteShellProps) {
   return (
     <PublicMarketingSiteShell
@@ -43,6 +49,9 @@ export function BusinessPublicSiteShell({
       primaryAction={action}
       emphasizeFirstNavItem={emphasizeFirstNavItem}
       embedded={embedded}
+      navbarCopy={navbarCopy}
+      language={language}
+      languageControl={languageControl}
       footer={
         <BusinessPublicFooter
           {...footer}

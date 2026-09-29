@@ -17,6 +17,7 @@ import { AdvertisingActivationStep } from "./AdvertisingActivationStep";
 import type { AdvertisingPriceRow, SponsorCategory } from "../pricing-data";
 import type { PaymentProvider, SponsorType } from "../journey-types";
 import type { AdvertisingPaymentProvider } from "../types";
+import { usePublicAdvertisingText } from "../public-locale";
 
 interface JourneyStep {
   number: string;
@@ -93,35 +94,38 @@ function buildWhatsAppMessage({
   paymentProvider,
   receiptUrl,
   videoCode,
+  translate,
 }: {
   sponsorType: SponsorType;
   price: number;
   paymentProvider: PaymentProvider;
   receiptUrl: string | null;
   videoCode: string;
+  translate?: (text: string) => string;
 }) {
-  const sponsorLabel = sponsorType === "personal" ? "شەخسی" : "بازرگانی";
-  const priceText = `${price.toLocaleString()} دینار`;
+  const t = translate ?? ((text: string) => text);
+  const sponsorLabel = sponsorType === "personal" ? t("شەخسی") : t("بازرگانی");
+  const priceText = `${price.toLocaleString()} ${t("دینار")}`;
   const receiptStatus = receiptUrl
-    ? "دیاریکراوە — پێویستە وێنەکە بە دەست لەم چاتەدا بنێردرێت"
-    : "هیچ وەسڵێک دیاری نەکراوە";
+    ? t("دیاریکراوە — پێویستە وێنەکە بە دەست لەم چاتەدا بنێردرێت")
+    : t("هیچ وەسڵێک دیاری نەکراوە");
   const trimmedVideoCode = videoCode.trim();
   // Isolate the code as its own LTR run so the "#"/"=" edges don't get
   // reordered by WhatsApp's bidi rendering inside the surrounding RTL text.
   const isolatedVideoCode = `⁦${trimmedVideoCode}⁩`;
 
   return [
-    "*داواکاری نوێی سپۆنسەر*",
+    `*${t("داواکاری نوێی سپۆنسەر")}*`,
     WHATSAPP_DIVIDER,
-    `*جۆری سپۆنسەر:* ${sponsorLabel}`,
-    `*نرخی پاکێج:* ${priceText}`,
+    `*${t("جۆری سپۆنسەر:")}* ${sponsorLabel}`,
+    `*${t("نرخی پاکێج:")}* ${priceText}`,
     WHATSAPP_DIVIDER,
-    `*شێوازی پارەدان:* ${paymentProvider}`,
-    `*وەسڵی پارەدان:* ${receiptStatus}`,
+    `*${t("شێوازی پارەدان:")}* ${paymentProvider}`,
+    `*${t("وەسڵی پارەدان:")}* ${receiptStatus}`,
     WHATSAPP_DIVIDER,
-    trimmedVideoCode ? `*کۆدی ڤیدیۆ:*\n\`${isolatedVideoCode}\`` : null,
+    trimmedVideoCode ? `*${t("کۆدی ڤیدیۆ:")}*\n\`${isolatedVideoCode}\`` : null,
     WHATSAPP_DIVIDER,
-    "_ئەم داواکارییە لە ڕێگەی پەڕەی سپۆنسەرینگەوە نێردراوە_",
+    `_${t("ئەم داواکارییە لە ڕێگەی پەڕەی سپۆنسەرینگەوە نێردراوە")}_`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -146,6 +150,7 @@ export function AdvertisingSponsorshipJourney({
   paymentProviders,
   receiptExampleImageUrl,
 }: AdvertisingSponsorshipJourneyProps) {
+  const t = usePublicAdvertisingText();
   const [activeStep, setActiveStep] = useState(0);
   const [sponsorType, setSponsorType] = useState<SponsorType>("personal");
   const [selectedPrices, setSelectedPrices] = useState<Record<SponsorType, number>>({
@@ -186,6 +191,7 @@ export function AdvertisingSponsorshipJourney({
       paymentProvider,
       receiptUrl,
       videoCode,
+      translate: t,
     });
     const url = `https://wa.me/${destination}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -198,23 +204,23 @@ export function AdvertisingSponsorshipJourney({
       decorations={
         <BusinessSectionDecorations
           colors={["#38bdf8", "#34d399"]}
-          labels={["هەڵبژاردن", "ئەکتیڤکردن"]}
+          labels={[t("هەڵبژاردن"), t("ئەکتیڤکردن")]}
           variant={1}
         />
       }
     >
         <PublicSectionHeading
           id="advertising-journey-title"
-          eyebrow="Quick sponsorship guide"
+          eyebrow={t("Quick sponsorship guide")}
           eyebrowColor="var(--advertising-accent)"
-          title="قۆناغەکانی سپۆنسەر کردن"
-          description="لە هەڵبژاردنی جۆری سپۆنسەرەوە تا ئەکتیڤبوونی ڤیدیۆکەت، هەموو هەنگاوەکان بە سادەیی ببینە"
+          title={t("قۆناغەکانی سپۆنسەر کردن")}
+          description={t("لە هەڵبژاردنی جۆری سپۆنسەرەوە تا ئەکتیڤبوونی ڤیدیۆکەت، هەموو هەنگاوەکان بە سادەیی ببینە")}
         />
 
         <StepJourneyMockup
-          title="Sponsorship guide"
+          title={t("Sponsorship guide")}
           brandIcon={<TikTokMark className="h-5.5 w-5.5" />}
-          steps={JOURNEY_STEPS}
+          steps={JOURNEY_STEPS.map((step) => ({ ...step, title: t(step.title) }))}
           activeStep={activeStep}
           onStepChange={setActiveStep}
           titleBadge={
@@ -232,13 +238,16 @@ export function AdvertisingSponsorshipJourney({
                 ) : (
                   <BriefcaseBusiness className="h-3 w-3" />
                 )}
-                {sponsorType === "personal" ? "Personal" : "Business"}
+                {sponsorType === "personal" ? t("Personal") : t("Business")}
               </span>
             ) : undefined
           }
-          footerNote="هیچ کات وشەی نهێنی یان زانیاری چوونەژوورەوەت مەبنێرە؛ تەنها وەسڵ و کۆدی ڤیدیۆ پێویستن"
+          footerNote={t("هیچ کات وشەی نهێنی یان زانیاری چوونەژوورەوەت مەبنێرە؛ تەنها وەسڵ و کۆدی ڤیدیۆ پێویستن")}
           onSubmit={handleWhatsAppSubmit}
-          submitLabel="بنێرە بۆ واتساپ"
+          submitLabel={t("بنێرە بۆ واتساپ")}
+          backLabel={t("Back")}
+          nextLabel={t("Next")}
+          stepsAriaLabel={t("Tutorial steps")}
           backButtonClass="border-black text-black hover:bg-black/5"
           nextButtonClass="bg-black text-white"
           progressBarClass="bg-black"

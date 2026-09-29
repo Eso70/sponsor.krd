@@ -11,6 +11,10 @@ export function SkeletonAuthenticationPage({
   accentColor,
   previewTitle,
   businessTenant = false,
+  loadingLabel,
+  backLabel,
+  themeCopy,
+  language,
 }: {
   brandDescription?: string;
   content?: "google" | "methods" | "form" | "operation";
@@ -20,6 +24,10 @@ export function SkeletonAuthenticationPage({
   accentColor?: string | null;
   previewTitle?: string;
   businessTenant?: boolean;
+  loadingLabel?: string;
+  backLabel?: string;
+  themeCopy?: { label: string; light: string; dark: string };
+  language?: string;
 }) {
   return (
     <AuthenticationShell
@@ -29,12 +37,15 @@ export function SkeletonAuthenticationPage({
       accentColor={accentColor}
       previewTitle={previewTitle}
       businessTenant={businessTenant}
+      backLabel={backLabel}
+      themeCopy={themeCopy}
+      language={language}
     >
       <section
         className="rounded-[26px] border border-slate-200 bg-white/80 p-5 shadow-[0_18px_55px_rgba(15,23,42,.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[0_18px_55px_rgba(0,0,0,.22)] sm:p-6"
         role="status"
         aria-busy="true"
-        aria-label="Loading authentication"
+        aria-label={loadingLabel ?? "Loading authentication"}
       >
         <div className="mb-6 flex flex-col items-center gap-2 px-2">
           <Skeleton className="h-7 w-52 max-w-full" rounded="rounded-lg" />

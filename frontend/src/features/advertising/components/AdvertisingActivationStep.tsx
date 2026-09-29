@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
 import { PartyPopper } from "lucide-react";
+import { usePublicAdvertisingText } from "../public-locale";
 
 const FIREWORK_COLORS = ["#25f4ee", "#8b5cf6", "#fe2c55", "#06b6d4", "#f59e0b", "#d946ef"];
 const MOBILE_BREAKPOINT_PX = 640;
@@ -54,6 +55,7 @@ function useFireworksOnMount() {
 }
 
 export function AdvertisingActivationStep() {
+  const t = usePublicAdvertisingText();
   useFireworksOnMount();
 
   return (
@@ -75,7 +77,7 @@ export function AdvertisingActivationStep() {
         className="text-lg font-black text-slate-900 dark:text-white"
         dir="auto"
       >
-        داواکارییەکەت بنێرە بۆ واتساپ
+        {t("داواکارییەکەت بنێرە بۆ واتساپ")}
       </motion.p>
     </div>
   );

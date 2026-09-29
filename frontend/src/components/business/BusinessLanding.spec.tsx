@@ -68,14 +68,49 @@ describe("BusinessLanding", () => {
     ).toMatchObject({ target: "_blank", rel: "noopener noreferrer" });
     expect(screen.getByText("Official contact channels")).toBeInTheDocument();
     expect(container.querySelector('a[href="tel:+9647500000000"]')).toBeInTheDocument();
-    const carousel = screen.getByRole("group", { name: "Mobile template carousel" });
-    expect(container.querySelectorAll('[aria-label$="mobile preview"]')).toHaveLength(3);
+    const carousel = screen.getByRole("group", { name: "پێشبینینی قاڵبەکانی مۆبایل" });
+    expect(container.querySelectorAll('[aria-label$="پێشبینینی مۆبایل"]')).toHaveLength(3);
     const activeTemplate = carousel.querySelector('[aria-live="polite"]');
     const initialTemplate = activeTemplate?.textContent;
-    fireEvent.click(screen.getByRole("button", { name: "Next template" }));
+    fireEvent.click(screen.getByRole("button", { name: "قاڵبی دواتر" }));
     expect(activeTemplate?.textContent).not.toBe(initialTemplate);
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(container.querySelector('a[href*="/business"]')).not.toBeInTheDocument();
+  });
+
+  it("lets visitors switch fixed homepage text to Arabic without changing authored business content", () => {
+    render(
+      <BusinessLanding
+        business={business}
+        linktrees={[{ id: "links-1", name: "Customer links", uid: "customer-links", subtitle: "Official contact channels" }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
+    expect(screen.getByRole("heading", { name: "أنشئ صفحات روابطك وأدرها بسهولة" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "صفحات الروابط المنشورة" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "معاينة قوالب الهاتف" })).toBeInTheDocument();
+    expect(screen.getByText("Official contact channels")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("lang", "ar");
+    expect(document.cookie).toContain("business_public_locale=ar");
+    document.cookie = "business_public_locale=; Path=/; Max-Age=0";
+  });
+
+  it("cycles to English while preserving authored business content", () => {
+    render(
+      <BusinessLanding
+        business={business}
+        linktrees={[{ id: "links-1", name: "Customer links", uid: "customer-links", subtitle: "Official contact channels" }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
+    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
+    expect(screen.getByRole("heading", { name: "Create and manage your Linktrees with ease" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Published Linktrees" })).toBeInTheDocument();
+    expect(screen.getByText("Official contact channels")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("lang", "en");
+    expect(document.cookie).toContain("business_public_locale=en");
+    document.cookie = "business_public_locale=; Path=/; Max-Age=0";
   });
 
   it("omits the gallery and its links when no Linktrees are published", () => {

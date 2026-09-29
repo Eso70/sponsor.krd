@@ -1,26 +1,32 @@
+"use client";
+
 import { PublicMarketingHero } from "@/components/public/PublicMarketingHero";
 import {
   SPONSOR_KRD_ACCENT_COLOR,
   SPONSOR_KRD_ACCENT_GRADIENT,
 } from "@/lib/sponsor-krd-theme";
+import { useRootPublicLocale } from "./RootPublicLocaleProvider";
+import { rootPublicCopy } from "./root-public-copy";
 
 export function SponsorKrdHero() {
+  const { locale } = useRootPublicLocale();
+  const copy = rootPublicCopy[locale].hero;
   return (
     <PublicMarketingHero
       accentColor={SPONSOR_KRD_ACCENT_COLOR}
-      eyebrow="پلاتفۆرمی SaaS بۆ هەژمارە ڕیکلامییەکان"
+      eyebrow={copy.eyebrow}
       title={
         <>
-          پەیوەندییەکی ڕێکخراو بۆ{" "}
+          {copy.titleBefore}{" "}
           <span
             className="bg-clip-text text-transparent"
             style={{ backgroundImage: SPONSOR_KRD_ACCENT_GRADIENT }}
           >
-            بەڕێوەبردنی ڕیکلام
+            {copy.titleAccent}
           </span>
         </>
       }
-      description="Sponsor.krd ژێرخانی پارێزراو و یەکگرتوو بۆ پەیوەستکردن بە هەژمارە ڕیکلامییەکانی TikTok دابین دەکات. پەیوەندیی بەڕێوەبەری پلاتفۆرم بە جیا بەڕێوەدەبرێت، و پەیوەستکردنی هەژماری تایبەتی بزنسەکان لە قۆناغی داهاتوودا بەردەست دەبێت"
+      description={copy.description}
       fillViewport
     />
   );

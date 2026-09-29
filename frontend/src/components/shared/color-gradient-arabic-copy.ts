@@ -1,0 +1,31 @@
+import type { ColorGradientModalProps } from "./ColorGradientModal";
+
+/** Shared Arabic labels for the color/gradient editor. */
+export const arabicColorGradientCopy: NonNullable<ColorGradientModalProps["copy"]> = {
+  title: "اختيار اللون",
+  subtitle: "اختر لونًا واحدًا أو تدرجًا لونيًا",
+  unsupported: "هذا المتصفح لا يدعم أداة التقاط اللون.",
+  picked: "تم التقاط اللون.",
+  pickFailed: "تعذّر التقاط اللون. حاول مجددًا.",
+  solid: "لون واحد",
+  gradient: "تدرج لوني",
+  first: "اللون الأول",
+  second: "اللون الثاني",
+  color: "اللون",
+  eyedropper: "أداة التقاط اللون",
+  pick: "التقاط",
+  direction: "اتجاه التدرج",
+  leftRight: "من اليسار إلى اليمين",
+  rightLeft: "من اليمين إلى اليسار",
+  topBottom: "من الأعلى إلى الأسفل",
+  bottomTop: "من الأسفل إلى الأعلى",
+  diagonal: "قطري",
+  diagonalReverse: "قطري معكوس",
+  topRight: "نحو أعلى اليمين",
+  topLeft: "نحو أعلى اليسار",
+  radial: "دائري",
+  quickColors: "ألوان جاهزة",
+  pickedColors: "الألوان الملتقطة",
+  apply: "تطبيق",
+  close: "إغلاق",
+};

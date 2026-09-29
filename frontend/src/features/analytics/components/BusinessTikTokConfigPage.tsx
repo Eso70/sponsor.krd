@@ -213,7 +213,7 @@ export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<Ti
 
   if (loading) {
     return (
-      <SkeletonTikTokPage />
+      <SkeletonTikTokPage loadingLabel={t("loadingSettings")} />
     );
   }
 

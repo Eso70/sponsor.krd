@@ -20,6 +20,7 @@ describe("BusinessMessagesPanel language", () => {
       </NextIntlClientProvider>,
     );
 
+    expect(screen.getByRole("status", { name: "جارٍ تحميل الرسائل" })).toBeInTheDocument();
     expect(await screen.findByText("لا توجد رسائل")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "رسالة جديدة" })).toBeInTheDocument();
   });

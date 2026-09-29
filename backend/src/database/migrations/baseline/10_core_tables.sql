@@ -519,6 +519,7 @@ CREATE TABLE public.platform_admins (
     favicon text DEFAULT '/favicon.ico'::text,
     accent_color character varying(100) DEFAULT 'gradient:to-r:#25F4EE:#FE2C55'::character varying NOT NULL,
     accent_ink_color character varying(7) DEFAULT '#111827'::character varying NOT NULL,
+    preferred_locale character varying(3) DEFAULT 'ckb'::character varying NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );

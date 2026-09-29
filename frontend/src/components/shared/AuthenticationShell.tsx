@@ -18,6 +18,9 @@ interface AuthenticationShellProps {
   accentColor?: string | null;
   previewTitle?: string;
   businessTenant?: boolean;
+  backLabel?: string;
+  themeCopy?: { label: string; light: string; dark: string };
+  language?: string;
 }
 
 export function AuthenticationShell({
@@ -31,6 +34,9 @@ export function AuthenticationShell({
   accentColor,
   previewTitle,
   businessTenant = false,
+  backLabel,
+  themeCopy,
+  language,
 }: AuthenticationShellProps) {
   const controlClass =
     "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-500 shadow-sm backdrop-blur transition hover:text-slate-900 dark:border-white/10 dark:bg-[#171a20]/90 dark:text-slate-400 dark:hover:text-white";
@@ -72,6 +78,7 @@ export function AuthenticationShell({
 
   return (
     <main
+      lang={language}
       data-sponsor-krd-theme={accent || businessTenant ? undefined : true}
       className={`${accent ? "custom-scrollbar theme-custom-scrollbar" : ""} relative h-screen overflow-hidden bg-[#f7f8fa] text-slate-900 transition-colors dark:bg-[#0d0f12] dark:text-white`}
       style={themeStyle}
@@ -79,13 +86,13 @@ export function AuthenticationShell({
       <a
         href={backHref}
         className={`${controlClass} absolute left-5 top-5 z-20 sm:left-8 sm:top-8`}
-        aria-label="Back"
+        aria-label={backLabel ?? "Back"}
       >
         <ArrowLeft className="h-4.5 w-4.5" />
       </a>
       <div className="absolute right-5 top-5 z-20 flex items-center gap-2 sm:right-8 sm:top-8">
         {headerAction}
-        <ThemeToggleButton />
+        <ThemeToggleButton copy={themeCopy} />
       </div>
       <div className="grid h-full w-full lg:grid-cols-[minmax(0,1fr)_1.4fr]">
         <section className="flex h-full flex-col px-5 py-5 sm:px-8 sm:py-8 lg:px-10 xl:px-14">

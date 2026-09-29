@@ -3,6 +3,8 @@ import { SkeletonTable } from "@/components/shared/Skeleton";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { ScopeType } from "./types";
+import { accessText } from "./use-access-text";
+import type { PlatformLocale } from "@/features/platform-admin/i18n/locale";
 
 export const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:ring-2 dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500 dark:[color-scheme:dark]";
@@ -114,18 +116,18 @@ export function Badge({
  * Kept as a name the access-control screens already import, now backed by the
  * shared primitive so the pulse and palette match the rest of the app.
  */
-export function TableSkeleton() {
-  return <SkeletonTable rows={6} />;
+export function TableSkeleton({ loadingLabel }: { loadingLabel?: string }) {
+  return <SkeletonTable rows={6} loadingLabel={loadingLabel} />;
 }
 
-export function scopeLabel(scope: ScopeType) {
-  return scope === "platform" ? "پلاتفۆرم" : "بزنس";
+export function scopeLabel(scope: ScopeType, locale: PlatformLocale = "ckb") {
+  return accessText(scope === "platform" ? "پلاتفۆرم" : "بزنس", locale);
 }
 
-export function riskLevelLabel(level: string) {
-  if (level === "critical") return "مەترسیدار";
-  if (level === "sensitive") return "هەستیار";
-  return "ئاسایی";
+export function riskLevelLabel(level: string, locale: PlatformLocale = "ckb") {
+  if (level === "critical") return accessText("مەترسیدار", locale);
+  if (level === "sensitive") return accessText("هەستیار", locale);
+  return accessText("ئاسایی", locale);
 }
 
 export function toLocalInput(value: string) {

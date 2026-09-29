@@ -13,6 +13,7 @@ import {
 import type { BackgroundPatternStyle } from "@linktree/types";
 
 export interface BackgroundPatternModalProps {
+  copy?: { title: string; count: string; close: string; radiogroup: string; labels: Record<BackgroundPatternStyle, string> };
   isOpen: boolean;
   value: BackgroundPatternStyle;
   onChange: (value: BackgroundPatternStyle) => void;
@@ -24,17 +25,19 @@ const BackgroundPatternCard = memo(function BackgroundPatternCard({
   option,
   isSelected,
   onSelect,
+  label,
 }: {
   option: (typeof BACKGROUND_PATTERN_OPTIONS)[number];
   isSelected: boolean;
   onSelect: () => void;
+  label?: string;
 }) {
   return (
-    <Tooltip content={option.label} side="top">
+    <Tooltip content={label ?? option.label} side="top">
       <motion.button
         animate={{ scale: isSelected ? 1.05 : 1 }}
         aria-checked={isSelected}
-        aria-label={option.label}
+        aria-label={label ?? option.label}
         className={`group relative aspect-4/3 w-full overflow-hidden rounded-xl border-2 cursor-pointer ${
           isSelected
             ? "theme-soft border-transparent shadow-lg"
@@ -66,7 +69,7 @@ const BackgroundPatternCard = memo(function BackgroundPatternCard({
 
         {/* Caption sits below the pattern instead of over it */}
         <span className="shrink-0 border-t border-slate-100 px-1 py-1 text-center text-[9px] font-semibold leading-tight text-slate-600 sm:text-[10px]">
-          {option.label}
+          {label ?? option.label}
         </span>
       </div>
 
@@ -95,6 +98,7 @@ export const BackgroundPatternModal = memo(
     value,
     onChange,
     onClose,
+    copy,
   }: BackgroundPatternModalProps) {
     const [mounted, setMounted] = useState(false);
     const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +139,7 @@ export const BackgroundPatternModal = memo(
         {/* Modal container */}
         <motion.div
           animate={{ opacity: 1, x: "-50%", y: "-50%", scale: 1 }}
-          aria-label="شێوازی پاشبنەما هەڵبژێرە"
+          aria-label={copy?.title ?? "شێوازی پاشبنەما هەڵبژێرە"}
           aria-modal="true"
           className="modal-ltr fixed left-1/2 top-1/2 z-[201] max-h-[85vh] w-[95vw] max-w-2xl overflow-hidden rounded-2xl border border-gray-100/50 bg-white/95 shadow-2xl backdrop-blur-sm sm:w-[85vw] md:w-[75vw]"
           dir="ltr"
@@ -155,20 +159,20 @@ export const BackgroundPatternModal = memo(
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-slate-700 sm:text-lg">
-                    شێوازی پاشبنەما هەڵبژێرە
+                    {copy?.title ?? "شێوازی پاشبنەما هەڵبژێرە"}
                   </h2>
                   <p
                     className="mt-0.5 text-[10px] sm:text-xs"
                     style={{ color: "var(--theme-primary, #64748b)" }}
                   >
-                    {BACKGROUND_PATTERN_OPTIONS.length} شێواز
+                    {BACKGROUND_PATTERN_OPTIONS.length} {copy?.count ?? "شێواز"}
                   </p>
                 </div>
               </div>
 
-              <Tooltip content="داخستن" side="bottom">
+              <Tooltip content={copy?.close ?? "داخستن"} side="bottom">
                 <button
-                  aria-label="Close"
+                  aria-label={copy?.close ?? "Close"}
                   className="shrink-0 rounded-xl border border-slate-100 bg-linear-to-br from-slate-50 to-gray-50 p-1.5 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow sm:p-2 cursor-pointer"
                   onClick={onClose}
                   type="button"
@@ -189,7 +193,7 @@ export const BackgroundPatternModal = memo(
           >
             <div className="w-full">
               <div
-                aria-label="شێوازی پاشبنەما"
+                aria-label={copy?.radiogroup ?? "شێوازی پاشبنەما"}
                 className="grid grid-cols-3 justify-items-center gap-2 sm:grid-cols-4 sm:gap-2.5 md:grid-cols-5 md:gap-3"
                 role="radiogroup"
               >
@@ -202,6 +206,7 @@ export const BackgroundPatternModal = memo(
                     transition={{ duration: 0.3, delay: index * 0.03 }}
                   >
                     <BackgroundPatternCard
+                      label={copy?.labels[option.value]}
                       isSelected={value === option.value}
                       onSelect={() => handleSelect(option.value)}
                       option={option}

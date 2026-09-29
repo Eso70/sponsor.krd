@@ -5,6 +5,7 @@ import type { CampaignScheduleType } from "../create-campaign-form";
 import { CampaignChoiceField } from "./CampaignChoiceField";
 import { CampaignChoiceGroup } from "./CampaignChoiceGroup";
 import { CampaignStepIntro } from "./CampaignStepIntro";
+import { useCampaignText } from "../use-campaign-text";
 
 const SCHEDULE_OPTIONS = [
   {
@@ -38,14 +39,15 @@ export function CampaignBudgetScheduleStep({
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
 }) {
+  const t = useCampaignText();
   return (
     <div className="space-y-5">
       <CampaignStepIntro
-        title="Budget and schedule"
-        description="بودجەی ڕۆژانە و کاتی بەڕێوەچوونی کەمپەینەکە ڕێک بخە"
+        title={t("Budget and schedule")}
+        description={t("بودجەی ڕۆژانە و کاتی بەڕێوەچوونی کەمپەینەکە ڕێک بخە")}
       />
 
-      <EditorField label="Daily budget" hint="USD · minimum $5" required>
+      <EditorField label={t("Daily budget")} hint={t("USD · minimum $5")} required>
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sm text-slate-400">
             $
@@ -56,23 +58,23 @@ export function CampaignBudgetScheduleStep({
             min={5}
             step={1}
             clearOnFocus
-            aria-label="Daily budget"
+            aria-label={t("Daily budget")}
             className={modalInputClass(false, "pl-8 font-mono")}
           />
         </div>
       </EditorField>
 
-      <CampaignChoiceField label="Schedule" required>
+      <CampaignChoiceField label={t("Schedule")} required>
         <CampaignChoiceGroup
           value={scheduleType}
-          options={SCHEDULE_OPTIONS}
+          options={SCHEDULE_OPTIONS.map((option) => ({ ...option, label: t(option.label), description: t(option.description) }))}
           onChange={onScheduleTypeChange}
         />
       </CampaignChoiceField>
 
       {scheduleType === "DATE_RANGE" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <EditorField label="Start date" required>
+          <EditorField label={t("Start date")} required>
             <input
               type="date"
               value={startDate}
@@ -80,7 +82,7 @@ export function CampaignBudgetScheduleStep({
               className={modalInputClass()}
             />
           </EditorField>
-          <EditorField label="End date" required>
+          <EditorField label={t("End date")} required>
             <input
               type="date"
               value={endDate}

@@ -2,8 +2,8 @@
 
 import { memo, type CSSProperties, type MouseEventHandler, type ReactNode } from "react";
 import { motion, type HTMLMotionProps } from "motion/react";
+import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
 
-const EMPTY_STATE_DEFAULT = "هێشتا هیچ لینکێک نییە";
 
 /** Standard action-button sizing shared by all Linktree templates. */
 export const STANDARD_BUTTON_CLASS =
@@ -90,19 +90,20 @@ export const TemplateActionButtonList = memo(function TemplateActionButtonList({
   isEmpty,
   className = STANDARD_TEMPLATE_ACTION_LIST_CLASS,
   style = { direction: "ltr" },
-  emptyStateText = EMPTY_STATE_DEFAULT,
+  emptyStateText,
   emptyStateClassName = "text-center py-8",
   emptyStateStyle,
   emptyStateTextClassName,
   emptyStateTextStyle,
   children,
 }: TemplateActionButtonListProps) {
+  const copy = usePublicLinktreeCopy();
   if (isEmpty) {
     return (
       <div className={className} style={style}>
         <div className={emptyStateClassName} style={emptyStateStyle}>
           <p className={emptyStateTextClassName} style={emptyStateTextStyle}>
-            {emptyStateText}
+            {emptyStateText ?? copy.empty}
           </p>
         </div>
       </div>

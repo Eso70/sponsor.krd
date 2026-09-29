@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   rowKey: (item: T) => string;
   emptyTitle: string;
+  emptyDescription?: string;
   minWidthClassName?: string;
 }
 
@@ -25,11 +26,12 @@ export function DataTable<T>({
   columns,
   rowKey,
   emptyTitle,
+  emptyDescription = "هیچ داتایەک بۆ پیشاندان نییە.",
   minWidthClassName = "min-w-[760px]",
 }: DataTableProps<T>) {
   if (!items.length) {
     return (
-      <EmptyState compact icon={Inbox} title={emptyTitle} description="هیچ داتایەک بۆ پیشاندان نییە." />
+      <EmptyState compact icon={Inbox} title={emptyTitle} description={emptyDescription} />
     );
   }
 

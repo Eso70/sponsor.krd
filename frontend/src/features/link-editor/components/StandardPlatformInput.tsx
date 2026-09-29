@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { modalInputClass } from "../modal-input-styles";
+import { arabicCountrySelectorCopy, englishCountrySelectorCopy, getEditorPlatformPlaceholder, type EditorCopy } from "../editor-copy";
 
 export const PHONE_PLATFORMS = ["whatsapp", "phone", "viber"] as const;
 
@@ -47,6 +48,7 @@ export function platformInputPlaceholder(platform: string): string {
 }
 
 export interface StandardPlatformInputProps {
+  copy?: EditorCopy;
   platform: string;
   value: string;
   onChange: (value: string) => void;
@@ -63,6 +65,7 @@ export interface StandardPlatformInputProps {
 }
 
 export function StandardPlatformInput({
+  copy,
   platform,
   value,
   onChange,
@@ -103,6 +106,7 @@ export function StandardPlatformInput({
       <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
         {phoneBased && (
           <CountrySelector
+            copy={copy?.language === "en" ? englishCountrySelectorCopy : copy ? arabicCountrySelectorCopy : undefined}
             value={countryCode || "964"}
             onChange={handleCountryChange}
             className={`h-11 shrink-0 ${countryClassName}`}
@@ -123,7 +127,7 @@ export function StandardPlatformInput({
               setTouched(true);
               onBlur?.();
             }}
-            placeholder={placeholder || platformInputPlaceholder(platform)}
+            placeholder={placeholder || (copy && getEditorPlatformPlaceholder(platform, copy)) || (copy?.language === "en" && !["whatsapp", "phone", "viber", "gps", "email", "website", "custom"].includes(platform) ? "Enter a value" : platformInputPlaceholder(platform))}
             className={modalInputClass(
               errorVisible,
               `h-11 min-w-0 flex-1 py-0 md:rounded-xl md:px-4 md:py-0 text-xs sm:text-sm ${inputClassName}`,
@@ -133,7 +137,7 @@ export function StandardPlatformInput({
             disabled={disabled}
           />
           {showClear && value && !disabled && (
-            <Tooltip content="سڕینەوە" side="top">
+            <Tooltip content={copy?.clear ?? "سڕینەوە"} side="top">
               <button
                 type="button"
                 onClick={() => {
@@ -141,8 +145,8 @@ export function StandardPlatformInput({
                   setTouched(false);
                 }}
                 className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-white/10 cursor-pointer"
-                aria-label="سڕینەوەی بەها"
-                title="سڕینەوە"
+                aria-label={copy?.clearValue ?? "سڕینەوەی بەها"}
+                title={copy?.clear ?? "سڕینەوە"}
               >
                 <X className="h-3.5 w-3.5" />
               </button>

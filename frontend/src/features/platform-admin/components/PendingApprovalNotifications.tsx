@@ -3,6 +3,8 @@
 import { Check, Loader2, X } from "lucide-react";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { formatNotificationDate } from "@/features/communications/format";
+import { useSettingsText } from "./use-settings-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 export interface ApprovalNotification {
   id: string;
@@ -26,12 +28,14 @@ export function PendingApprovalNotifications({
   reviewingId,
   onReview,
 }: PendingApprovalNotificationsProps) {
+  const t = useSettingsText();
+  const { locale } = usePlatformLocale();
   if (approvals.length === 0) return null;
 
   return (
     <>
       <p className="bg-slate-50/60 px-4 py-2 text-[10px] font-black uppercase tracking-wide text-slate-400 dark:bg-white/[0.02]">
-        پەسەندکردنە چاوەڕوانەکان
+        {t("پەسەندکردنە چاوەڕوانەکان")}
       </p>
       {approvals.map((approval) => {
         const reviewing = reviewingId === approval.id;
@@ -54,12 +58,12 @@ export function PendingApprovalNotifications({
                   {approval.permission}
                 </code>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-gray-400">
-                  خانەکان:{" "}
+                  {t("خانەکان:")}{" "}
                   {Object.keys(approval.requestedChanges || {}).join("، ") ||
-                    "هیچ"}
+                    t("هیچ")}
                 </p>
                 <p className="mt-1.5 text-[10px] text-slate-400 dark:text-gray-500">
-                  {formatNotificationDate(approval.requestedAt)}
+                  {formatNotificationDate(approval.requestedAt, locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ")}
                 </p>
 
                 <div className="mt-3 flex items-center gap-1.5">
@@ -76,7 +80,7 @@ export function PendingApprovalNotifications({
                     ) : (
                       <X className="h-3.5 w-3.5" />
                     )}
-                    ڕەتکردنەوە
+                    {t("ڕەتکردنەوە")}
                   </button>
                   <button
                     type="button"
@@ -91,7 +95,7 @@ export function PendingApprovalNotifications({
                     ) : (
                       <Check className="h-3.5 w-3.5" />
                     )}
-                    پەسەندکردن
+                    {t("پەسەندکردن")}
                   </button>
                 </div>
               </div>

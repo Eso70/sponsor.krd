@@ -11,8 +11,8 @@ export function BusinessLanguageSelector() {
 
   if (!canChangeLocale) return null;
 
-  const switchLabel =
-    locale === "ckb" ? t("switchToArabic") : t("switchToKurdish");
+  const nextLocale = locale === "ckb" ? "ar" : locale === "ar" ? "en" : "ckb";
+  const switchLabel = nextLocale === "ar" ? t("switchToArabic") : nextLocale === "en" ? t("switchToEnglish") : t("switchToKurdish");
 
   return (
     <Tooltip content={switchLabel} side="bottom">
@@ -20,10 +20,10 @@ export function BusinessLanguageSelector() {
         aria-label={switchLabel}
         aria-busy={saving}
         disabled={saving}
-        onClick={() => void changeLocale(locale === "ckb" ? "ar" : "ckb")}
+        onClick={() => void changeLocale(nextLocale)}
       >
         <span aria-hidden="true" className="text-xs font-bold leading-5">
-          {locale === "ckb" ? "AR" : "KU"}
+          {nextLocale === "ckb" ? "KU" : nextLocale.toUpperCase()}
         </span>
       </DashboardHeaderActionButton>
     </Tooltip>

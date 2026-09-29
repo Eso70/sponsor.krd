@@ -69,4 +69,11 @@ describe("HomeLanding platform theme", () => {
       screen.queryByText(/10,000|1,000,000|revenue/i),
     ).not.toBeInTheDocument();
   });
+
+  it("renders Arabic marketing copy when the root visitor selected Arabic", () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    render(<HomeLanding initialLocale="ar" />);
+    expect(screen.getByRole("heading", { name: /إدارة الإعلانات/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "شروط الاستخدام" })).toHaveAttribute("href", "/legal/terms");
+  });
 });

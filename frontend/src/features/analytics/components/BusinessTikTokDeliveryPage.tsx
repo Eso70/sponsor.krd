@@ -83,7 +83,7 @@ function formatNumber(value: number): string {
 
 function formatWhen(value: string, locale: string): string {
   const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : "en-US");
+  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ", { timeZone: "Asia/Baghdad" });
 }
 
 function ErrorRow({ item }: { item: TikTokDeliveryError }) {
@@ -216,7 +216,7 @@ export function BusinessTikTokDeliveryPage() {
     }
   };
 
-  if (loading) return <SkeletonTikTokDelivery />;
+  if (loading) return <SkeletonTikTokDelivery loadingLabel={t("loadingDelivery")} />;
 
   const pixelSilent = health.serverEvents > 0 && health.browserEvents === 0;
 

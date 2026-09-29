@@ -59,6 +59,9 @@ real published page data, with automatic direction for tenant text, and opens
 its public route. Omit the gallery when no pages are published. Keep contact
 in the shared navigation action and footer. Do not show dashboard controls,
 private data, sample gallery pages, or empty placeholders to anonymous visitors.
+The AR/KU visitor switch belongs in the shared navbar and must not reuse the
+authenticated Dashboard preference. Translate fixed interface labels while
+preserving business-authored content exactly as published.
 
 ---
 
@@ -82,9 +85,10 @@ real. Use clearly illustrative templates and interface states. Keep all copy
 and repeatable data in the centralized marketing content module so a future
 platform content manager can replace the source without replacing the UI.
 
-Sponsor.krd marketing prose and primary calls to action remain Kurdish. English
-is reserved for established product terms, concise top-level navigation, and
-the intentionally LTR marketing footer. Marketing primary CTAs use the fixed
+Sponsor.krd marketing prose and primary calls to action default to Kurdish;
+root visitors may switch presentation text to Arabic or English without changing
+direction. Product names and authored content are not translated automatically.
+Marketing primary CTAs use the fixed
 Sponsor.krd cyan-to-red brand gradient rather than the configurable platform accent. Visible
 marketing sentences do not use terminal full stops.
 

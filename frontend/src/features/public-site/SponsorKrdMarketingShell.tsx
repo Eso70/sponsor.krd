@@ -9,12 +9,15 @@ import {
 } from "@/lib/sponsor-krd-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { SponsorKrdMarketingFooter } from "./SponsorKrdMarketingFooter";
+import { RootPublicLanguageToggle, useRootPublicLocale } from "./RootPublicLocaleProvider";
+import { rootPublicCopy } from "./root-public-copy";
 
 export function SponsorKrdMarketingShell({
   children,
 }: {
   children: ReactNode;
 }) {
+  const { locale } = useRootPublicLocale();
   const [accent, setAccent] = useState(() =>
     parseWebsiteColor(SPONSOR_KRD_ACCENT_VALUE),
   );
@@ -42,6 +45,9 @@ export function SponsorKrdMarketingShell({
       logo={SPONSOR_KRD_LOGO}
       primaryActionColor={accent.css || SPONSOR_KRD_ACCENT_GRADIENT}
       primaryActionInk="#111827"
+      navbarCopy={rootPublicCopy[locale].navbar}
+      language={locale}
+      languageControl={<RootPublicLanguageToggle />}
       footer={<SponsorKrdMarketingFooter accentColor={accent.primary} />}
     >
       {children}

@@ -3,8 +3,8 @@
  * neutral communications feature so the business and platform-admin inboxes
  * cannot drift to different locales or field sets.
  */
-export function formatNotificationDate(isoDate: string) {
-  return new Date(isoDate).toLocaleDateString("ckb-IQ", {
+export function formatNotificationDate(isoDate: string, locale = "ckb-IQ") {
+  return new Date(isoDate).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",

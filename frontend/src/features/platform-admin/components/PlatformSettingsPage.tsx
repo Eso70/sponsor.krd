@@ -2,7 +2,7 @@
 
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import {
   Archive,
@@ -25,6 +25,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { StatCard } from "@/components/shared/StatCard";
 import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
+import { arabicColorGradientCopy } from "@/components/shared/color-gradient-arabic-copy";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import {
   createSponsorKrdThemeVariables,
@@ -37,12 +38,14 @@ import { InlineRequestError } from "@/components/shared/InlineRequestError";
 import {
   createUploadFailureError,
   inlineRequestErrorFromResponse,
+  localizeInlineRequestError,
   type InlineRequestErrorData,
   validateUploadFile,
 } from "@/lib/api/inline-request-error";
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
 import { applyCursorTheme } from "@/lib/utils/cursor-theme";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
 import {
   SPONSOR_KRD_FAVICON,
   SPONSOR_KRD_LOGO,
@@ -58,6 +61,11 @@ import {
   SkeletonMediaSettings,
   SkeletonRetentionSettings,
 } from "./PlatformSettingsSkeletons";
+import { useSettingsText } from "./use-settings-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
+import { arabicTikTokPixelCopy } from "@/features/analytics/tiktok-pixel-arabic-copy";
+import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
 
 type Tab =
   "general" | "security" | "retention" | "media" | "tiktok" | "tiktok-ads";
@@ -143,6 +151,12 @@ const tabs = [
 ];
 
 export function PlatformSettingsPage() {
+  const t = useSettingsText();
+  const { locale } = usePlatformLocale();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
+  const localeRef = useRef(locale);
+  useEffect(() => { localeRef.current = locale; }, [locale]);
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("tab") === "tiktok-ads"
@@ -202,13 +216,13 @@ export function PlatformSettingsPage() {
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(payload.message || "Unable to load settings");
+          throw new Error(platformRequestError(payload.message, tRef.current("Unable to load settings"), localeRef.current));
         }
         if (!cancelled) applySettings(payload.data as PlatformSettings);
       } catch (error) {
         if (!cancelled) {
           toast.error(
-            error instanceof Error ? error.message : "Unable to load settings",
+            platformRequestError(error instanceof Error ? error.message : null, tRef.current("Unable to load settings"), localeRef.current),
           );
         }
       } finally {
@@ -249,8 +263,8 @@ export function PlatformSettingsPage() {
     if (!response.ok) {
       const message = Array.isArray(payload.message)
         ? payload.message.join(", ")
-        : payload.message || "Unable to save settings";
-      throw new Error(message);
+        : payload.message || tRef.current("Unable to save settings");
+      throw new Error(platformRequestError(message, tRef.current("Unable to save settings"), localeRef.current));
     }
     return payload;
   }, []);
@@ -264,7 +278,7 @@ export function PlatformSettingsPage() {
       setSessions(payload.data?.sessions || []);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to load sessions",
+        platformRequestError(error instanceof Error ? error.message : null, tRef.current("Unable to load sessions"), localeRef.current),
       );
     } finally {
       setIsSecurityLoading(false);
@@ -280,9 +294,7 @@ export function PlatformSettingsPage() {
       setRetention(payload.data as RetentionStatus);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "نەتوانرا ڕێکخستنەکانی داتا بهێنرێن",
+        platformRequestError(error instanceof Error ? error.message : null, tRef.current("نەتوانرا ڕێکخستنەکانی داتا بهێنرێن"), localeRef.current),
       );
     } finally {
       setIsRetentionLoading(false);
@@ -298,9 +310,7 @@ export function PlatformSettingsPage() {
       setMedia(payload.data as MediaStatus);
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "نەتوانرا ڕێکخستنەکانی میدیا بهێنرێن",
+        platformRequestError(error instanceof Error ? error.message : null, tRef.current("نەتوانرا ڕێکخستنەکانی میدیا بهێنرێن"), localeRef.current),
       );
     } finally {
       setIsMediaLoading(false);
@@ -342,11 +352,11 @@ export function PlatformSettingsPage() {
           cleanup_hour_utc,
         }),
       });
-      toast.success("ڕێکخستنەکانی ماوەی هەڵگرتن پاشەکەوت کران");
+      toast.success(t("ڕێکخستنەکانی ماوەی هەڵگرتن پاشەکەوت کران"));
       await loadRetention();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پاشەکەوتکردن سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("پاشەکەوتکردن سەرکەوتوو نەبوو"), locale),
       );
     } finally {
       setIsRetentionSaving(false);
@@ -367,11 +377,11 @@ export function PlatformSettingsPage() {
         (sum: number, value) => sum + Number(value),
         0,
       );
-      toast.success(`${counts.toLocaleString("en-US")} تۆماری کۆن پاککرایەوە`);
+      toast.success(`${counts.toLocaleString("en-US")} ${t("تۆماری کۆن پاککرایەوە")}`);
       await loadRetention();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پاککردنەوە سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("پاککردنەوە سەرکەوتوو نەبوو"), locale),
       );
       throw error;
     } finally {
@@ -394,7 +404,7 @@ export function PlatformSettingsPage() {
     if (!media) return;
     const selected = media.policy.allowed_formats.includes(format);
     if (selected && media.policy.allowed_formats.length === 1) {
-      toast.error("لانیکەم یەک جۆری فایل دەبێت چالاک بێت");
+      toast.error(t("لانیکەم یەک جۆری فایل دەبێت چالاک بێت"));
       return;
     }
     updateMediaField(
@@ -413,11 +423,11 @@ export function PlatformSettingsPage() {
         method: "PUT",
         body: JSON.stringify(media.policy),
       });
-      toast.success("ڕێکخستنەکانی میدیا پاشەکەوت کران");
+      toast.success(t("ڕێکخستنەکانی میدیا پاشەکەوت کران"));
       await loadMedia();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پاشەکەوتکردن سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("پاشەکەوتکردن سەرکەوتوو نەبوو"), locale),
       );
     } finally {
       setIsMediaSaving(false);
@@ -432,12 +442,12 @@ export function PlatformSettingsPage() {
         body: JSON.stringify({ confirm: true }),
       });
       toast.success(
-        `${Number(payload.data?.deleted || 0).toLocaleString("en-US")} فایلی بەکارنەهاتوو پاککرایەوە`,
+        `${Number(payload.data?.deleted || 0).toLocaleString("en-US")} ${t("فایلی بەکارنەهاتوو پاککرایەوە")}`,
       );
       await loadMedia();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "پاککردنەوە سەرکەوتوو نەبوو",
+        platformRequestError(error instanceof Error ? error.message : null, t("پاککردنەوە سەرکەوتوو نەبوو"), locale),
       );
       throw error;
     } finally {
@@ -487,7 +497,7 @@ export function PlatformSettingsPage() {
         if (assetType === "logo") setLogo(url);
         if (assetType === "avatar") setAvatar(url);
         if (assetType === "favicon") setFavicon(url);
-        toast.success("Image uploaded. Save to apply the change.");
+        toast.success(t("Image uploaded. Save to apply the change."));
         return url;
       } catch {
         setAssetUploadError(createUploadFailureError());
@@ -530,10 +540,10 @@ export function PlatformSettingsPage() {
           detail: { ...brandingResponse.data, ...profileResponse.data },
         }),
       );
-      toast.success("General settings saved");
+      toast.success(t("General settings saved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to save settings",
+        platformRequestError(error instanceof Error ? error.message : null, t("Unable to save settings"), locale),
       );
     } finally {
       setIsGeneralSaving(false);
@@ -549,10 +559,10 @@ export function PlatformSettingsPage() {
       setSessions((current) =>
         current.filter((session) => session.id !== sessionId),
       );
-      toast.success("Session signed out");
+      toast.success(t("Session signed out"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to sign out session",
+        platformRequestError(error instanceof Error ? error.message : null, t("Unable to sign out session"), locale),
       );
     } finally {
       setRevokingSession(null);
@@ -564,10 +574,10 @@ export function PlatformSettingsPage() {
     try {
       await request("/api/platform/settings/sessions", { method: "DELETE" });
       setSessions((current) => current.filter((session) => session.is_current));
-      toast.success("All other sessions signed out");
+      toast.success(t("All other sessions signed out"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to sign out sessions",
+        platformRequestError(error instanceof Error ? error.message : null, t("Unable to sign out sessions"), locale),
       );
     } finally {
       setRevokingSession(null);
@@ -583,37 +593,37 @@ export function PlatformSettingsPage() {
     }
   > = {
     general: {
-      title: "ڕێکخستنە گشتییەکان",
-      description: "ناوی سیستەم، ڕەنگ و لۆگۆی پلاتفۆرم دیاری بکە.",
+      title: t("ڕێکخستنە گشتییەکان"),
+      description: t("ناوی سیستەم، ڕەنگ و لۆگۆی پلاتفۆرم دیاری بکە."),
       icon: Globe,
     },
     security: {
-      title: "چوونەژوورەوە و دانیشتنەکان",
+      title: t("چوونەژوورەوە و دانیشتنەکان"),
       description:
-        "پاسوۆرد، دانیشتنە چالاکەکان و مێژووی چوونەژوورەوە بەڕێوەببە.",
+        t("پاسوۆرد، دانیشتنە چالاکەکان و مێژووی چوونەژوورەوە بەڕێوەببە."),
       icon: Lock,
     },
     retention: {
-      title: "داتا و ماوەی هەڵگرتن",
+      title: t("داتا و ماوەی هەڵگرتن"),
       description:
-        "ماوەی هەڵگرتنی تۆمارە کارگێڕییەکان دیاری بکە و پاککردنەوەی پارێزراو بەڕێوەببە.",
+        t("ماوەی هەڵگرتنی تۆمارە کارگێڕییەکان دیاری بکە و پاککردنەوەی پارێزراو بەڕێوەببە."),
       icon: Database,
     },
     media: {
-      title: "میدیا و بارکردن",
+      title: t("میدیا و بارکردن"),
       description:
-        "قەبارە، جۆر، کوالێتی و پاککردنەوەی وێنە بارکراوەکان بەڕێوەببە.",
+        t("قەبارە، جۆر، کوالێتی و پاککردنەوەی وێنە بارکراوەکان بەڕێوەببە."),
       icon: ImageIcon,
     },
     tiktok: {
-      title: DASHBOARD_PAGE_LABELS.tiktokSettings,
+      title: t(DASHBOARD_PAGE_LABELS.tiktokSettings),
       description:
-        "Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە.",
+        t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
       icon: Radio,
     },
     "tiktok-ads": {
-      title: "هەژماری ڕیکلامی تیکتۆک",
-      description: "بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی پلاتفۆرم لە تیکتۆک.",
+      title: t("هەژماری ڕیکلامی تیکتۆک"),
+      description: t("بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی پلاتفۆرم لە تیکتۆک."),
       icon: TbBrandTiktok,
     },
   };
@@ -625,36 +635,40 @@ export function PlatformSettingsPage() {
       <StatCardGrid>
         <StatCard
           loading={isGeneralLoading}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Globe}
-          label="ڕێکخستنە گشتییەکان"
+          label={t("ڕێکخستنە گشتییەکان")}
           value="4"
           color="blue"
         />
         <StatCard
           loading={isSecurityLoading && sessions.length === 0}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Lock}
-          label="چوونەژوورەوە و دانیشتنەکان"
+          label={t("چوونەژوورەوە و دانیشتنەکان")}
           value="3"
           color="green"
         />
         <StatCard
           loading={isRetentionLoading && !retention}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Database}
-          label="پاککردنەوەی خۆکار"
-          value={retention?.policy.automatic_cleanup ? "چالاک" : "ناچالاک"}
+          label={t("پاککردنەوەی خۆکار")}
+          value={t(retention?.policy.automatic_cleanup ? "چالاک" : "ناچالاک")}
           color="purple"
         />
         <StatCard
           loading={isMediaLoading && !media}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={ImageIcon}
-          label="فایلی میدیا"
+          label={t("فایلی میدیا")}
           value={(media?.stats.asset_count || 0).toLocaleString("en-US")}
           color="slate"
         />
       </StatCardGrid>
 
       <SegmentedTabs
-        tabs={tabs}
+        tabs={tabs.map((item) => ({ ...item, label: t(item.label) }))}
         value={tab}
         onChange={changeTab}
         accent="var(--sponsor-krd-accent)"
@@ -662,7 +676,16 @@ export function PlatformSettingsPage() {
 
       {tab === "tiktok" && (
         <ThemeProvider websiteColor={accentColor}>
-          <BusinessTikTokPixelConfigPage owner="platform" />
+          <BusinessTikTokPixelConfigPage
+            owner="platform"
+            copy={locale === "ar" ? {
+              ...arabicTikTokPixelCopy,
+              description: t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
+            } : locale === "en" ? {
+              ...englishBusinessMessages.TikTokPixel,
+              description: t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
+            } : undefined}
+          />
         </ThemeProvider>
       )}
 
@@ -683,7 +706,7 @@ export function PlatformSettingsPage() {
           <div className="mt-2 border-t border-slate-100 pt-5 dark:border-white/5">
             {isGeneralLoading && (
               <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3 text-center text-xs text-slate-500 dark:bg-white/5 dark:text-slate-300">
-                Loading saved settings…
+                {t("Loading saved settings…")}
               </div>
             )}
             <div className="grid gap-5 sm:grid-cols-2">
@@ -693,14 +716,14 @@ export function PlatformSettingsPage() {
                     <label className="group absolute left-5 top-7 h-24 w-24 rotate-[-8deg] cursor-pointer overflow-hidden rounded-full border-4 border-white bg-white shadow-xl ring-1 ring-gray-200 transition hover:z-30 hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
                       <Image
                         src={avatar || SPONSOR_KRD_LOGO_MARK}
-                        alt="Default avatar"
+                        alt={t("Default avatar")}
                         width={112}
                         height={112}
                         className="h-full w-full object-cover"
                         unoptimized
                       />
                       <UploadOverlay
-                        label={uploadingAsset === "avatar" ? "…" : "ئەڤاتار"}
+                        label={uploadingAsset === "avatar" ? "…" : t("ئەڤاتار")}
                       />
                       <input
                         type="file"
@@ -715,14 +738,14 @@ export function PlatformSettingsPage() {
                     <label className="group absolute right-6 top-4 h-20 w-20 rotate-[10deg] cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-lg ring-1 ring-gray-200 transition hover:z-30 hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
                       <Image
                         src={favicon || SPONSOR_KRD_FAVICON}
-                        alt="Favicon"
+                        alt={t("Favicon")}
                         width={96}
                         height={96}
                         className="h-full w-full object-contain"
                         unoptimized
                       />
                       <UploadOverlay
-                        label={uploadingAsset === "favicon" ? "…" : "فایڤ"}
+                        label={uploadingAsset === "favicon" ? "…" : t("فایڤ")}
                       />
                       <input
                         type="file"
@@ -737,14 +760,14 @@ export function PlatformSettingsPage() {
                     <label className="group absolute left-1/2 top-12 z-20 h-32 w-32 -translate-x-1/2 cursor-pointer overflow-hidden rounded-3xl border-4 border-white bg-white p-3 shadow-2xl ring-1 ring-gray-200 transition hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
                       <Image
                         src={logo || SPONSOR_KRD_LOGO}
-                        alt="Logo"
+                        alt={t("Logo")}
                         width={144}
                         height={144}
                         className="h-full w-full object-contain"
                         unoptimized
                       />
                       <UploadOverlay
-                        label={uploadingAsset === "logo" ? "…" : "لۆگۆ"}
+                        label={uploadingAsset === "logo" ? "…" : t("لۆگۆ")}
                       />
                       <input
                         type="file"
@@ -762,13 +785,13 @@ export function PlatformSettingsPage() {
                       className="h-2 w-2 rounded-full"
                       style={{ background: parseWebsiteColor(accentColor).css }}
                     />
-                    Logo<span>·</span>Avatar<span>·</span>Favicon
+                    {t("Logo")}<span>·</span>{t("Avatar")}<span>·</span>{t("Favicon")}
                   </div>
                 </div>
                 {assetUploadError && (
                   <InlineRequestError
                     className="mx-auto mt-3 max-w-xl"
-                    error={assetUploadError}
+                    error={localizeInlineRequestError(assetUploadError, locale)}
                   />
                 )}
                 <div className="mt-3 flex justify-center">
@@ -783,42 +806,42 @@ export function PlatformSettingsPage() {
                     >
                       <Palette className="h-3.5 w-3.5" />
                     </span>
-                    <span>ڕەنگی سەرەکی</span>
+                    <span>{t("ڕەنگی سەرەکی")}</span>
                   </button>
                 </div>
               </div>
-              <Field label="ناوی سیستەم">
+              <Field label={t("ناوی سیستەم")}>
                 <input
                   value={sponsorKrdName}
                   onChange={(e) => setSponsorKrdName(e.target.value)}
-                  placeholder="بۆ نموونە: Sponsor.krd"
+                  placeholder={t("بۆ نموونە: Sponsor.krd")}
                   className={inputClass}
                   dir="ltr"
                 />
               </Field>
-              <Field label="ناوی بەکارهێنەر">
+              <Field label={t("ناوی بەکارهێنەر")}>
                 <input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="ناوی بەکارهێنەر"
+                  placeholder={t("ناوی بەکارهێنەر")}
                   className={inputClass}
                   dir="ltr"
                 />
               </Field>
-              <Field label="ئیمەیڵ">
+              <Field label={t("ئیمەیڵ")}>
                 <input
                   type="email"
                   value={adminEmail}
-                  placeholder="ئیمەیڵی بەڕێوەبەر"
+                  placeholder={t("ئیمەیڵی بەڕێوەبەر")}
                   className={`${inputClass} cursor-not-allowed opacity-70`}
                   dir="ltr"
                   readOnly
                 />
                 <p className="mt-1 text-[10px] text-slate-400">
-                  لە ڕێکخستنی سێرڤەرەوە دیاری کراوە و ناگۆڕدرێت.
+                  {t("لە ڕێکخستنی سێرڤەرەوە دیاری کراوە و ناگۆڕدرێت.")}
                 </p>
               </Field>
-              <Field label="ژمارەی مۆبایل">
+              <Field label={t("ژمارەی مۆبایل")}>
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -827,10 +850,10 @@ export function PlatformSettingsPage() {
                   dir="ltr"
                 />
               </Field>
-              <Field label="دۆمەین">
+              <Field label={t("دۆمەین")}>
                 <input
                   value={appUrl}
-                  placeholder="دۆمەین"
+                  placeholder={t("دۆمەین")}
                   className={`${inputClass} opacity-70`}
                   dir="ltr"
                   readOnly
@@ -839,7 +862,7 @@ export function PlatformSettingsPage() {
             </div>
             <div className="mt-5 flex justify-end border-t border-slate-100 pt-4 dark:border-white/5">
               <SaveButton
-                label={isGeneralSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن"}
+                label={t(isGeneralSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")}
                 onClick={() => void saveGeneralSettings()}
                 disabled={
                   isGeneralLoading || isGeneralSaving || !!uploadingAsset
@@ -870,16 +893,16 @@ export function PlatformSettingsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                    چوونەژوورەوە بە Google
+                    {t("چوونەژوورەوە بە Google")}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    تەنها ئیمەیڵی Googleـی ڕێگەپێدراو دەتوانێت بچێتە ژوورەوە.
+                    {t("تەنها ئیمەیڵی Googleـی ڕێگەپێدراو دەتوانێت بچێتە ژوورەوە.")}
                   </p>
                 </div>
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
                 <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                  Google OAuth چالاکە
+                  {t("Google OAuth چالاکە")}
                 </p>
                 <p
                   className="mt-1 break-all text-xs text-emerald-700 dark:text-emerald-300"
@@ -894,10 +917,10 @@ export function PlatformSettingsPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                    دانیشتنە چالاکەکان
+                    {t("دانیشتنە چالاکەکان")}
                   </h3>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    ئامێرەکانی چوونەژوورەوە ببینە و بەڕێوەیانببە.
+                    {t("ئامێرەکانی چوونەژوورەوە ببینە و بەڕێوەیانببە.")}
                   </p>
                 </div>
                 <button
@@ -905,7 +928,7 @@ export function PlatformSettingsPage() {
                   onClick={() => void loadLoginSecurity()}
                   disabled={isSecurityLoading}
                   className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/5"
-                  aria-label="Refresh sessions"
+                  aria-label={t("Refresh sessions")}
                 >
                   <MotionSpinner active={isSecurityLoading}>
                     <RefreshCw className="h-4 w-4" />
@@ -914,10 +937,10 @@ export function PlatformSettingsPage() {
               </div>
               <div className="space-y-3">
                 {isSecurityLoading && sessions.length === 0 ? (
-                  <SkeletonSessionList rows={3} />
+                  <SkeletonSessionList rows={3} loadingLabel={locale === "ar" ? "جارٍ تحميل الجلسات" : locale === "en" ? "Loading sessions" : "دانیشتنەکان بار دەکرێن"} />
                 ) : sessions.length === 0 ? (
                   <p className="py-8 text-center text-xs text-slate-400">
-                    No active sessions found.
+                    {t("No active sessions found.")}
                   </p>
                 ) : (
                   sessions.map((session) => (
@@ -929,17 +952,17 @@ export function PlatformSettingsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
-                            {describeUserAgent(session.user_agent)}
+                            {describeUserAgent(session.user_agent, t)}
                           </p>
                           {session.is_current && (
                             <span className="sa-soft sa-soft-border rounded-full border px-2 py-0.5 text-[10px] font-bold">
-                              Current
+                              {t("Current")}
                             </span>
                           )}
                         </div>
                         <p className="mt-1 truncate text-[11px] text-slate-400">
-                          {session.ip_address || "Unknown IP"} ·{" "}
-                          {formatSecurityDate(session.created_at)}
+                          {session.ip_address || t("Unknown IP")} ·{" "}
+                          {formatSecurityDate(session.created_at, locale, t)}
                         </p>
                       </div>
                       {!session.is_current && (
@@ -948,7 +971,7 @@ export function PlatformSettingsPage() {
                           onClick={() => void revokeSession(session.id)}
                           disabled={revokingSession !== null}
                           className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-500/10"
-                          aria-label="Sign out session"
+                          aria-label={t("Sign out session")}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -965,8 +988,8 @@ export function PlatformSettingsPage() {
                   className="mt-4 w-full cursor-pointer rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
                 >
                   {revokingSession === "all"
-                    ? "Signing out…"
-                    : "Sign out all other sessions"}
+                    ? t("Signing out…")
+                    : t("Sign out all other sessions")}
                 </button>
               )}
             </div>
@@ -990,15 +1013,15 @@ export function PlatformSettingsPage() {
                 <div className="grid gap-3">
                   <RetentionCount
                     icon={Archive}
-                    label="پەیوەندییە ئەرشیڤکراوەکان"
+                    label={t("پەیوەندییە ئەرشیڤکراوەکان")}
                     value={retention.eligible.communications}
                   />
                 </div>
 
                 <div className="grid gap-5">
                   <RetentionDaysField
-                    label="پەیام و ڕاگەیاندنی ئەرشیڤکراو"
-                    hint="30–3650 ڕۆژ"
+                    label={t("پەیام و ڕاگەیاندنی ئەرشیڤکراو")}
+                    hint={t("30–3650 ڕۆژ")}
                     value={retention.policy.communication_history_days}
                     min={30}
                     max={3650}
@@ -1015,15 +1038,14 @@ export function PlatformSettingsPage() {
                       onChange={(value) =>
                         updateRetentionField("automatic_cleanup", value)
                       }
-                      label="پاککردنەوەی خۆکار چالاک بکە"
+                      label={t("پاککردنەوەی خۆکار چالاک بکە")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      تەنها تۆمارە کۆن و تەواوبووەکان بە پارچەی بچووک پاک
-                      دەکرێنەوە.
+                      {t("تەنها تۆمارە کۆن و تەواوبووەکان بە پارچەی بچووک پاک دەکرێنەوە.")}
                     </p>
                   </div>
                   <CustomSelect
-                    label="کاتی پاککردنەوە (UTC)"
+                    label={t("کاتی پاککردنەوە (UTC)")}
                     value={String(retention.policy.cleanup_hour_utc)}
                     options={Array.from({ length: 24 }, (_, hour) => ({
                       value: String(hour),
@@ -1041,24 +1063,25 @@ export function PlatformSettingsPage() {
                   <div className="min-w-0 text-xs text-slate-500 dark:text-slate-400">
                     {retention.last_run ? (
                       <p>
-                        دوا پاککردنەوە:{" "}
+                        {t("دوا پاککردنەوە:")}{" "}
                         {formatSecurityDate(
                           retention.last_run.completed_at ||
                             retention.last_run.started_at,
+                          locale,
+                          t,
                         )}{" "}
                         ·{" "}
                         {retention.last_run.status === "completed"
-                          ? "سەرکەوتوو"
+                          ? t("سەرکەوتوو")
                           : retention.last_run.status === "running"
-                            ? "لە کاردایە"
-                            : "شکستی هێنا"}
+                            ? t("لە کاردایە")
+                            : t("شکستی هێنا")}
                       </p>
                     ) : (
-                      <p>هێشتا هیچ پاککردنەوەیەک ئەنجام نەدراوە.</p>
+                      <p>{t("هێشتا هیچ پاککردنەوەیەک ئەنجام نەدراوە.")}</p>
                     )}
                     <p className="mt-1">
-                      داتای چالاکی بزنس، پەڕەکان و کۆی ئاماری ئەنالیتیکس ناخرێنە
-                      ناو پاککردنەوە.
+                      {t("داتای چالاکی بزنس، پەڕەکان و کۆی ئاماری ئەنالیتیکس ناخرێنە ناو پاککردنەوە.")}
                     </p>
                   </div>
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -1068,11 +1091,11 @@ export function PlatformSettingsPage() {
                       disabled={isCleanupRunning || isRetentionSaving}
                       className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     >
-                      <Trash2 className="h-4 w-4" /> پاککردنەوە ئێستا
+                      <Trash2 className="h-4 w-4" /> {t("پاککردنەوە ئێستا")}
                     </button>
                     <SaveButton
                       label={
-                        isRetentionSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن"
+                        t(isRetentionSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")
                       }
                       onClick={() => void saveRetention()}
                       disabled={isRetentionSaving || isCleanupRunning}
@@ -1086,7 +1109,7 @@ export function PlatformSettingsPage() {
                 onClick={() => void loadRetention()}
                 className="mx-auto flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 dark:border-white/10 dark:text-slate-300"
               >
-                <RefreshCw className="h-4 w-4" /> دووبارە هەوڵبدەوە
+                <RefreshCw className="h-4 w-4" /> {t("دووبارە هەوڵبدەوە")}
               </button>
             )}
           </div>
@@ -1109,29 +1132,29 @@ export function PlatformSettingsPage() {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <RetentionCount
                     icon={ImageIcon}
-                    label="فایلی تۆمارکراو"
+                    label={t("فایلی تۆمارکراو")}
                     value={media.stats.asset_count}
                   />
                   <MediaSizeCard
                     icon={HardDrive}
-                    label="بۆشایی بەکارهاتوو"
+                    label={t("بۆشایی بەکارهاتوو")}
                     bytes={media.stats.stored_bytes}
                   />
                   <MediaSizeCard
                     icon={Archive}
-                    label="بۆشایی پاشەکەوتکراو"
+                    label={t("بۆشایی پاشەکەوتکراو")}
                     bytes={media.stats.saved_bytes}
                   />
                   <RetentionCount
                     icon={Trash2}
-                    label="فایلی بەکارنەهاتوو"
+                    label={t("فایلی بەکارنەهاتوو")}
                     value={media.unused_assets}
                   />
                 </div>
 
                 <div>
                   <p className="mb-3 text-xs font-bold text-slate-700 dark:text-slate-200">
-                    جۆری فایلە ڕێگەپێدراوەکان
+                    {t("جۆری فایلە ڕێگەپێدراوەکان")}
                   </p>
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
                     {(["jpeg", "png", "ico"] as MediaFormat[]).map((format) => (
@@ -1163,7 +1186,7 @@ export function PlatformSettingsPage() {
 
                 <div className="grid gap-5 sm:grid-cols-2">
                   <MediaNumberField
-                    label="زۆرترین قەبارەی فایل"
+                    label={t("زۆرترین قەبارەی فایل")}
                     suffix="MB"
                     value={media.policy.max_upload_size_mb}
                     min={1}
@@ -1173,7 +1196,7 @@ export function PlatformSettingsPage() {
                     }
                   />
                   <MediaNumberField
-                    label="زۆرترین ڕەهەندی وێنە"
+                    label={t("زۆرترین ڕەهەندی وێنە")}
                     suffix="px"
                     value={media.policy.max_image_dimension}
                     min={512}
@@ -1184,7 +1207,7 @@ export function PlatformSettingsPage() {
                     }
                   />
                   <MediaNumberField
-                    label="کوالێتی پەستاندن"
+                    label={t("کوالێتی پەستاندن")}
                     suffix="%"
                     value={media.policy.image_quality}
                     min={40}
@@ -1195,8 +1218,8 @@ export function PlatformSettingsPage() {
                     disabled={!media.policy.optimize_images}
                   />
                   <MediaNumberField
-                    label="ماوەی پاراستنی فایلی بەکارنەهاتوو"
-                    suffix="کاتژمێر"
+                    label={t("ماوەی پاراستنی فایلی بەکارنەهاتوو")}
+                    suffix={t("کاتژمێر")}
                     value={media.policy.unused_grace_hours}
                     min={24}
                     max={720}
@@ -1213,10 +1236,10 @@ export function PlatformSettingsPage() {
                       onChange={(value) =>
                         updateMediaField("optimize_images", value)
                       }
-                      label="پەستاندن و کەمکردنەوەی ڕەهەند بە خۆکار"
+                      label={t("پەستاندن و کەمکردنەوەی ڕەهەند بە خۆکار")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      JPG، PNG و WebP بەبێ گۆڕینی جۆری فایل خێراتر دەکرێن.
+                      {t("JPG، PNG و WebP بەبێ گۆڕینی جۆری فایل خێراتر دەکرێن.")}
                     </p>
                   </div>
                   <div className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5">
@@ -1225,19 +1248,17 @@ export function PlatformSettingsPage() {
                       onChange={(value) =>
                         updateMediaField("auto_cleanup_unused", value)
                       }
-                      label="پاککردنەوەی خۆکاری فایلی بەکارنەهاتوو"
+                      label={t("پاککردنەوەی خۆکاری فایلی بەکارنەهاتوو")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      تەنها فایلێک پاک دەکرێتەوە کە لە هیچ بزنس یان پەڕەیەکدا
-                      بەکارنەهاتووە.
+                      {t("تەنها فایلێک پاک دەکرێتەوە کە لە هیچ بزنس یان پەڕەیەکدا بەکارنەهاتووە.")}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[11px] leading-5 text-slate-400">
-                    پشکنینی ناوەڕۆکی فایل و ڕەتکردنەوەی فایلە ساختەکان هەمیشە
-                    چالاکە.
+                    {t("پشکنینی ناوەڕۆکی فایل و ڕەتکردنەوەی فایلە ساختەکان هەمیشە چالاکە.")}
                   </p>
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <button
@@ -1250,12 +1271,11 @@ export function PlatformSettingsPage() {
                       }
                       className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     >
-                      <Trash2 className="h-4 w-4" /> پاککردنەوەی فایلی
-                      بەکارنەهاتوو
+                      <Trash2 className="h-4 w-4" /> {t("پاککردنەوەی فایلی بەکارنەهاتوو")}
                     </button>
                     <SaveButton
                       label={
-                        isMediaSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن"
+                        t(isMediaSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")
                       }
                       onClick={() => void saveMedia()}
                       disabled={isMediaSaving || isMediaCleanupRunning}
@@ -1269,7 +1289,7 @@ export function PlatformSettingsPage() {
                 onClick={() => void loadMedia()}
                 className="mx-auto flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 dark:border-white/10 dark:text-slate-300"
               >
-                <RefreshCw className="h-4 w-4" /> دووبارە هەوڵبدەوە
+                <RefreshCw className="h-4 w-4" /> {t("دووبارە هەوڵبدەوە")}
               </button>
             )}
           </div>
@@ -1283,25 +1303,30 @@ export function PlatformSettingsPage() {
         onClose={() => setShowColorPicker(false)}
         solidFallback={SPONSOR_KRD_ACCENT_COLOR}
         gradientFallback="#0066ff"
+        copy={locale === "ar" ? arabicColorGradientCopy : locale === "en" ? englishBusinessMessages.SettingsColorPicker : undefined}
       />
       <ConfirmDeleteModal
         isOpen={showCleanupConfirm}
         onClose={() => setShowCleanupConfirm(false)}
         onConfirm={runCleanup}
-        title="پاککردنەوەی داتای کۆن"
-        message="هەموو تۆمارە کۆنە شیاوەکان بەپێی ماوە دیاریکراوەکان بە هەمیشەیی پاک دەکرێنەوە. داتای چالاک ناگیرێتەوە."
-        confirmLabel="پاککردنەوە ئێستا"
-        loadingLabel="پاک دەکرێتەوە…"
+        title={t("پاککردنەوەی داتای کۆن")}
+        message={t("هەموو تۆمارە کۆنە شیاوەکان بەپێی ماوە دیاریکراوەکان بە هەمیشەیی پاک دەکرێنەوە. داتای چالاک ناگیرێتەوە.")}
+        confirmLabel={t("پاککردنەوە ئێستا")}
+        loadingLabel={t("پاک دەکرێتەوە…")}
+        cancelLabel={t("پاشگەزبوونەوە")}
+        closeLabel={t("داخستن")}
         isDeleting={isCleanupRunning}
       />
       <ConfirmDeleteModal
         isOpen={showMediaCleanupConfirm}
         onClose={() => setShowMediaCleanupConfirm(false)}
         onConfirm={cleanupMedia}
-        title="پاککردنەوەی فایلی بەکارنەهاتوو"
-        message="تەنها فایلە کۆنە تۆمارکراوەکان پاک دەکرێنەوە کە لە هیچ ناسنامەی بزنس، پەڕەی لینک یان داواکاری گۆڕانکارییەکدا بەکارنەهاتوون."
-        confirmLabel="پاککردنەوە"
-        loadingLabel="پاک دەکرێتەوە…"
+        title={t("پاککردنەوەی فایلی بەکارنەهاتوو")}
+        message={t("تەنها فایلە کۆنە تۆمارکراوەکان پاک دەکرێنەوە کە لە هیچ ناسنامەی بزنس، پەڕەی لینک یان داواکاری گۆڕانکارییەکدا بەکارنەهاتوون.")}
+        confirmLabel={t("پاککردنەوە")}
+        loadingLabel={t("پاک دەکرێتەوە…")}
+        cancelLabel={t("پاشگەزبوونەوە")}
+        closeLabel={t("داخستن")}
         isDeleting={isMediaCleanupRunning}
       />
     </div>
@@ -1352,6 +1377,7 @@ function RetentionDaysField({
   max: number;
   onChange: (value: number) => void;
 }) {
+  const t = useSettingsText();
   return (
     <Field label={label}>
       <div className="relative">
@@ -1370,7 +1396,7 @@ function RetentionDaysField({
           dir="ltr"
         />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400">
-          ڕۆژ
+          {t("ڕۆژ")}
         </span>
       </div>
       <p className="mt-1 text-[10px] text-slate-400">{hint}</p>
@@ -1464,8 +1490,8 @@ function MediaNumberField({
 
 /* ─── Shared UI ─── */
 
-function describeUserAgent(userAgent: string | null): string {
-  if (!userAgent) return "Unknown device";
+function describeUserAgent(userAgent: string | null, t: (source: string) => string): string {
+  if (!userAgent) return t("Unknown device");
   const browser = userAgent.includes("Edg/")
     ? "Edge"
     : userAgent.includes("Chrome/")
@@ -1485,13 +1511,13 @@ function describeUserAgent(userAgent: string | null): string {
           ? "macOS"
           : userAgent.includes("Linux")
             ? "Linux"
-            : "Unknown device";
-  return `${browser} on ${platform}`;
+            : t("Unknown device");
+  return `${browser} ${t("on")} ${platform}`;
 }
 
-function formatSecurityDate(value: string): string {
+function formatSecurityDate(value: string, locale: string, t: (source: string) => string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Unknown time" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? t("Unknown time") : date.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ");
 }
 
 const inputClass =

@@ -52,6 +52,7 @@ export function BusinessLinktreesPage(props: BusinessLinktreesPageProps) {
       copy={{ ...copy, ...props.copy }}
       listCopy={businessMessages[locale].LinktreeList}
       profitCopy={businessMessages[locale].CampaignProfit}
+      calendarLocale={locale}
       trafficLabels={{
         column: businessMessages[locale].LinktreeList.traffic,
         views: businessMessages[locale].LinktreeList.views,

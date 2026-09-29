@@ -16,8 +16,7 @@ import { communicationRequest } from "./api";
 import { usePolling } from "@/lib/utils/usePolling";
 import { ChatComposer } from "./ChatComposer";
 import type { Conversation } from "./types";
-
-const CATEGORY_KEYS = ["account", "billing", "technical", "feature_request", "security", "verification", "other"] as const;
+import { CONVERSATION_CATEGORY_KEYS } from "./conversation-categories";
 
 const STATUS_LABELS: Record<string, { key: "open" | "waitingBusiness" | "waitingPlatform" | "resolved" | "archived"; color: string }> = {
   open: { key: "open", color: "text-blue-600 dark:text-blue-400" },
@@ -42,7 +41,7 @@ const inputClass =
 type View = "list" | "thread" | "new";
 
 function messageError(error: unknown, fallback: string, locale: string): string {
-  return locale === "ar" ? fallback : error instanceof Error ? error.message : fallback;
+  return locale !== "ckb" ? fallback : error instanceof Error ? error.message : fallback;
 }
 
 export function BusinessMessagesPanel({
@@ -217,7 +216,7 @@ export function BusinessMessagesPanel({
   };
 
   if (loading) {
-    return <SkeletonList className="min-h-[30vh]" rows={5} />;
+    return <SkeletonList className="min-h-[30vh]" rows={5} loadingLabel={t("loadingMessages")} />;
   }
 
   if (view === "new") {
@@ -254,7 +253,7 @@ export function BusinessMessagesPanel({
               hideLabel
               label={t("category")}
               value={form.category}
-              options={CATEGORY_KEYS.map((value) => ({ value, label: t(value) }))}
+              options={CONVERSATION_CATEGORY_KEYS.map((value) => ({ value, label: t(value) }))}
               onChange={(value) => setForm((current) => ({ ...current, category: value }))}
               triggerClassName="h-11"
             />
@@ -300,7 +299,7 @@ export function BusinessMessagesPanel({
             {active.subject}
           </p>
           {threadLoading ? (
-            <SkeletonList className="mt-4" rows={4} />
+            <SkeletonList className="mt-4" rows={4} loadingLabel={t("loadingThread")} />
           ) : (
             <div className="mt-4 max-h-[26rem] space-y-3 overflow-y-auto custom-scrollbar pr-1">
               {active.messages?.map((message) => {
@@ -321,7 +320,7 @@ export function BusinessMessagesPanel({
                       <p className="whitespace-pre-wrap">{message.body}</p>
                       <p className={`mt-1.5 text-[10px] ${mine ? "opacity-80" : "text-slate-400 dark:text-gray-500"}`}>
                         {message.senderName} ·{" "}
-                        {new Date(message.createdAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : "ckb-IQ", {
+                        {new Date(message.createdAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -419,7 +418,7 @@ export function BusinessMessagesPanel({
                     <span className={`font-bold ${status.color}`}>{t(status.key)}</span>
                     <span>·</span>
                     <span>
-                      {new Date(conversation.lastMessageAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : "ckb-IQ", {
+                      {new Date(conversation.lastMessageAt).toLocaleDateString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ", {
                         month: "short",
                         day: "numeric",
                       })}

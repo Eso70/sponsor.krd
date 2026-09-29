@@ -1,7 +1,11 @@
 "use client";
 
-import { type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { BusinessPublicSiteShell } from "@/components/business/BusinessPublicSiteShell";
+import { PublicBusinessLanguageToggle } from "@/features/business/components/PublicBusinessLanguageToggle";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { PublicAdvertisingLocaleProvider } from "../public-locale";
 import { readableInk } from "@/lib/utils/parse-website-color";
 import { AdvertisingHeroSection } from "./AdvertisingHeroSection";
 import { AdvertisingSponsorshipJourney } from "./AdvertisingSponsorshipJourney";
@@ -20,6 +24,7 @@ interface PublicAdvertisingServiceProps {
   /** Always supplied by the server: the route 404s when no published page exists. */
   config: AdvertisingServiceConfig;
   embedded?: boolean;
+  initialLocale?: BusinessLocale;
   footer?: {
     description?: string | null;
     phone?: string | null;
@@ -32,8 +37,11 @@ export function PublicAdvertisingService({
   branding,
   config,
   embedded = false,
+  initialLocale = "ckb",
   footer,
 }: PublicAdvertisingServiceProps) {
+  const [locale, setLocale] = useState<BusinessLocale>(initialLocale);
+  const copy = businessPublicCopy[locale];
   const accent = branding.accentColor || "#111827";
   const accentInk = readableInk(accent);
 
@@ -42,7 +50,7 @@ export function PublicAdvertisingService({
   // notFound() before any of this renders.
 
   const whatsappHref = config.whatsappNumber.trim()
-    ? `https://wa.me/${config.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent("سڵاو، دەمەوێت داواکاری ڕیکلامی تیکتۆک بکەم")}`
+    ? `https://wa.me/${config.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(copy.advertising.whatsappMessage)}`
     : "#packages";
   const pageStyle = {
     "--advertising-accent": accent,
@@ -64,33 +72,37 @@ export function PublicAdvertisingService({
       logo={branding.logo}
       accentColor={accent}
       homeHref="/"
+      navbarCopy={copy.navbar}
+      language={locale}
+      languageControl={<PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />}
       // Only link to sections this page actually renders; an anchor to a
       // section that was hidden or left empty scrolls nowhere.
       navigationItems={[
         config.sections.journey && {
-          label: "قۆناغەکانی سپۆنسەر",
+          label: copy.advertising.journey,
           href: "#how-it-works",
         },
         config.sections.results &&
-          config.results.length > 0 && { label: "ئەنجامەکان", href: "#results" },
-        config.sections.packages && hasPackages && { label: "نرخەکان", href: "#packages" },
+          config.results.length > 0 && { label: copy.advertising.results, href: "#results" },
+        config.sections.packages && hasPackages && { label: copy.advertising.prices, href: "#packages" },
         config.sections.testimonials &&
           config.testimonials.length > 0 && {
-            label: "ڕای کڕیاران",
+            label: copy.advertising.testimonials,
             href: "#testimonials",
           },
         config.sections.faq &&
-          config.faqs.length > 0 && { label: "پرسیارەکان", href: "#faq" },
-        hasTutorialVideo && { label: "ڤیدیۆی فێرکاری", href: "/advertising/video-code" },
-      ].filter((item): item is { label: string; href: string } =>
+          config.faqs.length > 0 && { label: copy.advertising.questions, href: "#faq" },
+        hasTutorialVideo && { label: copy.advertising.tutorial, href: "/advertising/video-code" },
+      ].filter((item): item is Exclude<typeof item, false> =>
         Boolean(item),
       )}
       action={{
-        label: "نامە بنێرە",
+        label: copy.advertising.message,
         href: whatsappHref,
         external: whatsappHref.startsWith("http"),
       }}
       footer={{
+        copy: copy.footer,
         logo: branding.logo,
         description: footer?.description,
         phone: footer?.phone,
@@ -101,6 +113,7 @@ export function PublicAdvertisingService({
         linktrees: footer?.linktrees,
       }}
     >
+      <PublicAdvertisingLocaleProvider locale={locale}>
       <div className="overflow-hidden" style={pageStyle}>
         {config.sections.hero && hasHeroContent && (
           <AdvertisingHeroSection
@@ -153,6 +166,7 @@ export function PublicAdvertisingService({
           />
         )}
       </div>
+      </PublicAdvertisingLocaleProvider>
     </BusinessPublicSiteShell>
   );
 }

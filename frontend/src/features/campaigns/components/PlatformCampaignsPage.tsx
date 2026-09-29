@@ -30,20 +30,14 @@ import { CampaignVideoPreview } from "./CampaignVideoPreview";
 import { CreateCampaignModal } from "./CreateCampaignModal";
 import { TikTokCampaignsGrid } from "./TikTokCampaignsGrid";
 import { TikTokCampaignsTable } from "./TikTokCampaignsTable";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { campaignCopy } from "../campaign-copy";
+import { useCampaignText } from "../use-campaign-text";
 
 type CampaignView = "grid" | "table";
 type CampaignFilter = "all" | CampaignStatus;
 
-const STATUS_FILTERS: ReadonlyArray<{
-  id: CampaignFilter;
-  label: string;
-}> = [
-  { id: "all", label: "هەمووی" },
-  { id: "active", label: "چالاک" },
-  { id: "paused", label: "ڕاگیراو" },
-  { id: "review", label: "پێداچوونەوە" },
-  { id: "completed", label: "تەواوبوو" },
-];
+const STATUS_FILTERS: ReadonlyArray<CampaignFilter> = ["all", "active", "paused", "review", "completed"];
 
 export function summarizeCampaigns(campaigns: TikTokCampaign[]) {
   return campaigns.reduce(
@@ -68,6 +62,9 @@ export function summarizeCampaigns(campaigns: TikTokCampaign[]) {
 }
 
 export function PlatformCampaignsPage() {
+  const { locale } = usePlatformLocale();
+  const copy = campaignCopy[locale];
+  const t = useCampaignText();
   const localStorageKey = "platform_tiktok_campaigns";
 
   const [campaigns, setCampaigns] = useState<TikTokCampaign[]>(
@@ -139,7 +136,7 @@ export function PlatformCampaignsPage() {
         const searchable = [
           campaign.name,
           campaign.video.title,
-          OBJECTIVE_LABELS[campaign.objective].label,
+          t(OBJECTIVE_LABELS[campaign.objective].label),
           campaign.destinationPage.title,
           campaign.destinationPage.slug,
           campaign.targetAudience.location,
@@ -149,7 +146,7 @@ export function PlatformCampaignsPage() {
           .toLowerCase();
         return searchable.includes(deferredSearch);
       }),
-    [campaigns, deferredSearch, statusFilter],
+    [campaigns, deferredSearch, statusFilter, t],
   );
 
   const toggleStatus = (campaignId: string) => {
@@ -178,38 +175,38 @@ export function PlatformCampaignsPage() {
       <StatCardGrid columns={3}>
         <StatCard
           icon={Megaphone}
-          label="کۆی کەمپەینەکان"
+          label={copy.totalCampaigns}
           value={summary.campaigns}
-          subtitle={`${summary.activeCampaigns.toLocaleString()} کەمپەینی چالاک`}
+          subtitle={`${summary.activeCampaigns.toLocaleString()} ${copy.activeCampaigns}`}
           color="blue"
         />
         <StatCard
           icon={Eye}
-          label="کۆی پیشاندانەکان"
+          label={copy.totalImpressions}
           value={summary.impressions}
           color="purple"
         />
         <StatCard
           icon={MousePointerClick}
-          label="کۆی کلیکەکان"
+          label={copy.totalClicks}
           value={summary.clicks}
           color="green"
         />
         <StatCard
           icon={DollarSign}
-          label="کۆی خەرجی"
+          label={copy.totalSpent}
           value={`$${summary.totalSpent.toFixed(2)}`}
           color="orange"
         />
         <StatCard
           icon={TrendingUp}
-          label="کۆی گۆڕانەکان"
+          label={copy.totalConversions}
           value={summary.conversions}
           color="pink"
         />
         <StatCard
           icon={CircleDollarSign}
-          label="تێچووی هەر گۆڕانێک"
+          label={copy.costPerConversion}
           value={formatCostPerConversion({
             totalSpent: summary.totalSpent,
             conversions: summary.conversions,
@@ -220,14 +217,14 @@ export function PlatformCampaignsPage() {
 
       <section className="w-full space-y-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
         <PageHeader
-          title="بەڕێوەبردنی کەمپەینەکان"
-          description="کەمپەینە ڤیدیۆییەکانی تیکتۆک ببینە، بگەڕێ و بە شێوەی گرید یان خشتە بەڕێوەیان ببە."
+          title={copy.title}
+          description={copy.description}
           icon={Megaphone}
           action={
             <>
               <Tooltip
                 content={
-                  searchQuery.trim() ? "پاککردنەوەی گەڕان" : "گەڕان (Ctrl+K)"
+                  searchQuery.trim() ? copy.clearSearch : copy.searchShortcut
                 }
                 side="bottom"
               >
@@ -239,7 +236,7 @@ export function PlatformCampaignsPage() {
                   }}
                   className={`group flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition hover:shadow sm:px-3.5 ${searchQuery.trim() ? "sa-soft sa-soft-border" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 sm:w-44 sm:justify-between"}`}
                   aria-label={
-                    searchQuery.trim() ? "پاککردنەوەی گەڕان" : "گەڕان"
+                    searchQuery.trim() ? copy.clearSearch : copy.search
                   }
                 >
                   {searchQuery.trim() ? (
@@ -249,7 +246,7 @@ export function PlatformCampaignsPage() {
                       <span className="flex items-center gap-2">
                         <Search className="h-4 w-4" />
                         <span className="hidden text-xs font-semibold sm:inline">
-                          گەڕان...
+                          {copy.searchPlaceholder}
                         </span>
                       </span>
                       <kbd className="hidden rounded bg-slate-100 px-1 py-0.5 font-sans text-[8px] font-bold text-slate-400 dark:bg-white/10 sm:inline-flex">
@@ -261,23 +258,23 @@ export function PlatformCampaignsPage() {
               </Tooltip>
 
               <div className="flex h-10 shrink-0 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
-                <Tooltip content="بینینی گرید" side="bottom">
+                <Tooltip content={copy.gridView} side="bottom">
                   <button
                     type="button"
                     onClick={() => setView("grid")}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${view === "grid" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"}`}
-                    aria-label="بینینی گرید"
+                    aria-label={copy.gridView}
                     aria-pressed={view === "grid"}
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </button>
                 </Tooltip>
-                <Tooltip content="بینینی خشتە" side="bottom">
+                <Tooltip content={copy.tableView} side="bottom">
                   <button
                     type="button"
                     onClick={() => setView("table")}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${view === "table" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"}`}
-                    aria-label="بینینی خشتە"
+                    aria-label={copy.tableView}
                     aria-pressed={view === "table"}
                   >
                     <Table2 className="h-4 w-4" />
@@ -291,7 +288,7 @@ export function PlatformCampaignsPage() {
                 className="sa-gradient sa-ink flex h-10 items-center justify-center gap-2 rounded-xl px-3.5 text-xs font-bold shadow-md transition hover:brightness-95"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">کەمپەینی نوێ</span>
+                <span className="hidden sm:inline">{copy.newCampaign}</span>
               </button>
             </>
           }
@@ -300,19 +297,19 @@ export function PlatformCampaignsPage() {
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-5 dark:border-white/5">
           {STATUS_FILTERS.map((filter) => {
             const count =
-              filter.id === "all"
+              filter === "all"
                 ? campaigns.length
-                : campaigns.filter((campaign) => campaign.status === filter.id)
+                : campaigns.filter((campaign) => campaign.status === filter)
                     .length;
             return (
               <button
-                key={filter.id}
+                key={filter}
                 type="button"
-                onClick={() => setStatusFilter(filter.id)}
-                className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all duration-200 ${statusFilter === filter.id ? "sa-soft sa-soft-border shadow-sm" : "border-transparent bg-transparent text-slate-500 hover:border-slate-200/70 hover:bg-white dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/5"}`}
-                aria-pressed={statusFilter === filter.id}
+                onClick={() => setStatusFilter(filter)}
+                className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all duration-200 ${statusFilter === filter ? "sa-soft sa-soft-border shadow-sm" : "border-transparent bg-transparent text-slate-500 hover:border-slate-200/70 hover:bg-white dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/5"}`}
+                aria-pressed={statusFilter === filter}
               >
-                {filter.label}
+                {copy.filters[filter]}
                 <span className="font-mono text-[10px] opacity-70">
                   {count}
                 </span>
@@ -331,7 +328,11 @@ export function PlatformCampaignsPage() {
       <SearchModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
-        placeholder="گەڕان بە ناوی کەمپەین، ڤیدیۆ یان لاپەڕە..."
+        placeholder={copy.searchCampaigns}
+        clearLabel={copy.clearSearch}
+        applyLabel={copy.close}
+        clearAriaLabel={copy.clearSearch}
+        applyAriaLabel={copy.close}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         wide
@@ -362,7 +363,7 @@ export function PlatformCampaignsPage() {
             ))
           ) : (
             <p className="p-6 text-center text-sm text-slate-500">
-              هیچ کەمپەینێک نەدۆزرایەوە
+              {copy.noCampaigns}
             </p>
           )}
         </div>
@@ -387,10 +388,13 @@ export function PlatformCampaignsPage() {
       <ConfirmDeleteModal
         isOpen={!!deleteCampaign}
         onClose={() => setDeleteCampaign(null)}
-        title="سڕینەوەی کەمپەین"
+        title={copy.deleteTitle}
+        confirmLabel={copy.confirmDelete}
+        cancelLabel={copy.cancel}
+        closeLabel={copy.close}
         message={
           deleteCampaign
-            ? `دڵنیایت لە سڕینەوەی «${deleteCampaign.name}»؟`
+            ? `${copy.deleteQuestion} «${deleteCampaign.name}»؟`
             : ""
         }
         onConfirm={async () => {

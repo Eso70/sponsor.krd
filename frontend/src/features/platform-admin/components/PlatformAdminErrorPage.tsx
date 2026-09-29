@@ -1,8 +1,9 @@
 "use client";
 
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
-import { ERROR_PAGE_COPY } from "@/components/error-pages/copy";
 import { platformErrorTheme } from "@/components/error-pages/error-theme";
+import { platformErrorCopy } from "@/features/platform-admin/i18n/error-copy";
+import type { PlatformLocale } from "@/features/platform-admin/i18n/locale";
 
 type PlatformAdminErrorKind =
   | "notFound"
@@ -21,16 +22,18 @@ interface PlatformAdminErrorPageProps {
     accentInk?: string;
   };
   onReset?: () => void;
+  locale?: PlatformLocale;
 }
 
 export function PlatformAdminErrorPage({
   kind,
   branding,
   onReset,
+  locale = "ckb",
 }: PlatformAdminErrorPageProps) {
   return (
     <ErrorPage
-      {...ERROR_PAGE_COPY[kind]}
+      {...platformErrorCopy(kind, locale)}
       theme={platformErrorTheme(branding)}
       homeHref="/"
       onReset={onReset}

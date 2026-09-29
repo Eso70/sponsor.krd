@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LinksStep } from "./LinksStep";
 import type { SocialLink } from "@/features/link-editor/types";
+import { arabicEditorCopy } from "../editor-copy";
 
 function socialLink(id: string, platform: string, order: number): SocialLink {
   return {
@@ -43,5 +44,30 @@ describe("LinksStep", () => {
     expect(screen.getByText("Instagram")).toBeInTheDocument();
     expect(screen.getByText("YouTube")).toBeInTheDocument();
     expect(screen.getByText("WhatsApp")).toBeInTheDocument();
+  });
+
+  it("shows Business link controls in Arabic", () => {
+    const link = socialLink("telegram-1", "telegram", 0);
+    render(
+      <LinksStep
+        copy={arabicEditorCopy}
+        selectedPlatforms={[link.id]}
+        socialLinks={[link]}
+        linkErrors={{}}
+        onUpdateLink={vi.fn()}
+        onUpdateCountryCode={vi.fn()}
+        onUpdateDisplayName={vi.fn()}
+        onUpdateCustomColor={vi.fn()}
+        onUpdateCustomIcon={vi.fn()}
+        onRemoveLink={vi.fn()}
+        onAddPlatformInstance={vi.fn()}
+        onMoveLink={vi.fn()}
+        onBlurLink={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1 رابط")).toBeInTheDocument();
+    expect(screen.getByText("تيليجرام")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/رمز الدعوة/)).toBeInTheDocument();
   });
 });

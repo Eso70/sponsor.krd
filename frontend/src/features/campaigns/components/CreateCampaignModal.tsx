@@ -25,6 +25,8 @@ import { CampaignCreativeStep } from "./CampaignCreativeStep";
 import { CampaignIdentityStep } from "./CampaignIdentityStep";
 import { CampaignInteractiveAddOnsStep } from "./CampaignInteractiveAddOnsStep";
 import { CampaignOptimizationStep } from "./CampaignOptimizationStep";
+import { useCampaignText } from "../use-campaign-text";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
@@ -61,9 +63,14 @@ export function CreateCampaignModal({
   onCreate,
   sponsorKrdTheme = false,
 }: CreateCampaignModalProps) {
+  const { locale } = usePlatformLocale();
+  const t = useCampaignText();
+  const initialForm = () => locale === "ar"
+    ? { ...INITIAL_CREATE_CAMPAIGN_FORM, location: "أربيل، السليمانية، دهوك", languages: "الكردية، العربية" }
+    : locale === "en" ? { ...INITIAL_CREATE_CAMPAIGN_FORM, location: "Erbil, Sulaymaniyah, Duhok" } : INITIAL_CREATE_CAMPAIGN_FORM;
   const [currentStep, setCurrentStep] = useState<CampaignWizardStep>("setup");
   const [form, setForm] = useState<CreateCampaignFormState>(
-    INITIAL_CREATE_CAMPAIGN_FORM,
+    initialForm,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,7 +81,7 @@ export function CreateCampaignModal({
   const isFinalStep = currentIndex === CAMPAIGN_WIZARD_STEPS.length - 1;
   const destinationError =
     form.destinationUrl && !isValidWebsiteUrl(form.destinationUrl)
-      ? "تکایە بەستەرێکی دروستی وێبسایت بنووسە"
+      ? t("تکایە بەستەرێکی دروستی وێبسایت بنووسە")
       : undefined;
 
   const updateField = <K extends keyof CreateCampaignFormState>(
@@ -140,7 +147,7 @@ export function CreateCampaignModal({
   const resetAndClose = () => {
     if (isSubmitting) return;
     setCurrentStep("setup");
-    setForm(INITIAL_CREATE_CAMPAIGN_FORM);
+    setForm(initialForm());
     onClose();
   };
 
@@ -235,7 +242,7 @@ export function CreateCampaignModal({
       onCreate(campaign);
       setIsSubmitting(false);
       setCurrentStep("setup");
-      setForm(INITIAL_CREATE_CAMPAIGN_FORM);
+      setForm(initialForm());
       onClose();
     }, 600);
   };
@@ -247,13 +254,13 @@ export function CreateCampaignModal({
       isOpen={isOpen}
       onClose={resetAndClose}
       sponsorKrdTheme={sponsorKrdTheme}
-      title="دروستکردنی کەمپەینی نوێ لە TikTok"
-      description={STEP_DESCRIPTIONS[currentStep]}
+      title={t("دروستکردنی کەمپەینی نوێ لە TikTok")}
+      description={t(STEP_DESCRIPTIONS[currentStep])}
       createBusinessStyle
       progress={
         <ModalWizardProgress
           currentStep={currentStep}
-          steps={[...CAMPAIGN_WIZARD_STEPS]}
+          steps={CAMPAIGN_WIZARD_STEPS.map((step) => ({ ...step, label: t(step.label) }))}
           variant="sponsor-krd"
         />
       }
@@ -265,7 +272,14 @@ export function CreateCampaignModal({
           isFinalStep={isFinalStep}
           isSubmitting={isSubmitting}
           canContinue={canContinue}
-          submitLabel="دروستکردنی کەمپەین"
+          submitLabel={t("دروستکردنی کەمپەین")}
+          nextLabel={t("بەردەوام بە")}
+          backLabel={t("گەڕانەوە")}
+          backTooltip={t("گەڕانەوە بۆ هەنگاوی پێشوو")}
+          cancelLabel={t("هەڵوەشاندنەوە")}
+          cancelTooltip={t("داخستن و هەڵوەشاندنەوەی گۆڕانکارییەکان")}
+          requiredTooltip={t("تکایە خانە پێویستەکان پڕبکەرەوە")}
+          savingLabel={t("پاشەکەوتکردن...")}
           onBack={handleBack}
           onCancel={resetAndClose}
           onNext={handleNext}

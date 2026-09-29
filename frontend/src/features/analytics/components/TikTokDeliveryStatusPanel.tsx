@@ -11,6 +11,34 @@ import {
 } from "@/features/analytics/api";
 import { apiRequest } from "@/lib/api/request";
 import type { TikTokConfigOwner } from "@/features/analytics/tiktok-config-workspace";
+import type { BusinessLocale } from "@/features/business/i18n/messages";
+
+const DELIVERY_COPY = {
+  ckb: {
+    permanent: "شکستی کۆتایی", retry: "هەوڵی دووبارە", events: "ڕووداو", attempts: "هەوڵ",
+    title: "دۆخی گەیاندن", platform: "ئەوەی TikTok وەڵامی داوەتەوە بۆ پەڕەکانی پلاتفۆرم.",
+    business: "ئەوەی TikTok وەڵامی داوەتەوە بۆ ئەم بزنسە.", delivered: "گەیشتوو",
+    queued: "لە ڕیز", failed: "شکستخواردوو", healthy: "هیچ هەڵەیەکی گەیاندن نییە.",
+    silentTitle: "Pixel هیچ ڕووداوێکی نەناردووە",
+    silentDetail: "ڕووداو لە ڕاژەکارەوە نێردراون، بەڵام هیچیان لە وێبگەڕەوە نەنێردراون. زۆرجار مانای ئەوەیە Pixel ID هەڵەیە یان بەربەستی ڕیکلام ڕێی لێ گرتووە.",
+  },
+  ar: {
+    permanent: "فشل نهائي", retry: "إعادة المحاولة", events: "أحداث", attempts: "محاولات",
+    title: "حالة التسليم", platform: "استجابة تيك توك لصفحات المنصة.",
+    business: "استجابة تيك توك لهذا النشاط التجاري.", delivered: "تم التسليم",
+    queued: "في قائمة الانتظار", failed: "فشل", healthy: "لا توجد أخطاء في التسليم.",
+    silentTitle: "لم يرسل Pixel أي أحداث",
+    silentDetail: "أحداث أُرسلت من الخادم، لكن لم يُرسل أي حدث من المتصفح. قد يكون Pixel ID غير صحيح أو أن مانع الإعلانات قد حظره.",
+  },
+  en: {
+    permanent: "Permanent failure", retry: "Retry", events: "events", attempts: "attempts",
+    title: "Delivery status", platform: "TikTok's responses for platform pages.",
+    business: "TikTok's responses for this business.", delivered: "delivered",
+    queued: "queued", failed: "failed", healthy: "No delivery errors.",
+    silentTitle: "Pixel has not sent any events",
+    silentDetail: "events were sent from the server, but none from the browser. The Pixel ID may be incorrect or an ad blocker may have prevented it from loading.",
+  },
+} as const;
 
 /**
  * What is actually wrong with a business's TikTok connection.
@@ -32,12 +60,13 @@ import type { TikTokConfigOwner } from "@/features/analytics/tiktok-config-works
  *   were queued while none of them carried a browser dispatch, which is what a
  *   pixel that never fires looks like from the server.
  */
-function formatWhen(value: string): string {
+function formatWhen(value: string, locale: BusinessLocale): string {
   const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString();
+  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ");
 }
 
-function ErrorRow({ item }: { item: TikTokDeliveryError }) {
+function ErrorRow({ item, locale }: { item: TikTokDeliveryError; locale: BusinessLocale }) {
+  const copy = DELIVERY_COPY[locale];
   const permanent = item.severity === "permanent";
   return (
     <li
@@ -60,7 +89,7 @@ function ErrorRow({ item }: { item: TikTokDeliveryError }) {
               : "text-amber-700 dark:text-amber-300"
           }`}
         >
-          {permanent ? "شکستی کۆتایی" : "هەوڵی دووبارە"}
+          {permanent ? copy.permanent : copy.retry}
         </span>
         {item.pixelId && (
           <span className="rounded-lg bg-white/70 px-2 py-0.5 font-mono text-[11px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
@@ -77,8 +106,8 @@ function ErrorRow({ item }: { item: TikTokDeliveryError }) {
         {item.message}
       </p>
       <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-        {item.events} ڕووداو · {item.attempts} هەوڵ ·{" "}
-        {formatWhen(item.lastSeenAt)}
+        {item.events} {copy.events} · {item.attempts} {copy.attempts} ·{" "}
+        {formatWhen(item.lastSeenAt, locale)}
       </p>
     </li>
   );
@@ -88,11 +117,14 @@ export function TikTokDeliveryStatusPanel({
   owner = "business",
   healthEndpoint,
   errorsEndpoint,
+  locale = "ckb",
 }: {
   owner?: TikTokConfigOwner;
   healthEndpoint?: string;
   errorsEndpoint?: string;
+  locale?: BusinessLocale;
 } = {}) {
+  const copy = DELIVERY_COPY[locale];
   const [health, setHealth] = useState<TikTokHealth | null>(null);
   const [errors, setErrors] = useState<TikTokDeliveryError[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,17 +174,15 @@ export function TikTokDeliveryStatusPanel({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            دۆخی گەیاندن
+            {copy.title}
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {owner === "platform"
-              ? "ئەوەی TikTok وەڵامی داوەتەوە بۆ پەڕەکانی پلاتفۆرم."
-              : "ئەوەی TikTok وەڵامی داوەتەوە بۆ ئەم بزنسە."}
+            {owner === "platform" ? copy.platform : copy.business}
           </p>
         </div>
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {health.delivered} گەیشتوو · {health.retrying} لە ڕیز ·{" "}
-          {health.failed} شکستخواردوو
+          {health.delivered} {copy.delivered} · {health.retrying} {copy.queued} ·{" "}
+          {health.failed} {copy.failed}
         </span>
       </div>
 
@@ -160,7 +190,7 @@ export function TikTokDeliveryStatusPanel({
         <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-500/25 dark:bg-emerald-500/10">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <p className="text-xs text-emerald-800 dark:text-emerald-200">
-            هیچ هەڵەیەکی گەیاندن نییە.
+            {copy.healthy}
           </p>
         </div>
       ) : (
@@ -170,13 +200,11 @@ export function TikTokDeliveryStatusPanel({
               <div className="flex items-center gap-2">
                 <EyeOff className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                  Pixel هیچ ڕووداوێکی نەناردووە
+                  {copy.silentTitle}
                 </span>
               </div>
               <p className="mt-2 text-xs text-slate-700 dark:text-slate-200">
-                {health.serverEvents} ڕووداو لە ڕاژەکارەوە نێردراون، بەڵام
-                هیچیان لە وێبگەڕەوە نەنێردراون. زۆرجار مانای ئەوەیە Pixel ID
-                هەڵەیە یان بەربەستی ڕیکلام ڕێی لێ گرتووە.
+                {health.serverEvents} {copy.silentDetail}
               </p>
             </li>
           )}
@@ -184,6 +212,7 @@ export function TikTokDeliveryStatusPanel({
             <ErrorRow
               key={`${item.destinationId}:${item.statusCode ?? "none"}:${item.message}`}
               item={item}
+              locale={locale}
             />
           ))}
         </ul>

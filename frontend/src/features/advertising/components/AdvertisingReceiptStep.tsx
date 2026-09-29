@@ -6,6 +6,7 @@ import { Check, CloudUpload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PhoneMockup } from "@/components/shared/PhoneMockup";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { usePublicAdvertisingText } from "../public-locale";
 
 interface AdvertisingReceiptStepProps {
   receiptUrl: string | null;
@@ -18,6 +19,7 @@ export function AdvertisingReceiptStep({
   onReceiptChange,
   exampleImageUrl,
 }: AdvertisingReceiptStepProps) {
+  const t = usePublicAdvertisingText();
   return (
     <div
       className={cn(
@@ -28,13 +30,13 @@ export function AdvertisingReceiptStep({
       {exampleImageUrl && (
         <div className="relative mx-auto w-[130px] max-w-full sm:w-[150px] lg:w-[190px]">
           <PhoneMockup
-            ariaLabel="پێشبینینی وەسڵی گواستنەوەی پارە"
-            name="Receipt"
+            ariaLabel={t("پێشبینینی وەسڵی گواستنەوەی پارە")}
+            name={t("Receipt")}
           >
             <div className="relative flex h-full w-full items-center justify-center bg-[#f4efe8]">
               <Image
                 src={exampleImageUrl}
-                alt="وێنەی نموونەی وەسڵی گواستنەوەی پارە"
+                alt={t("وێنەی نموونەی وەسڵی گواستنەوەی پارە")}
                 fill
                 sizes="190px"
                 className="object-contain"
@@ -43,7 +45,7 @@ export function AdvertisingReceiptStep({
             </div>
           </PhoneMockup>
           <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-wide text-black/40 dark:text-white/40 sm:mt-3 sm:text-[10px]">
-            نموونەی وەسڵ
+            {t("نموونەی وەسڵ")}
           </p>
         </div>
       )}
@@ -54,7 +56,7 @@ export function AdvertisingReceiptStep({
           onReceiptChange={onReceiptChange}
         />
         <p className="mt-2 text-center text-[9px] font-bold uppercase tracking-wide text-black/40 dark:text-white/40 sm:mt-3 sm:text-[10px]">
-          وێنەی وەسڵەکە لێرە دابگرە
+          {t("وێنەی وەسڵەکە لێرە دابگرە")}
         </p>
       </div>
     </div>
@@ -65,6 +67,7 @@ function ReceiptDropzone({
   receiptUrl,
   onReceiptChange,
 }: AdvertisingReceiptStepProps) {
+  const t = usePublicAdvertisingText();
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -100,24 +103,24 @@ function ReceiptDropzone({
 
   if (receiptUrl) {
     return (
-      <PhoneMockup ariaLabel="پێشبینینی وەسڵی بارکراو" name="Receipt">
+      <PhoneMockup ariaLabel={t("پێشبینینی وەسڵی بارکراو")} name={t("Receipt")}>
         <div className="relative h-full w-full bg-white dark:bg-white/[0.03]">
           {input}
           <Image
             src={receiptUrl}
-            alt="وەسڵی وەرکراو"
+            alt={t("وەسڵی وەرکراو")}
             fill
             sizes="190px"
             className="object-contain"
           />
           <span className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center gap-1.5 rounded-lg bg-black/70 px-2.5 py-1.5 text-[11px] font-bold text-white">
-            <Check className="h-3.5 w-3.5 text-emerald-400" /> دیاریکراوە
+            <Check className="h-3.5 w-3.5 text-emerald-400" /> {t("دیاریکراوە")}
           </span>
-          <Tooltip content="سڕینەوەی وەسڵ" side="top">
+          <Tooltip content={t("سڕینەوەی وەسڵ")} side="top">
             <button
               type="button"
               onClick={removeFile}
-              aria-label="سڕینەوەی وەسڵ"
+              aria-label={t("سڕینەوەی وەسڵ")}
               className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow transition-colors hover:bg-black cursor-pointer"
             >
               <X className="h-4 w-4" />
@@ -129,11 +132,11 @@ function ReceiptDropzone({
   }
 
   return (
-    <PhoneMockup ariaLabel="بەرزکردنەوەی وەسڵ" name="Upload">
+    <PhoneMockup ariaLabel={t("بەرزکردنەوەی وەسڵ")} name={t("Upload")}>
       <div
         role="button"
         tabIndex={0}
-        aria-label="بەرزکردنەوەی وەسڵ"
+        aria-label={t("بەرزکردنەوەی وەسڵ")}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ")
@@ -156,7 +159,7 @@ function ReceiptDropzone({
         </span>
         <div>
           <p className="text-sm font-black" dir="auto">
-            کلیک بکە یان وێنە بکێشە بۆ ئێرە
+            {t("کلیک بکە یان وێنە بکێشە بۆ ئێرە")}
           </p>
           <p className="mt-1 text-xs text-black/45 dark:text-white/45">
             PNG, JPG

@@ -4,11 +4,14 @@ import { Tooltip } from "@/components/shared/Tooltip";
 export function AdvertisingSectionVisibilityToggle({
   checked,
   onChange,
+  translate = (text) => text,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
+  translate?: (text: string) => string;
 }) {
-  const tooltipText = checked ? "شاردنەوە لە پەڕەی گشتی" : "پیشاندان لە پەڕەی گشتی";
+  const t = translate;
+  const tooltipText = t(checked ? "شاردنەوە لە پەڕەی گشتی" : "پیشاندان لە پەڕەی گشتی");
   return (
     <Tooltip content={tooltipText} side="top">
       <button
@@ -17,8 +20,8 @@ export function AdvertisingSectionVisibilityToggle({
         aria-checked={checked}
         aria-label={
           checked
-            ? "بەشەکە لە پەڕەی گشتی نیشان دەدرێت"
-            : "بەشەکە لە پەڕەی گشتی شاردراوە"
+            ? t("بەشەکە لە پەڕەی گشتی نیشان دەدرێت")
+            : t("بەشەکە لە پەڕەی گشتی شاردراوە")
         }
         onClick={() => onChange(!checked)}
         title={tooltipText}
@@ -42,7 +45,7 @@ export function AdvertisingSectionVisibilityToggle({
             )}
           />
         </span>
-        {checked ? "پیشان دەدرێت" : "شاردراوە"}
+        {t(checked ? "پیشان دەدرێت" : "شاردراوە")}
       </button>
     </Tooltip>
   );

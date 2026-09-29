@@ -11,7 +11,7 @@ import {
   Palette,
   RotateCcw,
 } from "lucide-react";
-import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
+import { ColorGradientModal, type ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { DEFAULT_FOOTER_PHONE } from "../modal-constants";
 import {
   modalChoiceButtonClass,
@@ -32,8 +32,11 @@ import { BackgroundColorPicker } from "../BackgroundColorPicker";
 import { AvatarImageUpload } from "@/components/shared/AvatarImageUpload";
 import { EditorField } from "@/components/shared/EditorField";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { arabicColorNames, arabicPatternCopy, arabicTemplatePickerCopy, englishColorNames, englishPatternCopy, englishTemplatePickerCopy, type EditorCopy } from "../editor-copy";
 
 interface BasicInfoStepProps {
+  copy?: EditorCopy;
+  colorCopy?: ColorGradientModalProps["copy"];
   profileImagePreview: string | null;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   name: string;
@@ -118,6 +121,8 @@ interface BasicInfoStepProps {
 }
 
 export const BasicInfoStep = memo(function BasicInfoStep({
+  copy,
+  colorCopy,
   profileImagePreview,
   fileInputRef,
   name,
@@ -214,6 +219,8 @@ export const BasicInfoStep = memo(function BasicInfoStep({
         {/* Profile Image Upload */}
         {!hideImageUploads && (
           <AvatarImageUpload
+            alt={copy?.profilePreview}
+            removeLabel={copy?.removeImage}
             imageUrl={profileImagePreview}
             fileInputRef={fileInputRef}
             onFileChange={onImageChange}
@@ -223,15 +230,15 @@ export const BasicInfoStep = memo(function BasicInfoStep({
             error={errors.image}
             uploadLabel={
               onUploadClick
-                ? "بارکردنی وێنەکانی بڕاند"
-                : "وێنەی پڕۆفایل هەڵبژێرە"
+                ? copy?.uploadBrand ?? "بارکردنی وێنەکانی بڕاند"
+                : copy?.chooseProfileImage ?? "وێنەی پڕۆفایل هەڵبژێرە"
             }
           />
         )}
 
         {/* Name and Subtitle / Username / ExpireDate */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <EditorField label={onUploadClick ? "ناوی بزنس" : "ناو"} required>
+          <EditorField label={onUploadClick ? copy?.businessName ?? "ناوی بزنس" : copy?.name ?? "ناو"} required>
             <input
               id="name"
               type="text"
@@ -242,7 +249,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
               maxLength={LINKTREE_NAME_MAX_LENGTH}
               aria-invalid={!!(errors.name && touched.name)}
               className={modalInputClass(!!(errors.name && touched.name))}
-              placeholder={onUploadClick ? "ناوی بزنس بنووسە" : "ناوی لینک"}
+              placeholder={onUploadClick ? copy?.businessNamePlaceholder ?? "ناوی بزنس بنووسە" : copy?.pageNamePlaceholder ?? "ناوی لینک"}
               dir="auto"
             />
             {errors.name && touched.name ? (
@@ -251,7 +258,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
               </p>
             ) : checkingName ? (
               <p className="text-xs text-gray-400 mt-1 font-kurdish">
-                پشکنینی ناو...
+                {copy?.checkingName ?? "پشکنینی ناو..."}
               </p>
             ) : nameWarning ? (
               <p className="text-xs text-amber-600 mt-1 font-kurdish">
@@ -261,7 +268,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
           </EditorField>
 
           {onUploadClick ? (
-            <EditorField label="ناوی بەکارهێنەر" required>
+            <EditorField label={copy?.username ?? "ناوی بەکارهێنەر"} required>
               <input
                 id="username"
                 type="text"
@@ -269,12 +276,12 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                 onChange={(e) => onUsernameChange?.(e.target.value)}
                 required
                 className={modalInputClass()}
-                placeholder="ناوی بەکارهێنەر"
+                placeholder={copy?.username ?? "ناوی بەکارهێنەر"}
                 dir="auto"
               />
             </EditorField>
           ) : (
-            <EditorField label="ناونیشانی کورت">
+            <EditorField label={copy?.subtitle ?? "ناونیشانی کورت"}>
               <div className="flex items-center gap-2">
                 <input
                   id="subtitle"
@@ -282,16 +289,16 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   value={subtitle}
                   onChange={(e) => onSubtitleChange(e.target.value)}
                   className={modalInputClass(false, "flex-1")}
-                  placeholder="ناونیشانی کورت بنووسە"
+                  placeholder={copy?.subtitlePlaceholder ?? "ناونیشانی کورت بنووسە"}
                   dir="auto"
                 />
-                <Tooltip content="ڕەنگی ناونیشانی کورت" side="top">
+                <Tooltip content={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"} side="top">
                   <button
                     type="button"
                     onClick={() => setIsSubtitleColorPickerOpen(true)}
                     className="theme-soft-hover theme-input-focus relative shrink-0 w-10 h-10 sm:w-11 sm:h-11 overflow-hidden rounded-xl border border-gray-300 bg-white shadow-sm transition-all duration-200 cursor-pointer group hover:border-transparent focus:outline-none dark:border-white/10 dark:bg-[#161B22]"
-                    title="ڕەنگی ناونیشانی کورت"
-                    aria-label="ڕەنگی ناونیشانی کورت"
+                    title={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
+                    aria-label={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
                   >
                     {subtitleColor ? (
                       <span
@@ -306,19 +313,20 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   </button>
                 </Tooltip>
                 {subtitleColor && onSubtitleColorChange && (
-                  <Tooltip content="سڕینەوەی ڕەنگ" side="top">
+                  <Tooltip content={copy?.clearColor ?? "سڕینەوەی ڕەنگ"} side="top">
                     <button
                       type="button"
                       onClick={() => onSubtitleColorChange("")}
                       className="shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                      title="سڕینەوەی ڕەنگ"
-                      aria-label="سڕینەوەی ڕەنگ"
+                      title={copy?.clearColor ?? "سڕینەوەی ڕەنگ"}
+                      aria-label={copy?.clearColor ?? "سڕینەوەی ڕەنگ"}
                     >
                       <RotateCcw className="h-4 w-4" />
                     </button>
                   </Tooltip>
                 )}
                 <ColorGradientModal
+                  copy={colorCopy}
                   isOpen={isSubtitleColorPickerOpen}
                   value={subtitleColor || "#ffffff"}
                   onChange={(color) => onSubtitleColorChange?.(color)}
@@ -326,8 +334,8 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   solidFallback="#ffffff"
                   gradientFallback="#ffffff"
                   allowGradient={false}
-                  title="ڕەنگی ناونیشانی کورت"
-                  subtitle="ڕەنگێکی تاک بۆ ناونیشانی کورت هەڵبژێرە"
+                  title={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
+                  subtitle={copy?.subtitleColorHint ?? "ڕەنگێکی تاک بۆ ناونیشانی کورت هەڵبژێرە"}
                 />
               </div>
               {errors.subtitleColor && (
@@ -340,13 +348,13 @@ export const BasicInfoStep = memo(function BasicInfoStep({
         </div>
 
         {!onUploadClick && (
-          <EditorField label="دەقی ڕوونکردنەوە">
+          <EditorField label={copy?.description ?? "دەقی ڕوونکردنەوە"}>
             <textarea
               id="description"
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
               className={modalTextareaClass(false, "min-h-0")}
-              placeholder="بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە"
+              placeholder={copy?.defaultDescription ?? "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە"}
               dir="auto"
               rows={2}
             />
@@ -354,14 +362,14 @@ export const BasicInfoStep = memo(function BasicInfoStep({
         )}
 
         {onUploadClick && (
-          <EditorField label="سەب دۆمەین">
+          <EditorField label={copy?.subdomain ?? "سەب دۆمەین"}>
             <input
               id="slug"
               type="text"
               value={slug}
               onChange={(e) => onSlugChange(e.target.value)}
               className={modalInputClass(!!(errors.slug && touched.slug))}
-              placeholder="سەب‌دۆمەین بنووسە"
+              placeholder={copy?.subdomainPlaceholder ?? "سەب‌دۆمەین بنووسە"}
               dir="ltr"
             />
             {errors.slug && touched.slug && (
@@ -388,7 +396,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   !!(errors.slug && touched.slug),
                   "cursor-not-allowed bg-gray-50 text-gray-500",
                 )}
-                placeholder="Slug بنووسە"
+                placeholder={copy?.slugPlaceholder ?? "Slug بنووسە"}
                 dir="ltr"
               />
               {errors.slug && touched.slug ? (
@@ -397,14 +405,14 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                 </p>
               ) : checkingSlug ? (
                 <p className="text-xs text-gray-400 mt-1 font-kurdish">
-                  پشکنینی slug...
+                  {copy?.checkingSlug ?? "پشکنینی slug..."}
                 </p>
               ) : null}
             </EditorField>
 
             {/* Template Style */}
-            <EditorField label="شێوازی پەڕە" required>
-              <Tooltip content="دیاریکردنی قاڵبی ڕووکاری پەڕە" side="top">
+            <EditorField label={copy?.pageStyle ?? "شێوازی پەڕە"} required>
+              <Tooltip content={copy?.chooseTemplateHint ?? "دیاریکردنی قاڵبی ڕووکاری پەڕە"} side="top">
                 <button
                   type="button"
                   onClick={() => setIsTemplateSelectorOpen(true)}
@@ -417,7 +425,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                       {selectedTemplate.name}
                     </span>
                   ) : (
-                    <span className="text-gray-400">شێوازێک هەڵبژێرە</span>
+                    <span className="text-gray-400">{copy?.chooseStyle ?? "شێوازێک هەڵبژێرە"}</span>
                   )}
                   <Layout className="h-4 w-4 text-gray-500 shrink-0" />
                 </button>
@@ -431,15 +439,15 @@ export const BasicInfoStep = memo(function BasicInfoStep({
 
             {/* Background Pattern — the shared public-page picker */}
             {onBackgroundPatternChange && (
-              <EditorField label="شێوازی پاشبنەما">
-                <Tooltip content="دیاریکردنی نەخشی پاشبنەمای پەڕە" side="top">
+              <EditorField label={copy?.backgroundPattern ?? "شێوازی پاشبنەما"}>
+                <Tooltip content={copy?.choosePatternHint ?? "دیاریکردنی نەخشی پاشبنەمای پەڕە"} side="top">
                   <button
                     type="button"
                     onClick={() => setIsPatternSelectorOpen(true)}
                     className={`${modalChoiceButtonClass(false)} w-full cursor-pointer`}
                   >
                     <span className="text-gray-900 truncate">
-                      {backgroundPatternLabel(backgroundPattern)}
+                      {copy?.language === "en" ? englishPatternCopy.labels[backgroundPattern] : copy ? arabicPatternCopy.labels[backgroundPattern] : backgroundPatternLabel(backgroundPattern)}
                     </span>
                     <Sparkles className="h-4 w-4 text-gray-500 shrink-0" />
                   </button>
@@ -454,11 +462,16 @@ export const BasicInfoStep = memo(function BasicInfoStep({
           <EditorField
             label={
               onUploadClick
-                ? "ڕەنگی وێبسایت (Website Color)"
-                : "ڕەنگی باکگڕاوند"
+                ? copy?.websiteColor ?? "ڕەنگی وێبسایت (Website Color)"
+                : copy?.backgroundColor ?? "ڕەنگی باکگڕاوند"
             }
           >
             <BackgroundColorPicker
+              colorCopy={colorCopy}
+              customLabel={copy?.customColor}
+              imageLabel={copy?.backgroundImage}
+              imageRemoveLabel={copy?.removeBackgroundImage}
+              colorNames={copy?.language === "en" ? englishColorNames : copy ? arabicColorNames : undefined}
               value={backgroundColor}
               onChange={onBackgroundColorChange}
               onBlur={onBackgroundColorBlur}
@@ -489,15 +502,15 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   className="text-xs sm:text-sm md:text-base font-medium text-gray-700 dark:text-gray-300 cursor-pointer flex-1 leading-tight sm:leading-normal pr-2 sm:pr-0"
                   onClick={() => onFooterHiddenChange(!footerHidden)}
                 >
-                  فوتەر بشارەوە
+                  {copy?.hideFooter ?? "فوتەر بشارەوە"}
                 </label>
-                <Tooltip content={footerHidden ? "فوتەر بشارەوە (شاردراوە)" : "فوتەر پیشان بدە (نیشاندراو)"} side="top">
+                <Tooltip content={footerHidden ? copy?.footerHiddenHint ?? "فوتەر بشارەوە (شاردراوە)" : copy?.footerShownHint ?? "فوتەر پیشان بدە (نیشاندراو)"} side="top">
                   <button
                     type="button"
                     role="switch"
                     aria-checked={footerHidden}
                     aria-label={
-                      footerHidden ? "فوتەر شاردراوە" : "فوتەر نیشاندراوە"
+                      footerHidden ? copy?.footerHidden ?? "فوتەر شاردراوە" : copy?.footerShown ?? "فوتەر نیشاندراوە"
                     }
                     onClick={() => onFooterHiddenChange(!footerHidden)}
                     className={`relative inline-flex h-7 w-12 sm:h-8 sm:w-14 md:h-9 md:w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 touch-manipulation active:scale-95 ${
@@ -527,18 +540,18 @@ export const BasicInfoStep = memo(function BasicInfoStep({
 
             {!footerHidden && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <EditorField label="ناوی فوتەر">
+                <EditorField label={copy?.footerName ?? "ناوی فوتەر"}>
                   <input
                     id="footerText"
                     type="text"
                     value={footerText}
                     onChange={(e) => onFooterTextChange(e.target.value)}
                     className={modalInputClass()}
-                    placeholder="بۆ نموونە: Sponsor.krd"
+                    placeholder={copy?.footerNamePlaceholder ?? "بۆ نموونە: Sponsor.krd"}
                     dir="auto"
                   />
                 </EditorField>
-                <EditorField label="ژمارەی مۆبایل">
+                <EditorField label={copy?.mobilePhone ?? "ژمارەی مۆبایل"}>
                   <input
                     id="footerPhone"
                     type="text"
@@ -570,18 +583,18 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   <MessageCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-200 font-kurdish">
-                  پرسیارەکانی واتساپ
+                  {copy?.whatsappQuestions ?? "پرسیارەکانی واتساپ"}
                 </h3>
               </div>
-              <Tooltip content={whatsappModalEnabled ? "مۆدالی واتساپ ناچالاک بکە" : "مۆدالی واتساپ چالاک بکە"} side="top">
+              <Tooltip content={whatsappModalEnabled ? copy?.disableWhatsapp ?? "مۆدالی واتساپ ناچالاک بکە" : copy?.enableWhatsapp ?? "مۆدالی واتساپ چالاک بکە"} side="top">
                 <button
                   type="button"
                   role="switch"
                   aria-checked={whatsappModalEnabled}
                   aria-label={
                     whatsappModalEnabled
-                      ? "مۆدالی واتساپ چالاکە"
-                      : "مۆدالی واتساپ ناچالاکە"
+                      ? copy?.whatsappEnabled ?? "مۆدالی واتساپ چالاکە"
+                      : copy?.whatsappDisabled ?? "مۆدالی واتساپ ناچالاکە"
                   }
                   onClick={() =>
                     onWhatsappModalEnabledChange(!whatsappModalEnabled)
@@ -614,27 +627,27 @@ export const BasicInfoStep = memo(function BasicInfoStep({
               <>
                 {/* Modal Title and Subtitle */}
                 <div className="space-y-3">
-                  <EditorField label="سەردێڕی مۆدال">
+                  <EditorField label={copy?.modalTitle ?? "سەردێڕی مۆدال"}>
                     <input
                       type="text"
                       value={whatsappModalTitle}
                       onChange={(e) =>
                         onWhatsappModalTitleChange(e.target.value)
                       }
-                      placeholder="پەیوەندی کردن"
+                      placeholder={copy?.whatsappTitle ?? "پەیوەندی کردن"}
                       className={modalInputClass()}
                       dir="auto"
                     />
                   </EditorField>
 
-                  <EditorField label="ژێر سەردێڕ">
+                  <EditorField label={copy?.modalSubtitle ?? "ژێر سەردێڕ"}>
                     <input
                       type="text"
                       value={whatsappModalSubtitle}
                       onChange={(e) =>
                         onWhatsappModalSubtitleChange(e.target.value)
                       }
-                      placeholder="پرسیارێک هەڵبژێرە"
+                      placeholder={copy?.whatsappSubtitle ?? "پرسیارێک هەڵبژێرە"}
                       className={modalInputClass()}
                       dir="auto"
                     />
@@ -645,23 +658,23 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-                      پرسیارەکان ({whatsappQuestions.length})
+                      {copy?.questions ?? "پرسیارەکان"} ({whatsappQuestions.length})
                     </label>
-                    <Tooltip content="زیادکردنی پرسیارێکی نوێی واتساپ" side="top">
+                    <Tooltip content={copy?.addQuestionHint ?? "زیادکردنی پرسیارێکی نوێی واتساپ"} side="top">
                       <button
                         type="button"
                         onClick={handleAddQuestion}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow-md animate-none cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        <span>زیادکردنی پرسیار</span>
+                        <span>{copy?.addQuestion ?? "زیادکردنی پرسیار"}</span>
                       </button>
                     </Tooltip>
                   </div>
 
                   {whatsappQuestions.length === 0 ? (
                     <div className="text-center py-6 text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-[#161B22] rounded-lg border border-dashed border-gray-300 dark:border-white/10">
-                      هیچ پرسیارێک نییە. کلیک بکە بۆ زیادکردنی پرسیارێکی نوێ.
+                      {copy?.noQuestions ?? "هیچ پرسیارێک نییە. کلیک بکە بۆ زیادکردنی پرسیارێکی نوێ."}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -676,18 +689,18 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                               <div className="flex items-center gap-2">
                                 <GripVertical className="h-4 w-4 text-gray-400" />
                                 <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                                  پرسیار #{index + 1}
+                                  {copy?.question ?? "پرسیار"} #{index + 1}
                                 </span>
                               </div>
                               {whatsappQuestions.length > 1 && (
-                                <Tooltip content="سڕینەوەی پرسیار" side="top">
+                                <Tooltip content={copy?.deleteQuestion ?? "سڕینەوەی پرسیار"} side="top">
                                   <button
                                     type="button"
                                     onClick={() =>
                                       handleRemoveQuestion(question.id)
                                     }
                                     className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                    aria-label="سڕینەوەی پرسیار"
+                                    aria-label={copy?.deleteQuestion ?? "سڕینەوەی پرسیار"}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </button>
@@ -696,7 +709,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                             </div>
 
                             {/* Question Text */}
-                            <EditorField label="دەقی پرسیار">
+                            <EditorField label={copy?.questionText ?? "دەقی پرسیار"}>
                               <input
                                 type="text"
                                 value={question.text}
@@ -707,7 +720,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                                     e.target.value,
                                   )
                                 }
-                                placeholder="داواکردن"
+                                placeholder={copy?.order ?? "داواکردن"}
                                 aria-invalid={!!questionError?.text}
                                 className={modalInputClass(
                                   !!questionError?.text,
@@ -716,13 +729,13 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                               />
                               {questionError?.text && (
                                 <p className="text-xs text-red-500 mt-1 font-kurdish">
-                                  {questionError.text}
+                                  {copy?.questionTextRequired ?? questionError.text}
                                 </p>
                               )}
                             </EditorField>
 
                             {/* Question Message */}
-                            <EditorField label="پەیام (دەقی نێردراو بۆ واتساپ)">
+                            <EditorField label={copy?.questionMessage ?? "پەیام (دەقی نێردراو بۆ واتساپ)"}>
                               <textarea
                                 value={question.message}
                                 onChange={(e) =>
@@ -732,7 +745,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                                     e.target.value,
                                   )
                                 }
-                                placeholder="سڵاو بەڕێز دەمەوێت داوا بکەم."
+                                placeholder={copy?.orderMessage ?? "سڵاو بەڕێز دەمەوێت داوا بکەم."}
                                 rows={2}
                                 aria-invalid={!!questionError?.message}
                                 className={modalTextareaClass(
@@ -743,7 +756,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                               />
                               {questionError?.message && (
                                 <p className="text-xs text-red-500 mt-1 font-kurdish">
-                                  {questionError.message}
+                                  {copy?.questionMessageRequired ?? questionError.message}
                                 </p>
                               )}
                             </EditorField>
@@ -761,6 +774,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
 
       {onBackgroundPatternChange && (
         <BackgroundPatternModal
+          copy={copy?.language === "en" ? englishPatternCopy : copy ? arabicPatternCopy : undefined}
           isOpen={isPatternSelectorOpen}
           value={backgroundPattern}
           onChange={onBackgroundPatternChange}
@@ -769,6 +783,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
       )}
 
       <TemplateSelector
+        copy={copy?.language === "en" ? englishTemplatePickerCopy : copy ? arabicTemplatePickerCopy : undefined}
         isOpen={isTemplateSelectorOpen}
         onClose={() => setIsTemplateSelectorOpen(false)}
         selectedTemplate={templateKey}

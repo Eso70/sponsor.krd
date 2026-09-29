@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { HomeLanding } from "@/components/home/HomeLanding";
 import { BusinessLanding } from "@/components/business/BusinessLanding";
 import { extractSubdomain } from "@/lib/subdomain-utils";
@@ -9,6 +9,11 @@ import { BusinessBadGatewayPage } from "@/components/error-pages/BusinessBadGate
 import { BusinessGatewayTimeoutPage } from "@/components/error-pages/BusinessGatewayTimeoutPage";
 import { classifyUpstreamFailure } from "@/lib/api/upstream-failure";
 import { businessTabTitle } from "@/lib/utils/tab-title";
+import { businessPublicCopy } from "@/features/business/i18n/public-copy";
+import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
+import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
+import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
+import { rootPublicCopy } from "@/features/public-site/root-public-copy";
 import {
   INTERNAL_PROXY_KEY_HEADER,
   internalProxyKey,
@@ -43,12 +48,20 @@ async function isRootRequest(): Promise<boolean> {
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default async function Home() {
-  if (await isRootRequest()) return <HomeLanding />;
+  if (await isRootRequest()) {
+    const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+    return <HomeLanding initialLocale={locale} />;
+  }
 
   const headerStore = await headers();
   const host = headerStore.get("host") || "";
   const subdomain = extractSubdomain(host, undefined, ROOT_DOMAIN);
-  if (!subdomain) return <HomeLanding />;
+  if (!subdomain) {
+    const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+    return <HomeLanding initialLocale={locale} />;
+  }
+  const cookieStore = await cookies();
+  const initialLocale = publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
 
   let landingProps: ComponentProps<typeof BusinessLanding> | null = null;
   let badGateway = false;
@@ -98,7 +111,7 @@ export default async function Home() {
           linktrees = Array.isArray(ltJson?.data) ? ltJson.data : [];
         }
 
-        landingProps = { business, linktrees };
+        landingProps = { business, linktrees, initialLocale };
       }
     }
   } catch (error) {
@@ -107,9 +120,9 @@ export default async function Home() {
     serviceUnavailable = failure.status === 503;
   }
 
-  if (badGateway) return <BusinessBadGatewayPage />;
-  if (serviceUnavailable) return <BusinessServiceUnavailablePage />;
-  if (gatewayTimeout) return <BusinessGatewayTimeoutPage />;
+  if (badGateway) return <BusinessBadGatewayPage pageCopy={businessErrorPageCopy(initialLocale, "badGateway")} />;
+  if (serviceUnavailable) return <BusinessServiceUnavailablePage pageCopy={businessErrorPageCopy(initialLocale, "serviceUnavailable")} />;
+  if (gatewayTimeout) return <BusinessGatewayTimeoutPage pageCopy={businessErrorPageCopy(initialLocale, "gatewayTimeout")} />;
   if (!landingProps) return <HomeLanding />;
   return <BusinessLanding {...landingProps} />;
 }
@@ -120,6 +133,8 @@ export async function generateMetadata() {
   const subdomain = extractSubdomain(host, undefined, ROOT_DOMAIN);
 
   if (subdomain) {
+    const cookieStore = await cookies();
+    const locale = publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
     try {
       const res = await fetch(`${BACKEND_URL}/api/public/business`, {
         headers: {
@@ -152,8 +167,8 @@ export async function generateMetadata() {
               business.logo || business.default_avatar || BUSINESS_LOGO_PLACEHOLDER,
           };
           return {
-            title: businessTabTitle(business.name, "Home"),
-            description: `Explore ${business.name}'s official public pages and contact information.`,
+            title: businessTabTitle(business.name, businessPublicCopy[locale].footer.home),
+            description: `${businessPublicCopy[locale].publishedPages} — ${business.name}`,
             icons,
             themeColor: business.website_color || SPONSOR_KRD_ACCENT_COLOR,
           };
@@ -163,12 +178,12 @@ export async function generateMetadata() {
   }
 
   // Root domain only — a business subdomain returned above with its own icons.
+  const rootLocale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
   // Declared explicitly rather than left to the implicit `/favicon.ico` pickup,
   // so SponsorKrd's own mark is stated in the same place a tenant's is.
   return {
     title: "Sponsor.krd",
-    description:
-      "A secure SaaS platform for structured TikTok advertising-account connections, with isolated platform administration and future business account connectivity.",
+    description: rootPublicCopy[rootLocale].metadataDescription,
     icons: {
       icon: [
         { url: SPONSOR_KRD_FAVICON },

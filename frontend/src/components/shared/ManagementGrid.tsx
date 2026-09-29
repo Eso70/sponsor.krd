@@ -6,12 +6,14 @@ import {
   useManagementPagination,
   type ManagementTablePagination,
 } from "@/components/shared/ManagementTable";
+import type { TablePaginationCopy } from "@/components/shared/TablePagination";
 
 interface ManagementGridProps<T> {
   data: T[];
   getItemKey: (item: T) => string;
   renderItem: (item: T) => ReactNode;
   pagination?: ManagementTablePagination;
+  paginationCopy?: Partial<TablePaginationCopy>;
   desktopColumns?: 2 | 3;
   className?: string;
 }
@@ -28,10 +30,11 @@ export function ManagementGrid<T>({
   getItemKey,
   renderItem,
   pagination,
+  paginationCopy,
   desktopColumns = 3,
   className = "",
 }: ManagementGridProps<T>) {
-  const { visibleData, footer } = useManagementPagination(data, pagination);
+  const { visibleData, footer } = useManagementPagination(data, pagination, paginationCopy);
 
   const cellBorders = (index: number) => {
     const total = visibleData.length;

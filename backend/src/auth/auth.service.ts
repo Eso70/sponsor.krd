@@ -43,10 +43,10 @@ export class AuthService {
   async getBusinessPreferredLocale(
     businessId: string,
     userId?: string,
-  ): Promise<'ckb' | 'ar'> {
+  ): Promise<'ckb' | 'ar' | 'en'> {
     if (!userId) return 'ckb';
     const result = await this.databaseService.query<{
-      preferred_locale: 'ckb' | 'ar';
+      preferred_locale: 'ckb' | 'ar' | 'en';
     }>(
       `SELECT users.preferred_locale
        FROM users
@@ -61,11 +61,11 @@ export class AuthService {
   async updateBusinessPreferredLocale(
     businessId: string,
     userId: string | undefined,
-    locale: 'ckb' | 'ar',
-  ): Promise<'ckb' | 'ar'> {
+    locale: 'ckb' | 'ar' | 'en',
+  ): Promise<'ckb' | 'ar' | 'en'> {
     if (!userId) throw new ForbiddenException('A member account is required');
     const result = await this.databaseService.query<{
-      preferred_locale: 'ckb' | 'ar';
+      preferred_locale: 'ckb' | 'ar' | 'en';
     }>(
       `UPDATE users SET preferred_locale = $3, updated_at = NOW()
        WHERE users.id = $1 AND users.status = 'active'
