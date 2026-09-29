@@ -604,8 +604,8 @@ export class BusinessOnboardingService {
       let userId = emailOwner.rows[0]?.id;
       if (!userId) {
         const user = await client.query<{ id: string }>(
-          `INSERT INTO users (email, display_name)
-           VALUES ($1, $2) RETURNING id`,
+          `INSERT INTO users (email, display_name, preferred_locale)
+           VALUES ($1, $2, 'en') RETURNING id`,
           [email, email.split('@')[0] || email],
         );
         userId = user.rows[0].id;
@@ -848,8 +848,8 @@ export class BusinessOnboardingService {
           );
         }
         const user = await client.query<{ id: string }>(
-          `INSERT INTO users (email, display_name, avatar_url)
-           VALUES ($1, $2, $3) RETURNING id`,
+          `INSERT INTO users (email, display_name, avatar_url, preferred_locale)
+           VALUES ($1, $2, $3, 'en') RETURNING id`,
           [identity.email, identity.name, identity.avatarUrl],
         );
         userId = user.rows[0].id;
@@ -1166,11 +1166,16 @@ export class BusinessOnboardingService {
   async application(sessionToken: string) {
     const session = await this.signupSession(sessionToken);
     const result = await this.database.query(
-      `SELECT id, status, owner_name AS "ownerName", owner_email AS "ownerEmail",
-              google_avatar_url AS "googleAvatarUrl", business_name AS "businessName",
-              phone, requested_subdomain AS "requestedSubdomain",
-              review_reason AS "reviewReason", submitted_at AS "submittedAt"
-       FROM business_signup_applications WHERE id = $1 AND user_id = $2`,
+      `SELECT application.id, application.status,
+              application.owner_name AS "ownerName", application.owner_email AS "ownerEmail",
+              application.google_avatar_url AS "googleAvatarUrl",
+              application.business_name AS "businessName",
+              application.phone, application.requested_subdomain AS "requestedSubdomain",
+              users.preferred_locale AS "preferredLocale",
+              application.review_reason AS "reviewReason", application.submitted_at AS "submittedAt"
+       FROM business_signup_applications application
+       JOIN users ON users.id = application.user_id
+       WHERE application.id = $1 AND application.user_id = $2`,
       [session.applicationId, session.userId],
     );
     if (!result.rows[0])
@@ -1190,14 +1195,19 @@ export class BusinessOnboardingService {
     const subdomain = normalizeBusinessSubdomain(dto.requestedSubdomain);
     try {
       const result = await this.database.query(
-        `UPDATE business_signup_applications SET
-           business_name = $1, phone = $2, requested_subdomain = $3,
-           terms_version = $4, privacy_version = $5,
-           terms_accepted_at = COALESCE(terms_accepted_at, NOW()),
-           privacy_accepted_at = COALESCE(privacy_accepted_at, NOW()),
-           status = CASE WHEN status = 'changes_requested' THEN 'draft' ELSE status END,
-           review_reason = CASE WHEN status = 'changes_requested' THEN NULL ELSE review_reason END
-         WHERE id = $6 AND user_id = $7 AND status IN ('draft', 'changes_requested')
+        `WITH updated_application AS (
+           UPDATE business_signup_applications SET
+             business_name = $1, phone = $2, requested_subdomain = $3,
+             terms_version = $4, privacy_version = $5,
+             terms_accepted_at = COALESCE(terms_accepted_at, NOW()),
+             privacy_accepted_at = COALESCE(privacy_accepted_at, NOW()),
+             status = CASE WHEN status = 'changes_requested' THEN 'draft' ELSE status END,
+             review_reason = CASE WHEN status = 'changes_requested' THEN NULL ELSE review_reason END
+           WHERE id = $6 AND user_id = $7 AND status IN ('draft', 'changes_requested')
+           RETURNING user_id
+         )
+         UPDATE users SET preferred_locale = COALESCE($8, preferred_locale), updated_at = NOW()
+         WHERE id = (SELECT user_id FROM updated_application)
          RETURNING id`,
         [
           dto.businessName.trim(),
@@ -1207,6 +1217,7 @@ export class BusinessOnboardingService {
           PRIVACY_VERSION,
           session.applicationId,
           session.userId,
+          dto.preferredLocale ?? null,
         ],
       );
       if (!result.rows[0])

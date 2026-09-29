@@ -56,6 +56,9 @@ email (or the entered email when the invitation is not bound to one), and
 user plus `signup_session` when the email matched. Codes are stored only as
 HMAC digests keyed by `SESSION_SECRET`, expire after 10 minutes, allow a bounded
 number of attempts, and are rate limited per email and per IP.
+New Google and email signup users start with English as their dashboard
+language. The application form can select Kurdish, Arabic, or English; its
+update saves the choice atomically to the verified applicant's user account.
 
 Both Google and email verification accept the shared private-device choice.
 Normal business sessions last 12 hours; remembered business sessions last 30

@@ -574,12 +574,13 @@ single cycling button that shows the destination language code (AR, EN, or KU) a
 remains available on mobile. A change updates client text at once,
 persists through `PATCH /api/auth/preferred-locale`, and rolls back with feedback
 if the request fails. The control is hidden for impersonated or legacy sessions
-without a member identity. The locked first-time setup modal and Business Settings
-defaults tab expose the same member-owned preference as a language dropdown;
-changing any of the three controls saves immediately and updates the others.
+without a member identity. The public business application form lets the
+applicant choose their initial dashboard language (English for a new account).
+Business Settings → Defaults exposes the same member-owned preference as a
+dropdown; changes there or in the header save immediately and stay in sync.
 This is not a business-wide or public-page language setting. The Business dashboard
-stays LTR in all three languages; the
-Business subtree carries the selected `lang` for assistive technology.
+stays LTR in all three languages; the Business subtree carries the selected
+`lang` for assistive technology.
 The selected language is also mirrored to a host-only, non-sensitive
 `business_dashboard_locale` cookie. It is a UI hint only, never an
 authentication or authorization input. The pre-sign-in Business workspace,

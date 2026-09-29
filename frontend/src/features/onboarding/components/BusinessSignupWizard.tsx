@@ -4,21 +4,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, Loader2, ShieldCheck } from "lucide-react";
 import { apiRequest } from "@/lib/api/request";
-import { getBusinessWorkspaceEntryUrl } from "@/lib/utils/app-url";
+import { getBusinessWorkspaceEntryUrl, getRootDomain } from "@/lib/utils/app-url";
 import { AuthenticationCard } from "@/components/shared/AuthenticationCard";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
 import { AuthenticationRefreshButton } from "@/components/shared/AuthenticationRefreshButton";
 import { EditorField } from "@/components/shared/EditorField";
+import { LanguagePreferenceSelect } from "@/components/shared/LanguagePreferenceSelect";
 import { InlineRequestError } from "@/components/shared/InlineRequestError";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { toast } from "sonner";
 import { RootPublicLanguageToggle, useRootPublicLocale } from "@/features/public-site/RootPublicLocaleProvider";
+import { parseRootPublicLocale, type RootPublicLocale } from "@/features/public-site/root-public-locale";
 import { rootOnboardingCopy } from "../root-onboarding-copy";
 import {
   buildSignupApplicationPayload,
   validateSignupApplication,
+  type SignupApplicationForm,
   type SignupFieldErrors,
 } from "@/features/onboarding/signup-application";
 
@@ -28,6 +31,7 @@ type Application = {
   businessName: string | null;
   phone: string | null;
   requestedSubdomain: string | null;
+  preferredLocale?: RootPublicLocale;
   reviewReason?: string | null;
 };
 
@@ -44,10 +48,11 @@ export function BusinessSignupWizard() {
   const { locale } = useRootPublicLocale();
   const copy = rootOnboardingCopy[locale];
   const [application, setApplication] = useState<Application | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SignupApplicationForm>({
     businessName: "",
     phone: "",
     requestedSubdomain: "",
+    preferredLocale: "en",
   });
   const [subdomainTouched, setSubdomainTouched] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -72,6 +77,7 @@ export function BusinessSignupWizard() {
           businessName: data.businessName || "",
           phone: data.phone || "",
           requestedSubdomain: data.requestedSubdomain || "",
+          preferredLocale: data.preferredLocale ? parseRootPublicLocale(data.preferredLocale) : "en",
         });
       })
       .catch(() =>
@@ -270,7 +276,7 @@ export function BusinessSignupWizard() {
               className={modalInputClass(Boolean(visibleErrors.phone))}
               aria-invalid={Boolean(visibleErrors.phone)}
               value={form.phone}
-              placeholder="750 000 0000"
+              placeholder={copy.phonePlaceholder}
               onChange={(event) =>
                 setForm({ ...form, phone: event.target.value })
               }
@@ -296,7 +302,7 @@ export function BusinessSignupWizard() {
                   visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
                 )}
                 value={form.requestedSubdomain}
-                placeholder="electronics-shop"
+                placeholder={copy.subdomainPlaceholder}
                 onChange={(event) => {
                   setSubdomainTouched(true);
                   setAvailable(null);
@@ -306,9 +312,16 @@ export function BusinessSignupWizard() {
                   });
                 }}
               />
-              <span className="shrink-0 text-xs text-slate-400">.lvh.me</span>
+              <span className="shrink-0 text-xs text-slate-400">.{getRootDomain().split(":")[0]}</span>
             </div>
           </EditorField>
+          <LanguagePreferenceSelect
+            label={copy.defaultLanguage}
+            hint={copy.languageHint}
+            value={form.preferredLocale}
+            onChange={(preferredLocale) => setForm((current) => ({ ...current, preferredLocale }))}
+            disabled={busy}
+          />
           <button
             type="button"
             disabled={busy}

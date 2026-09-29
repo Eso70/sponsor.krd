@@ -51,6 +51,8 @@ export class UpdateSignupApplicationDto {
   @IsString()
   @Matches(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/)
   requestedSubdomain: string;
+  @IsOptional() @IsIn(['ckb', 'ar', 'en']) preferredLocale?:
+    'ckb' | 'ar' | 'en';
 }
 
 export class ReviewSignupApplicationDto {

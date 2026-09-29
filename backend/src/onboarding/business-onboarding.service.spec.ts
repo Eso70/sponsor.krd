@@ -19,6 +19,50 @@ function createService() {
 }
 
 describe('BusinessOnboardingService invitations', () => {
+  it('saves the application language only for the verified signup user', async () => {
+    const database = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1' }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'application-1', preferredLocale: 'ar' }],
+        }),
+    };
+    const redis = {
+      get: jest.fn().mockResolvedValue({
+        applicationId: 'application-1',
+        userId: 'user-1',
+      }),
+    };
+    const service = new BusinessOnboardingService(
+      database as never,
+      redis as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.updateApplication('session-token', {
+        businessName: 'Acme Studio',
+        phone: '7501234567',
+        requestedSubdomain: 'acme-studio',
+        preferredLocale: 'ar',
+      }),
+    ).resolves.toEqual(expect.objectContaining({ preferredLocale: 'ar' }));
+    expect(database.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('UPDATE users SET preferred_locale'),
+      expect.arrayContaining(['application-1', 'user-1', 'ar']),
+    );
+    expect(database.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('JOIN users ON users.id = application.user_id'),
+      ['application-1', 'user-1'],
+    );
+  });
+
   it('preserves the handoff query when building a tenant URL', () => {
     expect(
       buildTenantUrl(
@@ -791,6 +835,11 @@ describe('BusinessOnboardingService invitations', () => {
       'owner@example.com',
       expect.stringMatching(/^\d{6}$/),
     );
+    expect(
+      client.query.mock.calls.some(([sql]) =>
+        String(sql).includes("VALUES ($1, $2, 'en') RETURNING id"),
+      ),
+    ).toBe(true);
     expect(redis.set).toHaveBeenCalledWith(
       expect.stringMatching(/^signup:session:/),
       { applicationId: 'application-1', userId: 'user-1' },

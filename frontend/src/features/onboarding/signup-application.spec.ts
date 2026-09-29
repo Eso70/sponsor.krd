@@ -9,6 +9,7 @@ const validForm: SignupApplicationForm = {
   businessName: "Acme Studio",
   phone: "7501234567",
   requestedSubdomain: "acme-studio",
+  preferredLocale: "en",
 };
 
 describe("signup application", () => {
@@ -16,7 +17,7 @@ describe("signup application", () => {
     expect(validateSignupApplication(validForm, true)).toEqual({});
   });
 
-  it("sends only the three required application fields", () => {
+  it("sends the selected dashboard language with the application fields", () => {
     expect(
       buildSignupApplicationPayload({
         ...validForm,
@@ -26,6 +27,7 @@ describe("signup application", () => {
       businessName: "Acme Studio",
       phone: "7501234567",
       requestedSubdomain: "acme-studio",
+      preferredLocale: "en",
     });
   });
 

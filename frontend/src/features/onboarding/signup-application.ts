@@ -4,6 +4,7 @@ export type SignupApplicationForm = {
   businessName: string;
   phone: string;
   requestedSubdomain: string;
+  preferredLocale: RootPublicLocale;
 };
 
 export type SignupField = keyof SignupApplicationForm | "subdomainAvailability";
@@ -42,5 +43,6 @@ export function buildSignupApplicationPayload(form: SignupApplicationForm) {
     businessName: form.businessName.trim(),
     phone: form.phone.trim(),
     requestedSubdomain: form.requestedSubdomain,
+    preferredLocale: form.preferredLocale,
   };
 }

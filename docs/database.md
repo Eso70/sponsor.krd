@@ -16,8 +16,10 @@ underlying advertising-page entitlement where applicable.
 ## Business identity and applications
 
 `users.preferred_locale` stores each person's dashboard language (`ckb`, `ar`, or
-`en`, default `ckb`). It is not business branding and does not change public
-page content. The 2026-09-22 forward migration adds the column after the
+`en`, database default `ckb`). New invitation-signup users explicitly start in
+English, and their application form can select another initial language. Existing
+users keep their saved choice. It is not business branding and does not change
+public page content. The 2026-09-22 forward migration adds the column after the
 baseline on both fresh and existing installations; the 2026-09-28 forward
 migration expands its check constraint to permit English.
 

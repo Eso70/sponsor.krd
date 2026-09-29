@@ -9,10 +9,25 @@ describe('UpdateSignupApplicationDto', () => {
       businessName: 'Acme Studio',
       phone: '7501234567',
       requestedSubdomain: 'acme-studio',
+      preferredLocale: 'en',
       acceptTerms: true,
       acceptPrivacy: true,
     });
 
     await expect(validate(dto)).resolves.toEqual([]);
+  });
+
+  it('rejects an unsupported dashboard language', async () => {
+    const dto = plainToInstance(UpdateSignupApplicationDto, {
+      businessName: 'Acme Studio',
+      phone: '7501234567',
+      requestedSubdomain: 'acme-studio',
+      preferredLocale: 'fr',
+    });
+    expect(await validate(dto)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ property: 'preferredLocale' }),
+      ]),
+    );
   });
 });
