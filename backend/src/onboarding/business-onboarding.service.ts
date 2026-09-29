@@ -70,6 +70,8 @@ const REOPEN_SIGNUP_APPLICATION_SQL = `
   status = CASE WHEN status IN ('rejected', 'deleted')
                  OR (status = 'approved' AND business_id IS NULL)
                 THEN 'draft' ELSE status END,
+  business_name = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE business_name END,
+  phone = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE phone END,
   requested_subdomain = CASE WHEN status IN ('rejected', 'approved', 'deleted')
                              THEN NULL ELSE requested_subdomain END,
   logo = CASE WHEN status IN ('approved', 'deleted') THEN NULL ELSE logo END,

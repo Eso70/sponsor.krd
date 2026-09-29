@@ -67,6 +67,9 @@ describe('BusinessAdministrationService', () => {
     expect(clientQuery.mock.calls[0][0]).toContain(
       'requested_subdomain = NULL',
     );
+    expect(clientQuery.mock.calls[0][0]).toContain(
+      'business_name = NULL, phone = NULL',
+    );
     expect(clientQuery.mock.calls[0][0]).toContain("'business_deleted'");
   });
 

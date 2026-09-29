@@ -1005,6 +1005,7 @@ export class BusinessAdministrationService {
         `WITH closed AS (
            UPDATE business_signup_applications
            SET status = 'deleted', business_id = NULL,
+               business_name = NULL, phone = NULL,
                requested_subdomain = NULL, logo = NULL, favicon = NULL,
                default_avatar = NULL, selected_subscription_plan_id = NULL
            WHERE business_id = $1

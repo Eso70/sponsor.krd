@@ -54,7 +54,6 @@ export function BusinessSignupWizard() {
     requestedSubdomain: "",
     preferredLocale: "en",
   });
-  const [subdomainTouched, setSubdomainTouched] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -74,9 +73,9 @@ export function BusinessSignupWizard() {
       .then((data) => {
         setApplication(data);
         setForm({
-          businessName: data.businessName || "",
-          phone: data.phone || "",
-          requestedSubdomain: data.requestedSubdomain || "",
+          businessName: "",
+          phone: "",
+          requestedSubdomain: "",
           preferredLocale: data.preferredLocale ? parseRootPublicLocale(data.preferredLocale) : "en",
         });
       })
@@ -264,27 +263,21 @@ export function BusinessSignupWizard() {
           <EditorField label={copy.businessName} required error={visibleErrors.businessName}>
             <input
               autoFocus
+              autoComplete="off"
               className={modalInputClass(Boolean(visibleErrors.businessName))}
               aria-invalid={Boolean(visibleErrors.businessName)}
               value={form.businessName}
               placeholder={copy.namePlaceholder}
               onChange={(event) => {
                 const businessName = event.target.value;
-                setAvailable(null);
-                setForm((current) => ({
-                  ...current,
-                  businessName,
-                  requestedSubdomain: subdomainTouched
-                    ? current.requestedSubdomain
-                    : slug(businessName),
-                }));
+                setForm((current) => ({ ...current, businessName }));
               }}
             />
           </EditorField>
           <EditorField label={copy.phone} required error={visibleErrors.phone}>
             <input
               type="tel"
-              autoComplete="tel"
+              autoComplete="off"
               className={modalInputClass(Boolean(visibleErrors.phone))}
               aria-invalid={Boolean(visibleErrors.phone)}
               value={form.phone}
@@ -304,6 +297,7 @@ export function BusinessSignupWizard() {
           >
             <div className="flex items-center gap-2">
               <input
+                autoComplete="off"
                 className={modalInputClass(
                   available === false ||
                     Boolean(
@@ -316,7 +310,6 @@ export function BusinessSignupWizard() {
                 value={form.requestedSubdomain}
                 placeholder={copy.subdomainPlaceholder}
                 onChange={(event) => {
-                  setSubdomainTouched(true);
                   setAvailable(null);
                   setForm({
                     ...form,

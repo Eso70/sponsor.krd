@@ -61,9 +61,10 @@ language. The application form can select Kurdish, Arabic, or English; its
 update saves the choice atomically to the verified applicant's user account.
 Deleting an approved business closes its signup application as `deleted` in the
 same PostgreSQL transaction, records the administrator in its review-event
-history, releases the reserved subdomain, and keeps the
+history, clears the old business name and phone, releases the reserved
+subdomain, and keeps the
 verified user/Google identity. A later administrator invitation can reopen the
-application for the same owner; an approval still linked to an existing
+application for the same owner with empty business details; an approval still linked to an existing
 business remains ineligible for signup.
 
 Both Google and email verification accept the shared private-device choice.

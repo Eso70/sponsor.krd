@@ -535,6 +535,13 @@ describe('BusinessOnboardingService invitations', () => {
         expect(
           client.query.mock.calls.some(([sql]) =>
             String(sql).includes(
+              "business_name = CASE WHEN status IN ('approved', 'deleted')",
+            ),
+          ),
+        ).toBe(true);
+        expect(
+          client.query.mock.calls.some(([sql]) =>
+            String(sql).includes(
               "requested_subdomain = CASE WHEN status IN ('rejected', 'approved', 'deleted')",
             ),
           ),
@@ -626,6 +633,13 @@ describe('BusinessOnboardingService invitations', () => {
         applicationId: 'application-1',
         userId: 'user-1',
       });
+      expect(
+        client.query.mock.calls.some(([sql]) =>
+          String(sql).includes(
+            "business_name = CASE WHEN status IN ('approved', 'deleted')",
+          ),
+        ),
+      ).toBe(true);
       expect(
         client.query.mock.calls.some(([sql]) =>
           String(sql).includes(

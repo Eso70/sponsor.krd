@@ -11,6 +11,8 @@ ALTER TABLE public.business_signup_applications
 WITH closed AS (
     UPDATE public.business_signup_applications
     SET status = 'deleted',
+        business_name = NULL,
+        phone = NULL,
         requested_subdomain = NULL,
         logo = NULL,
         favicon = NULL,

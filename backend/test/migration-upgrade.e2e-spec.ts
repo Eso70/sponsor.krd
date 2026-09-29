@@ -90,9 +90,9 @@ describe('consolidated database schema commands (e2e)', () => {
     const application = await fixture.query<{ id: string }>(
       `INSERT INTO business_signup_applications
          (invitation_id, user_id, status, owner_name, owner_email,
-          requested_subdomain, logo)
+           business_name, phone, requested_subdomain, logo)
        VALUES ($1, $2, 'approved', 'Orphan owner', 'orphan@example.com',
-               'released-tenant', '/images/upload/old-logo.png')
+                'Old Business', '7501234567', 'released-tenant', '/images/upload/old-logo.png')
        RETURNING id`,
       [invitation.rows[0].id, user.rows[0].id],
     );
@@ -130,15 +130,19 @@ describe('consolidated database schema commands (e2e)', () => {
     ]);
     const repaired = await fixture.query<{
       status: string;
+      business_name: string | null;
+      phone: string | null;
       requested_subdomain: string | null;
       logo: string | null;
     }>(
-      `SELECT status, requested_subdomain, logo
+      `SELECT status, business_name, phone, requested_subdomain, logo
        FROM business_signup_applications WHERE id = $1`,
       [application.rows[0].id],
     );
     expect(repaired.rows[0]).toEqual({
       status: 'deleted',
+      business_name: null,
+      phone: null,
       requested_subdomain: null,
       logo: null,
     });

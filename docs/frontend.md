@@ -576,6 +576,10 @@ persists through `PATCH /api/auth/preferred-locale`, and rolls back with feedbac
 if the request fails. The control is hidden for impersonated or legacy sessions
 without a member identity. The public business application form lets the
 applicant choose their initial dashboard language (English for a new account).
+The application form opens with blank business name, phone, and subdomain fields,
+including when reopening an older draft or reapplying after a deleted business;
+the saved dashboard language remains selected. Typing a business name does not
+fill the subdomain automatically.
 Business Settings → Defaults exposes the same member-owned preference as a
 dropdown; changes there or in the header save immediately and stay in sync.
 If an approved business is later deleted, its old signup session shows that a

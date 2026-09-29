@@ -86,6 +86,26 @@ describe("BusinessSignupWizard application status", () => {
     expect(screen.queryByText("ناوی بزنس دەبێت لە ٢ تا ١٥٠ پیت بێت")).not.toBeInTheDocument();
   });
 
+  it("starts with empty business fields even when an older application has values", async () => {
+    apiRequest.mockResolvedValueOnce({
+      status: "draft",
+      ownerEmail: "owner@example.com",
+      businessName: "Old Business",
+      phone: "7501234567",
+      requestedSubdomain: "old-business",
+      preferredLocale: "ar",
+    });
+    render(<RootPublicLocaleProvider initialLocale="en"><BusinessSignupWizard /></RootPublicLocaleProvider>);
+
+    expect(await screen.findByPlaceholderText("Enter business name")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Enter mobile number")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Enter subdomain")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "العربية" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Enter business name"), { target: { value: "New Business" } });
+    expect(screen.getByPlaceholderText("Enter subdomain")).toHaveValue("");
+  });
+
   it("starts a new application in English and saves the form language", async () => {
     apiRequest.mockImplementation((path: string, options?: { method?: string }) => {
       if (path === "/api/signup/application" && !options?.method) {
@@ -106,6 +126,7 @@ describe("BusinessSignupWizard application status", () => {
 
     fireEvent.change(screen.getByPlaceholderText("Enter business name"), { target: { value: "Acme Studio" } });
     fireEvent.change(screen.getByPlaceholderText("Enter mobile number"), { target: { value: "7501234567" } });
+    fireEvent.change(screen.getByPlaceholderText("Enter subdomain"), { target: { value: "acme-studio" } });
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining("/api/signup/subdomain-availability")));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     fireEvent.click(screen.getByRole("option", { name: "العربية" }));
