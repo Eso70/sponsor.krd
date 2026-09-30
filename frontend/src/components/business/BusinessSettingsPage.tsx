@@ -43,6 +43,7 @@ import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { BusinessOwnerIdentityFields } from "@/features/link-editor/components/BusinessOwnerIdentityFields";
 import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
+import { DefaultPageCreationCard } from "@/features/business/components/DefaultPageCreationCard";
 import {
   AVATAR_ACCEPT,
   AVATAR_MIME_TYPES,
@@ -626,7 +627,7 @@ export function BusinessSettingsPage() {
                     </div>
                   </div>
                 </PageHeaderSection>
-
+                <DefaultPageCreationCard />
               </>
             )}
 

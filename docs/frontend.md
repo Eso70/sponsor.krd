@@ -2,7 +2,9 @@
 
 Business Settings > New page defaults configures starting values for new
 ordinary Linktree pages only. It does not manage the business default page;
-that page is edited through Pages. Saving any existing page, including the
+that page is edited through Pages. A separate card in the same tab can create
+the business default page if it is missing, using system defaults rather than
+the starting settings above. Saving any existing page, including the
 business default page, never changes these starting values.
 
 The shared Linktree editor allows business and platform administrators to edit
