@@ -47,7 +47,7 @@ const KURDISH_COPY: TikTokPixelConfigCopy = {
   saveFailed: "پاشەکەوتکردن سەرکەوتوو نەبوو", saved: "ڕێکخستنەکانی TikTok نوێکرانەوە",
   title: "پەیوەستکردنی TikTok", description: TIKTOK_CONFIG_WORKSPACES.business.description,
   groups: "گرووپەکانی Pixel و Events API",
-  tokenHint: "تەنها Pixelی سەرەکی ڕووداوەکانی پەڕەکانی Linktree وەردەگرێت. ئەوانی تر وەک پاشەکەوت دەمێننەوە.",
+  tokenHint: "هەموو Pixelە چالاکەکان ڕووداوەکانی پەڕەکانی Linktree وەردەگرن. هەر tokenێک تەنها لەگەڵ Pixel IDی هەمان گرووپ بەکار دەکەوێت.",
   addTooltip: "زیادکردنی گرووپێکی نوێی TikTok", limitTooltip: "گەیشتوویتە سنووری ڕێگەپێدراوی Pixel",
   addGroup: "زیادکردنی گرووپ", emptyTitle: "هیچ گرووپێکی TikTok نییە",
   emptyDescription: "گرووپێک زیاد بکە، Pixel ID دابنێ و ئەگەر دەتەوێت گەیاندنی ڕاژەکار چالاک بێت Events API token زیاد بکە.",
@@ -289,15 +289,6 @@ export function BusinessTikTokPixelConfigPage({
               secretEndpoint={workspace.secretEndpoint}
               copy={copy?.group}
               onUpdate={(patch) => updateConfig(index, patch)}
-              isPrimary={index === 0}
-              onMakePrimary={() =>
-                setConfigs((current) => {
-                  const selected = current[index];
-                  return selected
-                    ? [selected, ...current.filter((_, configIndex) => configIndex !== index)]
-                    : current;
-                })
-              }
               canDelete={configs.length > 1}
               onDelete={() =>
                 setConfigs((current) =>

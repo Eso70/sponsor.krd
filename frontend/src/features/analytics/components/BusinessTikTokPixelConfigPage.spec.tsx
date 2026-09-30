@@ -16,7 +16,7 @@ describe.each([
   ["business", "/api/auth/settings", "PATCH"],
   ["platform", "/api/platform/settings/tiktok", "PUT"],
 ] as const)("%s TikTok settings", (owner, endpoint, method) => {
-  it("saves the selected primary group first", async () => {
+  it("shows and saves both Pixel groups without a primary selection", async () => {
     const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/auth/effective-access") {
         return new Response(JSON.stringify({ data: { entitlements: { "limit.tiktok_pixels": 3 } } }), { status: 200 });
@@ -32,7 +32,10 @@ describe.each([
     vi.stubGlobal("fetch", fetchMock);
 
     render(<BusinessTikTokPixelConfigPage owner={owner} copy={businessMessages.en.TikTokPixel} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Make primary" }));
+    await screen.findByDisplayValue("PIXEL_ONE");
+    expect(screen.getByDisplayValue("PIXEL_TWO")).toBeInTheDocument();
+    expect(screen.queryByText("Primary Pixel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Make primary" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
@@ -44,7 +47,7 @@ describe.each([
         tiktok_configs: Array<{ pixel_id: string }>;
       };
       expect(payload.tiktok_configs.map((group) => group.pixel_id)).toEqual([
-        "PIXEL_TWO", "PIXEL_ONE",
+        "PIXEL_ONE", "PIXEL_TWO",
       ]);
     });
   });

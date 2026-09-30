@@ -66,16 +66,16 @@ would have no authoritative shared event name.
 Linktree HTML. `TikTokPixel` handles client route state, and
 `tiktok-dispatch.ts` is the only runtime owner of `window.ttq`.
 
-Pixel IDs come from the public page owner's database configuration. The first
-active group in saved display order is the one automatic Linktree tracking
-destination for that owner; other groups remain configured as standby choices
-and do not receive Linktree traffic. The shared Business/Platform Pixel editor
-can move a group to the first position with “Make primary” and saves the order.
-The public read and the Events API outbox use the same primary-selection SQL,
-so they cannot broadcast one page event to several unrelated Pixels. The
-platform content workspace has its own groups; it never shares a destination
-with customer businesses. Events API tokens are encrypted at rest and are
-never sent to the browser. Neither value may be read from a shared environment
+Pixel IDs come from the public page owner's database configuration. All active
+groups for that owner receive the same eligible Linktree events, independently
+of saved display order. Each group may therefore be selected in its associated
+TikTok ad account without changing a primary setting. The public read exposes
+all active Pixel IDs; the Events API outbox creates one row per active group
+that has its own encrypted token. Browser and server copies of an event use the
+same event ID and name for deduplication within each Pixel. The platform
+content workspace has its own groups; it never shares destinations with
+customer businesses. Events API tokens are encrypted at rest and are never
+sent to the browser. Neither value may be read from a shared environment
 variable because tracking ownership is per public-page owner.
 
 ## Events API

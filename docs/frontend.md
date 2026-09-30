@@ -39,9 +39,8 @@ Settings. Business dashboards expose neither
 feature; `/business/campaigns` and the former `/business/campains` alias are
 removed. Business TikTok Pixel, Events API, and delivery settings remain in
 place. The shared TikTok Pixel editor disables group deletion when only one
-group remains. Its first saved group is marked Primary Pixel and is the only
-group used for automatic public Linktree tracking; Business and Platform can
-promote another saved group without removing its token. The Ads OAuth callback
+group remains. Every active group is used for automatic public Linktree
+tracking; none is designated primary. The Ads OAuth callback
 requires a verified platform-admin session and
 returns to the configured platform console's Settings > TikTok Ads tab.
 

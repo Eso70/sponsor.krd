@@ -42,8 +42,6 @@ interface TikTokPixelGroupCardProps {
   testEndpoint: string;
   secretEndpoint?: (id: string) => string;
   onUpdate: (updates: Partial<PixelConfigRow>) => void;
-  isPrimary?: boolean;
-  onMakePrimary?: () => void;
   canDelete?: boolean;
   onDelete: () => void;
   copy?: Partial<TikTokPixelGroupCopy>;
@@ -62,7 +60,6 @@ export interface TikTokPixelGroupCopy {
   testTooltip: string; test: string; testSuccess: string; testFailed: string;
   resultBefore: string; resultAfter: string; resultCode: string; resultSaved: string;
   requestIdLabel: string;
-  primary: string; makePrimary: string;
 }
 
 const KURDISH_COPY: TikTokPixelGroupCopy = {
@@ -89,7 +86,6 @@ const KURDISH_COPY: TikTokPixelGroupCopy = {
   resultBefore: "ئێستا لە", resultAfter: "سەیری بکە، ڕووداوەکە بە جۆری",
   resultCode: "و کۆدی", resultSaved: "تۆمار کراوە.",
   requestIdLabel: "ناسنامەی داواکاری:",
-  primary: "Pixelی سەرەکی", makePrimary: "بیکە بە Pixelی سەرەکی",
 };
 
 type TikTokTestEventName = "ViewContent" | "Contact" | "ClickButton";
@@ -100,8 +96,6 @@ export function TikTokPixelGroupCard({
   testEndpoint,
   secretEndpoint,
   onUpdate,
-  isPrimary = false,
-  onMakePrimary,
   canDelete = true,
   onDelete,
   copy,
@@ -296,24 +290,8 @@ export function TikTokPixelGroupCard({
                 {labels.apiActive}
               </span>
             )}
-            {isPrimary && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                {labels.primary}
-              </span>
-            )}
           </div>
         </div>
-
-        {!isPrimary && onMakePrimary && (
-          <button
-            type="button"
-            onClick={onMakePrimary}
-            className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5"
-          >
-            {labels.makePrimary}
-          </button>
-        )}
 
         <IconActionButton
           label={

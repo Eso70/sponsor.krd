@@ -4,7 +4,6 @@ import type {
   PublicPageTikTokEvent,
 } from '@linktree/types';
 import { DatabaseService } from '../database/database.service';
-import { PRIMARY_TIKTOK_DESTINATION_SQL } from './primary-tiktok-destination';
 import { TIKTOK_OWNER_ELIGIBLE_SQL } from './tiktok-owner-eligibility';
 
 /**
@@ -37,7 +36,6 @@ export class PublicPageAnalyticsService {
          JOIN public.businesses business ON business.id = pixel.business_id
         WHERE pixel.business_id = $1
           AND pixel.status = 'active'
-          AND ${PRIMARY_TIKTOK_DESTINATION_SQL}
           AND ${TIKTOK_OWNER_ELIGIBLE_SQL}
         ORDER BY pixel.display_order, pixel.created_at`,
       [businessId],

@@ -30,12 +30,13 @@ describe('PublicPageAnalyticsService', () => {
     // no longer pays for.
     expect(pixelSql).toContain('feature.tiktok');
     expect(pixelSql).toContain('business_subscriptions');
-    expect(pixelSql).toContain('ORDER BY candidate.display_order');
+    expect(pixelSql).toContain('ORDER BY pixel.display_order');
+    expect(pixelSql).not.toContain('SELECT candidate.id');
   });
 
   it('carries the action id and the event name the browser must echo', async () => {
     const { service: subject } = service([
-      [{ pixel_id: 'PIXEL123' }],
+      [{ pixel_id: 'PIXEL123' }, { pixel_id: 'PIXEL456' }],
       [
         {
           id: 'action-1',
@@ -48,7 +49,7 @@ describe('PublicPageAnalyticsService', () => {
 
     const analytics = await subject.forPublicPage('business-1', 'page-1');
 
-    expect(analytics.pixelIds).toEqual(['PIXEL123']);
+    expect(analytics.pixelIds).toEqual(['PIXEL123', 'PIXEL456']);
     // Keyed by `action_key`, because that is what the renderer holds; the id
     // and the event name travel together so neither side invents one.
     expect(analytics.actions['page:whatsapp']).toEqual({
@@ -107,7 +108,9 @@ describe('TikTok forwarding scope', () => {
     );
 
     expect(insert?.[0]).toContain('TIKTOK_OWNER_ELIGIBLE_SQL');
-    expect(insert?.[0]).toContain('PRIMARY_TIKTOK_DESTINATION_SQL');
+    expect(insert?.[0]).toContain('SELECT $1, $2, pixel.id');
+    expect(insert?.[0]).toContain("pixel.status = 'active'");
+    expect(insert?.[0]).not.toContain('PRIMARY_TIKTOK_DESTINATION_SQL');
     expect(eligibility).toContain('entitledSql(ENTITLEMENT.tiktok)');
   });
 });
