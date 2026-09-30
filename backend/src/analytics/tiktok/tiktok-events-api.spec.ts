@@ -78,19 +78,23 @@ describe('TikTok Events API request body', () => {
     expect(body.event_source_id).toBe('PIXEL123');
   });
 
-  it('sends the documented `contents` array alongside the flat ids', () => {
-    const [event] = bodyFor(basePayload).data as Array<Record<string, unknown>>;
-    const properties = event.properties as Record<string, unknown>;
+  it.each(['linktree', 'form', 'page:whatsapp'])(
+    'omits internal content type %s from outgoing catalog parameters',
+    (contentType) => {
+      const [event] = bodyFor({ ...basePayload, content_type: contentType })
+        .data as Array<Record<string, unknown>>;
+      const properties = event.properties as Record<string, unknown>;
 
-    expect(properties.contents).toEqual([
-      {
-        content_id: 'action-1',
-        content_type: 'form',
-        content_name: 'Enquiry',
-      },
-    ]);
-    expect(properties.content_id).toBe('action-1');
-  });
+      expect(properties.contents).toEqual([
+        {
+          content_id: 'action-1',
+          content_name: 'Enquiry',
+        },
+      ]);
+      expect(properties.content_id).toBe('action-1');
+      expect(properties).not.toHaveProperty('content_type');
+    },
+  );
 
   it('puts identity in `user`, not the retired `context`', () => {
     const [event] = bodyFor(basePayload).data as Array<Record<string, unknown>>;

@@ -80,6 +80,12 @@ variable because tracking ownership is per public-page owner.
 
 ## Events API
 
+Linktree and action classifications are internal analytics metadata, not
+TikTok catalog types. Browser Pixel and Events API payloads omit
+`content_type`, including inside `contents`: TikTok accepts only `product`
+or `product_group`, and these events do not describe catalog products.
+The server delivery boundary also omits it for previously queued events.
+
 The backend ingests first-party analytics idempotently. Eligible Linktree
 events create transactional `marketing_event_outbox` rows for active,
 entitled business destinations. The outbox worker performs delivery, retry,

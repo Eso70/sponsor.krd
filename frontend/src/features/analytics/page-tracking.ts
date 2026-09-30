@@ -61,7 +61,7 @@ export interface PageTrackerOptions {
   /** The page's own id; the server resolves it to a public page. */
   pageId: string;
   pageName: string;
-  /** Describes the page for TikTok's `content_type`. */
+  /** Internal page classification; not a TikTok product-catalog type. */
   contentType: string;
   /** Pixel ids and registered actions, both resolved server-side. */
   analytics: PublicPageAnalytics;
@@ -252,7 +252,6 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         {
           content_id: input.action?.id || options.pageId,
           content_ids: [input.action?.id || options.pageId],
-          content_type: input.actionKey,
           content_name: contentName,
           description: options.description ?? "",
           url: window.location.href,
@@ -334,7 +333,6 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
           {
             content_id: options.pageId,
             content_ids: [options.pageId],
-            content_type: options.contentType,
             content_name: options.pageName,
             description: options.description ?? "",
             url: window.location.href,
@@ -437,7 +435,6 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         {
           content_id: action.id,
           content_ids: [action.id],
-          content_type: actionKey,
           content_name: options.pageName,
           description: options.description ?? "",
           url: window.location.href,

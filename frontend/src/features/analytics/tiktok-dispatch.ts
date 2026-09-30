@@ -43,7 +43,6 @@ const PIXEL_SOURCE = "https://analytics.tiktok.com/i18n/pixel/events.js";
 export interface TikTokEventProperties {
   content_id: string;
   content_ids: string[];
-  content_type: string;
   content_name: string;
   description: string;
   url?: string;

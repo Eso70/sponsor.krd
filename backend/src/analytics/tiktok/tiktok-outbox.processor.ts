@@ -205,13 +205,11 @@ export class TikTokOutboxProcessor implements OnModuleInit, OnModuleDestroy {
         contents: [
           this.compact({
             content_id: payload.content_id,
-            content_type: payload.content_type,
             content_name: payload.content_name,
           }),
         ].filter((entry) => Object.keys(entry).length > 0),
         content_id: payload.content_id,
         content_ids: payload.content_ids,
-        content_type: payload.content_type,
         content_name: payload.content_name,
         description: payload.description,
       }),

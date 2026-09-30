@@ -14,7 +14,6 @@ import { tiktokBaseCodeSnippet } from "./tiktok-base-code-snippet";
 const properties = {
   content_id: "action-1",
   content_ids: ["action-1"],
-  content_type: "page:whatsapp",
   content_name: "WhatsApp",
   description: "",
 };
@@ -46,6 +45,8 @@ describe("trackTikTokEvent", () => {
     trackTikTokEvent("Contact", properties, "event-1", ["PIXELONE"]);
 
     expect(track).toHaveBeenCalledTimes(1);
+    expect(track).toHaveBeenCalledWith("Contact", properties, { event_id: "event-1" });
+    expect(track.mock.calls[0][1]).not.toHaveProperty("content_type");
     expect(instanceTrack).not.toHaveBeenCalled();
   });
 
