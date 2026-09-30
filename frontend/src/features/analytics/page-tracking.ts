@@ -144,8 +144,9 @@ function inferEventName(actionKey: string): PageEventName {
   if (actionKey === "page:share" || actionKey === "page:vcard") return "share";
   if (actionKey.startsWith("page:social:")) return "social_click";
   if (actionKey.startsWith("page:service:")) return "service_click";
+  // Opening a plan or offer is not a checkout; this Linktree has no cart.
   if (actionKey.startsWith("page:plan:") || actionKey.startsWith("page:offer:"))
-    return "checkout_started";
+    return "button_click";
   if (
     actionKey === "page:booking" ||
     actionKey.startsWith("page:booking:") ||

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import type { PoolClient } from 'pg';
+import { buildTenantUrl } from '../common/root-domain';
 import { DatabaseService } from '../database/database.service';
 import { SecretCryptoService } from './secret-crypto.service';
 
@@ -35,6 +36,7 @@ export class TikTokPixelConfigService {
   constructor(
     private readonly database: DatabaseService,
     private readonly secrets: SecretCryptoService,
+    private readonly config: ConfigService,
   ) {}
 
   normalize(
@@ -97,7 +99,7 @@ export class TikTokPixelConfigService {
       `SELECT id::text, pixel_id, token_last_four, status
          FROM business_tiktok_pixels
         WHERE business_id = $1::uuid AND status = 'active'
-        ORDER BY display_order ASC, created_at ASC`,
+        ORDER BY display_order ASC, created_at ASC, id ASC`,
       [ownerId],
     );
     return result.rows.map((row) => ({
@@ -324,25 +326,71 @@ export class TikTokPixelConfigService {
       };
     }
 
+    const pageResult = await this.database.query<{
+      id: string;
+      seo_name: string;
+      subdomain: string | null;
+      account_type: 'platform' | 'business';
+    }>(
+      `SELECT page.id::text, linktree.seo_name, business.subdomain,
+              business.account_type
+         FROM public_pages page
+         JOIN linktrees linktree ON linktree.id = page.source_linktree_id
+         JOIN businesses business ON business.id = page.business_id
+        WHERE page.business_id = $1::uuid
+          AND page.page_type = 'linktree'
+          AND page.status = 'published'
+          AND linktree.status = 'active'
+          AND business.status = 'active'
+        ORDER BY linktree.is_default DESC, linktree.created_at, linktree.id
+        LIMIT 1`,
+      [ownerId],
+    );
+    const page = pageResult.rows[0];
+    const applicationBaseUrl = this.config.get<string>('APP_BASE_URL');
+    if (
+      !page ||
+      !applicationBaseUrl ||
+      (page.account_type !== 'platform' && !page.subdomain)
+    ) {
+      return {
+        success: false,
+        statusCode: 400,
+        tiktokCode: null,
+        message:
+          'Publish a Linktree and configure APP_BASE_URL before testing TikTok events.',
+        requestId: null,
+        pixelId: targetPixel.pixel_id,
+        testEventCode,
+        eventName,
+        sentAt: new Date().toISOString(),
+      };
+    }
+    const path = `/linktree/${encodeURIComponent(page.seo_name)}`;
+    const pageUrl =
+      page.account_type === 'platform'
+        ? new URL(path, applicationBaseUrl).toString()
+        : buildTenantUrl(applicationBaseUrl, page.subdomain!, path);
+
     const eventTime = Math.floor(Date.now() / 1000);
     const eventId = crypto.randomUUID();
-    const externalId = createHash('sha256')
-      .update(`test-user-${ownerId}`)
-      .digest('hex');
 
     const properties =
       eventName === 'Contact'
         ? {
-            content_type: 'contact',
+            content_id: page.id,
+            content_ids: [page.id],
             content_name: 'WhatsApp Contact',
           }
         : eventName === 'ClickButton'
           ? {
-              content_type: 'button',
+              content_id: page.id,
+              content_ids: [page.id],
               content_name: 'Link Click',
             }
           : {
-              content_type: 'linktree',
+              content_id: page.id,
+              content_ids: [page.id],
               content_name: 'Public Page',
             };
 
@@ -356,15 +404,11 @@ export class TikTokPixelConfigService {
           event_time: eventTime,
           event_id: eventId,
           user: {
-            ip: context?.ip || '127.0.0.1',
-            user_agent: context?.userAgent || 'Sponsor.krd-EventsAPI/1.0',
-            ttclid: 'test_ttclid_diagnostic',
-            ttp: 'test_ttp_diagnostic',
-            external_id: externalId,
+            ip: context?.ip,
+            user_agent: context?.userAgent,
           },
           page: {
-            url: 'https://sponsor.krd/',
-            referrer: 'https://www.tiktok.com/',
+            url: pageUrl,
           },
           properties,
         },

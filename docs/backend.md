@@ -11,6 +11,11 @@ live customer entitlement for business owners and allowing the non-billable
 platform owner explicitly.
 Business TikTok updates and approved delete actions must always retain at least
 one active Pixel group once configuration exists.
+Automatic public Linktree tracking selects only the first active group in saved
+order for each owner, on both the browser and Events API paths. Other groups
+remain stored but receive no automatic events until made primary. The shared
+Events API test sends from a published Linktree URL for the resolved owner,
+never from a hard-coded Sponsor.krd homepage.
 
 ## Google business identity configuration
 

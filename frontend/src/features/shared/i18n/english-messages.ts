@@ -258,7 +258,7 @@ export const englishBusinessMessages = {
     pixelRequired: "Pixel ID is required for every group", saveFailed: "Couldn't save TikTok settings",
     saved: "TikTok settings updated", title: "Connect TikTok",
     description: "Manage your business's Pixel and Events API groups.",
-    groups: "Pixel and Events API groups", tokenHint: "Each access token is used only with the Pixel ID in its group.",
+    groups: "Pixel and Events API groups", tokenHint: "Only the primary Pixel receives Linktree events. Other groups remain on standby.",
     addTooltip: "Add a TikTok group", limitTooltip: "You've reached the Pixel limit",
     addGroup: "Add group", emptyTitle: "No TikTok groups",
     emptyDescription: "Add a group and enter its Pixel ID. You can also add an Events API token for server-side delivery.",
@@ -283,6 +283,7 @@ export const englishBusinessMessages = {
       testFailed: "Couldn't send event", resultBefore: "Check", resultAfter: "for the event type",
       resultCode: "and test code", resultSaved: ".",
       requestIdLabel: "Request ID:",
+      primary: "Primary Pixel", makePrimary: "Make primary",
     },
   },
   PageAnalytics: {

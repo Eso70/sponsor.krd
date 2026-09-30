@@ -10,7 +10,7 @@ export const arabicTikTokPixelCopy: TikTokPixelConfigCopy = {
   title: "ربط تيك توك",
   description: "أدِر مجموعات Pixel وEvents API الخاصة بنشاطك التجاري.",
   groups: "مجموعات Pixel وEvents API",
-  tokenHint: "يُستخدم كل رمز وصول مع Pixel ID في مجموعته فقط.",
+  tokenHint: "يتلقى Pixel الأساسي وحده أحداث صفحات Linktree. تبقى المجموعات الأخرى احتياطية.",
   addTooltip: "إضافة مجموعة تيك توك جديدة",
   limitTooltip: "بلغت الحد المسموح لوحدات Pixel",
   addGroup: "إضافة مجموعة",
@@ -61,5 +61,7 @@ export const arabicTikTokPixelCopy: TikTokPixelConfigCopy = {
     resultCode: "ورمز الاختبار",
     resultSaved: ".",
     requestIdLabel: "معرّف الطلب:",
+    primary: "Pixel الأساسي",
+    makePrimary: "تعيين Pixel أساسي",
   },
 };

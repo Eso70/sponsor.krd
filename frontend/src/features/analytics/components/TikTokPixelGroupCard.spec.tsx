@@ -21,6 +21,36 @@ describe("TikTokPixelGroupCard", () => {
     vi.clearAllMocks();
   });
 
+  it("marks the primary Pixel and lets a standby group become primary", () => {
+    const onMakePrimary = vi.fn();
+    const { rerender } = render(
+      <TikTokPixelGroupCard
+        index={0}
+        config={{ pixel_id: "C9ABC123456789", events_token: "" }}
+        testEndpoint="/api/analytics/v2/tiktok/test"
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isPrimary
+        onMakePrimary={onMakePrimary}
+        copy={businessMessages.en.TikTokPixel.group}
+      />,
+    );
+    expect(screen.getByText("Primary Pixel")).toBeInTheDocument();
+    rerender(
+      <TikTokPixelGroupCard
+        index={1}
+        config={{ pixel_id: "C9ABC123456789", events_token: "" }}
+        testEndpoint="/api/analytics/v2/tiktok/test"
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        onMakePrimary={onMakePrimary}
+        copy={businessMessages.en.TikTokPixel.group}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Make primary" }));
+    expect(onMakePrimary).toHaveBeenCalledOnce();
+  });
+
   it("disables deleting the last Pixel group", () => {
     const onDelete = vi.fn();
 

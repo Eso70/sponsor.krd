@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { SecretCryptoService } from './secret-crypto.service';
 import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
@@ -6,7 +7,10 @@ import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
 describe('TikTokPixelConfigService', () => {
   const database = { query: jest.fn() } as unknown as DatabaseService;
   const secrets = { encryptJson: jest.fn() } as unknown as SecretCryptoService;
-  const service = new TikTokPixelConfigService(database, secrets);
+  const config = {
+    get: jest.fn(() => 'https://sponsor.krd'),
+  } as unknown as ConfigService;
+  const service = new TikTokPixelConfigService(database, secrets, config);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -62,7 +66,11 @@ describe('TikTokPixelConfigService', () => {
       encryptJson: jest.fn(),
       decryptJson: jest.fn(),
     } as unknown as SecretCryptoService;
-    const testService = new TikTokPixelConfigService(database, mockSecrets);
+    const testService = new TikTokPixelConfigService(
+      database,
+      mockSecrets,
+      config,
+    );
 
     it('requires test_event_code', async () => {
       await expect(
@@ -83,7 +91,7 @@ describe('TikTokPixelConfigService', () => {
     });
 
     it('returns 400 when pixel has no events token', async () => {
-      (database.query as jest.Mock).mockResolvedValue({
+      (database.query as jest.Mock).mockResolvedValueOnce({
         rows: [
           {
             id: 'pixel-uuid',
@@ -102,16 +110,49 @@ describe('TikTokPixelConfigService', () => {
       expect(result.message).toContain('Events API token');
     });
 
-    it('successfully calls TikTok Events API with test_event_code and returns response', async () => {
-      (database.query as jest.Mock).mockResolvedValue({
-        rows: [
-          {
-            id: 'pixel-uuid',
-            pixel_id: 'PIXEL_TEST',
-            encrypted_events_token: Buffer.from('encrypted'),
-          },
-        ],
+    it('does not invent a root-site URL when the owner has no published Linktree', async () => {
+      (database.query as jest.Mock)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'pixel-uuid',
+              pixel_id: 'PIXEL_TEST',
+              encrypted_events_token: Buffer.from('encrypted'),
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [] });
+      (mockSecrets.decryptJson as jest.Mock).mockReturnValue({
+        events_token: 'valid-secret-token',
       });
+      const result = await testService.testEventsApi('owner-1', {
+        test_event_code: 'TEST77408',
+      });
+      expect(result.statusCode).toBe(400);
+      expect(result.message).toContain('Publish a Linktree');
+    });
+
+    it('successfully calls TikTok Events API with test_event_code and returns response', async () => {
+      (database.query as jest.Mock)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'pixel-uuid',
+              pixel_id: 'PIXEL_TEST',
+              encrypted_events_token: Buffer.from('encrypted'),
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'page-uuid',
+              seo_name: 'ismail-cs',
+              subdomain: 'ismail',
+              account_type: 'business',
+            },
+          ],
+        });
       (mockSecrets.decryptJson as jest.Mock).mockReturnValue({
         events_token: 'valid-secret-token',
       });
@@ -154,7 +195,12 @@ describe('TikTokPixelConfigService', () => {
           event_source: string;
           event_source_id: string;
           test_event_code: string;
-          data: Array<{ event: string; user: { ip: string } }>;
+          data: Array<{
+            event: string;
+            user: { ip: string; ttclid?: string };
+            page: { url: string };
+            properties: { content_id: string };
+          }>;
         };
         expect(body.event_source).toBe('web');
         expect(body.event_source_id).toBe('PIXEL_TEST');
@@ -162,6 +208,11 @@ describe('TikTokPixelConfigService', () => {
         expect(body.data).toHaveLength(1);
         expect(body.data[0]?.event).toBe('ViewContent');
         expect(body.data[0]?.user.ip).toBe('1.2.3.4');
+        expect(body.data[0]?.user.ttclid).toBeUndefined();
+        expect(body.data[0]?.page.url).toBe(
+          'https://ismail.sponsor.krd/linktree/ismail-cs',
+        );
+        expect(body.data[0]?.properties.content_id).toBe('page-uuid');
 
         expect(result.success).toBe(true);
         expect(result.statusCode).toBe(200);
@@ -175,15 +226,26 @@ describe('TikTokPixelConfigService', () => {
     });
 
     it('returns error result when TikTok rejects the test payload', async () => {
-      (database.query as jest.Mock).mockResolvedValue({
-        rows: [
-          {
-            id: 'pixel-uuid',
-            pixel_id: 'PIXEL_TEST',
-            encrypted_events_token: Buffer.from('encrypted'),
-          },
-        ],
-      });
+      (database.query as jest.Mock)
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'pixel-uuid',
+              pixel_id: 'PIXEL_TEST',
+              encrypted_events_token: Buffer.from('encrypted'),
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'platform-page',
+              seo_name: 'platform-page',
+              subdomain: null,
+              account_type: 'platform',
+            },
+          ],
+        });
       (mockSecrets.decryptJson as jest.Mock).mockReturnValue({
         events_token: 'invalid-token',
       });
@@ -212,6 +274,16 @@ describe('TikTokPixelConfigService', () => {
         expect(result.tiktokCode).toBe(40100);
         expect(result.message).toBe('Access token is invalid');
         expect(result.requestId).toBe('tiktok-err-999');
+        const [, options] = mockFetch.mock.calls[0] as [
+          string,
+          { body: string },
+        ];
+        const body = JSON.parse(options.body) as {
+          data: Array<{ page: { url: string } }>;
+        };
+        expect(body.data[0].page.url).toBe(
+          'https://sponsor.krd/linktree/platform-page',
+        );
       } finally {
         global.fetch = originalFetch;
       }

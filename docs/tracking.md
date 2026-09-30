@@ -66,10 +66,17 @@ would have no authoritative shared event name.
 Linktree HTML. `TikTokPixel` handles client route state, and
 `tiktok-dispatch.ts` is the only runtime owner of `window.ttq`.
 
-Pixel IDs come from the business's database configuration. Events API tokens
-are encrypted at rest and are never sent to the browser. Neither value may be
-read from a shared environment variable because tracking ownership is
-per-business.
+Pixel IDs come from the public page owner's database configuration. The first
+active group in saved display order is the one automatic Linktree tracking
+destination for that owner; other groups remain configured as standby choices
+and do not receive Linktree traffic. The shared Business/Platform Pixel editor
+can move a group to the first position with “Make primary” and saves the order.
+The public read and the Events API outbox use the same primary-selection SQL,
+so they cannot broadcast one page event to several unrelated Pixels. The
+platform content workspace has its own groups; it never shares a destination
+with customer businesses. Events API tokens are encrypted at rest and are
+never sent to the browser. Neither value may be read from a shared environment
+variable because tracking ownership is per public-page owner.
 
 ## Events API
 
@@ -77,6 +84,15 @@ The backend ingests first-party analytics idempotently. Eligible Linktree
 events create transactional `marketing_event_outbox` rows for active,
 entitled business destinations. The outbox worker performs delivery, retry,
 backoff, error recording, and permanent-failure notification.
+
+The Events API test tool sends a test-code-scoped lead/page event using a real
+published Linktree URL belonging to the authenticated owner, including the
+tenant subdomain for a customer or the root domain for the platform workspace.
+It refuses to fabricate a root-homepage URL when that owner has no published
+Linktree. Diagnostic events include a page content ID but never invent TikTok
+click IDs, cookies, or visitor identities. A plan or offer link opening is a
+button click, not a checkout event. Do not add shopping events to a Linktree
+whose visitors cannot actually add to cart or purchase.
 
 Analytics reporting is read-only with respect to marketing delivery. Showing
 an archived/replaced action as a historical row, or grouping an unresolved

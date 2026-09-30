@@ -42,6 +42,24 @@ beforeEach(() => {
 });
 
 describe("navigation-critical page tracking", () => {
+  it("records offer clicks as clicks, not checkout events", () => {
+    const tracker = createPageTracker({
+      pageId: PAGE_ID,
+      pageName: "Holiday Travel",
+      contentType: "linktree",
+      analytics: { pixelIds: ["PIXEL1"], actions: {} },
+    });
+    const anchor = document.createElement("a");
+    anchor.href = "https://example.com/offer";
+    anchor.dataset.pageAction = "page:offer:summer";
+
+    tracker.trackAnchor(anchor);
+
+    expect(mocks.queueAnalyticsEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventName: "button_click" }),
+    );
+  });
+
   it("shares one id across Pixel, queue, beacon, and first-party hop", () => {
     const tracker = createPageTracker({
       pageId: PAGE_ID,

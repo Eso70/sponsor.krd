@@ -30,6 +30,7 @@ describe('PublicPageAnalyticsService', () => {
     // no longer pays for.
     expect(pixelSql).toContain('feature.tiktok');
     expect(pixelSql).toContain('business_subscriptions');
+    expect(pixelSql).toContain('ORDER BY candidate.display_order');
   });
 
   it('carries the action id and the event name the browser must echo', async () => {
@@ -106,6 +107,7 @@ describe('TikTok forwarding scope', () => {
     );
 
     expect(insert?.[0]).toContain('TIKTOK_OWNER_ELIGIBLE_SQL');
+    expect(insert?.[0]).toContain('PRIMARY_TIKTOK_DESTINATION_SQL');
     expect(eligibility).toContain('entitledSql(ENTITLEMENT.tiktok)');
   });
 });

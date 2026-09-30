@@ -12,6 +12,7 @@ import type {
   TrackAnalyticsEventDto,
 } from './dto/analytics-event.dto';
 import { TIKTOK_OWNER_ELIGIBLE_SQL } from './tiktok-owner-eligibility';
+import { PRIMARY_TIKTOK_DESTINATION_SQL } from './primary-tiktok-destination';
 
 export interface AnalyticsRequestContext {
   ip: string;
@@ -758,6 +759,7 @@ export class UnifiedAnalyticsService {
            JOIN businesses business ON business.id = pixel.business_id
            WHERE pixel.business_id = $2
              AND pixel.status = 'active'
+             AND ${PRIMARY_TIKTOK_DESTINATION_SQL}
              AND pixel.encrypted_events_token IS NOT NULL
              -- Same live entitlement check the public read applies before it
              -- injects the pixel. Without it a downgraded business keeps
