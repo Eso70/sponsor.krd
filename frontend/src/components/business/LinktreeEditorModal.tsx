@@ -1051,7 +1051,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
    */
   useEffect(() => {
     const s = slug.trim();
-    if (!s) {
+    setSlugApiError(null);
+    if (validateSlug(s)) {
       setSlugApiError(null);
       setCheckingSlug(false);
       return;
@@ -1088,6 +1089,7 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
     editData?.linktree?.id,
     apiEndpoints.checkSlug,
     copy,
+    validateSlug,
   ]);
 
   /**
@@ -2139,7 +2141,12 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             subtitleColor={subtitleColor}
             onSubtitleColorChange={setSubtitleColor}
             onDescriptionChange={setDescription}
-            onSlugChange={setSlug}
+            onSlugChange={(value) => {
+              setSlug(value);
+              setSlugApiError(null);
+              setTouched((prev) => ({ ...prev, slug: true }));
+              setErrors((prev) => ({ ...prev, slug: validateSlug(value) }));
+            }}
             onBackgroundColorChange={handleBackgroundColorChange}
             onBackgroundColorBlur={handleBackgroundColorBlur}
             onTemplateKeyChange={handleTemplateKeyChange}

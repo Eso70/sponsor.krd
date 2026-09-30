@@ -390,21 +390,20 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                 type="text"
                 value={slug}
                 onChange={(e) => onSlugChange(e.target.value)}
-                disabled
                 aria-invalid={!!(errors.slug && touched.slug)}
+                aria-describedby={errors.slug && touched.slug ? "slug-error" : checkingSlug ? "slug-checking" : undefined}
                 className={modalInputClass(
                   !!(errors.slug && touched.slug),
-                  "cursor-not-allowed bg-gray-50 text-gray-500",
                 )}
                 placeholder={copy?.slugPlaceholder ?? "Slug بنووسە"}
                 dir="ltr"
               />
               {errors.slug && touched.slug ? (
-                <p className="text-xs text-red-500 mt-1 font-kurdish">
+                <p id="slug-error" role="alert" className="text-xs text-red-500 mt-1 font-kurdish">
                   {errors.slug}
                 </p>
               ) : checkingSlug ? (
-                <p className="text-xs text-gray-400 mt-1 font-kurdish">
+                <p id="slug-checking" role="status" className="text-xs text-gray-400 mt-1 font-kurdish">
                   {copy?.checkingSlug ?? "پشکنینی slug..."}
                 </p>
               ) : null}

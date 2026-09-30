@@ -1,5 +1,10 @@
 # Frontend
 
+The shared Linktree editor allows business and platform administrators to edit
+the page slug. Format errors and unavailable slugs appear inline. Availability
+checks use the surface's scoped endpoint and exclude the current page during
+editing; changing the slug updates its public URL on save.
+
 The Campaigns navigation entry uses the same management composition as the
 Platform business directory: a shared six-card performance summary, page
 header actions, search and status filters, a two-column grid, the shared
