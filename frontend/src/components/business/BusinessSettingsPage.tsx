@@ -8,11 +8,8 @@ import Image from "next/image";
 import {
   Building2,
   Clock3,
-  FileText,
-  Loader2,
   MessageSquare,
   Palette,
-  Plus,
   ShieldCheck,
   SlidersHorizontal,
   Upload,
@@ -25,7 +22,6 @@ import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { TabSaveButton } from "@/components/shared/TabSaveButton";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { StatCard } from "@/components/shared/StatCard";
-import { Skeleton } from "@/components/shared/Skeleton";
 import { SkeletonSettingsPage } from "@/components/shared/SkeletonPageLayouts";
 import { TemplateCombobox } from "@/components/ui/TemplateCombobox";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
@@ -36,7 +32,6 @@ import { isBusinessSettingsTabLocked } from "@/lib/business-page-access";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import { LockedContent } from "@/components/shared/LockedContent";
 import { InlineRequestError } from "@/components/shared/InlineRequestError";
-import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import {
   createUploadFailureError,
   inlineRequestErrorFromResponse,
@@ -138,35 +133,18 @@ export function BusinessSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showDefaultColorPicker, setShowDefaultColorPicker] = useState(false);
-  const [creatingDefault, setCreatingDefault] = useState(false);
-  const [defaultLinktree, setDefaultLinktree] = useState<
-    | {
-        id: string;
-        name: string;
-        uid: string;
-        seo_name?: string;
-        image?: string | null;
-        status?: string;
-      }
-    | null
-    | undefined
-  >(undefined);
   const [effectiveAccess, setEffectiveAccess] =
     useState<EffectiveAccessManifest | null>(null);
 
   const loadSettings = useCallback(async (rethrow = false) => {
     try {
-      const [settingsResponse, accessResponse, defaultResponse] =
+      const [settingsResponse, accessResponse] =
         await Promise.all([
           fetch("/api/auth/settings", {
             credentials: "include",
             cache: "no-store",
           }),
           fetch("/api/auth/effective-access", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/linktrees/default", {
             credentials: "include",
             cache: "no-store",
           }),
@@ -182,12 +160,6 @@ export function BusinessSettingsPage() {
       setData(normalizedSettings);
       setSavedSnapshot(normalizedSettings);
       setEffectiveAccess(accessResult.data || null);
-      if (defaultResponse.ok) {
-        const defaultData = await defaultResponse.json();
-        setDefaultLinktree(defaultData.data || null);
-      } else {
-        setDefaultLinktree(null);
-      }
     } catch (error) {
       if (rethrow) throw error;
       toast.error(t("loadFailed"));
@@ -283,43 +255,6 @@ export function BusinessSettingsPage() {
       });
     } finally {
       setSaving(false);
-    }
-  };
-
-  /**
-   * Creates the default page outright rather than opening the builder.
-   *
-   * The server seeds it from what the business has already registered — name,
-   * logo, colours, and WhatsApp and phone buttons built from its own phone
-   * number — so the page is live and reachable immediately. Nothing here is
-   * final: it opens in the editor from the pages list like any other.
-   */
-  const handleCreateDefaultPage = async () => {
-    if (creatingDefault) return;
-    setCreatingDefault(true);
-    try {
-      const response = await fetch("/api/linktrees/default", {
-        method: "POST",
-        credentials: "include",
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(result?.message || "Create failed");
-      }
-      setDefaultLinktree(result?.data || null);
-      // The pages list is served from a long-lived localStorage cache, so
-      // without this the new default page is missing there until it expires.
-      const { clearCachedData } = await import("@/lib/utils/cache");
-      clearCachedData("/api/linktrees");
-      toast.success(t("defaultCreated"), {
-        description: t("defaultCreatedHint"),
-      });
-    } catch (error) {
-      toast.error(t("defaultCreateFailed"), {
-        description: locale !== "ckb" ? undefined : error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setCreatingDefault(false);
     }
   };
 
@@ -692,114 +627,6 @@ export function BusinessSettingsPage() {
                   </div>
                 </PageHeaderSection>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-                  {defaultLinktree === undefined ? (
-                    <div
-                      className="flex items-center gap-3.5"
-                      role="status"
-                      aria-label={t("loadingDefaultLinktree")}
-                    >
-                      <Skeleton className="h-12 w-12 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <Skeleton
-                          className="mb-2 h-4 w-40 max-w-full"
-                          rounded="rounded-md"
-                        />
-                        <Skeleton
-                          className="h-3 w-56 max-w-full"
-                          rounded="rounded-md"
-                        />
-                      </div>
-                    </div>
-                  ) : defaultLinktree ? (
-                    <div className="flex items-center gap-3.5">
-                      <div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-inset ring-slate-200 dark:ring-white/10"
-                        style={{
-                          background:
-                            "color-mix(in srgb, var(--theme-primary, #64748b) 12%, white)",
-                        }}
-                      >
-                        {defaultLinktree.image ? (
-                          <Image
-                            src={defaultLinktree.image}
-                            alt={defaultLinktree.name}
-                            width={48}
-                            height={48}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <FileText
-                            className="h-5 w-5"
-                            style={{ color: "var(--theme-primary, #64748b)" }}
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-slate-700 truncate dark:text-slate-200">
-                            {defaultLinktree.name}
-                          </p>
-                          <span
-                            className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold"
-                            style={{
-                              background:
-                                "color-mix(in srgb, var(--theme-primary, #64748b) 14%, white)",
-                              color: "var(--theme-primary, #64748b)",
-                            }}
-                          >
-                            {t("defaultBadge")}
-                          </span>
-                        </div>
-                        <p className="mt-1 truncate font-mono text-xs text-slate-400 dark:text-slate-500">
-                          {defaultLinktree.uid}
-                          {defaultLinktree.seo_name &&
-                            ` · ${defaultLinktree.seo_name}`}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-3 text-center">
-                      <div
-                        className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full"
-                        style={{
-                          background:
-                            "color-mix(in srgb, var(--theme-primary, #64748b) 12%, white)",
-                        }}
-                      >
-                        <FileText
-                          className="h-5 w-5"
-                          style={{ color: "var(--theme-primary, #64748b)" }}
-                        />
-                      </div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        {t("noDefaultPage")}
-                      </p>
-                      <p className="mx-auto mt-1 mb-4 max-w-sm text-xs text-slate-400 dark:text-slate-500">
-                        {t("noDefaultHint")}
-                      </p>
-                      <Tooltip content={t("createDefaultTooltip")} side="bottom">
-                        <button
-                          type="button"
-                          onClick={() => void handleCreateDefaultPage()}
-                          disabled={creatingDefault}
-                          className="theme-fill mx-auto flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-transparent px-3.5 text-xs font-black text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
-                        >
-                          {creatingDefault ? (
-                            <MotionSpinner>
-                              <Loader2 className="h-4 w-4" />
-                            </MotionSpinner>
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                          {creatingDefault
-                            ? t("creating")
-                            : t("createDefault")}
-                        </button>
-                      </Tooltip>
-                    </div>
-                  )}
-                </div>
               </>
             )}
 

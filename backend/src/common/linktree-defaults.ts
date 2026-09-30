@@ -2,8 +2,9 @@
  * What a new business's linktree pages start out looking like.
  *
  * These are the *page* defaults in `business_defaults` — the template, canvas
- * colour and footer/WhatsApp switches every linktree that business creates
- * inherits. They are deliberately separate from the business's own tenant
+ * colour and footer/WhatsApp switches ordinary new Linktrees inherit. The
+ * business default page uses the system constants independently. These
+ * starting values are deliberately separate from the business's own tenant
  * colour (`business_branding.website_color`), which themes the dashboard and
  * the public shell and is chosen per business.
  *

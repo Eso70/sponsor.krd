@@ -1776,7 +1776,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               onSubmit={handleSubmit}
               editData={editData}
               isLoadingEditData={isLoadingEditData}
-              businessDefaults={defaults}
+              businessDefaults={isCreatingDefault ? undefined : defaults}
               businessIdentity={{ name, phone }}
               isDefault={isCreatingDefault}
             />

@@ -1,5 +1,10 @@
 # Frontend
 
+Business Settings > New page defaults configures starting values for new
+ordinary Linktree pages only. It does not manage the business default page;
+that page is edited through Pages. Saving any existing page, including the
+business default page, never changes these starting values.
+
 The shared Linktree editor allows business and platform administrators to edit
 the page slug. Format errors and unavailable slugs appear inline. Availability
 checks use the surface's scoped endpoint and exclude the current page during

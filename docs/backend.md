@@ -94,6 +94,12 @@ configuration, and backend commands.
 
 ## Default linktree page seeding
 
+The business default page is independent of `business_defaults`, which stores
+starting values for new ordinary pages. Default-page creation uses shared
+system page constants plus business identity and contact details. Updating
+the default page never writes to `business_defaults`; saving starting values
+never modifies existing Linktrees.
+
 `POST /linktrees/default` creates the business default page on the server,
 without opening the link editor. It must produce the same page the editor
 would: name, tagline, helper text, footer credit, WhatsApp modal wording and

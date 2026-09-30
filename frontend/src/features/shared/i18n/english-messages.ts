@@ -113,7 +113,7 @@ export const englishBusinessMessages = {
     saved: "Settings updated successfully", saveFailed: "Couldn't save settings",
     defaultCreated: "Default page created", defaultCreatedHint: "WhatsApp and phone buttons were added using your business number",
     defaultCreateFailed: "Couldn't create the default page", profileTab: "Business profile",
-    defaultsTab: "Default pages", securityTab: "Sign-in and sessions", messagesTab: "Messages",
+    defaultsTab: "New page defaults", securityTab: "Sign-in and sessions", messagesTab: "Messages",
     tabsCount: "Tabs", businessName: "Business name", defaultTemplate: "Default template",
     accountStatus: "Account status", locked: "Locked", active: "Active",
     upgradeRequired: "Upgrade your plan to use this section",

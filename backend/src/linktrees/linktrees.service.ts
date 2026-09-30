@@ -43,12 +43,14 @@ import {
   DEFAULT_LINKTREE_BACKGROUND_COLOR,
   DEFAULT_LINKTREE_DESCRIPTION,
   DEFAULT_LINKTREE_FOOTER_PHONE,
+  DEFAULT_LINKTREE_FOOTER_HIDDEN,
   DEFAULT_LINKTREE_FOOTER_TEXT,
   DEFAULT_LINKTREE_SUBTITLE,
   DEFAULT_LINKTREE_TEMPLATE_KEY,
   DEFAULT_LINKTREE_WHATSAPP_MODAL_SUBTITLE,
   DEFAULT_LINKTREE_WHATSAPP_MODAL_TITLE,
   DEFAULT_LINKTREE_WHATSAPP_QUESTIONS,
+  DEFAULT_LINKTREE_WHATSAPP_ENABLED,
 } from '../common/linktree-defaults';
 
 /**
@@ -1289,29 +1291,6 @@ export class LinktreesService {
         }
       }
 
-      if (updatedLinktree.is_default) {
-        await client.query(
-          `INSERT INTO business_defaults (business_id, footer_text, footer_phone, template_key, background_color, footer_hidden, whatsapp_enabled)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (business_id) DO UPDATE SET
-             footer_text = EXCLUDED.footer_text,
-             footer_phone = EXCLUDED.footer_phone,
-             template_key = EXCLUDED.template_key,
-             background_color = EXCLUDED.background_color,
-             footer_hidden = EXCLUDED.footer_hidden,
-             whatsapp_enabled = EXCLUDED.whatsapp_enabled`,
-          [
-            businessId,
-            footer_text,
-            footer_phone,
-            config.templateKey,
-            background_color,
-            footer_hidden,
-            whatsappEnabled,
-          ],
-        );
-      }
-
       return updatedLinktree;
     });
 
@@ -1472,16 +1451,15 @@ export class LinktreesService {
     const existing = await this.getDefaultLinktree(businessId);
     if (existing) return existing;
 
-    const businessRes = await this.databaseService.query<
-      BusinessDefaultsRow & { phone: string | null; subdomain: string | null }
-    >(
-      `SELECT a.name, a.phone, a.subdomain, b.logo, b.website_color,
-              d.template_key AS default_template, d.background_color AS default_background_color,
-              d.footer_text AS default_footer_text, d.footer_phone AS default_footer_phone,
-              d.footer_hidden AS default_footer_hidden, d.whatsapp_enabled AS default_whatsapp_enabled
+    const businessRes = await this.databaseService.query<{
+      name: string;
+      phone: string | null;
+      subdomain: string | null;
+      logo: string | null;
+    }>(
+      `SELECT a.name, a.phone, a.subdomain, b.logo
        FROM businesses a
        LEFT JOIN business_branding b ON b.business_id = a.id
-       LEFT JOIN business_defaults d ON d.business_id = a.id
        WHERE a.id = $1`,
       [businessId],
     );
@@ -1492,13 +1470,13 @@ export class LinktreesService {
     const seoName = await this.defaultPageSlug(businessId, b.subdomain, b.name);
     const config = this.normalizeTemplateConfig(
       null,
-      b.default_template || DEFAULT_LINKTREE_TEMPLATE_KEY,
+      DEFAULT_LINKTREE_TEMPLATE_KEY,
     );
     // Same wording the editor puts on a hand-made page; the normalizer's
     // English placeholders are only there for rows that predate it.
     config.whatsapp_modal = {
       ...config.whatsapp_modal,
-      enabled: b.default_whatsapp_enabled ?? false,
+      enabled: DEFAULT_LINKTREE_WHATSAPP_ENABLED,
       title: DEFAULT_LINKTREE_WHATSAPP_MODAL_TITLE,
       subtitle: DEFAULT_LINKTREE_WHATSAPP_MODAL_SUBTITLE,
     };
@@ -1524,15 +1502,15 @@ export class LinktreesService {
           // The page canvas, never the tenant colour. `website_color` themes
           // the dashboard and the public shell; using it here made a brand-new
           // page inherit a brand colour nobody chose as a background.
-          b.default_background_color || DEFAULT_LINKTREE_BACKGROUND_COLOR,
+          DEFAULT_LINKTREE_BACKGROUND_COLOR,
           config.templateKey,
           JSON.stringify(config),
-          b.default_whatsapp_enabled ?? false,
+          DEFAULT_LINKTREE_WHATSAPP_ENABLED,
           // The business name used to land here, which is the page title, not
           // the footer credit the editor puts there.
-          b.default_footer_text || DEFAULT_LINKTREE_FOOTER_TEXT,
-          b.default_footer_phone || DEFAULT_LINKTREE_FOOTER_PHONE,
-          b.default_footer_hidden ?? false,
+          DEFAULT_LINKTREE_FOOTER_TEXT,
+          DEFAULT_LINKTREE_FOOTER_PHONE,
+          DEFAULT_LINKTREE_FOOTER_HIDDEN,
         ],
       );
       const created = ltRes.rows[0];
