@@ -23,8 +23,6 @@ import { readBackgroundPattern } from "@/lib/templates/background-pattern";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { applyCursorColor, resetCursorColor } from "@/lib/utils/cursor-theme";
 import { WhatsAppQuestionModal, type WhatsAppQuestion } from "@/components/public/WhatsAppQuestionModal";
-import { PublicBusinessLanguageToggle } from "@/features/business/components/PublicBusinessLanguageToggle";
-import { RootPublicLinktreeLanguageToggle } from "@/features/public-site/RootPublicLocaleProvider";
 import { PublicLinktreeLocaleProvider } from "@/features/business/i18n/public-linktree";
 import type { BusinessLocale } from "@/features/business/i18n/messages";
 import {
@@ -93,8 +91,6 @@ interface LinktreePageProps {
   analytics: PublicPageAnalytics;
   enableMarketingTracking?: boolean;
   initialLocale?: BusinessLocale;
-  showLanguageToggle?: boolean;
-  rootVisitorLocale?: boolean;
 }
 
 export const LinktreePage = memo(function LinktreePage({
@@ -103,10 +99,8 @@ export const LinktreePage = memo(function LinktreePage({
   analytics,
   enableMarketingTracking = true,
   initialLocale = "ckb",
-  showLanguageToggle = false,
-  rootVisitorLocale = false,
 }: LinktreePageProps) {
-  const [locale, setLocale] = useState<BusinessLocale>(initialLocale);
+  const locale = initialLocale;
   // Identifies the page to the pixel across a soft navigation. Next.js keeps
   // this component mounted when moving between two linktrees, so without a key
   // that changes the second page would never report a view. The record's own
@@ -514,15 +508,6 @@ export const LinktreePage = memo(function LinktreePage({
         <TikTokPixel pixelIds={analytics.pixelIds} pageKey={pixelPageKey} />
       ) : null}
       <div className="relative z-10">
-        {showLanguageToggle && (
-          <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-slate-200 bg-white/95 shadow-lg backdrop-blur-sm">
-            {rootVisitorLocale ? (
-              <RootPublicLinktreeLanguageToggle locale={locale} onChange={setLocale} />
-            ) : (
-              <PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />
-            )}
-          </div>
-        )}
         {/* Dynamic template renders based on template_config from database */}
         <DynamicTemplate
           linktree={linktree}

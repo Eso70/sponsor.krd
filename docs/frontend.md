@@ -1,5 +1,9 @@
 # Frontend
 
+Public `/linktree/*` pages do not show a visitor language toggle. Saved page
+text and link labels are rendered unchanged; built-in interface labels and
+fallback descriptions use Kurdish, independent of visitor language cookies.
+
 Business Settings > New page defaults configures starting values for new
 ordinary Linktree pages only. It does not manage the business default page;
 that page is edited through Pages. A separate card in the same tab can create

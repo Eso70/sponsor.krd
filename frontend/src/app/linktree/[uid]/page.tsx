@@ -193,7 +193,7 @@ export default async function LinktreePublicPage({ params }: PageProps) {
   }
 
   const { linktree, links, analytics } = result;
-  const locale = visitorLocale ?? "ckb";
+  const locale = "ckb";
 
   // A template for the page the pixel belongs to, in the HTML itself: TikTok's
   // verifier reads the served document, and the base code has to be there at
@@ -211,8 +211,6 @@ export default async function LinktreePublicPage({ params }: PageProps) {
         analytics={analytics}
         enableMarketingTracking
         initialLocale={locale}
-        showLanguageToggle
-        rootVisitorLocale={result.isPlatformRoot}
       />
     </>
   );
@@ -247,7 +245,7 @@ export async function generateMetadata({ params }: PageProps) {
   }
 
   const { linktree } = result;
-  const locale = visitorLocale ?? "ckb";
+  const locale = "ckb";
   const defaultDescription = publicLinktreeCopy[locale].description;
 
   // Only the business's own favicon is offered as a tab icon: a larger
