@@ -39,6 +39,24 @@ const links: LinktreePresentationLink[] = [
 ];
 
 describe("BranchSignalTemplate", () => {
+  it("updates avatar and link signals when the saved subtitle color changes", () => {
+    const props = { links, theme: { from: "#111714", via: "#080b09", to: "#050706" }, onLinkClick: vi.fn() };
+    const { container, rerender } = render(
+      <BranchSignalTemplate {...props} linktree={{ ...linktree, subtitle_color: "#ff6600" }} />,
+    );
+    const assertSignalColor = (color: string) => {
+      expect(container.querySelector('[data-signal-connector] path:last-child')).toHaveAttribute("stroke", color);
+      expect(container.querySelector('[data-avatar-signal-glow] span:nth-child(3)')).toHaveStyle({ background: color });
+      expect(container.querySelector('[data-template-viewport-layout]')).toHaveStyle({ "--branch-signal-accent": color });
+      expect(screen.getByText("Digital Product Designer")).toHaveStyle({ color });
+    };
+    assertSignalColor("#ff6600");
+    rerender(<BranchSignalTemplate {...props} linktree={{ ...linktree, subtitle_color: "#cc44ee" }} />);
+    assertSignalColor("#cc44ee");
+    rerender(<BranchSignalTemplate {...props} linktree={linktree} />);
+    assertSignalColor("#22c55e");
+  });
+
   it("connects real profile and link data with the tenant accent", () => {
     const onLinkClick = vi.fn();
     const { container } = render(

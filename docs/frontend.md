@@ -1,5 +1,11 @@
 # Frontend
 
+The shared Linktree editor reuses one solid-color picker for subtitle and
+footer-button colors. Footer color is saved per page in
+`template_config.footer_button_color` and rendered by the shared footer in all
+templates. Clearing it restores the template's default footer color; it does
+not change subtitle or signal colors. Only valid solid colors reach footer CSS.
+
 Public `/linktree/*` pages do not show a visitor language toggle. Saved page
 text and link labels are rendered unchanged; built-in interface labels and
 fallback descriptions use Kurdish, independent of visitor language cookies.
@@ -462,7 +468,7 @@ future segments remain visible at reduced opacity.
   supports the complete shared solid, gradient, custom-gradient, uploaded-image,
   and pattern background system. Text contrast follows that background, while
   signal paths, avatar rings, nodes, borders, hover light, and the footer accent
-  derive from the tenant website color. Its asymmetric dark cards use only the
+  follow the saved subtitle color, falling back to the tenant website color. Its asymmetric dark cards use only the
   stored link title, description, platform icon, URL, and default message;
   share/theme/header controls are not invented inside the template. The shared
   phone supplies preview-only device chrome.

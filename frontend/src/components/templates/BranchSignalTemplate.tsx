@@ -181,11 +181,13 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
   onLinkClick,
 }: TemplateComponentProps) {
   const accent = useMemo(() => {
-    const value = linktree.business_website_color;
+    const value = isWebsiteColor(linktree.subtitle_color)
+      ? linktree.subtitle_color
+      : linktree.business_website_color;
     return isWebsiteColor(value)
       ? parseWebsiteColor(value).primary
       : SPONSOR_KRD_ACCENT_COLOR;
-  }, [linktree.business_website_color]);
+  }, [linktree.subtitle_color, linktree.business_website_color]);
   const isPreview = useMemo(
     () => linktree.id.includes("preview"),
     [linktree.id],
@@ -386,6 +388,7 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
         <TemplateFooter
           footerText={linktree.footer_text}
           footerPhone={linktree.footer_phone}
+          footerButtonColor={linktree.template_config?.footer_button_color}
           footerHidden={linktree.footer_hidden ?? false}
           textColor={textColor}
           textSecondaryColor={textSecondaryColor}

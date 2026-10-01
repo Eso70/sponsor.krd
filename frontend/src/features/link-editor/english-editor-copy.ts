@@ -24,6 +24,7 @@ export const englishEditorCopy = {
   uploadBrand: "Upload brand images", chooseProfileImage: "Choose a profile image",
   businessName: "Business name", name: "Name", businessNamePlaceholder: "Enter business name",
   pageNamePlaceholder: "Page name", checkingName: "Checking name...", username: "Username",
+  footerButtonColor: "Footer button color",
   subtitle: "Subtitle", subtitlePlaceholder: "Enter a subtitle", subtitleColor: "Subtitle color",
   clearColor: "Clear color", subtitleColorHint: "Choose a subtitle color",
   description: "Description", subdomain: "Subdomain", subdomainPlaceholder: "Enter a subdomain",

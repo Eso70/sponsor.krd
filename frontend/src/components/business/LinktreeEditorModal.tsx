@@ -2123,6 +2123,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             onBackgroundImageChange={handleBackgroundImageChange}
             onBackgroundImageRemove={handleRemoveBackgroundImage}
             templateKey={templateKey}
+            footerButtonColor={typeof templateConfig.footer_button_color === "string" ? templateConfig.footer_button_color : ""}
+            onFooterButtonColorChange={(value) => setTemplateConfig((prev) => ({ ...prev, footer_button_color: value }))}
             footerText={footerText}
             footerPhone={footerPhone}
             footerHidden={footerHidden}

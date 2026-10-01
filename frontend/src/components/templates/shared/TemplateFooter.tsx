@@ -2,9 +2,11 @@
 
 import { memo, useCallback, type CSSProperties, type MouseEvent } from "react";
 import { SPONSOR_TEXT, DEFAULT_FOOTER_NAME, DEFAULT_FOOTER_PHONE } from "@/lib/constants/footer";
+import { isWebsiteColor, parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
 
 export interface TemplateFooterProps {
+  footerButtonColor?: unknown;
   footerText?: string | null;
   footerPhone?: string | null;
   footerHidden?: boolean;
@@ -34,6 +36,7 @@ export interface TemplateFooterProps {
  * phone-number normalization, and copy defaults.
  */
 export const TemplateFooter = memo(function TemplateFooter({
+  footerButtonColor,
   footerText,
   footerPhone,
   footerHidden = false,
@@ -75,12 +78,14 @@ export const TemplateFooter = memo(function TemplateFooter({
 
   const isLightBackground = textColor !== "#ffffff" && textColor !== "#00ff00";
   const sponsorTextColor = isLightBackground ? "rgba(107, 114, 128, 0.8)" : textSecondaryColor;
-  const businessColor = `var(--business-website-color, ${SPONSOR_KRD_ACCENT_COLOR})`;
+  const customColor = typeof footerButtonColor === "string" && isWebsiteColor(footerButtonColor) && !footerButtonColor.startsWith("gradient:")
+    ? parseWebsiteColor(footerButtonColor).primary : undefined;
+  const businessColor = customColor || `var(--business-website-color, ${SPONSOR_KRD_ACCENT_COLOR})`;
 
-  const baseBackground = `color-mix(in srgb, var(--business-website-color, ${SPONSOR_KRD_ACCENT_COLOR}) 10%, transparent)`;
+  const baseBackground = `color-mix(in srgb, ${businessColor} 10%, transparent)`;
   const hoverBackground =
-    nameButtonHoverBackground ??
-    `color-mix(in srgb, var(--business-website-color, ${SPONSOR_KRD_ACCENT_COLOR}) 18%, transparent)`;
+    (customColor ? undefined : nameButtonHoverBackground) ??
+    `color-mix(in srgb, ${businessColor} 18%, transparent)`;
 
   return (
     <footer className={className} style={style}>
@@ -98,6 +103,7 @@ export const TemplateFooter = memo(function TemplateFooter({
             background: baseBackground,
             backdropFilter: "blur(4px)",
             ...nameButtonStyle,
+            ...(customColor ? { color: customColor, borderColor: customColor, background: baseBackground } : {}),
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = hoverBackground;

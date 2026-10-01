@@ -8,10 +8,8 @@ import {
   GripVertical,
   MessageCircle,
   Sparkles,
-  Palette,
-  RotateCcw,
 } from "lucide-react";
-import { ColorGradientModal, type ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
+import type { ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { DEFAULT_FOOTER_PHONE } from "../modal-constants";
 import {
   modalChoiceButtonClass,
@@ -31,6 +29,7 @@ import type { WhatsAppQuestion } from "@/components/public/WhatsAppQuestionModal
 import { BackgroundColorPicker } from "../BackgroundColorPicker";
 import { AvatarImageUpload } from "@/components/shared/AvatarImageUpload";
 import { EditorField } from "@/components/shared/EditorField";
+import { SolidColorPickerButton } from "@/components/shared/SolidColorPickerButton";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { arabicColorNames, arabicPatternCopy, arabicTemplatePickerCopy, englishColorNames, englishPatternCopy, englishTemplatePickerCopy, type EditorCopy } from "../editor-copy";
 
@@ -58,6 +57,8 @@ interface BasicInfoStepProps {
    */
   backgroundPattern?: BackgroundPatternStyle;
   onBackgroundPatternChange?: (value: BackgroundPatternStyle) => void;
+  footerButtonColor?: string;
+  onFooterButtonColorChange?: (value: string) => void;
   footerText: string;
   footerPhone: string;
   footerHidden: boolean;
@@ -137,6 +138,8 @@ export const BasicInfoStep = memo(function BasicInfoStep({
   templateKey,
   backgroundPattern = BACKGROUND_PATTERN_DEFAULT,
   onBackgroundPatternChange,
+  footerButtonColor,
+  onFooterButtonColorChange,
   footerText,
   footerPhone,
   footerHidden,
@@ -180,7 +183,6 @@ export const BasicInfoStep = memo(function BasicInfoStep({
 }: BasicInfoStepProps) {
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
   const [isPatternSelectorOpen, setIsPatternSelectorOpen] = useState(false);
-  const [isSubtitleColorPickerOpen, setIsSubtitleColorPickerOpen] = useState(false);
 
   // Helper functions for managing WhatsApp questions
   const handleAddQuestion = () => {
@@ -292,51 +294,11 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                   placeholder={copy?.subtitlePlaceholder ?? "ناونیشانی کورت بنووسە"}
                   dir="auto"
                 />
-                <Tooltip content={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"} side="top">
-                  <button
-                    type="button"
-                    onClick={() => setIsSubtitleColorPickerOpen(true)}
-                    className="theme-soft-hover theme-input-focus relative shrink-0 w-10 h-10 sm:w-11 sm:h-11 overflow-hidden rounded-xl border border-gray-300 bg-white shadow-sm transition-all duration-200 cursor-pointer group hover:border-transparent focus:outline-none dark:border-white/10 dark:bg-[#161B22]"
-                    title={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
-                    aria-label={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
-                  >
-                    {subtitleColor ? (
-                      <span
-                        className="absolute inset-0"
-                        style={{ background: subtitleColor }}
-                      />
-                    ) : (
-                      <span className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-500 transition-colors group-hover:bg-gray-100 dark:bg-white/5 dark:text-gray-300 dark:group-hover:bg-white/10">
-                        <Palette className="h-4 w-4" />
-                      </span>
-                    )}
-                  </button>
-                </Tooltip>
-                {subtitleColor && onSubtitleColorChange && (
-                  <Tooltip content={copy?.clearColor ?? "سڕینەوەی ڕەنگ"} side="top">
-                    <button
-                      type="button"
-                      onClick={() => onSubtitleColorChange("")}
-                      className="shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                      title={copy?.clearColor ?? "سڕینەوەی ڕەنگ"}
-                      aria-label={copy?.clearColor ?? "سڕینەوەی ڕەنگ"}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </button>
-                  </Tooltip>
-                )}
-                <ColorGradientModal
-                  copy={colorCopy}
-                  isOpen={isSubtitleColorPickerOpen}
-                  value={subtitleColor || "#ffffff"}
-                  onChange={(color) => onSubtitleColorChange?.(color)}
-                  onClose={() => setIsSubtitleColorPickerOpen(false)}
-                  solidFallback="#ffffff"
-                  gradientFallback="#ffffff"
-                  allowGradient={false}
-                  title={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
-                  subtitle={copy?.subtitleColorHint ?? "ڕەنگێکی تاک بۆ ناونیشانی کورت هەڵبژێرە"}
-                />
+                {onSubtitleColorChange && <SolidColorPickerButton value={subtitleColor || ""}
+                  onChange={onSubtitleColorChange} copy={colorCopy}
+                  label={copy?.subtitleColor ?? "ڕەنگی ناونیشانی کورت"}
+                  resetLabel={copy?.clearColor ?? "سڕینەوەی ڕەنگ"} />}
+
               </div>
               {errors.subtitleColor && (
                 <p className="text-xs text-red-500 mt-1 font-kurdish">
@@ -540,6 +502,7 @@ export const BasicInfoStep = memo(function BasicInfoStep({
             {!footerHidden && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <EditorField label={copy?.footerName ?? "ناوی فوتەر"}>
+                  <div className="flex items-center gap-2">
                   <input
                     id="footerText"
                     type="text"
@@ -549,6 +512,13 @@ export const BasicInfoStep = memo(function BasicInfoStep({
                     placeholder={copy?.footerNamePlaceholder ?? "بۆ نموونە: Sponsor.krd"}
                     dir="auto"
                   />
+                    {onFooterButtonColorChange && (
+                      <SolidColorPickerButton value={footerButtonColor || ""}
+                        onChange={onFooterButtonColorChange} copy={colorCopy}
+                        label={copy?.footerButtonColor ?? "ڕەنگی دوگمەی فوتەر"}
+                        resetLabel={copy?.clearColor ?? "سڕینەوەی ڕەنگ"} />
+                    )}
+                  </div>
                 </EditorField>
                 <EditorField label={copy?.mobilePhone ?? "ژمارەی مۆبایل"}>
                   <input

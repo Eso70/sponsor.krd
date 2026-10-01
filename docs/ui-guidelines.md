@@ -727,8 +727,9 @@ description.
 Branch Signal (`branch-signal`) is the Ultra-only premium network template. It
 must support every shared Linktree background color, gradient, uploaded image,
 and pattern, with readable text derived from the selected surface. Soft
-tenant-colored paths connect alternating dark cards directly. Platform colors
-stay inside icon tiles, while the tenant accent owns the network, card edge,
+paths connect alternating cards directly and follow the saved subtitle color,
+falling back to the tenant website color. Platform colors
+stay inside icon tiles, while the subtitle-derived accent owns the network, card edge,
 arrow, glow, and footer. It must not add share, theme, navigation, badge, or
 header controls that are not part of the Linktree data contract.
 

@@ -154,6 +154,7 @@ export const arabicEditorCopy = {
   businessNamePlaceholder: "اكتب اسم النشاط التجاري", pageNamePlaceholder: "اسم الصفحة",
   checkingName: "جارٍ التحقق من الاسم...", username: "اسم المستخدم",
   subtitle: "العنوان الفرعي", subtitlePlaceholder: "اكتب عنوانًا فرعيًا",
+  footerButtonColor: "لون زر التذييل",
   subtitleColor: "لون العنوان الفرعي", clearColor: "إزالة اللون",
   subtitleColorHint: "اختر لونًا واحدًا للعنوان الفرعي",
   description: "الوصف", subdomain: "النطاق الفرعي",
