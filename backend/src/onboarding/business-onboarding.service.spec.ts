@@ -222,6 +222,20 @@ describe('BusinessOnboardingService invitations', () => {
     expect(sessions.createPlatformAdminSession).toHaveBeenCalledWith(
       expect.objectContaining({ platformAdminId: 'admin-1' }),
     );
+
+    database.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'admin-1', email: 'esma3ildilshad04x@gmail.com' },
+        { id: 'admin-2', email: 'esma3ildilshad04x@gmail.com' },
+      ],
+    });
+    await expect(
+      service.finishGoogleCallback('code', 'state', {
+        ipAddress: '127.0.0.1',
+        userAgent: 'mobile-agent',
+      }),
+    ).rejects.toThrow('Platform administrator email is ambiguous');
+    expect(sessions.createPlatformAdminSession).toHaveBeenCalledTimes(1);
   });
 
   it('does not redirect to Google when the one-time OAuth state was not stored', async () => {
@@ -887,6 +901,12 @@ describe('BusinessOnboardingService invitations', () => {
     expect(session.redirectUrl).toBe(
       'http://lvh.me:3011/ops-9c741e5b2f8a4d63b017ce95',
     );
+
+    database.query.mockResolvedValueOnce({
+      rows: [{ id: 'admin-1' }, { id: 'admin-2' }],
+    });
+    await service.requestAdminEmailCode('esma3ildilshad04x@gmail.com');
+    expect(mail.sendAdminLoginCode).toHaveBeenCalledTimes(1);
   });
 
   it('creates a signup application from a verified email without Google', async () => {

@@ -290,6 +290,30 @@ pm2 reload ecosystem.config.json
 - business dashboard
 - platform administration
 
+### Repairing ambiguous platform administrator email
+
+The `2026-10-01_platform_admin_email_identity.sql` migration fixes the 409
+`Platform administrator email is ambiguous` error caused when an administrator
+changed their username and a later deployment seed inserted a second row with
+the same email. Back up PostgreSQL, deploy the updated code, and run
+`pnpm db:migrate` from the production repository root before reloading PM2.
+The migration retains the oldest account ID, clears the duplicate email from
+later rows without deleting their history, and adds a case-insensitive unique
+email index. The seed then updates the retained account by email.
+
+Before and after the migration, inspect the affected rows with:
+
+```sql
+SELECT id, username, email, created_at
+FROM platform_admins
+WHERE lower(btrim(email)) = lower('esma3ildilshad04x@gmail.com')
+ORDER BY created_at, id;
+```
+
+The query should return exactly one row with that email afterward. A new
+platform sign-in can then succeed. Platform security still revokes the previous
+device's session when a new device signs in.
+
 ---
 
 # Environment

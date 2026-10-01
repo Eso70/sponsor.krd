@@ -85,6 +85,10 @@ Platform access requires a verified Google email that exactly matches
 email code sent only to an email that matches both a `platform_admins` row and,
 when set, the same allowlist. Any other email is rejected before session
 creation and the attempt is audited.
+The seed identifies an existing platform admin by the configured email even if
+the admin changed their username. PostgreSQL enforces one non-null platform
+admin row per case-insensitive email; email-code verification also refuses an
+ambiguous match instead of choosing an arbitrary account.
 The former `POST /api/platform/auth/login` password route is removed along
 with the credentials it checked, so it cannot bypass this allowlist. Google starts are limited to five attempts per
 IP per five minutes. The

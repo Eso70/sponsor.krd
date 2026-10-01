@@ -425,12 +425,13 @@ export class BusinessOnboardingService {
     const allowedEmail = this.platformAdminGoogleEmail();
     const result = await this.database.query<{ id: string }>(
       `SELECT id FROM platform_admins
-       WHERE lower(email) = $1 AND ($2 = '' OR $1 = $2::text)`,
+       WHERE lower(email) = $1 AND ($2 = '' OR $1 = $2::text)
+       LIMIT 2`,
       [email, allowedEmail],
     );
     const challengeId = this.randomToken();
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    const authorized = Boolean(result.rows[0]);
+    const authorized = result.rows.length === 1;
     const challenge: AdminEmailChallenge = {
       email,
       codeHash: this.loginCodeHash(challengeId, code),
@@ -496,9 +497,12 @@ export class BusinessOnboardingService {
     }>(
       `SELECT id, username, name, email
        FROM platform_admins WHERE lower(email) = $1
-       ORDER BY created_at ASC LIMIT 1`,
+       ORDER BY created_at ASC LIMIT 2`,
       [challenge.email],
     );
+    if (adminResult.rows.length > 1) {
+      throw new ConflictException('Platform administrator email is ambiguous');
+    }
     const admin = adminResult.rows[0];
     if (!admin) throw new UnauthorizedException('Admin account not found');
     const session = await this.sessions.createPlatformAdminSession({
@@ -788,7 +792,8 @@ export class BusinessOnboardingService {
       `SELECT id, username, name, email
        FROM platform_admins
        WHERE lower(email) = $1
-       ORDER BY created_at ASC`,
+       ORDER BY created_at ASC
+       LIMIT 2`,
       [allowedEmail],
     );
     let admin = result.rows[0];

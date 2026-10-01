@@ -30,6 +30,14 @@ existing installations; `2026-09-29_platform_admin_english_locale.sql` expands
 the allowed values to English. The consolidated baseline includes all three
 values for fresh installations.
 
+`2026-10-01_platform_admin_email_identity.sql` repairs the earlier seed's
+duplicate-email failure: for each case-insensitive email, the oldest admin row
+keeps the address and later rows keep their IDs and related history with their
+email set to `NULL`. It normalizes stored addresses to lowercase and adds a
+unique index on `lower(email)` for non-null addresses. The deployment seed now
+matches the existing account by email, so an edited username cannot create a
+second account on the next migration run.
+
 Business onboarding uses `users`, `user_identities`,
 `business_memberships`, `business_signup_invitations`,
 `business_signup_applications`, and
