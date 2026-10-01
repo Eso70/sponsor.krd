@@ -206,8 +206,8 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
     ? "rgba(31, 41, 55, 0.58)"
     : "rgba(255, 255, 255, 0.48)";
   const cardBackground = usesLightCardSurface
-    ? "linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 249, 0.9))"
-    : "linear-gradient(145deg, rgba(24, 31, 27, 0.94), rgba(10, 14, 12, 0.9))";
+    ? "linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(248, 250, 249, 0.24))"
+    : "linear-gradient(145deg, rgba(24, 31, 27, 0.48), rgba(10, 14, 12, 0.24))";
   const cardShadow = usesLightCardSurface
     ? `0 16px 34px rgba(15, 23, 42, 0.12), inset 0 1px rgba(255,255,255,.8), 0 0 18px color-mix(in srgb, ${accent} 5%, transparent)`
     : `0 16px 34px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.035), 0 0 18px color-mix(in srgb, ${accent} 5%, transparent)`;
@@ -309,7 +309,7 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
                     )
                   }
                   aria-label={title}
-                  className={`group relative z-10 flex min-h-[5.25rem] w-[calc(100%-1.25rem)] items-center gap-3.5 overflow-hidden rounded-[1.4rem] border px-3.5 py-3 text-left backdrop-blur-md ${
+                  className={`group relative z-10 flex min-h-[5.25rem] w-[calc(100%-1.25rem)] items-center gap-3.5 overflow-hidden rounded-[1.4rem] border px-3.5 py-3 text-left backdrop-blur-xl backdrop-saturate-150 ${
                     side === "left" ? "mr-5" : "ml-5"
                   }`}
                   initial={isPreview ? false : { opacity: 0 }}

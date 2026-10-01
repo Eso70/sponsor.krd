@@ -84,7 +84,7 @@ describe("BranchSignalTemplate", () => {
     expect(screen.getByRole("button", { name: "WhatsApp" })).toHaveStyle({
       color: "#f7faf8",
       background:
-        "linear-gradient(145deg, rgba(24, 31, 27, 0.94), rgba(10, 14, 12, 0.9))",
+        "linear-gradient(145deg, rgba(24, 31, 27, 0.48), rgba(10, 14, 12, 0.24))",
     });
     expect(container.querySelector('[data-branch-side="left"]')).toBeTruthy();
     expect(container.querySelector('[data-branch-side="right"]')).toBeTruthy();
@@ -214,7 +214,7 @@ describe("BranchSignalTemplate", () => {
     expect(screen.getByRole("button", { name: "WhatsApp" })).toHaveStyle({
       color: "#1f2937",
       background:
-        "linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 249, 0.9))",
+        "linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(248, 250, 249, 0.24))",
     });
     expect(
       container.querySelector("[data-template-platform-name]"),

@@ -724,7 +724,9 @@ label and the catalog-owned English platform name as a smaller secondary label.
 The secondary label is static UI metadata and must not use the editable link
 description.
 
-Branch Signal (`branch-signal`) is the Ultra-only premium network template. It
+Branch Signal (`branch-signal`) is the Ultra-only premium network template.
+Its platform link buttons use translucent glass gradients with backdrop blur
+and saturation, adapting the tint and text contrast to light or dark backgrounds. It
 must support every shared Linktree background color, gradient, uploaded image,
 and pattern, with readable text derived from the selected surface. Soft
 paths connect alternating cards directly and follow the saved subtitle color,
