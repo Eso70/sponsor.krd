@@ -24,7 +24,7 @@ export class PublicController {
   @Get('sitemap')
   async getSitemap(
     @Subdomain() subdomain: string,
-    @Query('page') rawPage = '0',
+    @Query('chunk') rawPage = '0',
   ) {
     if (!/^\d{1,6}$/.test(rawPage)) throw new NotFoundException('Not Found');
     return {

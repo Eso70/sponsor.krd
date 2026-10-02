@@ -19,6 +19,7 @@ const UUID_PARAMETERS = new Set([
 
 const INTEGER_QUERY_LIMITS: Record<string, { min: number; max: number }> = {
   page: { min: 1, max: 100_000 },
+  chunk: { min: 0, max: 49_999 },
   limit: { min: 1, max: 500 },
   offset: { min: 0, max: 1_000_000 },
   days: { min: 1, max: 3_650 },

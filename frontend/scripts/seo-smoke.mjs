@@ -21,6 +21,7 @@ const fixture = createServer((req, res) => {
     return respond({ slug: id === "noindex" ? id : "same-slug" }, id === "unavailable" ? 503 : ["same-slug", "random-id", "noindex"].includes(id) ? 200 : 404);
   }
   if (url.pathname === "/api/public/sitemap") {
+    if (!/^(0|[1-9]\d{0,4})$/.test(url.searchParams.get("chunk") || "")) return respond({}, 400);
     return respond({ pages: [{ slug: "same-slug", updatedAt: "2026-10-02" }], totalPages: 1 });
   }
   if (url.pathname.includes("/linktree/")) {

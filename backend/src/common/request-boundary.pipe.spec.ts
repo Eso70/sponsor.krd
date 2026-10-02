@@ -3,6 +3,23 @@ import { RequestBoundaryPipe } from './request-boundary.pipe';
 
 describe('RequestBoundaryPipe', () => {
   const pipe = new RequestBoundaryPipe();
+  it('accepts zero-based sitemap chunks without weakening ordinary page validation', () => {
+    expect(
+      pipe.transform('0', { type: 'query', data: 'chunk', metatype: String }),
+    ).toBe('0');
+    for (const chunk of ['-1', '50000', 'abc']) {
+      expect(() =>
+        pipe.transform(chunk, {
+          type: 'query',
+          data: 'chunk',
+          metatype: String,
+        }),
+      ).toThrow(BadRequestException);
+    }
+    expect(() =>
+      pipe.transform('0', { type: 'query', data: 'page', metatype: String }),
+    ).toThrow(BadRequestException);
+  });
 
   it('rejects malformed UUID route parameters', () => {
     expect(() =>

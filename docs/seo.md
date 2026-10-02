@@ -39,6 +39,9 @@ JSON-LD escapes script terminators and uses the existing CSP nonce.
 
 ## Discovery and sharing
 
+The internal sitemap API uses `chunk=0` for its first chunk. Ordinary `page`
+queries remain one-based under the global request-boundary validator.
+
 - `/robots.txt` declares the current host's sitemap. It blocks API crawling,
   but keeps noindex/authentication URLs crawlable so exclusion can be observed.
   Authentication/authorization remains the privacy boundary.

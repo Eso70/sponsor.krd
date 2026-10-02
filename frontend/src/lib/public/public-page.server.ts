@@ -56,7 +56,7 @@ export const fetchPublicLinktree = cache(async (uid: string) => {
 });
 
 export async function fetchSitemapPages(page: number): Promise<{ pages: PublicSitemapPage[]; totalPages: number }> {
-  const response = await publicFetch(`/api/public/sitemap?page=${page}`);
+  const response = await publicFetch(`/api/public/sitemap?chunk=${page}`);
   if (response.status === 404) notFound();
   if (!response.ok) throw new Error("Sitemap upstream unavailable");
   const body = await response.json() as { data: { pages: PublicSitemapPage[]; totalPages: number } };
