@@ -43,11 +43,14 @@ JSON-LD escapes script terminators and uses the existing CSP nonce.
   but keeps noindex/authentication URLs crawlable so exclusion can be observed.
   Authentication/authorization remains the privacy boundary.
 - `/sitemap.xml` is derived from active, nonarchived, indexable owner-scoped
-  database rows. Root also includes its public homepage. Tenant login/landing
+  database rows. Root also includes its public homepage and legal documents. Tenant login/landing
   and dashboard routes are not included.
 - Larger sites receive a sitemap index pointing to `/sitemaps/0.xml`, etc.
   Each deterministic chunk contains at most 1,000 pages. XML values are escaped
-  and lastmod uses actual database updates. Responses are not globally cached.
+  and lastmod uses actual page/link and branding updates. Link mutations refresh
+  the parent page timestamp, including deletions, and clear both business and
+  platform public caches. Sitemap indexes fail closed above the protocol's
+  50,000-entry limit. Responses are not globally cached.
 - `/linktree/<slug>/share-image` produces a 1200×630 PNG from actual page name
   and subtitle. It performs no arbitrary remote image fetches and caches the
   returned image for five minutes by its full host/path URL.
@@ -104,8 +107,16 @@ cover backend SQL ownership/publication/indexing and cache safeguards.
    property, submit sitemaps, inspect representative URLs/live HTML, request
    indexing where appropriate, and monitor crawl/indexing errors.
 
+The initial HTML language matches the stored public-page language or public
+site preference. Legal documents declare root-host canonicals; tenant copies
+are noindex. Malformed public identifiers return 404 before streaming.
+Direct Caddy API responses carry noindex headers as well as the Next proxy.
+
 Local tests do not prove live DNS/CDN settings or Search Console acceptance.
 Publishing and Search Console changes require deployment/account access.
+
+See [the follow-up audit](seo-audit-2026-10-03.md) for fixes and the remaining
+production acceptance boundaries.
 
 ## Official references
 

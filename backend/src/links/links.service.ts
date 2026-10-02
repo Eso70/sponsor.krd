@@ -31,25 +31,37 @@ export class LinksService {
     return row ? withLinkMetadata(row) : undefined;
   }
 
-  private async invalidateLinktreeCache(linktreeId: string): Promise<void> {
+  private async invalidateLinktreeCache(
+    linktreeId: string,
+    businessId: string,
+  ): Promise<void> {
     try {
       const res = await this.databaseService.query<{
         uid: string;
         seo_name: string | null;
         subdomain: string | null;
       }>(
-        `SELECT lt.uid, lt.seo_name, a.subdomain
-         FROM linktrees lt
+        `WITH changed_page AS (
+           UPDATE linktrees SET updated_at = NOW()
+           WHERE id = $1 AND business_id = $2 RETURNING *
+         )
+         SELECT lt.uid, lt.seo_name, a.subdomain
+         FROM changed_page lt
          INNER JOIN businesses a ON lt.business_id = a.id
          WHERE lt.id = $1`,
-        [linktreeId],
+        [linktreeId, businessId],
       );
       const row = res.rows[0];
       if (row?.uid) {
         const sub = row.subdomain?.toLowerCase();
-        const keys = [`cache:linktree:uid:${row.uid}`, `cache:linktree:uid:id`];
+        const keys = [
+          `cache:linktree:uid:${row.uid}`,
+          `cache:linktree:uid:id`,
+          `cache:platform-linktree:${row.uid}`,
+        ];
         if (row.seo_name) {
           keys.push(`cache:linktree:uid:${row.seo_name}`);
+          keys.push(`cache:platform-linktree:${row.seo_name}`);
         }
         if (sub) {
           keys.push(`cache:linktree:uid:${row.uid}:sub:${sub}`);
@@ -128,7 +140,7 @@ export class LinksService {
       ],
     );
 
-    await this.invalidateLinktreeCache(data.linktree_id);
+    await this.invalidateLinktreeCache(data.linktree_id, businessId);
     return this.mapLinkRow(res.rows[0]);
   }
 
@@ -215,7 +227,7 @@ export class LinksService {
       ],
     );
 
-    await this.invalidateLinktreeCache(linktreeId);
+    await this.invalidateLinktreeCache(linktreeId, businessId);
     return this.mapLinkRow(res.rows[0]);
   }
 
@@ -241,7 +253,7 @@ export class LinksService {
       );
       await client.query('DELETE FROM links WHERE id = $1', [id]);
     });
-    await this.invalidateLinktreeCache(linktreeId);
+    await this.invalidateLinktreeCache(linktreeId, businessId);
 
     return { success: true };
   }
@@ -374,7 +386,7 @@ export class LinksService {
       }
     });
 
-    await this.invalidateLinktreeCache(linktreeId);
+    await this.invalidateLinktreeCache(linktreeId, businessId);
     return { success: true };
   }
 }

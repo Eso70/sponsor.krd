@@ -29,7 +29,7 @@ const fixture = createServer((req, res) => {
     return respond({ linktree: {
       id: `${tenant || "platform"}-page`, uid: "random-id", seo_name: id === "noindex" ? id : "same-slug",
       name: names[tenant], subtitle: "Actual services", description: `Actual description for ${names[tenant]}`,
-      template_key: "spectrum", template_config: { templateKey: "spectrum", seo: { robotsIndex: id !== "noindex" } },
+      template_key: "spectrum", template_config: { templateKey: "spectrum", seo: { robotsIndex: id !== "noindex", locale: tenant === "alpha" ? "en" : "ckb" } },
       background_color: "#161b22", status: "active", footer_hidden: true,
     }, links: [{ id: "website-link", platform: "website", url: "https://example.com/official", display_name: "Official website", display_order: 0, metadata: {} }],
     analytics: { pixelIds: [], actions: {} } });
@@ -81,12 +81,15 @@ try {
       const html = response.body.toString();
       assert.ok(html.includes(names[tenant])); assert.ok(!html.includes(names[tenant === "alpha" ? "beta" : "alpha"]));
       assert.match(html, /<h1[^>]*>/); assert.match(html, /<title>/); assert.match(html, /name="description"/);
+      assert.match(html, new RegExp(`<html[^>]+lang="${tenant === "alpha" ? "en" : "ckb"}"`));
       assert.match(html, /rel="canonical"/); assert.match(html, /property="og:title"/);
       assert.match(html, /application\/ld\+json/); assert.match(html, /<a[^>]+href="https:\/\/example.com\/official"/);
       assert.ok(html.includes(`http://${host}:${frontendPort}/linktree/same-slug`));
     }
     assert.equal((await get(host, "/linktree/missing")).status, 404);
     assert.equal((await get(host, "/linktree/unpublished")).status, 404);
+    assert.equal((await get(host, "/linktree/INVALID")).status, 404);
+    assert.equal((await get(host, `/linktree/${"a".repeat(51)}`)).status, 404);
     assert.equal((await get(host, "/linktree/unavailable")).status, 503);
     const alias = await get(host, "/linktree/random-id"); assert.equal(alias.status, 308);
     const campaign = await get(host, "/linktree/noindex"); assert.match(campaign.body.toString(), /content="noindex, follow"/);
@@ -100,6 +103,16 @@ try {
   assert.equal((await get("alpha.evil.test", "/linktree/same-slug")).status, 404);
   const www = await get("www.localhost", "/linktree/same-slug"); assert.equal(www.status, 308);
   assert.equal((await get("localhost", "/robots.txt")).status, 200);
+  const rootSitemap = await get("localhost", "/sitemap.xml");
+  assert.match(rootSitemap.body.toString(), /\/legal\/privacy/);
+  assert.match(rootSitemap.body.toString(), /\/legal\/terms/);
+  for (const path of ["/legal/privacy", "/legal/terms"]) {
+    const rootLegal = await get("localhost", path);
+    assert.equal(rootLegal.status, 200);
+    assert.match(rootLegal.body.toString(), new RegExp(`rel="canonical" href="http://localhost:${frontendPort}${path}"`));
+    const tenantLegal = await get("alpha.localhost", path);
+    assert.match(tenantLegal.body.toString(), /content="noindex, follow"/);
+  }
   console.log("SEO HTTP smoke passed: two tenants, raw HTML, robots, sitemaps, real links, OG images, 404/503/308, noindex, and hostile hosts.");
   }
 } catch (error) {

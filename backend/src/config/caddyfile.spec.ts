@@ -49,4 +49,11 @@ describe('Caddyfile Configuration Validation', () => {
   it('should contain proxy to backend (localhost:4000)', () => {
     expect(caddyfileContent).toMatch(/localhost:4000/);
   });
+  it('marks direct API responses as nonindexable on root and tenant hosts', () => {
+    expect(
+      caddyfileContent.match(
+        /header @api X-Robots-Tag "noindex, nofollow, noarchive"/g,
+      ),
+    ).toHaveLength(2);
+  });
 });

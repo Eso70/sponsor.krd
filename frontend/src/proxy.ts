@@ -131,6 +131,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("x-subdomain");
   requestHeaders.delete(INTERNAL_PROXY_KEY_HEADER);
+  requestHeaders.set("x-public-path", pathname);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
 
@@ -188,6 +189,9 @@ export async function proxy(request: NextRequest) {
   }
 
   const publicPageMatch = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})(?:\/share-image)?\/?$/);
+  if ((pathname === "/linktree" || pathname.startsWith("/linktree/")) && !publicPageMatch) {
+    return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
+  }
   if (publicPageMatch) {
     const availability = await publicPageAvailability(backendUrl, subdomain, publicPageMatch[1],
       request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "");
@@ -203,7 +207,7 @@ export async function proxy(request: NextRequest) {
     if (slug && /^[a-z0-9-]{1,50}$/.test(slug) && slug !== publicPageMatch[1]) {
       const context = resolvePublicOrigin(host, ROOT_DOMAIN, getAppBaseUrl());
       if (context) {
-        const suffix = pathname.endsWith("/share-image") ? "/share-image" : "";
+        const suffix = /\/share-image\/?$/.test(pathname) ? "/share-image" : "";
         return withCsp(NextResponse.redirect(new URL(`/linktree/${slug}${suffix}${request.nextUrl.search}`, context.origin), 308), csp);
       }
     }

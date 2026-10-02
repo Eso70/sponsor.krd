@@ -56,5 +56,9 @@ describe("public SEO boundary", () => {
     expect(xml).not.toContain("https://b.sponsor.krd");
     expect(xml).toContain("2026-10-02T00:00:00.000Z");
     expect(sitemapIndexXml("https://a.sponsor.krd", 2)).toContain("/sitemaps/1.xml");
+    expect(sitemapXml("https://sponsor.krd", [], true)).toContain("https://sponsor.krd/legal/privacy");
+    expect(xml).not.toContain("/legal/");
+    expect(() => sitemapIndexXml("https://sponsor.krd", 50_001)).toThrow(RangeError);
+    expect(() => sitemapIndexXml("https://sponsor.krd", Infinity)).toThrow(RangeError);
   });
 });

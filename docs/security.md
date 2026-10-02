@@ -341,8 +341,9 @@ when a new session type is introduced.
 - Public analytics ingestion: `POST /api/public/analytics/events` uses an
   IP-keyed Redis rate limit of 180 requests per 60 seconds and returns HTTP
   `429` when the limit is exceeded.
-- Other anonymous endpoints, including public page reads, do not currently
-  have a general-purpose or dedicated rate limiter.
+- Public Linktree content reads use an IP limit of 30 requests per minute;
+  the lightweight pre-stream availability endpoint uses a separate 120-per-minute
+  limit. Other anonymous endpoints do not have a general-purpose rate limiter.
 
 ## Input validation
 

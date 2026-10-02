@@ -69,9 +69,11 @@ export function buildPageMetadata(page: PublicLinktree, origin: string): Metadat
 
 /** WebPage describes known visible content without inventing LocalBusiness fields. */
 export function buildPageJsonLd(page: PublicLinktree, origin: string) {
+  const language = readPageSeo(page.template_config).locale || "ckb";
   return {
     "@context": "https://schema.org", "@type": "WebPage",
     "@id": `${canonicalPageUrl(page, origin)}#page`, url: canonicalPageUrl(page, origin), name: page.name,
+    inLanguage: language,
     ...(meaningfulPageDescription(page.description) ? { description: page.description } : {}),
     ...(publicAssetUrl(page.image, origin) ? { image: publicAssetUrl(page.image, origin) } : {}),
   };

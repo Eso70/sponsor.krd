@@ -18,6 +18,11 @@ import {
 } from "@/lib/sponsor-krd-theme";
 import "./globals.css";
 import { PublicRouteTracking } from "@/components/analytics/PublicRouteTracking";
+import { resolveLinktreeHost } from "@/lib/public/linktree-host";
+import { fetchPublicLinktree } from "@/lib/public/public-page.server";
+import { readPageSeo } from "@/lib/public/page-seo";
+import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
+import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
 
 /* Applied in the initial HTML while the full stylesheet initializes. */
 const criticalCursor =
@@ -66,12 +71,26 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const initialTheme = (await cookies()).get(APP_THEME_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const initialTheme = cookieStore.get(APP_THEME_COOKIE)?.value;
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get("x-public-path") || "";
+  const scope = resolveLinktreeHost(requestHeaders.get("host") || "", process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost");
+  let language = "en";
+  const linktree = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})\/?$/);
+  if (linktree) {
+    const result = await fetchPublicLinktree(linktree[1]);
+    language = result && typeof result !== "string" ? readPageSeo(result.linktree.template_config).locale || "ckb" : "ckb";
+  } else if (pathname === "/" || pathname.startsWith("/legal/")) {
+    language = scope.isPlatformRoot || pathname.startsWith("/legal/")
+      ? parseRootPublicLocale(cookieStore.get(ROOT_PUBLIC_LOCALE_COOKIE)?.value)
+      : publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+  }
 
   return (
     <html
       className={initialTheme === "dark" ? "dark" : undefined}
-      lang="en"
+      lang={language}
       dir="ltr"
       style={sponsorKrdThemeStyle}
       suppressHydrationWarning

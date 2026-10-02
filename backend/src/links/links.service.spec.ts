@@ -38,13 +38,27 @@ function buildService(
   const redis = {
     del: jest.fn().mockResolvedValue(undefined),
   } as unknown as RedisService;
-  return { service: new LinksService(database, redis), calls };
+  return { service: new LinksService(database, redis), calls, database, redis };
 }
 
 const find = (calls: Call[], fragment: string) =>
   calls.filter((call) => call.sql.includes(fragment));
 
 describe('LinksService.syncLinks', () => {
+  it('refreshes modification time and invalidates both public surfaces after a link deletion', async () => {
+    const { service, database, redis } = buildService([
+      { id: WHATSAPP_ID, platform: 'whatsapp', url: 'https://wa.me/1' },
+    ]);
+    await service.syncLinks(LINKTREE_ID, [], BUSINESS_ID);
+    expect(database.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE linktrees SET updated_at = NOW()'),
+      [LINKTREE_ID, BUSINESS_ID],
+    );
+    expect(redis.del).toHaveBeenCalledWith(
+      'cache:linktree:uid:page-uid:sub:shop',
+    );
+    expect(redis.del).toHaveBeenCalledWith('cache:platform-linktree:page-uid');
+  });
   /**
    * The regression this exists for.
    *

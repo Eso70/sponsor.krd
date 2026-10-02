@@ -211,7 +211,10 @@ export class PublicService {
       total: string;
     }>(
       `SELECT COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS slug,
-              lt.updated_at AS "updatedAt", count(*) OVER ()::text AS total
+              GREATEST(lt.updated_at, (
+                SELECT branding.updated_at FROM business_branding branding
+                WHERE branding.business_id = lt.business_id
+              )) AS "updatedAt", count(*) OVER ()::text AS total
          FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
         WHERE lt.business_id = $1::uuid AND a.status = 'active'
           AND lt.status = 'active' AND NOT COALESCE(lt.is_archived, false)

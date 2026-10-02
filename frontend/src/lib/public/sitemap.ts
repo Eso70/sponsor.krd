@@ -6,7 +6,8 @@ export function escapeXml(value: string): string {
 }
 
 export function sitemapXml(origin: string, pages: PublicSitemapPage[], includeHome: boolean): string {
-  const home = includeHome ? `<url><loc>${escapeXml(`${origin}/`)}</loc></url>` : "";
+  const home = includeHome ? ["/", "/legal/privacy", "/legal/terms"].map(path =>
+    `<url><loc>${escapeXml(`${origin}${path}`)}</loc></url>`).join("") : "";
   const entries = pages.map(page => {
     const date = new Date(page.updatedAt);
     const lastmod = Number.isNaN(date.getTime()) ? "" : `<lastmod>${date.toISOString()}</lastmod>`;
@@ -16,6 +17,9 @@ export function sitemapXml(origin: string, pages: PublicSitemapPage[], includeHo
 }
 
 export function sitemapIndexXml(origin: string, totalPages: number): string {
+  if (!Number.isSafeInteger(totalPages) || totalPages < 1 || totalPages > 50_000) {
+    throw new RangeError("Sitemap index exceeds the supported protocol limit");
+  }
   const entries = Array.from({ length: totalPages }, (_, page) =>
     `<sitemap><loc>${escapeXml(`${origin}/sitemaps/${page}.xml`)}</loc></sitemap>`).join("");
   return `<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}</sitemapindex>`;

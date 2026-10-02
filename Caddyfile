@@ -15,6 +15,7 @@
     request_header -x-subdomain
 
     @api path /api/*
+    header @api X-Robots-Tag "noindex, nofollow, noarchive"
     reverse_proxy @api localhost:4000 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
@@ -40,6 +41,7 @@ sponsor.krd, www.sponsor.krd {
     request_header -x-subdomain
 
     @api path /api/*
+    header @api X-Robots-Tag "noindex, nofollow, noarchive"
     reverse_proxy @api localhost:4000 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}

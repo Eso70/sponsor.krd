@@ -5,10 +5,15 @@ import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocal
 import { RootLegalDocument } from "@/features/public-site/RootLegalDocument";
 import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
 import { termsCopy } from "@/features/public-site/legal-copy";
+import { publicRequestContext } from "@/lib/public/public-page.server";
+import { getAppBaseUrl } from "@/lib/utils/app-url";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
-  return { title: `${termsCopy[locale].title} | Sponsor.krd`, description: termsCopy[locale].title };
+  const context = await publicRequestContext();
+  return { title: `${termsCopy[locale].title} | Sponsor.krd`, description: termsCopy[locale].title,
+    alternates: { canonical: new URL("/legal/terms", getAppBaseUrl()).href },
+    robots: { index: context.isPlatformRoot, follow: true } };
 }
 
 export default async function TermsPage() {
