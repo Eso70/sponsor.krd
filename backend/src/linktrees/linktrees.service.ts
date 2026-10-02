@@ -1,3 +1,4 @@
+import { normalizePageSeo } from '../common/page-seo';
 import {
   Injectable,
   Logger,
@@ -247,6 +248,7 @@ export class LinktreesService {
     config.type = config.type || 'simple';
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
+    if (config.seo !== undefined) config.seo = normalizePageSeo(config.seo);
     config.whatsapp_modal = config.whatsapp_modal || {};
 
     // A background image is painted into public page CSS, so anything that is

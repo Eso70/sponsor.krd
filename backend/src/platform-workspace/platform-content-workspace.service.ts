@@ -1,6 +1,11 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { normalizeSponsorKrdAccent } from '../common/platform-brand';
+import {
+  normalizeSponsorKrdAccent,
+  normalizeSponsorKrdAsset,
+  SPONSOR_KRD_LOGO,
+  sponsorKrdFaviconForLogo,
+} from '../common/platform-brand';
 
 export const PLATFORM_CONTENT_WORKSPACE_ID =
   '00000000-0000-4000-8000-000000000001';
@@ -57,11 +62,12 @@ export class PlatformContentWorkspaceService {
         LIMIT 1`,
     );
     const row = result.rows[0];
+    const logo = normalizeSponsorKrdAsset(row?.logo || SPONSOR_KRD_LOGO);
     return {
       name: row?.name?.trim() || 'Sponsor.krd',
-      logo: row?.logo || '/images/Logo.jpg',
-      avatar: row?.avatar || '/images/sponsor-krd-logo-mark.png',
-      favicon: row?.favicon || '/favicon.ico',
+      logo,
+      avatar: logo,
+      favicon: sponsorKrdFaviconForLogo(logo),
       accentColor: normalizeSponsorKrdAccent(row?.accent_color),
     };
   }
@@ -82,16 +88,23 @@ export class PlatformContentWorkspaceService {
         WHERE business.id = $1`,
       [workspaceId],
     );
-    return (
-      result.rows[0] || {
-        default_footer_text: null,
-        default_footer_phone: null,
-        default_template: null,
-        default_background_color: null,
-        default_footer_hidden: false,
-        default_whatsapp_enabled: false,
-        default_avatar: null,
-      }
-    );
+    const defaults = result.rows[0];
+    if (defaults) {
+      return {
+        ...defaults,
+        default_avatar: defaults.default_avatar
+          ? normalizeSponsorKrdAsset(defaults.default_avatar)
+          : null,
+      };
+    }
+    return {
+      default_footer_text: null,
+      default_footer_phone: null,
+      default_template: null,
+      default_background_color: null,
+      default_footer_hidden: false,
+      default_whatsapp_enabled: false,
+      default_avatar: null,
+    };
   }
 }

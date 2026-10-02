@@ -1,5 +1,11 @@
 # Testing and verification
 
+For SEO changes, `pnpm --filter frontend test:seo` starts an isolated Next
+preview with a disposable fixture API, without database writes. It tests raw
+HTML, two tenants with identical slugs, robots/sitemaps, share images, real
+anchors, noindex, crawler agents and HTTP status/redirect behavior. See
+[SEO verification and live deployment checks](seo.md).
+
 Everything, in one command:
 
 ```bash

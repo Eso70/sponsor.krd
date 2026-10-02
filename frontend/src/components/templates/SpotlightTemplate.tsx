@@ -1,4 +1,5 @@
 "use client";
+import { navigationHref } from "@/lib/public/navigation-href";
 
 import { memo, useMemo, useCallback } from "react";
 import {
@@ -159,6 +160,7 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
                   id={`link-${link.platform.toLowerCase()}`}
                   data-platform={link.platform.toLowerCase()}
                   data-action-key={`link:${link.id}`}
+                  href={navigationHref(link.url, link.platform, link.default_message)}
                   onClick={() =>
                     handleLinkClick(
                       link.id,

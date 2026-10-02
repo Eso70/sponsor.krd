@@ -180,6 +180,7 @@ export const GpsLocationDisplay = memo(function GpsLocationDisplay({
           onClick={
             onOpen
               ? (event) => {
+                  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                   // The handler both reports and opens, so the anchor's own
                   // navigation would produce a second tab. `href` stays for
                   // middle-click, "open in new tab", and the no-handler case.

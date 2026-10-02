@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:seo": "node scripts/seo-smoke.mjs"
   },
   "dependencies": {
     "@linktree/types": "workspace:*",

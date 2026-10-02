@@ -1,5 +1,60 @@
 # Frontend
 
+## Public-page SEO
+
+Public Linktrees use request-scoped server reads, validated tenant canonicals,
+full metadata, safe JSON-LD, generated share images, and host-aware robots and
+paginated sitemaps. Shared page-editor controls select indexing and metadata
+without duplicating business/platform UI. See [SEO architecture and operations](seo.md)
+and [the implementation plan](seo-implementation-plan.md).
+
+## Sponsor.krd Rise branding
+
+Brand assets live together in `frontend/public/images/brand/`. The original
+`02-rise.svg` has moved there as `rise-original.svg` and supplies Sponsor.krd's
+Rise geometry. One transparent
+`/images/brand/rise.svg` is used for the platform logo and administrator avatar.
+Its center bar follows the app's light/dark theme through the embedding image's
+color scheme; the surrounding component supplies the background. Shared branding
+constants supply platform chrome and powered-by footers. The separate opaque
+logo and transparent-mark PNGs are removed. `rise.png`, `rise-favicon-white.png`,
+`rise-apple.png`, and `rise-icon-192.png` are transparent raster exports of the
+same artwork for metadata and native icon compatibility, not independent logos.
+Browser tabs use `rise-favicon-white.png` with the original white center pillar
+in every theme. This distinct URL avoids reusing the earlier dark-center icon
+from browser caches. The on-page SVG still adapts its center bar to the app theme.
+Customer logos, avatars, favicons, and neutral placeholders remain separate.
+
+The shared authentication preview's right-side logo tile always uses the dark
+primary surface (`#161b22`), independently of the surrounding page theme. It
+uses `rise-original.svg` so its center pillar stays white and its
+cyan/pink colors stay original on sign-in and sign-up screens. A soft white
+outer ring frames the dark tile in both themes.
+Tenant authentication continues to display the tenant's own logo in that tile.
+
+Platform Settings exposes one logo uploader. The backend derives the avatar
+and browser favicon from that logo on reads and writes; neither has a separate
+upload control. Apply `2026-10-02_unify_platform_logo.sql` through the normal
+migration workflow to unify persisted platform assets. Legacy logo/mark URLs are
+normalized on reads. Uploaded logos still use the existing validated PNG/JPEG
+boundary; this change does not enable arbitrary SVG uploads.
+
+The retired `Logo.jpg`, `sponsor-krd-logo-mark.png`, and `favicon.ico` public
+files are removed. Deployments must remove those files on the server too;
+copying new files over an existing public directory is insufficient. Rebuild
+Next.js and purge any reverse-proxy/CDN copies of the retired assets and their
+`/_next/image` variants. Run the normal migration workflow to apply
+`2026-10-02_replace_platform_branding.sql`, which replaces saved platform
+branding without touching customer branding. Existing known legacy platform
+paths are also normalized on read, including old environment defaults.
+
+After deployment, verify the old URLs return 404, verify the homepage's icon
+and social metadata, and request homepage indexing through Google Search
+Console. Use its Removals tool for any old image URLs still appearing in
+search. Google controls recrawl timing; local code cannot immediately purge
+Google's index or copies hosted by other websites. Do not block the old URLs
+in robots.txt, because crawlers must see their removal.
+
 The shared Linktree editor reuses one solid-color picker for subtitle and
 footer-button colors. Footer color is saved per page in
 `template_config.footer_button_color` and rendered by the shared footer in all

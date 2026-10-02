@@ -34,7 +34,6 @@ describe('readPlatformAdminEnv', () => {
       [
         'PLATFORM_ADMIN_EMAIL',
         'PLATFORM_ADMIN_FAVICON',
-        'PLATFORM_ADMIN_LOGO_WITHOUT_BACKGROUND',
         'PLATFORM_ADMIN_LOGO_WITH_BACKGROUND',
         'PLATFORM_ADMIN_NAME',
         'PLATFORM_ADMIN_PHONE',

@@ -19,6 +19,22 @@ export function rootDomainHostname(rootDomain: string): string {
   return rootDomain.trim().split(':')[0].toLowerCase().replace(/\.$/, '');
 }
 
+/** One configured-domain DNS label, empty for root, null for unknown hosts. */
+export function publicSubdomainFromHost(
+  authority: string,
+  rootDomain: string,
+): string | null {
+  if (!/^[a-z0-9.-]+(?::\d{1,5})?$/i.test(authority.trim())) return null;
+  const host = rootDomainHostname(authority);
+  const root = rootDomainHostname(rootDomain);
+  if (host === root || host === `www.${root}`) return '';
+  if (!host.endsWith(`.${root}`)) return null;
+  const candidate = host.slice(0, -(root.length + 1));
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(candidate)
+    ? candidate
+    : null;
+}
+
 /**
  * The port embedded in the configured root domain, or an empty string. Returned
  * with its leading colon so it can be concatenated directly.

@@ -8,13 +8,20 @@ export function resolveLinktreeHost(
   hostname: string,
   rootDomain: string,
 ): LinktreeHostScope {
-  const host = hostname.toLowerCase().replace(/^www\./, "");
-  const root = rootDomain.toLowerCase().replace(/^www\./, "");
-  const isIp = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host);
-  const isPlatformRoot = isIp || host === "localhost" || host === root;
+  if (!/^[a-z0-9.-]+(?::\d{1,5})?$/i.test(hostname.trim())) {
+    return { isPlatformRoot: false, subdomain: "" };
+  }
+  const host = hostname.trim().toLowerCase().split(":")[0].replace(/\.$/, "");
+  const root = rootDomain.trim().toLowerCase().split(":")[0].replace(/\.$/, "");
+  const isLocalRoot = root === "localhost" && host === "127.0.0.1";
+  const isPlatformRoot = isLocalRoot || host === root || host === `www.${root}`;
   const subdomain =
     !isPlatformRoot && host.endsWith(`.${root}`)
-      ? host.slice(0, -(root.length + 1)).split(".")[0]
+      ? host.slice(0, -(root.length + 1))
       : "";
-  return { isPlatformRoot, subdomain };
+  return {
+    isPlatformRoot,
+    subdomain: /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomain)
+      ? subdomain : "",
+  };
 }

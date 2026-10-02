@@ -1,5 +1,10 @@
 # Deployment
 
+For public SEO deployment, build/deploy frontend and backend together, include
+`KurdishFont-share.ttf`, verify host/proxy configuration, and test at least two
+real HTTPS tenant pages before submitting their sitemaps through Search Console.
+See [the SEO deployment checklist](seo.md#deployment-and-production-acceptance).
+
 Register exact production callback
 `https://<root-domain>/api/auth/google/callback` in Google Cloud and configure
 `APP_BASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and

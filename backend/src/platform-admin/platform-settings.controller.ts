@@ -260,8 +260,7 @@ export class PlatformSettingsController {
 
     const field = data.fields?.assetType as { value?: unknown } | undefined;
     const assetType =
-      typeof field?.value === 'string' &&
-      ['logo', 'avatar', 'favicon'].includes(field.value)
+      typeof field?.value === 'string' && field.value === 'logo'
         ? field.value
         : null;
     if (!assetType) {

@@ -2,7 +2,29 @@ import {
   isRootDomainHost,
   rootDomainHostname,
   rootDomainPort,
+  publicSubdomainFromHost,
 } from './root-domain';
+
+describe('public hostname resolution', () => {
+  it.each([
+    'tenant.evil.test',
+    'nested.tenant.sponsor.krd',
+    'tenant.sponsor.krd@evil.test',
+    'tenant.sponsor.krd,evil.test',
+    'localhost',
+  ])('rejects unapproved host %s', (host) => {
+    expect(publicSubdomainFromHost(host, 'sponsor.krd')).toBeNull();
+  });
+  it('normalizes genuine tenant/root authorities and development ports', () => {
+    expect(
+      publicSubdomainFromHost('TENANT.SPONSOR.KRD.:443', 'sponsor.krd'),
+    ).toBe('tenant');
+    expect(publicSubdomainFromHost('www.sponsor.krd', 'sponsor.krd')).toBe('');
+    expect(
+      publicSubdomainFromHost('tenant.localhost:3011', 'localhost:3011'),
+    ).toBe('tenant');
+  });
+});
 
 describe('rootDomainHostname', () => {
   it('returns a bare domain unchanged', () => {

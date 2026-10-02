@@ -81,7 +81,7 @@ describe("BranchSignalTemplate", () => {
     expect(platformNames).toHaveLength(2);
     expect(platformNames[0]).toHaveTextContent("WhatsApp");
     expect(platformNames[1]).toHaveTextContent("Link");
-    expect(screen.getByRole("button", { name: "WhatsApp" })).toHaveStyle({
+    expect(screen.getByRole("link", { name: "WhatsApp" })).toHaveStyle({
       color: "#f7faf8",
       background:
         "linear-gradient(145deg, rgba(24, 31, 27, 0.48), rgba(10, 14, 12, 0.24))",
@@ -106,7 +106,7 @@ describe("BranchSignalTemplate", () => {
       container.querySelector<HTMLElement>("[data-template-viewport-layout]"),
     ).toHaveStyle({ "--branch-signal-accent": "#22c55e" });
 
-    fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
+    fireEvent.click(screen.getByRole("link", { name: "WhatsApp" }));
     expect(onLinkClick).toHaveBeenCalledWith(
       "whatsapp-link",
       "https://wa.me/9647502485829",
@@ -125,7 +125,7 @@ describe("BranchSignalTemplate", () => {
       />,
     );
 
-    expect(screen.getAllByRole("button", { name: "WhatsApp" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "WhatsApp" })).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: /share/i }),
     ).not.toBeInTheDocument();
@@ -211,7 +211,7 @@ describe("BranchSignalTemplate", () => {
     expect(
       screen.getByText("Building connected digital identities."),
     ).toHaveStyle({ color: "rgba(31, 41, 55, 0.7)" });
-    expect(screen.getByRole("button", { name: "WhatsApp" })).toHaveStyle({
+    expect(screen.getByRole("link", { name: "WhatsApp" })).toHaveStyle({
       color: "#1f2937",
       background:
         "linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(248, 250, 249, 0.24))",

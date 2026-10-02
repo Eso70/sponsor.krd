@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { extractSubdomain } from "@/lib/subdomain-utils";
+import {
+  BUSINESS_FAVICON_PLACEHOLDER,
+  SPONSOR_KRD_APPLE_ICON,
+  SPONSOR_KRD_FAVICON,
+} from "@/lib/brand/brand-assets";
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import { AppToaster } from "@/components/shared/AppToaster";
 import { GlobalInputLimits } from "@/components/shared/GlobalInputLimits";
@@ -20,7 +26,7 @@ const criticalCursor =
 const sponsorKrdThemeStyle =
   createSponsorKrdThemeVariables() as CSSProperties;
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(getAppBaseUrl()),
   title: "Sponsor.krd",
   description:
@@ -29,6 +35,22 @@ export const metadata: Metadata = {
     telephone: false,
   },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const host = (await headers()).get("host") || "";
+  const tenant = extractSubdomain(
+    host,
+    undefined,
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
+  );
+  return {
+    ...baseMetadata,
+    icons: {
+      icon: tenant ? BUSINESS_FAVICON_PLACEHOLDER : SPONSOR_KRD_FAVICON,
+      apple: tenant ? BUSINESS_FAVICON_PLACEHOLDER : SPONSOR_KRD_APPLE_ICON,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: SPONSOR_KRD_ACCENT_COLOR,

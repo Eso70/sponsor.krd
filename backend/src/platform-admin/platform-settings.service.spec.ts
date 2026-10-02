@@ -36,7 +36,11 @@ describe('PlatformSettingsService', () => {
       ),
     } as unknown as ConfigService);
 
-    await expect(service.getProfile('admin-id')).resolves.toEqual(profile);
+    await expect(service.getProfile('admin-id')).resolves.toEqual({
+      ...profile,
+      avatar: profile.logo,
+      favicon: profile.logo,
+    });
     expect(mockArg(database.query, 0, 0)).toContain(
       'email, phone, logo, avatar, favicon',
     );
@@ -78,11 +82,33 @@ describe('PlatformSettingsService', () => {
     await expect(service.getProfile('admin-id')).resolves.toMatchObject({
       email: 'admin@example.com',
       phone: '7502485829',
-      logo: '/images/Logo.jpg',
-      avatar: '/images/sponsor-krd-logo-mark.png',
-      favicon: '/favicon.ico',
+      logo: '/images/brand/rise.svg',
+      avatar: '/images/brand/rise.svg',
+      favicon: '/images/brand/rise-favicon-white.png',
       accent_color: '#123456',
       app_url: 'https://sponsor-krd.example',
+    });
+  });
+
+  it('replaces retired persisted platform assets before returning branding', async () => {
+    const database = {
+      query: jest.fn().mockResolvedValue({
+        rows: [
+          {
+            id: 'admin-id',
+            name: 'Sponsor.krd',
+            logo: '/images/Logo.jpg?v=old',
+            avatar: '/images/sponsor-krd-logo-mark.png',
+            favicon: '/favicon.ico',
+          },
+        ],
+      }),
+    } as unknown as DatabaseService;
+    const service = new PlatformSettingsService(database, redis);
+    await expect(service.getProfile('admin-id')).resolves.toMatchObject({
+      logo: '/images/brand/rise.svg',
+      avatar: '/images/brand/rise.svg',
+      favicon: '/images/brand/rise-favicon-white.png',
     });
   });
 
@@ -133,7 +159,7 @@ describe('PlatformSettingsService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('stores all branding assets and colors', async () => {
+  it('stores one logo for both branding and avatar together with colors', async () => {
     const database = {
       query: jest.fn().mockResolvedValue({
         rows: [
@@ -141,8 +167,6 @@ describe('PlatformSettingsService', () => {
             id: 'admin-id',
             name: 'My Platform',
             logo: '/logo.png',
-            avatar: '/avatar.png',
-            favicon: '/favicon.ico',
             accent_color: 'gradient:to-r:#112233:#445566',
             accent_ink_color: '#ffffff',
           },
@@ -154,8 +178,6 @@ describe('PlatformSettingsService', () => {
     await service.updateBranding('admin-id', {
       name: 'My Platform',
       logo: '/logo.png',
-      avatar: '/avatar.png',
-      favicon: '/favicon.ico',
       accent_color: 'gradient:to-r:#112233:#445566',
       accent_ink_color: '#ffffff',
     });
@@ -163,8 +185,8 @@ describe('PlatformSettingsService', () => {
     expect(mockArg(database.query, 0, 1)).toEqual([
       'My Platform',
       '/logo.png',
-      '/avatar.png',
-      '/favicon.ico',
+      '/logo.png',
+      '/logo.png',
       'gradient:to-r:#112233:#445566',
       '#ffffff',
       'admin-id',

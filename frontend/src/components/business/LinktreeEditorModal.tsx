@@ -10,6 +10,7 @@ import {
   startTransition,
 } from "react";
 import { BasicInfoStep } from "@/features/link-editor/components/BasicInfoStep";
+import { PageSeoFields } from "@/features/link-editor/components/PageSeoFields";
 import type { ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { getEditorPlatformName, localizeEditorUploadError, localizeEditorValidationError, type EditorCopy } from "@/features/link-editor/editor-copy";
 import { PlatformSelectionStep } from "@/features/link-editor/components/PlatformSelectionStep";
@@ -2169,6 +2170,10 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
         )}
 
         {/* Step 2: Select Platforms */}
+        {!isLoadingEditData && currentStep === "basic" && (
+          <PageSeoFields config={templateConfig} name={name} subtitle={subtitle} description={description} slug={slug} copy={copy}
+            onChange={seo => setTemplateConfig(previous => ({ ...previous, seo }))} />
+        )}
         {!isLoadingEditData && currentStep === "select" && (
           <PlatformSelectionStep
             copy={copy}

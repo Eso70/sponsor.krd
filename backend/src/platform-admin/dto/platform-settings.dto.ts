@@ -121,18 +121,6 @@ export class UpdatePlatformBrandingDto {
   logo?: string | null;
 
   @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
-  @IsString()
-  @MaxLength(2048)
-  avatar?: string | null;
-
-  @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
-  @IsString()
-  @MaxLength(2048)
-  favicon?: string | null;
-
-  @IsOptional()
   @IsString()
   @MaxLength(100)
   @Matches(WEBSITE_COLOR_PATTERN)

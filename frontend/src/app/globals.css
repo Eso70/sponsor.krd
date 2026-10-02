@@ -2,6 +2,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The transparent SVG follows the app theme, including manual theme changes. */
+img[src="/images/brand/rise.svg"] {
+  color-scheme: light;
+}
+
+.dark img[src="/images/brand/rise.svg"] {
+  color-scheme: dark;
+}
+
 /* Shared, content-measured marquee primitive. Framer Motion owns movement;
    feature components provide only content, spacing, masks, and treatment. */
 

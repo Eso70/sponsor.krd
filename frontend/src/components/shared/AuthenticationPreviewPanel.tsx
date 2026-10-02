@@ -1,5 +1,9 @@
 import Image from "next/image";
-import { BUSINESS_LOGO_PLACEHOLDER } from "@/lib/brand/brand-assets";
+import {
+  BUSINESS_LOGO_PLACEHOLDER,
+  SPONSOR_KRD_LOGO,
+  SPONSOR_KRD_ORIGINAL_LOGO,
+} from "@/lib/brand/brand-assets";
 
 interface AuthenticationPreviewPanelProps {
   description: string;
@@ -23,12 +27,17 @@ export function AuthenticationPreviewPanel({
       ? brandLogo
       : businessTenant
         ? BUSINESS_LOGO_PLACEHOLDER
-        : null;
+        : SPONSOR_KRD_LOGO;
   const effectiveTitle =
     title ??
     (businessTenant || effectiveBrandName !== "Sponsor.krd"
       ? "پانێڵی بزنس"
       : "پانێڵی پلاتفۆڕم");
+  const logoSource =
+    effectiveBrandLogo ||
+    (businessTenant ? BUSINESS_LOGO_PLACEHOLDER : SPONSOR_KRD_LOGO);
+  const previewLogoSource =
+    logoSource === SPONSOR_KRD_LOGO ? SPONSOR_KRD_ORIGINAL_LOGO : logoSource;
 
   return (
     <aside className="theme-fill relative hidden min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[32px] p-10 lg:flex lg:items-center lg:justify-center lg:ml-4 lg:mr-[-2.5rem] lg:min-h-[calc(100vh-2rem)]">
@@ -36,13 +45,13 @@ export function AuthenticationPreviewPanel({
       <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-slate-900/10" />
       <div className="absolute -bottom-28 -left-20 h-96 w-96 rounded-full border border-slate-900/10" />
       <div className="relative max-w-md text-center text-white" dir="rtl">
-        <div className="mx-auto h-20 w-20 overflow-hidden rounded-3xl border border-white/50 bg-white/85 p-1.5 shadow-[0_20px_45px_rgba(15,23,42,.18)]">
+        <div className="mx-auto h-20 w-20 overflow-hidden rounded-3xl border border-white/15 bg-[#161B22] p-1.5 shadow-[0_20px_45px_rgba(15,23,42,.18)] ring-4 ring-white/60">
           <Image
-            src={effectiveBrandLogo || BUSINESS_LOGO_PLACEHOLDER}
+            src={previewLogoSource}
             alt={effectiveBrandName}
             width={80}
             height={80}
-            className="h-full w-full rounded-[18px] object-cover"
+            className="h-full w-full rounded-[18px] object-contain"
           />
         </div>
         <p className="mt-8 text-xs font-black uppercase tracking-[0.28em] text-white/75">

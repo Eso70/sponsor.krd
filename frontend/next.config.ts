@@ -39,6 +39,8 @@ const getAllowedDevOrigins = (): string[] => {
 const nextConfig: NextConfig = {
   // Standard Next.js configuration
   reactStrictMode: true,
+  // Isolate the disposable HTTP fixture test from the owner's running dev app.
+  distDir: process.env.SEO_SMOKE === "1" ? ".next/seo-smoke" : ".next",
   // NOTE: "standalone" output mode is intentionally disabled.
   // It has known issues with Tailwind v4 CSS chunking on Next.js 16
   // (CSS files end up missing from the traced output, leaving pages
@@ -49,6 +51,8 @@ const nextConfig: NextConfig = {
   // Production optimizations
   compress: process.env.NODE_ENV === "production",
   poweredByHeader: false, // Remove X-Powered-By header for security
+  // Complete metadata before streaming to preserve real 404s and share previews.
+  htmlLimitedBots: /.*/,
 
   // Allow cross-origin requests in development (for network access)
   // Origins are read from ALLOWED_DEV_ORIGINS environment variable
@@ -65,7 +69,8 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     qualities: [75, 80, 85],
-    dangerouslyAllowSVG: true,
+    // Serve SVG assets directly so their theme-aware vector styles remain intact.
+    dangerouslyAllowSVG: false,
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     // Safari/iOS: Ensure images load properly

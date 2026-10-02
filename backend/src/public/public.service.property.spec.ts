@@ -117,8 +117,10 @@ describe('PublicService - Property Tests', () => {
         actions: {},
       })),
     } as unknown as PublicPageAnalyticsService;
+    const database = createMockDatabaseService();
+    (database.query as jest.Mock).mockResolvedValue({ rows: [{ id: 'lt-1' }] });
     const service = new PublicService(
-      createMockDatabaseService(),
+      database,
       redis,
       pageAnalytics,
       createMockPlatformWorkspace(),

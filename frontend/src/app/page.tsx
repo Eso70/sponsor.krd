@@ -1,5 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { HomeLanding } from "@/components/home/HomeLanding";
+import { PlatformOrganizationStructuredData } from "@/components/public/PlatformOrganizationStructuredData";
+import { publicRequestContext } from "@/lib/public/public-page.server";
 import { BusinessLanding } from "@/components/business/BusinessLanding";
 import { extractSubdomain } from "@/lib/subdomain-utils";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
@@ -22,7 +24,8 @@ import {
   BUSINESS_FAVICON_PLACEHOLDER,
   BUSINESS_LOGO_PLACEHOLDER,
   SPONSOR_KRD_FAVICON,
-  SPONSOR_KRD_LOGO_MARK,
+  SPONSOR_KRD_APPLE_ICON,
+  SPONSOR_KRD_APP_ICON,
 } from "@/lib/brand/brand-assets";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +53,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 export default async function Home() {
   if (await isRootRequest()) {
     const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
-    return <HomeLanding initialLocale={locale} />;
+    return <><PlatformOrganizationStructuredData /><HomeLanding initialLocale={locale} /></>;
   }
 
   const headerStore = await headers();
@@ -179,17 +182,21 @@ export async function generateMetadata() {
 
   // Root domain only — a business subdomain returned above with its own icons.
   const rootLocale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  const context = await publicRequestContext();
   // Declared explicitly rather than left to the implicit `/favicon.ico` pickup,
   // so SponsorKrd's own mark is stated in the same place a tenant's is.
   return {
     title: "Sponsor.krd",
+    alternates: { canonical: `${context.origin}/` },
+    openGraph: {
+      url: `${context.origin}/`,
+      images: [{ url: SPONSOR_KRD_APP_ICON, width: 512, height: 512, alt: "Sponsor.krd" }],
+    },
+    twitter: { card: "summary", images: [SPONSOR_KRD_APP_ICON] },
     description: rootPublicCopy[rootLocale].metadataDescription,
     icons: {
-      icon: [
-        { url: SPONSOR_KRD_FAVICON },
-        { url: SPONSOR_KRD_LOGO_MARK, sizes: "512x512" },
-      ],
-      apple: SPONSOR_KRD_LOGO_MARK,
+      icon: [{ url: SPONSOR_KRD_FAVICON, type: "image/png", sizes: "96x96" }],
+      apple: SPONSOR_KRD_APPLE_ICON,
     },
     themeColor: SPONSOR_KRD_ACCENT_COLOR,
   };

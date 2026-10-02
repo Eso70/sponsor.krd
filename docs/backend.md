@@ -1,5 +1,13 @@
 # Backend
 
+## Public crawler projections
+
+`PublicService` owns the live public availability gate and owner-scoped,
+paginated sitemap projection. Active business/page and archive boundaries
+apply before serving public content, including Redis cache hits. Bounded
+`template_config.seo` metadata reuses the existing JSONB field and requires
+no schema migration. See [SEO architecture and operations](seo.md).
+
 ## Platform TikTok tracking
 
 Platform Settings exposes guarded TikTok configuration and delivery-health
@@ -550,8 +558,11 @@ rewrite, so the console cannot be reached through a public path.
 migration seed. The email is also the exact verified-Google-email allowlist;
 platform login fails closed when it is absent. `PLATFORM_ADMIN_PHONE`,
 `PLATFORM_ADMIN_WEBSITE_COLOR`, `PLATFORM_ADMIN_LOGO_WITH_BACKGROUND`,
-`PLATFORM_ADMIN_LOGO_WITHOUT_BACKGROUND`, and `PLATFORM_ADMIN_FAVICON` provide
-initial/fallback profile and branding values. Platform administrators
+and `PLATFORM_ADMIN_FAVICON` provide
+initial/fallback profile and branding values. The logo is also the administrator
+avatar; no independent avatar setting or upload is supported. The seed normalizes
+retired branding paths and derives the default favicon from the shared logo.
+Platform administrators
 authenticate with Google or a root-domain email code; the seed stores no
 credential of its own.
 

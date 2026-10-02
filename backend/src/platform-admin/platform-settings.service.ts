@@ -4,7 +4,10 @@ import {
 } from '../common/platform-admin-env';
 import {
   normalizeSponsorKrdAccent,
+  normalizeSponsorKrdAsset,
   SPONSOR_KRD_ACCENT_VALUE,
+  SPONSOR_KRD_LOGO,
+  sponsorKrdFaviconForLogo,
 } from '../common/platform-brand';
 import {
   BadRequestException,
@@ -135,29 +138,19 @@ export class PlatformSettingsService {
   }
 
   private resolveProfile(profile: PlatformAdminProfile): PlatformAdminProfile {
+    const logo = normalizeSponsorKrdAsset(
+      profile.logo ||
+        this.adminEnv('PLATFORM_ADMIN_LOGO_WITH_BACKGROUND', SPONSOR_KRD_LOGO),
+    );
     return {
       ...profile,
       username: profile.username || this.adminEnv('PLATFORM_ADMIN_USERNAME'),
       name: profile.name || this.adminEnv('PLATFORM_ADMIN_NAME', 'Sponsor.krd'),
       email: profile.email || this.adminEnv('PLATFORM_ADMIN_EMAIL') || null,
       phone: profile.phone || this.adminEnv('PLATFORM_ADMIN_PHONE') || null,
-      logo:
-        profile.logo ||
-        this.adminEnv(
-          'PLATFORM_ADMIN_LOGO_WITH_BACKGROUND',
-          '/images/Logo.jpg',
-        ),
-      avatar:
-        profile.avatar ||
-        // Platform branding owns its bare mark independently from tenant
-        // placeholders.
-        this.adminEnv(
-          'PLATFORM_ADMIN_LOGO_WITHOUT_BACKGROUND',
-          '/images/sponsor-krd-logo-mark.png',
-        ),
-      favicon:
-        profile.favicon ||
-        this.adminEnv('PLATFORM_ADMIN_FAVICON', '/favicon.ico'),
+      logo,
+      avatar: logo,
+      favicon: sponsorKrdFaviconForLogo(logo),
       accent_color: normalizeSponsorKrdAccent(
         profile.accent_color ||
           this.adminEnv(
@@ -302,8 +295,6 @@ export class PlatformSettingsService {
     data: {
       name?: string;
       logo?: string | null;
-      avatar?: string | null;
-      favicon?: string | null;
       accent_color?: string;
       accent_ink_color?: string;
     },
@@ -312,8 +303,13 @@ export class PlatformSettingsService {
     const allowedFields = [
       ['name', data.name?.trim()],
       ['logo', data.logo],
-      ['avatar', data.avatar],
-      ['favicon', data.favicon],
+      ['avatar', data.logo],
+      [
+        'favicon',
+        data.logo === undefined || data.logo === null
+          ? data.logo
+          : sponsorKrdFaviconForLogo(normalizeSponsorKrdAsset(data.logo)),
+      ],
       ['accent_color', data.accent_color],
       ['accent_ink_color', data.accent_ink_color],
     ] as const;
@@ -340,10 +336,10 @@ export class PlatformSettingsService {
       data.logo !== undefined && data.logo !== current?.logo
         ? current?.logo
         : null,
-      data.avatar !== undefined && data.avatar !== current?.avatar
+      data.logo !== undefined && data.logo !== current?.avatar
         ? current?.avatar
         : null,
-      data.favicon !== undefined && data.favicon !== current?.favicon
+      data.logo !== undefined && data.logo !== current?.favicon
         ? current?.favicon
         : null,
     );

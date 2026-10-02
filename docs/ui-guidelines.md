@@ -427,10 +427,11 @@ session, so a business that wants a distinct favicon or avatar is never blocked.
 A favicon the owner uploaded is never overwritten by a later logo upload. Logo
 and favicon pickers both accept JPEG and PNG (favicon also `.ico`); the tile
 markup itself lives in `BrandAssetTile` so a locked tile does not nest a button
-inside a label. Sponsor.krd's own assets are platform chrome: use the opaque
-`/images/Logo.jpg` in visible logo tiles, the transparent
-`/images/sponsor-krd-logo-mark.png` for app icons and surfaces that provide
-their own background, and `/favicon.ico` for browser-tab icons. They must never
+inside a label. Sponsor.krd's own assets are platform chrome: use the transparent,
+theme-aware `/images/brand/rise.svg` for both visible platform logos and
+administrator avatars, and `/images/brand/rise-favicon-white.png` for browser-tab
+icons. Platform avatar and favicon are derived from the logo with no independent pickers.
+They must never
 stand in for a business that has not uploaded its own asset. Resolve every
 fallback from `frontend/src/lib/brand/brand-assets.ts` rather than repeating a
 path. Show the

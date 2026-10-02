@@ -15,7 +15,8 @@ export const STANDARD_TEMPLATE_ACTION_LIST_CLASS =
 
 export interface TemplateActionButtonProps
   extends Omit<HTMLMotionProps<"button">, "onClick" | "style" | "className" | "children"> {
-  onClick: MouseEventHandler<HTMLButtonElement>;
+  onClick: MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
+  href?: string;
   /** Defaults to the standard pill size/shape. Pass a different className to match another template's button shape entirely. */
   className?: string;
   style?: CSSProperties;
@@ -35,6 +36,7 @@ export interface TemplateActionButtonProps
  */
 export const TemplateActionButton = memo(function TemplateActionButton({
   onClick,
+  href,
   className = STANDARD_BUTTON_CLASS,
   style,
   children,
@@ -47,6 +49,24 @@ export const TemplateActionButton = memo(function TemplateActionButton({
   transition = { duration: 0.5 },
   ...motionProps
 }: TemplateActionButtonProps) {
+  if (href) {
+    return <motion.a
+      {...motionProps as HTMLMotionProps<"a">}
+      href={href} target="_blank" rel="noopener noreferrer" dir={dir}
+      onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        try {
+          onClick(event);
+          event.preventDefault();
+        } catch {
+          // Keep the native anchor destination available when enhancement fails.
+          console.error("Public link action could not be processed");
+        }
+      }}
+      className={className} style={style} initial={false} animate={animate}
+      whileHover={whileHover} whileTap={whileTap} transition={transition}
+    >{children}</motion.a>;
+  }
   return (
     <motion.button
       type={type}

@@ -1,4 +1,5 @@
 "use client";
+import { navigationHref } from "@/lib/public/navigation-href";
 
 import { memo, useCallback, useMemo, type CSSProperties } from "react";
 import { ArrowUpRight } from "lucide-react";
@@ -300,6 +301,7 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
                   id={`link-${link.platform.toLowerCase()}`}
                   data-platform={link.platform.toLowerCase()}
                   data-action-key={`link:${link.id}`}
+                  href={navigationHref(link.url, link.platform, link.default_message)}
                   onClick={() =>
                     handleClick(
                       link.id,

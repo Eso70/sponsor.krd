@@ -6,6 +6,7 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { PublicService } from './public.service';
 import { RedisService } from '../redis/redis.service';
@@ -20,9 +21,25 @@ export class PublicController {
     private readonly redisService: RedisService,
   ) {}
 
+  @Get('sitemap')
+  async getSitemap(
+    @Subdomain() subdomain: string,
+    @Query('page') rawPage = '0',
+  ) {
+    if (!/^\d{1,6}$/.test(rawPage)) throw new NotFoundException('Not Found');
+    return {
+      success: true,
+      data: await this.publicService.getSitemapPages(
+        subdomain,
+        Number(rawPage),
+      ),
+    };
+  }
+
   private async enforcePublicPageRequest(
     uid: string,
     req: FastifyRequest,
+    statusOnly = false,
   ): Promise<void> {
     if (!/^[a-z0-9-]+$/.test(uid) || uid.length > 50) {
       throw new HttpException('Invalid linktree ID', HttpStatus.BAD_REQUEST);
@@ -30,8 +47,8 @@ export class PublicController {
 
     const clientIp = requestIp(req);
     const isLimited = await this.redisService.isRateLimited(
-      `rl:public:${clientIp}`,
-      30,
+      `rl:public${statusOnly ? '-status' : ''}:${clientIp}`,
+      statusOnly ? 120 : 30,
       60,
     );
     if (isLimited) {
@@ -40,6 +57,20 @@ export class PublicController {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+  }
+
+  @Get('linktree-status/:uid')
+  async getPublicLinktreeStatus(
+    @Param('uid') uid: string,
+    @Subdomain() subdomain: string,
+    @Req() request: FastifyRequest,
+  ) {
+    await this.enforcePublicPageRequest(uid, request, true);
+    const slug = await this.publicService.assertPublicLinktreeAvailable(
+      uid,
+      subdomain,
+    );
+    return { success: true, data: { slug } };
   }
 
   @Get('business')

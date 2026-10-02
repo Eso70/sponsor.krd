@@ -1,4 +1,5 @@
 "use client";
+import { navigationHref } from "@/lib/public/navigation-href";
 
 import { memo, useCallback, useMemo } from "react";
 import {
@@ -136,6 +137,7 @@ export const FrostTemplate = memo(function FrostTemplate({
                   id={`link-${link.platform.toLowerCase()}`}
                   data-platform={link.platform.toLowerCase()}
                   data-action-key={`link:${link.id}`}
+                  href={navigationHref(link.url, link.platform, link.default_message)}
                   dir="ltr"
                   onClick={() =>
                     handleClick(

@@ -22,6 +22,7 @@ interface BrandAssetTileProps {
   width: number;
   height: number;
   unoptimized?: boolean;
+  disabled?: boolean;
   /**
    * A locked tile is derived from another asset and takes no upload until the
    * lock is opened. Rendered as a plain element rather than a label, because a
@@ -46,6 +47,7 @@ export function BrandAssetTile({
   width,
   height,
   unoptimized,
+  disabled = false,
   locked = false,
   onUnlock,
   unlockLabel,
@@ -91,6 +93,7 @@ export function BrandAssetTile({
         aria-label={inputLabel}
         type="file"
         accept={accept}
+        disabled={disabled}
         onChange={onChange}
         className="hidden"
       />

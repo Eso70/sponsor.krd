@@ -52,6 +52,8 @@ describe("Linktree template button labels", () => {
       );
 
       expect(screen.getByText("Editable button title")).toBeInTheDocument();
+      expect(container.querySelector('a[data-action-key="link:whatsapp-link"]'))
+        .toHaveAttribute("href", "https://wa.me/9647502485829");
       expect(
         container.querySelector("[data-template-platform-name]"),
       ).toHaveTextContent("WhatsApp");

@@ -1,5 +1,15 @@
 # Security
 
+## Public SEO host boundaries
+
+Public subdomain resolution accepts only the configured root and one valid
+tenant DNS label. Direct requests cannot select owners using forwarded-host
+or unverified subdomain headers; internal calls retain proxy-secret validation.
+Canonical authorities come from configuration. SEO JSON-LD escapes script
+terminators, has a CSP nonce, and never accepts arbitrary scripts or structured
+data from the editor. Public caches recheck live ownership/publication status.
+See [SEO architecture](seo.md).
+
 ## Marketing tracking ownership and consent
 
 TikTok destinations are owner-scoped. A customer public page can resolve only

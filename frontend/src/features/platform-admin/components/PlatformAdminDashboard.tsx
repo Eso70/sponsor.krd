@@ -1,5 +1,7 @@
 "use client";
 
+import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { MotionPulseIcon } from "@/components/motion/MotionPrimitives";
@@ -496,8 +498,7 @@ export function PlatformAdminDashboard() {
         brandSubtitle={copy.generalControl}
         brandImage={
           platformBranding.logo ||
-          platformBranding.avatar ||
-          "/images/DefaultAvatar.png"
+          SPONSOR_KRD_LOGO
         }
         items={sidebarItems}
         collapsed={isSidebarCollapsed}
@@ -558,7 +559,7 @@ export function PlatformAdminDashboard() {
             name: administrator.name,
             email: administrator.email,
             badge: copy.admin,
-            avatarSrc: platformBranding.avatar || platformBranding.logo,
+            avatarSrc: platformBranding.logo || SPONSOR_KRD_LOGO,
             items: [
               {
                 id: "settings",

@@ -1,4 +1,9 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  NotFoundException,
+} from '@nestjs/common';
+import { publicSubdomainFromHost } from '../common/root-domain';
 
 import type { FastifyRequest } from 'fastify';
 import {
@@ -21,29 +26,24 @@ export const Subdomain = createParamDecorator(
         : headerValue;
       if (typeof xSubdomain === 'string') {
         const normalized = xSubdomain.trim().toLowerCase();
+        if (!normalized) return '';
         if (/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalized)) {
           return normalized === 'www' ? '' : normalized;
         }
+        throw new NotFoundException('Not Found');
       }
     }
 
     // Fallback: parse host header
-    const hostValue =
-      request.headers?.['x-forwarded-host'] || request.headers?.['host'] || '';
-    const rawHost = Array.isArray(hostValue) ? hostValue[0] : String(hostValue);
-    const host = rawHost
-      .split(',')[0]
-      .trim()
-      .split(':')[0]
-      .toLowerCase()
-      .replace(/\.$/, '');
-    const parts = host.split('.').filter(Boolean);
-    if (parts.length > 2) {
-      const candidate = parts[0];
-      if (/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(candidate)) {
-        return candidate === 'www' ? '' : candidate;
-      }
-    }
-    return '';
+    const hostValue = request.headers?.['host'] || '';
+    const rawHost: string = String(
+      Array.isArray(hostValue) ? hostValue[0] : hostValue,
+    );
+    const subdomain = publicSubdomainFromHost(
+      rawHost,
+      process.env.ROOT_DOMAIN || 'localhost',
+    );
+    if (subdomain !== null) return subdomain;
+    throw new NotFoundException('Not Found');
   },
 );

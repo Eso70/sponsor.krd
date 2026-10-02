@@ -1,3 +1,4 @@
+import { indexableLinktreeSql, normalizePageSeo } from '../common/page-seo';
 import {
   Injectable,
   NotFoundException,
@@ -160,6 +161,80 @@ export class PublicService {
     private readonly platformWorkspace: PlatformContentWorkspaceService,
   ) {}
 
+  /** Lightweight pre-render gate gives Next a status before it streams HTML. */
+  async assertPublicLinktreeAvailable(identifier: string, subdomain: string) {
+    const result = await this.databaseService.query<{
+      status: string;
+      owner_status: string;
+      is_archived: boolean;
+      canonical_slug: string;
+    }>(
+      `SELECT lt.status, a.status AS owner_status, lt.is_archived,
+              COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS canonical_slug
+         FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
+        WHERE (lt.uid = $1 OR lt.seo_name = $1) AND (
+          (a.subdomain = $2 AND a.account_type = 'business' AND $2 <> '') OR
+          ($2 = '' AND a.account_type = 'platform' AND EXISTS (
+            SELECT 1 FROM root_public_slugs r WHERE r.linktree_id = lt.id
+              AND r.business_id = a.id AND r.page_type = 'linktree' AND r.slug = $1
+          ))
+        ) ORDER BY CASE WHEN lt.seo_name = $1 THEN 0 ELSE 1 END LIMIT 1`,
+      [identifier, subdomain],
+    );
+    const page = result.rows[0];
+    if (
+      !page ||
+      page.status !== 'active' ||
+      page.owner_status !== 'active' ||
+      page.is_archived
+    ) {
+      throw new NotFoundException('Page not found');
+    }
+    return page.canonical_slug;
+  }
+
+  /** Bounded sitemap projection; never selects other tenants or tracking data. */
+  async getSitemapPages(subdomain: string, page: number) {
+    const owner = subdomain
+      ? (
+          await this.databaseService.query<{ id: string }>(
+            `SELECT id FROM businesses WHERE subdomain = $1
+             AND account_type = 'business' AND status = 'active'`,
+            [subdomain],
+          )
+        ).rows[0]?.id
+      : await this.platformWorkspace.getWorkspaceId();
+    if (!owner) throw new NotFoundException('Not Found');
+    const result = await this.databaseService.query<{
+      slug: string;
+      updatedAt: string;
+      total: string;
+    }>(
+      `SELECT COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS slug,
+              lt.updated_at AS "updatedAt", count(*) OVER ()::text AS total
+         FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
+        WHERE lt.business_id = $1::uuid AND a.status = 'active'
+          AND lt.status = 'active' AND NOT COALESCE(lt.is_archived, false)
+          AND ${indexableLinktreeSql()}
+          AND (a.account_type = 'business' OR EXISTS (
+            SELECT 1 FROM root_public_slugs r WHERE r.linktree_id = lt.id
+              AND r.business_id = a.id AND r.page_type = 'linktree'
+              AND r.slug = COALESCE(NULLIF(lt.seo_name, ''), lt.uid)
+          ))
+        ORDER BY lt.id LIMIT 1000 OFFSET $2`,
+      [owner, page * 1000],
+    );
+    if (page > 0 && !result.rows.length)
+      throw new NotFoundException('Not Found');
+    return {
+      pages: result.rows.map(({ slug, updatedAt }) => ({ slug, updatedAt })),
+      totalPages: Math.max(
+        1,
+        Math.ceil(Number(result.rows[0]?.total || 0) / 1000),
+      ),
+    };
+  }
+
   async getPublicRouteTracking(
     routeKey: string,
     subdomain?: string,
@@ -250,6 +325,7 @@ export class PublicService {
     config.type = config.type || 'simple';
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
+    if (config.seo !== undefined) config.seo = normalizePageSeo(config.seo);
     config.whatsapp_modal = config.whatsapp_modal || {};
 
     // A background image is painted into public page CSS, so anything that is
@@ -372,28 +448,43 @@ export class PublicService {
     const cachedData =
       await this.redisService.get<CachedLinktreeBody>(cacheKey);
     if (cachedData) {
-      return {
-        ...cachedData,
-        analytics: await this.pageAnalytics.forSource(
-          'linktree',
-          cachedData.linktree.id,
-        ),
-      };
+      const live = await this.databaseService.query<{ id: string }>(
+        `SELECT lt.id FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
+          WHERE lt.id = $1 AND a.subdomain = $2 AND a.account_type = 'business'
+            AND a.status = 'active' AND lt.status = 'active'
+            AND NOT COALESCE(lt.is_archived, false)
+            AND (lt.uid = $3 OR lt.seo_name = $3)
+            AND NOT EXISTS (SELECT 1 FROM linktrees canonical
+              WHERE canonical.business_id = lt.business_id
+                AND canonical.seo_name = $3 AND canonical.id <> lt.id)`,
+        [cachedData.linktree.id, subdomain, uid],
+      );
+      if (live.rows.length) {
+        return {
+          ...cachedData,
+          analytics: await this.pageAnalytics.forSource(
+            'linktree',
+            cachedData.linktree.id,
+          ),
+        };
+      }
     }
 
     const base = this.publicLinktreeSelect();
     let ltRes = await this.databaseService.query<PublicLinktreeRow>(
       `${base}
-       WHERE lt.uid = $1 AND a.subdomain = $2
-         AND a.account_type = 'business'`,
+       WHERE lt.seo_name = $1 AND a.subdomain = $2
+         AND a.account_type = 'business' AND a.status = 'active'
+         AND NOT COALESCE(lt.is_archived, false)`,
       [uid, subdomain],
     );
 
     if (!ltRes.rows || ltRes.rows.length === 0) {
       ltRes = await this.databaseService.query<PublicLinktreeRow>(
         `${base}
-         WHERE lt.seo_name = $1 AND a.subdomain = $2
-           AND a.account_type = 'business'`,
+         WHERE lt.uid = $1 AND a.subdomain = $2
+           AND a.account_type = 'business' AND a.status = 'active'
+           AND NOT COALESCE(lt.is_archived, false)`,
         [uid, subdomain],
       );
       if (!ltRes.rows || ltRes.rows.length === 0) {
@@ -465,6 +556,8 @@ export class PublicService {
           AND root_slug.slug = $1
           AND business.status = 'active'
           AND business.account_type = 'platform'
+          AND EXISTS (SELECT 1 FROM linktrees live WHERE live.id = root_slug.linktree_id
+            AND live.status = 'active' AND NOT COALESCE(live.is_archived, false))
         LIMIT 1`,
       [identifier],
     );
@@ -489,6 +582,7 @@ export class PublicService {
       `${base}
        WHERE (lt.uid = $1 OR lt.seo_name = $1)
          AND a.account_type = 'platform'
+         AND a.status = 'active' AND NOT COALESCE(lt.is_archived, false)
          AND EXISTS (
            SELECT 1 FROM root_public_slugs root_slug
             WHERE root_slug.page_type = 'linktree'

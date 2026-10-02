@@ -1,7 +1,7 @@
 /**
  * Single source of truth for branding asset fallbacks.
  *
- * The distinction this module exists to enforce: `/images/Logo.jpg` is
+ * The distinction this module exists to enforce: `/images/brand/rise.svg` is
  * SponsorKrd's own mark. It belongs to platform chrome — the home page, the
  * dashboard sidebar, the "powered by" footer, the platform manifest — and must
  * never stand in for a business that has not uploaded its own logo or favicon.
@@ -15,25 +15,20 @@
  * `backend/src/common/brand-assets.ts`.
  */
 
-/**
- * SponsorKrd's own logo, on its background. Platform chrome only.
- * Mirrors `PLATFORM_ADMIN_LOGO_WITH_BACKGROUND`.
- */
-export const SPONSOR_KRD_LOGO = "/images/Logo.jpg";
+/** One transparent, theme-aware logo for platform chrome and administrator avatars. */
+export const SPONSOR_KRD_LOGO = "/images/brand/rise.svg";
 
-/**
- * The bare SponsorKrd mark, for surfaces that supply their own background.
- * Mirrors `PLATFORM_ADMIN_LOGO_WITHOUT_BACKGROUND`.
- *
- * Kept separate from `DEFAULT_AVATAR` on purpose: the two were the same file
- * until the default avatar became the neutral person placeholder, at which
- * point SponsorKrd's logo silently became a person icon. Platform branding and
- * the business fallback must never share a path again.
- */
-export const SPONSOR_KRD_LOGO_MARK = "/images/sponsor-krd-logo-mark.png";
+/** Original artwork with a white center for surfaces that always stay dark. */
+export const SPONSOR_KRD_ORIGINAL_LOGO = "/images/brand/rise-original.svg";
 
-/** SponsorKrd's browser-tab icon. Mirrors `PLATFORM_ADMIN_FAVICON`. */
-export const SPONSOR_KRD_FAVICON = "/favicon.ico";
+/** Raster export of the same mark for metadata and installed-app compatibility. */
+export const SPONSOR_KRD_APP_ICON = "/images/brand/rise.png";
+
+/** Original white-center Rise mark for browser tabs in every theme. */
+export const SPONSOR_KRD_FAVICON = "/images/brand/rise-favicon-white.png";
+
+export const SPONSOR_KRD_APPLE_ICON = "/images/brand/rise-apple.png";
+export const SPONSOR_KRD_APP_ICON_SMALL = "/images/brand/rise-icon-192.png";
 
 /** Neutral person mark used wherever a profile image is unset. */
 export const DEFAULT_AVATAR = "/images/DefaultAvatar.png";

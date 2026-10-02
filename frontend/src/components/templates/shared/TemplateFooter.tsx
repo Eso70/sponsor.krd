@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, type CSSProperties, type MouseEvent } from "react";
+import { memo, type CSSProperties } from "react";
 import { SPONSOR_TEXT, DEFAULT_FOOTER_NAME, DEFAULT_FOOTER_PHONE } from "@/lib/constants/footer";
 import { isWebsiteColor, parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
@@ -54,21 +54,6 @@ export const TemplateFooter = memo(function TemplateFooter({
   const phoneNumber = footerPhone?.trim() || DEFAULT_FOOTER_PHONE;
   const cleanPhone = phoneNumber.startsWith("+") ? phoneNumber.slice(1) : phoneNumber;
 
-  const handleSponsorKrdWhatsApp = useCallback(
-    (e: MouseEvent<HTMLButtonElement | HTMLParagraphElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const whatsappUrl = `https://wa.me/${cleanPhone}`;
-      try {
-        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-      } catch {
-        // Ignore popup blockers; user can tap again
-      }
-    },
-    [cleanPhone],
-  );
-
   if (footerHidden) {
     return null;
   }
@@ -93,9 +78,10 @@ export const TemplateFooter = memo(function TemplateFooter({
         <p className={sponsorTextClassName} style={{ color: sponsorTextColor, ...sponsorTextStyle }}>
           {sponsorText}
         </p>
-        <button
-          type="button"
-          onClick={handleSponsorKrdWhatsApp}
+        <a
+          href={`https://wa.me/${encodeURIComponent(cleanPhone)}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className={nameButtonClassName}
           style={{
             borderColor: businessColor,
@@ -113,7 +99,7 @@ export const TemplateFooter = memo(function TemplateFooter({
           }}
         >
           {nameText}
-        </button>
+        </a>
       </div>
     </footer>
   );

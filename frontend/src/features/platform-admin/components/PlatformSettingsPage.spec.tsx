@@ -135,6 +135,8 @@ describe("PlatformSettingsPage General tab", () => {
     expect(screen.getByDisplayValue("operator")).toBeInTheDocument();
     expect(screen.getByDisplayValue("admin@example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("+964 750 123 4567")).toBeInTheDocument();
+    expect(document.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(screen.queryByAltText("Default avatar")).not.toBeInTheDocument();
     expect(
       screen.getByDisplayValue("https://sponsor-krd.example"),
     ).toBeInTheDocument();
@@ -154,6 +156,11 @@ describe("PlatformSettingsPage General tab", () => {
         "/api/platform/settings/branding",
         expect.objectContaining({ method: "PUT" }),
       );
+      const brandingCall = fetchMock.mock.calls.find(([url]) => url === "/api/platform/settings/branding");
+      const branding = JSON.parse(String(brandingCall?.[1]?.body)) as Record<string, unknown>;
+      expect(branding.logo).toBe(savedSettings.logo);
+      expect(branding).not.toHaveProperty("avatar");
+      expect(branding).not.toHaveProperty("favicon");
     });
   });
 

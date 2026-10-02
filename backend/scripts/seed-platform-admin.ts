@@ -3,7 +3,12 @@ import {
   readPlatformAdminEnv,
   type PlatformAdminEnvKey,
 } from '../src/common/platform-admin-env';
-import { SPONSOR_KRD_ACCENT_VALUE } from '../src/common/platform-brand';
+import {
+  normalizeSponsorKrdAsset,
+  sponsorKrdFaviconForLogo,
+  SPONSOR_KRD_ACCENT_VALUE,
+  SPONSOR_KRD_LOGO,
+} from '../src/common/platform-brand';
 
 const fromEnvironment = (name: string) => process.env[name];
 
@@ -20,12 +25,14 @@ export async function seedPlatformAdmin(client: PoolClient): Promise<void> {
   const phone = setting('PLATFORM_ADMIN_PHONE') || null;
   const websiteColor =
     setting('PLATFORM_ADMIN_WEBSITE_COLOR') || SPONSOR_KRD_ACCENT_VALUE;
-  const logoWithBackground =
-    setting('PLATFORM_ADMIN_LOGO_WITH_BACKGROUND') || '/images/Logo.jpg';
-  const logoWithoutBackground =
-    setting('PLATFORM_ADMIN_LOGO_WITHOUT_BACKGROUND') ||
-    '/images/DefaultAvatar.png';
-  const favicon = setting('PLATFORM_ADMIN_FAVICON') || '/favicon.ico';
+  const logoWithBackground = normalizeSponsorKrdAsset(
+    setting('PLATFORM_ADMIN_LOGO_WITH_BACKGROUND') || SPONSOR_KRD_LOGO,
+  );
+  const logoWithoutBackground = logoWithBackground;
+  const favicon = normalizeSponsorKrdAsset(
+    setting('PLATFORM_ADMIN_FAVICON') ||
+      sponsorKrdFaviconForLogo(logoWithBackground),
+  );
 
   if (!email) {
     console.warn(

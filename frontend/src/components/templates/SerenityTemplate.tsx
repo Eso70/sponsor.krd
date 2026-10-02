@@ -1,4 +1,5 @@
 "use client";
+import { navigationHref } from "@/lib/public/navigation-href";
 
 import { memo, useMemo, useCallback } from "react";
 import { motion } from "motion/react";
@@ -107,7 +108,7 @@ export const SerenityTemplate = memo(function SerenityTemplate({
       style={backgroundStyle}
       header={
         <motion.div
-          initial={isPreview ? false : { opacity: 0, y: 20 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
         >
@@ -185,6 +186,7 @@ export const SerenityTemplate = memo(function SerenityTemplate({
                   id={`link-${link.platform.toLowerCase()}`}
                   data-platform={link.platform.toLowerCase()}
                   data-action-key={`link:${link.id}`}
+                  href={navigationHref(link.url, link.platform, link.default_message)}
                   onClick={() =>
                     handleClick(
                       link.id,

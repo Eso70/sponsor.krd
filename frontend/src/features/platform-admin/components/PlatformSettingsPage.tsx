@@ -3,7 +3,7 @@
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import Image from "next/image";
+import { PlatformBrandingFields } from "./PlatformBrandingFields";
 import {
   Archive,
   Database,
@@ -17,7 +17,6 @@ import {
   Save,
   ShieldCheck,
   Trash2,
-  Upload,
   Radio,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,11 +45,6 @@ import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
 import { applyCursorTheme } from "@/lib/utils/cursor-theme";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
-import {
-  SPONSOR_KRD_FAVICON,
-  SPONSOR_KRD_LOGO,
-  SPONSOR_KRD_LOGO_MARK,
-} from "@/lib/brand/brand-assets";
 import { BusinessTikTokPixelConfigPage } from "@/features/analytics/components/BusinessTikTokPixelConfigPage";
 import { PlatformTikTokAdAccountTab } from "@/features/campaigns/components/PlatformTikTokAdAccountTab";
 import { TbBrandTiktok } from "react-icons/tb";
@@ -84,7 +78,7 @@ type PlatformSettings = {
   app_url: string;
 };
 
-type BrandingAsset = "logo" | "avatar" | "favicon";
+type BrandingAsset = "logo";
 
 type AdminSession = {
   id: string;
@@ -171,8 +165,6 @@ export function PlatformSettingsPage() {
   const [appUrl, setAppUrl] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [logo, setLogo] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [favicon, setFavicon] = useState<string | null>(null);
   const [isGeneralLoading, setIsGeneralLoading] = useState(true);
   const [isGeneralSaving, setIsGeneralSaving] = useState(false);
   const [uploadingAsset, setUploadingAsset] = useState<BrandingAsset | null>(
@@ -200,8 +192,6 @@ export function PlatformSettingsPage() {
     setAdminEmail(settings.email || "");
     setPhone(settings.phone || "");
     setLogo(settings.logo);
-    setAvatar(settings.avatar);
-    setFavicon(settings.favicon);
     setAccentColor(settings.accent_color || SPONSOR_KRD_ACCENT_VALUE);
     setAppUrl(settings.app_url || "");
   }, []);
@@ -464,10 +454,7 @@ export function PlatformSettingsPage() {
     if (!file) return;
 
     const validationError = validateUploadFile(file, {
-      allowedMimeTypes:
-        assetType === "favicon"
-          ? ["image/x-icon", "image/vnd.microsoft.icon", "image/png"]
-          : ["image/jpeg", "image/png"],
+      allowedMimeTypes: ["image/jpeg", "image/png"],
       maxBytes: 10 * 1024 * 1024,
     });
     if (validationError) {
@@ -495,8 +482,6 @@ export function PlatformSettingsPage() {
         const url = payload.data?.url as string | undefined;
         if (!url) throw new Error("The upload did not return an image URL");
         if (assetType === "logo") setLogo(url);
-        if (assetType === "avatar") setAvatar(url);
-        if (assetType === "favicon") setFavicon(url);
         toast.success(t("Image uploaded. Save to apply the change."));
         return url;
       } catch {
@@ -524,8 +509,6 @@ export function PlatformSettingsPage() {
           body: JSON.stringify({
             name: sponsorKrdName.trim(),
             logo,
-            avatar,
-            favicon,
             accent_color: accentColor,
           }),
         }),
@@ -711,83 +694,12 @@ export function PlatformSettingsPage() {
             )}
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="col-span-full">
-                <div className="flex flex-col items-center gap-1 py-1">
-                  <div className="relative h-44 w-72 sm:h-48 sm:w-80">
-                    <label className="group absolute left-5 top-7 h-24 w-24 rotate-[-8deg] cursor-pointer overflow-hidden rounded-full border-4 border-white bg-white shadow-xl ring-1 ring-gray-200 transition hover:z-30 hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
-                      <Image
-                        src={avatar || SPONSOR_KRD_LOGO_MARK}
-                        alt={t("Default avatar")}
-                        width={112}
-                        height={112}
-                        className="h-full w-full object-cover"
-                        unoptimized
-                      />
-                      <UploadOverlay
-                        label={uploadingAsset === "avatar" ? "…" : t("ئەڤاتار")}
-                      />
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png"
-                        className="hidden"
-                        disabled={!!uploadingAsset}
-                        onChange={(event) =>
-                          void handleAssetUpload("avatar", event)
-                        }
-                      />
-                    </label>
-                    <label className="group absolute right-6 top-4 h-20 w-20 rotate-[10deg] cursor-pointer overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-lg ring-1 ring-gray-200 transition hover:z-30 hover:rotate-0 hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
-                      <Image
-                        src={favicon || SPONSOR_KRD_FAVICON}
-                        alt={t("Favicon")}
-                        width={96}
-                        height={96}
-                        className="h-full w-full object-contain"
-                        unoptimized
-                      />
-                      <UploadOverlay
-                        label={uploadingAsset === "favicon" ? "…" : t("فایڤ")}
-                      />
-                      <input
-                        type="file"
-                        accept="image/x-icon,image/vnd.microsoft.icon,image/png"
-                        className="hidden"
-                        disabled={!!uploadingAsset}
-                        onChange={(event) =>
-                          void handleAssetUpload("favicon", event)
-                        }
-                      />
-                    </label>
-                    <label className="group absolute left-1/2 top-12 z-20 h-32 w-32 -translate-x-1/2 cursor-pointer overflow-hidden rounded-3xl border-4 border-white bg-white p-3 shadow-2xl ring-1 ring-gray-200 transition hover:scale-105 dark:border-[#161B22] dark:bg-[#161B22] dark:ring-white/10">
-                      <Image
-                        src={logo || SPONSOR_KRD_LOGO}
-                        alt={t("Logo")}
-                        width={144}
-                        height={144}
-                        className="h-full w-full object-contain"
-                        unoptimized
-                      />
-                      <UploadOverlay
-                        label={uploadingAsset === "logo" ? "…" : t("لۆگۆ")}
-                      />
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png"
-                        className="hidden"
-                        disabled={!!uploadingAsset}
-                        onChange={(event) =>
-                          void handleAssetUpload("logo", event)
-                        }
-                      />
-                    </label>
-                  </div>
-                  <div className="-mt-2 flex items-center gap-2 rounded-full border border-gray-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-gray-500 shadow-sm dark:border-white/10 dark:bg-[#161B22]/90 dark:text-gray-300">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: parseWebsiteColor(accentColor).css }}
-                    />
-                    {t("Logo")}<span>·</span>{t("Avatar")}<span>·</span>{t("Favicon")}
-                  </div>
-                </div>
+                <PlatformBrandingFields
+                  logo={logo}
+                  uploadingAsset={uploadingAsset}
+                  logoLabel={t("لۆگۆ")}
+                  onUpload={(asset, event) => void handleAssetUpload(asset, event)}
+                />
                 {assetUploadError && (
                   <InlineRequestError
                     className="mx-auto mt-3 max-w-xl"
@@ -1592,15 +1504,3 @@ function Field({
   );
 }
 
-function UploadOverlay({ label }: { label: string }) {
-  return (
-    <>
-      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">
-        <Upload className="h-5 w-5" />
-      </span>
-      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-black/65 px-2 py-0.5 text-[9px] text-white">
-        {label}
-      </span>
-    </>
-  );
-}
