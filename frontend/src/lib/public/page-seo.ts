@@ -1,32 +1,49 @@
 import type { Metadata } from "next";
-import type { PageSeo, PublicLinktree } from "@linktree/types";
+import type { PublicLinktree } from "@linktree/types";
 import { NON_DESCRIPTIVE_PAGE_TEXT } from "@linktree/types";
 import { BUSINESS_FAVICON_PLACEHOLDER, BUSINESS_LOGO_PLACEHOLDER } from "@/lib/brand/brand-assets";
 
-export function readPageSeo(config?: Record<string, unknown> | null): PageSeo {
-  const value = config?.seo;
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const input = value as Record<string, unknown>;
-  const result: PageSeo = {};
-  for (const key of ["title", "description", "ogTitle", "ogDescription"] as const) {
-    if (typeof input[key] === "string") result[key] = input[key].trim().slice(0, key.endsWith("escription") ? 320 : 150);
-  }
-  for (const key of ["robotsIndex", "robotsFollow"] as const) {
-    if (typeof input[key] === "boolean") result[key] = input[key];
-  }
-  if (input.locale === "ckb" || input.locale === "ar" || input.locale === "en") result.locale = input.locale;
-  return result;
+function compactText(value?: string | null): string {
+  return (value || "").replace(/[\p{Cc}\s]+/gu, " ").trim();
+}
+
+function shortenText(value: string, limit: number): string {
+  const characters = Array.from(value);
+  if (characters.length <= limit) return value;
+  const shortened = characters.slice(0, limit - 1).join("");
+  const boundary = shortened.lastIndexOf(" ");
+  return `${boundary >= shortened.length * 0.7 ? shortened.slice(0, boundary) : shortened}…`;
+}
+
+/** Infer the dominant writing system; ambiguous content keeps the product default. */
+function contentLocale(text: string): "ckb" | "ar" | "en" {
+  const arabic = text.match(/\p{Script=Arabic}/gu)?.length || 0;
+  const latin = text.match(/\p{Script=Latin}/gu)?.length || 0;
+  if (arabic > 0 && arabic >= latin) return /[ڕڵۆێە]/u.test(text) ? "ckb" : "ar";
+  return latin > 0 ? "en" : "ckb";
+}
+
+/** Search, sharing, HTML language and share images derive from the same visible content. */
+export function automaticPageSeo(page: Pick<PublicLinktree, "name" | "subtitle" | "description">) {
+  const name = compactText(page.name);
+  const subtitle = meaningfulPageDescription(page.subtitle);
+  const description = meaningfulPageDescription(page.description);
+  const parts = [subtitle, description].filter((value, index, values) => value && values.indexOf(value) === index);
+  return {
+    title: shortenText(name, 150),
+    description: shortenText(parts.join(" — ") || name, 200),
+    imageSubtitle: shortenText(subtitle || description, 100),
+    locale: contentLocale(parts.join(" ") || name),
+  };
 }
 
 export function isPageIndexable(page: Pick<PublicLinktree, "name" | "subtitle" | "description" | "template_config">): boolean {
-  const seo = readPageSeo(page.template_config);
-  if (seo.robotsIndex !== undefined) return seo.robotsIndex;
-  return Boolean(page.name.trim() && (page.subtitle?.trim() || meaningfulPageDescription(page.description)));
+  return Boolean(page.name.trim() && (meaningfulPageDescription(page.subtitle) || meaningfulPageDescription(page.description)));
 }
 
 export function meaningfulPageDescription(description?: string | null): string {
-  const value = description?.trim() || "";
-  return NON_DESCRIPTIVE_PAGE_TEXT.some(text => text === value) ? "" : value;
+  const value = compactText(description);
+  return NON_DESCRIPTIVE_PAGE_TEXT.some(text => compactText(text).toLowerCase() === value.toLowerCase()) ? "" : value;
 }
 
 export function canonicalPageUrl(page: Pick<PublicLinktree, "uid" | "seo_name">, origin: string): string {
@@ -43,33 +60,28 @@ export function publicAssetUrl(value: string | null | undefined, origin: string)
 }
 
 export function buildPageMetadata(page: PublicLinktree, origin: string): Metadata {
-  const seo = readPageSeo(page.template_config);
+  const seo = automaticPageSeo(page);
   const canonical = canonicalPageUrl(page, origin);
-  const title = seo.title || page.name;
-  const description = seo.description ||
-    meaningfulPageDescription(page.description) ||
-    page.subtitle?.trim() || page.name;
-  const ogTitle = seo.ogTitle || title;
-  const ogDescription = seo.ogDescription || description;
+  const { title, description } = seo;
   const image = `${canonical}/share-image`;
   return {
     metadataBase: new URL(origin), title: { absolute: title }, description,
     alternates: { canonical },
-    robots: { index: isPageIndexable(page), follow: seo.robotsFollow ?? true },
+    robots: { index: isPageIndexable(page), follow: true },
     icons: {
       icon: publicAssetUrl(page.business_favicon || page.business_logo, origin) || new URL(BUSINESS_FAVICON_PLACEHOLDER, origin).href,
       apple: publicAssetUrl(page.business_logo || page.image, origin) || new URL(BUSINESS_LOGO_PLACEHOLDER, origin).href,
     },
-    openGraph: { type: "website", url: canonical, title: ogTitle, description: ogDescription,
-      ...(seo.locale ? { locale: { ckb: "ckb_IQ", ar: "ar_IQ", en: "en_US" }[seo.locale] } : {}),
+    openGraph: { type: "website", url: canonical, title, description,
+      locale: { ckb: "ckb_IQ", ar: "ar_IQ", en: "en_US" }[seo.locale],
       images: [{ url: image, width: 1200, height: 630, alt: page.name }] },
-    twitter: { card: "summary_large_image", title: ogTitle, description: ogDescription, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }
 
 /** WebPage describes known visible content without inventing LocalBusiness fields. */
 export function buildPageJsonLd(page: PublicLinktree, origin: string) {
-  const language = readPageSeo(page.template_config).locale || "ckb";
+  const language = automaticPageSeo(page).locale;
   return {
     "@context": "https://schema.org", "@type": "WebPage",
     "@id": `${canonicalPageUrl(page, origin)}#page`, url: canonicalPageUrl(page, origin), name: page.name,

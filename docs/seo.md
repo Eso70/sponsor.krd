@@ -17,20 +17,33 @@ fail closed until a verified-domain registry is implemented. Canonicals use
 the configured root/app protocol and port, never an arbitrary incoming host.
 `www` redirects to root and identifier aliases redirect to the page's slug.
 
-`template_config.seo` stores bounded title, description, sharing-title,
-sharing-description, indexing/following flags and an optional content locale.
-Both dashboard surfaces use `PageSeoFields` and `PageSeoDiagnostics` through
-the existing shared editor. No duplicate business fields or database migration
-are required. Canonical overrides and arbitrary structured-data input are not
-accepted. Empty metadata fields fall back to actual page information.
+Search and sharing are fully automatic; neither dashboard exposes a separate
+SEO section. `automaticPageSeo` derives bounded titles from the page name and
+descriptions from distinct, meaningful subtitle/description text. It normalizes
+whitespace, excludes generic contact prompts, and shortens long text at word
+boundaries where possible. Sharing previews and generated images use the same
+content resolver. No external AI service or fabricated business information is
+used.
 
-The default indexing policy requires a business name and a subtitle or
-description beyond the standard contact prompt in Kurdish/Arabic/English.
-An owner may explicitly choose index or noindex, including temporary campaign
-pages. This is a conservative technical policy, not a search ranking score.
-SEO descriptions alone do not make a thin public page useful: add real visible
-business information. Content language is preserved; no fabricated hreflang
-or translated business names are emitted.
+Indexing requires a page name plus a meaningful subtitle or description.
+Starter prompts alone never qualify, including when used as a subtitle. The
+same rule governs public robots metadata and backend sitemap SQL; publication,
+archive, and tenant ownership checks still gate public access. Public pages
+allow following links automatically. This is a technical eligibility policy,
+not a ranking score or an indexing guarantee.
+
+Retired `template_config.seo` overrides are ignored on existing pages and
+removed by backend normalization on reads/saves. Existing explicit noindex
+choices therefore no longer override content eligibility. No database rewrite
+or migration is required. Deploy frontend and backend together.
+
+HTML, Open Graph, structured data, and renderer language use the same content
+inference: dominant Latin text is English, Arabic-script text containing Sorani
+markers is Kurdish, and other Arabic-script text is Arabic. Text without a
+recognized writing system defaults to Kurdish. This is a deterministic
+heuristic; very short, ambiguous or mixed-language content may be classified
+imperfectly. Saved content is preserved; no translated names or fabricated
+hreflang alternates are emitted.
 
 Public pages output full metadata and safe WebPage JSON-LD describing visible
 content. No local-business subtype, address, opening hours, rating or geographic
@@ -88,7 +101,8 @@ normal development server and database are untouched.
 
 The HTTP suite verifies two tenants with identical slugs, crawler/ordinary user
 agents, raw HTML identity/H1/metadata/JSON-LD, real anchors, robots, sitemaps,
-share images, explicit noindex, identifier/www redirects, hostile hosts,
+share images, automatic noindex for starter content, ignored legacy overrides,
+identifier/www redirects, hostile hosts,
 unpublished/missing pages, and unavailable upstreams. Unit tests separately
 cover backend SQL ownership/publication/indexing and cache safeguards.
 
@@ -110,7 +124,7 @@ cover backend SQL ownership/publication/indexing and cache safeguards.
    property, submit sitemaps, inspect representative URLs/live HTML, request
    indexing where appropriate, and monitor crawl/indexing errors.
 
-The initial HTML language matches the stored public-page language or public
+The initial HTML language matches the inferred public-page language or public
 site preference. Legal documents declare root-host canonicals; tenant copies
 are noindex. Malformed public identifiers return 404 before streaming.
 Direct Caddy API responses carry noindex headers as well as the Next proxy.

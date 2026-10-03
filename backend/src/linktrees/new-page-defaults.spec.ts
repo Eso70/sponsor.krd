@@ -115,4 +115,39 @@ describe('new-page defaults isolation', () => {
       ),
     ).toBe(false);
   });
+
+  it.each(['business', 'platform'] as const)(
+    'removes retired SEO overrides when saving through %s',
+    async (scope) => {
+      const { service, query } = setup();
+      jest
+        .spyOn(service, 'getLinktreeById')
+        .mockResolvedValue(
+          row as Awaited<ReturnType<LinktreesService['getLinktreeById']>>,
+        );
+      await service.updateLinktree(
+        row.id,
+        {
+          template_config: {
+            templateKey: 'spectrum',
+            seo: { title: 'Stale title', robotsIndex: false },
+          },
+        },
+        'business-1',
+        scope,
+      );
+      const update = query.mock.calls.find(([sql]) =>
+        sql.includes('UPDATE linktrees'),
+      );
+      const config = update?.[1]?.find(
+        (value) => typeof value === 'string' && value.includes('"templateKey"'),
+      );
+      expect(typeof config).toBe('string');
+      expect(JSON.parse(config as string)).not.toHaveProperty('seo');
+      expect(JSON.parse(config as string)).toHaveProperty(
+        'templateKey',
+        'spectrum',
+      );
+    },
+  );
 });

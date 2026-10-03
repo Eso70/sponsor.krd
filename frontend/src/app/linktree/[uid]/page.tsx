@@ -8,7 +8,7 @@ import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
 import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
 import { RootPublicLinktreeError } from "@/features/public-site/RootErrorPage";
 import { fetchPublicLinktree, publicRequestContext } from "@/lib/public/public-page.server";
-import { buildPageMetadata, canonicalPageUrl, readPageSeo } from "@/lib/public/page-seo";
+import { buildPageMetadata, canonicalPageUrl, automaticPageSeo } from "@/lib/public/page-seo";
 import { PublicPageStructuredData } from "@/components/public/PublicPageStructuredData";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function LinktreePublicPage({ params }: PageProps) {
     <PublicPageStructuredData page={result.linktree} origin={result.origin} nonce={nonce} />
     <TikTokPixelBaseCode pixelIds={result.analytics.pixelIds} nonce={nonce} />
     <LinktreePage linktree={result.linktree} links={result.links} analytics={result.analytics}
-      enableMarketingTracking initialLocale={readPageSeo(result.linktree.template_config).locale || "ckb"} />
+      enableMarketingTracking initialLocale={automaticPageSeo(result.linktree).locale} />
   </>;
 }
 

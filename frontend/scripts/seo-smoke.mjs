@@ -29,8 +29,9 @@ const fixture = createServer((req, res) => {
     if (!["same-slug", "random-id", "noindex"].includes(id)) return respond({}, 404);
     return respond({ linktree: {
       id: `${tenant || "platform"}-page`, uid: "random-id", seo_name: id === "noindex" ? id : "same-slug",
-      name: names[tenant], subtitle: "Actual services", description: `Actual description for ${names[tenant]}`,
-      template_key: "spectrum", template_config: { templateKey: "spectrum", seo: { robotsIndex: id !== "noindex", locale: tenant === "alpha" ? "en" : "ckb" } },
+      name: names[tenant], subtitle: id === "noindex" ? "" : tenant === "beta" ? "خزمەتگوزارییەکانی بزنس" : "Actual services",
+      description: id === "noindex" ? "To contact us, tap one of the links below" : tenant === "beta" ? "وەسفی ڕاستەقینەی بزنس" : `Actual description for ${names[tenant]}`,
+      template_key: "spectrum", template_config: { templateKey: "spectrum", seo: { title: "Obsolete override", robotsIndex: id === "noindex", locale: "ar" } },
       background_color: "#161b22", status: "active", footer_hidden: true,
     }, links: [{ id: "website-link", platform: "website", url: "https://example.com/official", display_name: "Official website", display_order: 0, metadata: {} }],
     analytics: { pixelIds: [], actions: {} } });
@@ -84,6 +85,7 @@ try {
       assert.match(html, /<h1[^>]*>/); assert.match(html, /<title>/); assert.match(html, /name="description"/);
       assert.match(html, new RegExp(`<html[^>]+lang="${tenant === "alpha" ? "en" : "ckb"}"`));
       assert.match(html, /rel="canonical"/); assert.match(html, /property="og:title"/);
+      assert.doesNotMatch(html, /<title>Obsolete override|content="Obsolete override"/);
       assert.match(html, /application\/ld\+json/); assert.match(html, /<a[^>]+href="https:\/\/example.com\/official"/);
       assert.ok(html.includes(`http://${host}:${frontendPort}/linktree/same-slug`));
     }
@@ -104,6 +106,11 @@ try {
   assert.equal((await get("alpha.evil.test", "/linktree/same-slug")).status, 404);
   const www = await get("www.localhost", "/linktree/same-slug"); assert.equal(www.status, 308);
   assert.equal((await get("localhost", "/robots.txt")).status, 200);
+  const platformPage = await get("localhost", "/linktree/same-slug");
+  assert.equal(platformPage.status, 200);
+  assert.match(platformPage.body.toString(), /<title>Platform Profile<\/title>/);
+  assert.match(platformPage.body.toString(), /<html[^>]+lang="en"/);
+  assert.doesNotMatch(platformPage.body.toString(), /<title>Obsolete override/);
   const rootSitemap = await get("localhost", "/sitemap.xml");
   assert.match(rootSitemap.body.toString(), /\/legal\/privacy/);
   assert.match(rootSitemap.body.toString(), /\/legal\/terms/);

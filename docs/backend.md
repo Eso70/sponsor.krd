@@ -4,9 +4,10 @@
 
 `PublicService` owns the live public availability gate and owner-scoped,
 paginated sitemap projection. Active business/page and archive boundaries
-apply before serving public content, including Redis cache hits. Bounded
-`template_config.seo` metadata reuses the existing JSONB field and requires
-no schema migration. See [SEO architecture and operations](seo.md).
+apply before serving public content, including Redis cache hits. Sitemap
+indexing is derived from meaningful page content. Retired `template_config.seo`
+overrides are stripped during normalization and cannot control eligibility.
+No schema migration is needed. See [SEO architecture and operations](seo.md).
 
 ## Platform TikTok tracking
 

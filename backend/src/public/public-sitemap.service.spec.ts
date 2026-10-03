@@ -43,7 +43,7 @@ describe('tenant sitemap and cached publication boundaries', () => {
       );
       expect(query).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('robotsIndex'),
+        expect.stringContaining('lt.description'),
         expect.any(Array),
       );
       expect(query).toHaveBeenNthCalledWith(

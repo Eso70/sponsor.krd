@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import type { PublicLinktree } from "@linktree/types";
 import { LINKTREE_DEFAULT_DESCRIPTION } from "@linktree/types";
 import { NON_DESCRIPTIVE_PAGE_TEXT } from "@linktree/types";
-import { NON_DESCRIPTIVE_PAGE_TEXT as backendStarterText } from "../../../../backend/src/common/page-seo";
-import { buildPageMetadata, canonicalPageUrl, isPageIndexable, serializeJsonLd, publicAssetUrl } from "./page-seo";
+import { NON_DESCRIPTIVE_PAGE_TEXT as backendStarterText, isIndexableLinktree } from "../../../../backend/src/common/page-seo";
+import { automaticPageSeo, buildPageJsonLd, buildPageMetadata, canonicalPageUrl, isPageIndexable, serializeJsonLd, publicAssetUrl } from "./page-seo";
 import { resolvePublicOrigin } from "./public-origin";
 import { sitemapXml, sitemapIndexXml } from "./sitemap";
 
@@ -31,16 +31,16 @@ describe("public SEO boundary", () => {
   });
   it("generates full metadata from actual content and ignores canonical injection", () => {
     const metadata = buildPageMetadata({ ...page, template_config: { seo: { title: "Chosen title", canonicalUrl: "https://evil.test", robotsIndex: false } } }, "https://a.sponsor.krd");
-    expect(metadata.title).toEqual({ absolute: "Chosen title" });
-    expect(metadata.description).toBe("Actual description");
+    expect(metadata.title).toEqual({ absolute: "Real business" });
+    expect(metadata.description).toBe("Services provided by this business — Actual description");
     expect(metadata.alternates?.canonical).toBe("https://a.sponsor.krd/linktree/business");
-    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(metadata.robots).toEqual({ index: true, follow: true });
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
-  it("does not automatically index a thin default page, but respects explicit intent", () => {
+  it("automatically excludes starter pages and ignores retired overrides", () => {
     const thin = { ...page, subtitle: "", description: LINKTREE_DEFAULT_DESCRIPTION };
     expect(isPageIndexable(thin)).toBe(false);
-    expect(isPageIndexable({ ...thin, template_config: { seo: { robotsIndex: true } } })).toBe(true);
+    expect(isPageIndexable({ ...thin, template_config: { seo: { robotsIndex: true } } })).toBe(false);
     expect(isPageIndexable({ ...page, template_config: { seo: { robotsIndex: "false" } } })).toBe(true);
   });
   it("escapes script terminators and rejects unsafe metadata URLs", () => {
@@ -49,6 +49,36 @@ describe("public SEO boundary", () => {
     expect(JSON.parse(text)).toEqual({ name: "</script><script>alert(1)</script>" });
     expect(publicAssetUrl("javascript:alert(1)", "https://sponsor.krd")).toBeUndefined();
     expect(publicAssetUrl("//evil.test/logo.png", "https://sponsor.krd")).toBeUndefined();
+  });
+  it.each([
+    ["Real services and contact information", "en"],
+    ["خدمات الشركة ومعلومات التواصل", "ar"],
+    ["خزمەتگوزاری و زانیارییەکانی پەیوەندی", "ckb"],
+    ["123", "ckb"],
+  ] as const)("infers %s consistently for metadata and structured data", (description, locale) => {
+    const content = { ...page, subtitle: "", description };
+    expect(automaticPageSeo(content).locale).toBe(locale);
+    expect(buildPageJsonLd(content, "https://a.sponsor.krd").inLanguage).toBe(locale);
+    expect(buildPageMetadata(content, "https://a.sponsor.krd").openGraph).toMatchObject({ locale: { en: "en_US", ar: "ar_IQ", ckb: "ckb_IQ" }[locale] });
+  });
+  it("uses page name when content is empty and ignores generic prompts for language", () => {
+    expect(automaticPageSeo({ ...page, subtitle: "", description: LINKTREE_DEFAULT_DESCRIPTION })).toMatchObject({ title: "Real business", description: "Real business", imageSubtitle: "", locale: "en" });
+  });
+  it("cleans whitespace, removes duplicate descriptions and bounds long text", () => {
+    expect(automaticPageSeo({ ...page, subtitle: " Real\nservices ", description: "Real services" }).description).toBe("Real services");
+    const seo = automaticPageSeo({ ...page, name: "😀".repeat(160), subtitle: "", description: "Actual services ".repeat(100) });
+    expect(Array.from(seo.title)).toHaveLength(150);
+    expect(seo.description.length).toBeLessThanOrEqual(200);
+    expect(seo.description).toMatch(/…$/);
+    expect(seo.imageSubtitle.length).toBeLessThanOrEqual(100);
+  });
+  it("keeps backend and frontend indexing aligned for generic and mixed content", () => {
+    for (const description of [...NON_DESCRIPTIVE_PAGE_TEXT, "", "Real services"]) {
+      for (const subtitle of ["", "Real subtitle", " TO CONTACT US,\nTAP ONE OF THE LINKS BELOW "]) {
+        const content = { ...page, description, subtitle, template_config: { seo: { robotsIndex: true } } };
+        expect(isPageIndexable(content)).toBe(isIndexableLinktree(content));
+      }
+    }
   });
   it("produces host-bound, escaped sitemap chunks and indexes", () => {
     const xml = sitemapXml("https://a.sponsor.krd", [{ slug: "business", updatedAt: "2026-10-02" }], false);

@@ -1,20 +1,16 @@
-import { isIndexableLinktree, normalizePageSeo } from './page-seo';
+import { isIndexableLinktree, indexableLinktreeSql } from './page-seo';
 
 describe('stored page SEO policy', () => {
-  it('bounds metadata and rejects arbitrary fields and false-like strings', () => {
-    expect(
-      normalizePageSeo({
-        title: 'x'.repeat(200),
-        robotsIndex: 'false',
-        canonicalUrl: 'https://evil.test',
-        locale: 'invented',
-      }),
-    ).toEqual({ title: 'x'.repeat(150) });
-    expect(
-      normalizePageSeo({ title: ' real\nname ', robotsIndex: false }),
-    ).toEqual({ title: 'real name', robotsIndex: false });
+  it('derives sitemap eligibility from content rather than manual choices', () => {
+    const sql = indexableLinktreeSql();
+    expect(sql).toContain('lt.name');
+    expect(sql).toContain('lt.subtitle');
+    expect(sql).toContain('lt.description');
+    expect(sql).toContain('regexp_replace');
+    expect(sql).not.toContain('robotsIndex');
+    expect(sql).not.toContain('template_config');
   });
-  it('defaults thin pages to noindex and respects deliberate index/noindex', () => {
+  it('excludes starter pages and ignores retired index/noindex settings', () => {
     const page = {
       name: 'Business',
       description: 'بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە',
@@ -28,6 +24,22 @@ describe('stored page SEO policy', () => {
         ...page,
         template_config: { seo: { robotsIndex: true } },
       }),
+    ).toBe(false);
+    expect(
+      isIndexableLinktree({
+        ...page,
+        subtitle: 'Actual services',
+        template_config: { seo: { robotsIndex: false } },
+      }),
     ).toBe(true);
+    expect(
+      isIndexableLinktree({
+        ...page,
+        description: ' TO CONTACT US,\nTAP ONE OF THE LINKS BELOW ',
+      }),
+    ).toBe(false);
+    expect(
+      isIndexableLinktree({ ...page, name: ' ', subtitle: 'Actual services' }),
+    ).toBe(false);
   });
 });

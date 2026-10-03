@@ -1,14 +1,3 @@
-/** Stored in existing Linktree template_config.seo; canonical hosts are server-owned. */
-export interface PageSeo {
-  title?: string;
-  description?: string;
-  ogTitle?: string;
-  ogDescription?: string;
-  robotsIndex?: boolean;
-  robotsFollow?: boolean;
-  locale?: "ckb" | "ar" | "en";
-}
-
 export interface PublicSitemapPage {
   slug: string;
   updatedAt: string;

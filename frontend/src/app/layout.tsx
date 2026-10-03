@@ -20,7 +20,7 @@ import "./globals.css";
 import { PublicRouteTracking } from "@/components/analytics/PublicRouteTracking";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { fetchPublicLinktree } from "@/lib/public/public-page.server";
-import { readPageSeo } from "@/lib/public/page-seo";
+import { automaticPageSeo } from "@/lib/public/page-seo";
 import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
 import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
 
@@ -80,7 +80,7 @@ export default async function RootLayout({
   const linktree = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})\/?$/);
   if (linktree) {
     const result = await fetchPublicLinktree(linktree[1]);
-    language = result && typeof result !== "string" ? readPageSeo(result.linktree.template_config).locale || "ckb" : "ckb";
+    language = result && typeof result !== "string" ? automaticPageSeo(result.linktree).locale : "ckb";
   } else if (pathname === "/" || pathname.startsWith("/legal/")) {
     language = scope.isPlatformRoot || pathname.startsWith("/legal/")
       ? parseRootPublicLocale(cookieStore.get(ROOT_PUBLIC_LOCALE_COOKIE)?.value)

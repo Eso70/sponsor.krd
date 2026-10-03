@@ -4,8 +4,9 @@
 
 Public Linktrees use request-scoped server reads, validated tenant canonicals,
 full metadata, safe JSON-LD, generated share images, and host-aware robots and
-paginated sitemaps. Shared page-editor controls select indexing and metadata
-without duplicating business/platform UI. See [SEO architecture and operations](seo.md)
+paginated sitemaps. Search titles, descriptions, sharing previews, indexing,
+and content language are derived automatically from page content; both
+dashboard editors omit manual SEO controls. See [SEO architecture and operations](seo.md)
 and [the implementation plan](seo-implementation-plan.md).
 
 ## Sponsor.krd Rise branding

@@ -5,5 +5,5 @@ export * from "./analytics.types";
 export * from "./billing.types";
 export * from "./authorization.types";
 export * from "./legal.types";
-export type { PageSeo, PublicSitemapPage } from "./seo.types";
+export type { PublicSitemapPage } from "./seo.types";
 export { NON_DESCRIPTIVE_PAGE_TEXT } from "./seo.types";
