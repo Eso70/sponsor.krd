@@ -21,10 +21,10 @@ describe("root visitor language", () => {
     fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
     expect(screen.getByText("ar")).toBeInTheDocument();
     expect(document.cookie).toContain(`${ROOT_PUBLIC_LOCALE_COOKIE}=ar`);
-    expect(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).toHaveTextContent("EN");
+    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
     fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
     expect(screen.getByText("en")).toBeInTheDocument();
     expect(document.cookie).toContain(`${ROOT_PUBLIC_LOCALE_COOKIE}=en`);
-    expect(screen.getByRole("button", { name: "Switch to Kurdish" })).toHaveTextContent("KU");
+    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
   });
 });

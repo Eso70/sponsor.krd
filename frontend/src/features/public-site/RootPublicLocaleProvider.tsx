@@ -37,7 +37,7 @@ export function RootPublicLanguageToggle() {
   const { locale, changeLocale } = useRootPublicLocale();
   const nextLocale = locale === "ckb" ? "ar" : locale === "ar" ? "en" : "ckb";
   const label = locale === "ckb" ? "گۆڕینی زمان بۆ عەرەبی" : locale === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Kurdish";
-  return <PublicLanguageToggle nextLocale={nextLocale} label={label} onClick={() => changeLocale(nextLocale)} />;
+  return <PublicLanguageToggle locale={locale} label={label} onClick={() => changeLocale(nextLocale)} />;
 }
 
 export function RootPublicLinktreeLanguageToggle({ locale, onChange }: {
@@ -46,7 +46,7 @@ export function RootPublicLinktreeLanguageToggle({ locale, onChange }: {
 }) {
   const nextLocale = locale === "ckb" ? "ar" : locale === "ar" ? "en" : "ckb";
   const label = locale === "ckb" ? "گۆڕینی زمان بۆ عەرەبی" : locale === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Kurdish";
-  return <PublicLanguageToggle nextLocale={nextLocale} label={label} onClick={() => {
+  return <PublicLanguageToggle locale={locale} label={label} onClick={() => {
     rememberRootPublicLocale(nextLocale);
     onChange(nextLocale);
   }} />;

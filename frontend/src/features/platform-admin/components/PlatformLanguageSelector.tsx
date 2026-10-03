@@ -2,6 +2,7 @@
 
 import { DashboardHeaderActionButton } from "@/components/shared/DashboardHeader";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { LanguageFlag } from "@/components/shared/LanguageFlag";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
@@ -12,14 +13,13 @@ export function PlatformLanguageSelector() {
   return (
     <Tooltip content={copy.switchLanguage} side="bottom">
       <DashboardHeaderActionButton
+        className="size-10 overflow-hidden !p-0 sm:size-11 md:size-12"
         disabled={saving}
         aria-busy={saving}
         aria-label={copy.switchLanguage}
         onClick={() => void changeLocale(next)}
       >
-        <span aria-hidden="true" className="text-xs font-bold leading-5">
-          {next === "ar" ? "AR" : next === "en" ? "EN" : "KU"}
-        </span>
+        <LanguageFlag locale={locale} />
       </DashboardHeaderActionButton>
     </Tooltip>
   );

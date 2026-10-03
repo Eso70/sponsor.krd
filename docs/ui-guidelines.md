@@ -25,6 +25,15 @@ Users should not feel like they are switching between different applications.
 
 ## Typography
 
+Language toggle buttons show the active language's PNG flag rather than the
+next language's text abbreviation. Flags sit centered in a 28-by-19-pixel frame
+with small rounded corners and breathing room inside the button. Their full
+artwork is preserved without cropping. `LanguageFlag` owns the shared mapping:
+Kurdish uses `ku.png`, Arabic uses `saudi.png`, and English uses `uk.png` from
+`frontend/public/images/languages/`. Public, sign-in, business, and platform
+toggles keep their existing language cycle, accessible action labels, and
+preference persistence. Settings language dropdowns retain readable names.
+
 Rabar is the product-wide typeface and must be inherited by public pages,
 dashboards, dialogs, notifications, form controls, and generated interface
 labels. Responsive headings and content cards must allow long Latin and Kurdish

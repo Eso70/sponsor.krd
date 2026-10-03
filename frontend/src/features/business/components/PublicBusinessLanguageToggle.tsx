@@ -15,7 +15,7 @@ export function PublicBusinessLanguageToggle({
   const nextLocale = locale === "ckb" ? "ar" : locale === "ar" ? "en" : "ckb";
   return (
     <PublicLanguageToggle
-      nextLocale={nextLocale}
+      locale={locale}
       label={businessPublicCopy[locale].switchLanguage}
       onClick={() => {
         rememberPublicBusinessLocale(nextLocale);

@@ -133,6 +133,6 @@ describe("BusinessWorkspaceEntryPage", () => {
     render(<BusinessWorkspaceEntryPage />);
 
     expect(await screen.findByRole("heading", { name: "تسجيل دخول النشاط التجاري" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).toHaveTextContent("EN");
+    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
   });
 });

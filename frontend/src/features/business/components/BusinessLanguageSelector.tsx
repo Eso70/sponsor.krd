@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { DashboardHeaderActionButton } from "@/components/shared/DashboardHeader";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { LanguageFlag } from "@/components/shared/LanguageFlag";
 import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
 
 export function BusinessLanguageSelector() {
@@ -17,14 +18,13 @@ export function BusinessLanguageSelector() {
   return (
     <Tooltip content={switchLabel} side="bottom">
       <DashboardHeaderActionButton
+        className="size-10 overflow-hidden !p-0 sm:size-11 md:size-12"
         aria-label={switchLabel}
         aria-busy={saving}
         disabled={saving}
         onClick={() => void changeLocale(nextLocale)}
       >
-        <span aria-hidden="true" className="text-xs font-bold leading-5">
-          {nextLocale === "ckb" ? "KU" : nextLocale.toUpperCase()}
-        </span>
+        <LanguageFlag locale={locale} />
       </DashboardHeaderActionButton>
     </Tooltip>
   );

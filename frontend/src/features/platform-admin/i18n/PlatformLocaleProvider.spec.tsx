@@ -31,7 +31,7 @@ describe("platform administrator language", () => {
       </PlatformLocaleProvider>,
     );
     const toggle = screen.getByRole("button", { name: "گۆڕین بۆ عەرەبی" });
-    expect(toggle).toHaveTextContent("AR");
+    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("ku.png"));
     fireEvent.click(toggle);
     expect(screen.getByText("إدارة الأعمال")).toBeInTheDocument();
     await waitFor(() =>
@@ -40,9 +40,7 @@ describe("platform administrator language", () => {
         { method: "PATCH", json: { locale: "ar" } },
       ),
     );
-    expect(
-      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
-    ).toHaveTextContent("EN");
+    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
   });
 
   it("switches from Arabic to English and saves the administrator preference", async () => {
@@ -58,7 +56,7 @@ describe("platform administrator language", () => {
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
       "/api/platform/auth/preferred-locale", { method: "PATCH", json: { locale: "en" } },
     ));
-    expect(screen.getByRole("button", { name: "Switch to Kurdish" })).toHaveTextContent("KU");
+    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
   });
 
   it("restores Kurdish if saving fails", async () => {

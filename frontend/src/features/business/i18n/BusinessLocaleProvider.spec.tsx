@@ -35,14 +35,11 @@ describe("business language preference", () => {
     const toggle = screen.getByRole("button", {
       name: "گۆڕینی زمان بۆ عەرەبی",
     });
-    expect(toggle).toHaveTextContent("AR");
-    expect(toggle).not.toHaveTextContent("KU");
+    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("ku.png"));
     fireEvent.click(toggle);
 
     expect(screen.getByText("الإعدادات")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
-    ).toHaveTextContent("EN");
+    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(container.firstElementChild).toHaveAttribute("dir", "ltr");
     await waitFor(() =>
@@ -84,11 +81,11 @@ describe("business language preference", () => {
     const toggle = screen.getByRole("button", {
       name: "التبديل إلى الإنجليزية",
     });
-    expect(toggle).toHaveTextContent("EN");
+    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
     fireEvent.click(toggle);
 
     expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Switch to Kurdish" })).toHaveTextContent("KU");
+    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
         method: "PATCH",
