@@ -137,9 +137,11 @@ Business Settings includes a Custom domains tab. Platform business directory
 actions open the same domain-management panel. Both reuse shared compact tables,
 modal inputs and footer controls. Pending/disconnected domain statuses refresh
 automatically while the panel is visible. The same polling and cancellation apply
-on both dashboards. Verified primary origins drive public routing, canonicals,
-sitemap and share images; dashboard authentication remains on the Sponsor.krd
-subdomain. See [Custom domains](custom-domains.md).
+on both dashboards. The DNS dialog prioritizes a current request failure over a
+previous ownership failure, and reports temporary server DNS lookup failures
+explicitly. Verified primary origins drive public routing, canonicals, sitemap
+and share images; dashboard authentication remains on the Sponsor.krd subdomain.
+See [Custom domains](custom-domains.md).
 
 
 Platform Settings > Blocked subdomains lists permanent system reservations and

@@ -241,4 +241,46 @@ describe("shared custom-domain management", () => {
       "Remove it before connecting a different domain",
     );
   });
+  it.each(["business", "platform"] as const)(
+    "shows the current server DNS failure instead of an old ownership failure on %s",
+    async (surface) => {
+      load.mockResolvedValue({
+        ...data,
+        domains: [{ ...domain, lastError: "ownership" }],
+      });
+      action.mockRejectedValue(
+        new ApiRequestError("DNS unavailable", {
+          status: 503,
+          code: "SERVICE_UNAVAILABLE",
+        }),
+      );
+      render(
+        surface === "business" ? (
+          <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />
+        ) : (
+          <PlatformLocaleProvider initialLocale="en">
+            <PlatformBusinessDomainsModal
+              business={{ id: "wafaye-id", name: "Wafaye" }}
+              onClose={vi.fn()}
+            />
+          </PlatformLocaleProvider>
+        ),
+      );
+      await screen.findAllByText("wafaye.com");
+      fireEvent.click(
+        screen.getAllByRole("button", { name: "DNS setup: wafaye.com" })[0],
+      );
+      const modal = within(screen.getAllByRole("dialog").at(-1)!);
+      expect(
+        modal.getByText(/ownership TXT record is missing/),
+      ).toBeInTheDocument();
+      fireEvent.click(modal.getByRole("button", { name: "Verify DNS" }));
+      expect(
+        await modal.findByText(/server could not complete the DNS lookup/),
+      ).toBeInTheDocument();
+      expect(
+        modal.queryByText(/ownership TXT record is missing/),
+      ).not.toBeInTheDocument();
+    },
+  );
 });

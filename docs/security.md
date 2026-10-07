@@ -521,7 +521,9 @@ for these boundaries is listed in [docs/testing.md](testing.md).
 ## Customer domain security
 
 Custom domains require a unique business mapping, exact DNS TXT ownership proof,
-origin-address verification and a renewable 48-hour lease. Unknown, disconnected,
+origin-address verification and a renewable 48-hour lease. Queries use
+administrator-configured trusted DNS resolvers; customers cannot select a resolver.
+Failure logs exclude expected and returned token values. Unknown, disconnected,
 expired and suspended-tenant mappings fail closed. Internal domain resolution
 requires the proxy secret; certificate permission requires loopback and is blocked
 at the edge. Primary selection checks the public TLS certificate at a configured

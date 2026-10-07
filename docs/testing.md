@@ -70,6 +70,10 @@ tests cover automatic status updates in business and platform contexts, hidden
 tabs, request overlap and unmount cancellation. The domain e2e suite uses only its
 disposable database with stub DNS/TLS; production DNS and certificate issuance
 still require deployment verification.
+DNS verification tests cover configured trusted resolvers, invalid resolver
+configuration, missing versus mismatched proofs, token-free diagnostic logging,
+and transient lookup errors. Both dashboard integrations cover current lookup
+errors taking precedence over previously recorded ownership failures.
 
 Subdomain policy coverage includes permanent/custom reservations, occupied names,
 administrator-only policy mutations, stale signup availability responses, inline

@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { DomainDnsService } from './domain-dns.service';
 import { configValidationSchema } from '../config/config.schema';
 const txt = jest.fn();
@@ -14,12 +15,20 @@ jest.mock('node:dns/promises', () => ({
   })),
 }));
 describe('domain DNS verification', () => {
-  it.each(['', 'https://1.1.1.1', 'dns.example.com', '1.1.1.1,', '1.1.1.1:53', '1.1.1.1,8.8.8.8,9.9.9.9,8.8.4.4,1.0.0.1'])(
-    'rejects invalid DNS-server configuration: %s',
-    (value) => {
-      expect(configValidationSchema.extract('CUSTOM_DOMAIN_DNS_SERVERS').validate(value).error).toBeDefined();
-    },
-  );
+  it.each([
+    '',
+    'https://1.1.1.1',
+    'dns.example.com',
+    '1.1.1.1,',
+    '1.1.1.1:53',
+    '1.1.1.1,8.8.8.8,9.9.9.9,8.8.4.4,1.0.0.1',
+  ])('rejects invalid DNS-server configuration: %s', (value) => {
+    expect(
+      configValidationSchema
+        .extract('CUSTOM_DOMAIN_DNS_SERVERS')
+        .validate(value).error,
+    ).toBeDefined();
+  });
   const service = new DomainDnsService(
     new ConfigService({
       CUSTOM_DOMAIN_IPV4: '203.0.113.10',
@@ -47,7 +56,6 @@ describe('domain DNS verification', () => {
     expect(setServers).toHaveBeenCalledWith(['9.9.9.9', '2620:fe::fe']);
   });
   it('logs missing versus mismatched proofs without logging token values', async () => {
-    const { Logger } = await import('@nestjs/common');
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => {});

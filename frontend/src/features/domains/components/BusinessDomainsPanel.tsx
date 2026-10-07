@@ -126,7 +126,7 @@ export function BusinessDomainsPanel({
               cause instanceof ApiRequestError &&
               cause.status === 503
             ? copy.dnsUnavailable
-          : copy.error,
+            : copy.error,
       );
       if (action === "remove") throw cause;
     } finally {
