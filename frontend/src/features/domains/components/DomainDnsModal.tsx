@@ -58,7 +58,7 @@ export function DomainDnsModal({
             {error}
           </p>
         )}
-        {domain.lastError && (
+        {!error && !busy && domain.lastError && (
           <p role="alert" className="text-xs text-rose-500">
             {copy[domain.lastError]}
           </p>

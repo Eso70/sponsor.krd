@@ -122,6 +122,10 @@ export function BusinessDomainsPanel({
           cause instanceof ApiRequestError &&
           cause.status === 503
           ? copy.tlsPending
+          : action === "verify" &&
+              cause instanceof ApiRequestError &&
+              cause.status === 503
+            ? copy.dnsUnavailable
           : copy.error,
       );
       if (action === "remove") throw cause;

@@ -99,6 +99,7 @@ Configure these server-only values in the root environment:
 ```dotenv
 CUSTOM_DOMAINS_ENABLED=true
 CUSTOM_DOMAIN_TARGET=domains.sponsor.krd
+CUSTOM_DOMAIN_DNS_SERVERS=1.1.1.1,8.8.8.8
 CUSTOM_DOMAIN_IPV4=<your public origin IPv4 address>
 CUSTOM_DOMAIN_IPV6=
 ```
@@ -109,6 +110,18 @@ optional; configure it only when that address actually serves Caddy. Point
 the stable CNAME target shown in the dashboard. Customer CDN proxies are not
 supported by this first version because verification checks the actual origin
 addresses, rather than a shared CDN network's addresses.
+
+Ownership and routing queries use explicit trusted recursive DNS servers rather
+than the host's default resolver. `CUSTOM_DOMAIN_DNS_SERVERS` accepts up to four
+comma-separated DNS-server IPs; the default uses Cloudflare and Google DNS.
+Allow outbound DNS to these addresses, or configure approved reachable resolvers.
+Node uses later servers for DNS query errors/timeouts, not for an authoritative
+negative response; caches at the chosen resolver may still need time to expire.
+No customer-supplied nameservers or HTTP verification fallbacks are used.
+Ownership-failure logs distinguish no returned TXT record from a record that
+does not match the current database claim, without logging token values.
+When public DNS looks correct but verification fails, compare the dashboard's
+entire token, check backend logs and test DNS from the running backend host.
 
 Reload the updated Caddyfile after validating it with the production Caddy binary
 (which must include the existing Cloudflare DNS module). Keep Caddy's certificate

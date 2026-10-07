@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Resolver } from 'node:dns/promises';
 import { ConfigService } from '@nestjs/config';
 import { isIP } from 'node:net';
@@ -11,6 +15,7 @@ function normalizedAddress(value: string): string {
 
 @Injectable()
 export class DomainDnsService {
+  private readonly logger = new Logger(DomainDnsService.name);
   constructor(private readonly config: ConfigService) {}
 
   addresses(key: 'CUSTOM_DOMAIN_IPV4' | 'CUSTOM_DOMAIN_IPV6'): string[] {
@@ -26,6 +31,11 @@ export class DomainDnsService {
   ): Promise<'ownership' | 'routing' | null> {
     // Only DNS queries are issued. Never fetch a customer-controlled URL.
     const resolver = new Resolver({ timeout: 2500, tries: 2 });
+    const servers = this.config
+      .get<string>('CUSTOM_DOMAIN_DNS_SERVERS', '1.1.1.1,8.8.8.8')
+      .split(',')
+      .map((server) => server.trim());
+    resolver.setServers(servers);
     async function read<T>(query: Promise<T>, empty: T): Promise<T> {
       try {
         return await query;
@@ -43,8 +53,12 @@ export class DomainDnsService {
     );
     if (
       !txt.some((parts) => parts.join('') === `sponsor-verification=${token}`)
-    )
+    ) {
+      this.logger.warn(
+        `TXT ownership check failed for ${hostname} using ${servers.join(',')}: ${txt.length ? 'record does not match the current domain claim' : 'no TXT record returned'}`,
+      );
       return 'ownership';
+    }
     const [ipv4, ipv6] = await Promise.all([
       read(resolver.resolve4(hostname), [] as string[]),
       read(resolver.resolve6(hostname), [] as string[]),

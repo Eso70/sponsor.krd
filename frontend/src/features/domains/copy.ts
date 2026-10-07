@@ -35,6 +35,7 @@ const en = {
   tlsPending:
     "HTTPS is not ready yet. Check the server setup, then try again shortly.",
   loadError: "Unable to load domains. Please try again.",
+  dnsUnavailable: "The server could not complete the DNS lookup. Please try again shortly.",
   refresh: "Refresh",
   ownership:
     "The ownership TXT record is missing or does not match. Check the records below and verify again.",
@@ -64,6 +65,7 @@ export const domainCopy = {
   en,
   ar: {
     ...en,
+    dnsUnavailable: "تعذّر على الخادم إكمال استعلام DNS. حاول مجددًا بعد قليل.",
     automatic: "يُفحص DNS تلقائيًا بعد إضافة السجلات. يمكنك أيضًا التحقق الآن.",
     limit: "هذا النشاط التجاري لديه نطاق مخصص بالفعل. أزله قبل ربط نطاق مختلف.",
     tlsPending: "HTTPS غير جاهز بعد. راجع إعداد الخادم وحاول مجددًا بعد قليل.",
@@ -119,6 +121,7 @@ export const domainCopy = {
   },
   ckb: {
     ...en,
+    dnsUnavailable: "سێرڤەر نەیتوانی پشکنینی DNS تەواو بکات. دوای کەمێک دووبارە هەوڵ بدە.",
     automatic:
       "دوای زیادکردنی تۆمارەکان، DNS بە خۆکار پشکنین دەکرێت. دەتوانیت ئێستاش پشکنین بکەیت.",
     limit:

@@ -28,6 +28,15 @@ export const configValidationSchema = Joi.object({
   ROOT_DOMAIN: Joi.string().default('localhost'),
   CUSTOM_DOMAINS_ENABLED: Joi.boolean().default(false),
   CUSTOM_DOMAIN_TARGET: Joi.string().hostname().default('domains.sponsor.krd'),
+  CUSTOM_DOMAIN_DNS_SERVERS: Joi.string()
+    .default('1.1.1.1,8.8.8.8')
+    .custom((value: string, helpers) => {
+      const servers = value.split(',');
+      return servers.length <= 4 &&
+        servers.every((server) => isIP(server.trim()))
+        ? value
+        : helpers.error('any.invalid');
+    }),
   CUSTOM_DOMAIN_IPV4: Joi.string()
     .allow('')
     .default('')
