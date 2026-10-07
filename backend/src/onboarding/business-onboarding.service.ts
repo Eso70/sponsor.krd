@@ -1299,6 +1299,11 @@ export class BusinessOnboardingService {
 
   async subdomainAvailable(sessionToken: string, raw: string) {
     const session = await this.signupSession(sessionToken);
+    await this.assertRateLimit(
+      `subdomain-availability:${session.userId}`,
+      120,
+      60,
+    );
     return this.subdomains.availability(raw, session.applicationId);
   }
 

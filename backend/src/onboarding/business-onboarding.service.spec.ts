@@ -19,6 +19,34 @@ function createService() {
 }
 
 describe('BusinessOnboardingService invitations', () => {
+  it('limits signup availability reads by authenticated user', async () => {
+    const redis = {
+      get: jest
+        .fn()
+        .mockResolvedValue({ applicationId: 'application', userId: 'owner' }),
+      isRateLimited: jest.fn().mockResolvedValue(true),
+    };
+    const policy = { availability: jest.fn() };
+    const service = new BusinessOnboardingService(
+      {} as never,
+      redis as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      undefined,
+      policy as never,
+    );
+    await expect(
+      service.subdomainAvailable('session', 'acme'),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(redis.isRateLimited).toHaveBeenCalledWith(
+      'rl:onboarding:subdomain-availability:owner',
+      120,
+      60,
+    );
+    expect(policy.availability).not.toHaveBeenCalled();
+  });
   it('saves the application language only for the verified signup user', async () => {
     const database = {
       query: jest

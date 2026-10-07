@@ -6,18 +6,31 @@ import {
 
 describe("request origin protection", () => {
   it("identifies authenticated state-changing requests", () => {
-    expect(isAuthenticatedMutation("POST", "business_session=token")).toBe(true);
-    expect(isAuthenticatedMutation("PATCH", "other=x; platform_admin_session=token")).toBe(true);
-    expect(isAuthenticatedMutation("GET", "business_session=token")).toBe(false);
+    expect(isAuthenticatedMutation("POST", "business_session=token")).toBe(
+      true,
+    );
+    expect(
+      isAuthenticatedMutation("PATCH", "other=x; platform_admin_session=token"),
+    ).toBe(true);
+    expect(isAuthenticatedMutation("GET", "business_session=token")).toBe(
+      false,
+    );
     expect(isAuthenticatedMutation("POST", null)).toBe(false);
   });
 
   it("recognises every session cookie that can authenticate a mutation", () => {
+    expect(isAuthenticatedMutation("PATCH", "signup_session=token")).toBe(true);
+    expect(isAuthenticatedMutation("GET", "signup_session=token")).toBe(false);
     expect(isAuthenticatedMutation("PUT", "business_session=token")).toBe(true);
     expect(
-      isAuthenticatedMutation("DELETE", "theme=dark; platform_admin_session=token"),
+      isAuthenticatedMutation(
+        "DELETE",
+        "theme=dark; platform_admin_session=token",
+      ),
     ).toBe(true);
-    expect(isAuthenticatedMutation("GET", "business_session=token")).toBe(false);
+    expect(isAuthenticatedMutation("GET", "business_session=token")).toBe(
+      false,
+    );
   });
 
   /** A name that merely ends with a known one is a different cookie. */
@@ -34,8 +47,20 @@ describe("request origin protection", () => {
   });
 
   it("accepts same-origin browser requests and server requests without origin headers", () => {
-    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", "https://tenant.example.com", null)).toBe(true);
-    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", null, null)).toBe(true);
+    expect(
+      isSameOriginBrowserRequest(
+        "https://tenant.example.com/api/test",
+        "https://tenant.example.com",
+        null,
+      ),
+    ).toBe(true);
+    expect(
+      isSameOriginBrowserRequest(
+        "https://tenant.example.com/api/test",
+        null,
+        null,
+      ),
+    ).toBe(true);
   });
 
   it("uses the browser-facing host when Next.js has an internal request URL", () => {
@@ -74,8 +99,26 @@ describe("request origin protection", () => {
   });
 
   it("rejects cross-origin, opaque, and malformed browser origins", () => {
-    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", "https://evil.example", null)).toBe(false);
-    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", "null", null)).toBe(false);
-    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", "not-a-url", null)).toBe(false);
+    expect(
+      isSameOriginBrowserRequest(
+        "https://tenant.example.com/api/test",
+        "https://evil.example",
+        null,
+      ),
+    ).toBe(false);
+    expect(
+      isSameOriginBrowserRequest(
+        "https://tenant.example.com/api/test",
+        "null",
+        null,
+      ),
+    ).toBe(false);
+    expect(
+      isSameOriginBrowserRequest(
+        "https://tenant.example.com/api/test",
+        "not-a-url",
+        null,
+      ),
+    ).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const SESSION_COOKIE_NAMES = [
   'business_session',
   'platform_admin_session',
+  'signup_session',
 ] as const;
 type HeaderValue = string | string[] | undefined;
 

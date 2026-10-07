@@ -15,6 +15,12 @@ describe('request origin protection', () => {
   });
 
   it('recognises every session cookie that can authenticate a mutation', () => {
+    expect(isAuthenticatedMutation('PATCH', { signup_session: 'token' })).toBe(
+      true,
+    );
+    expect(isAuthenticatedMutation('GET', { signup_session: 'token' })).toBe(
+      false,
+    );
     expect(isAuthenticatedMutation('PUT', { business_session: 'token' })).toBe(
       true,
     );

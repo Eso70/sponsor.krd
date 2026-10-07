@@ -1,4 +1,4 @@
-import { resolveLinktreeHost } from "./linktree-host";
+import { resolveLinktreeHost, type LinktreeHostScope } from "./linktree-host";
 import type { ResolvedBusinessDomain } from "@linktree/types";
 
 /** Canonical authorities come from configuration, never a supplied Host value. */
@@ -7,14 +7,18 @@ export function resolvePublicOrigin(
   rootDomain: string,
   appUrl: string,
   verified?: ResolvedBusinessDomain | null,
-) {
+): (LinktreeHostScope & { origin: string }) | null {
   if (verified?.isCustom || verified?.primaryHostname) {
-    const hostname = verified.primaryHostname || verified.hostname;
-    if (
-      !/^[a-z0-9.-]+$/.test(hostname) ||
-      !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(verified.subdomain)
-    )
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(verified.subdomain))
       return null;
+    if (!verified.primaryHostname)
+      return resolvePublicOrigin(
+        `${verified.subdomain}.${rootDomain}`,
+        rootDomain,
+        appUrl,
+      );
+    const hostname = verified.primaryHostname;
+    if (!/^[a-z0-9.-]+$/.test(hostname)) return null;
     return {
       isPlatformRoot: false,
       subdomain: verified.subdomain,

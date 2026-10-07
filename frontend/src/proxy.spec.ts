@@ -11,6 +11,10 @@ import {
   vi,
 } from "vitest";
 
+vi.mock("@/lib/public/domain-routing", () => ({
+  resolveBusinessHost: vi.fn().mockResolvedValue(null),
+}));
+
 const originalRootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
 let proxy: typeof import("./proxy").proxy;
 
@@ -65,20 +69,24 @@ describe("business route protection", () => {
     expect(response.headers.get("x-middleware-next")).toBe("1");
     expect(response.headers.get("location")).toBeNull();
   });
-  it.each(["/linktree/INVALID", "/linktree/" + "a".repeat(51), "/linktree/good/unknown"])(
-    "rejects malformed public path %s before streaming", async path => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
-      const response = await proxy(request(path));
-      expect(response.status).toBe(404);
-      expect(response.headers.get("x-robots-tag")).toContain("noindex");
-    },
-  );
+  it.each([
+    "/linktree/INVALID",
+    "/linktree/" + "a".repeat(51),
+    "/linktree/good/unknown",
+  ])("rejects malformed public path %s before streaming", async (path) => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+    const response = await proxy(request(path));
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-robots-tag")).toContain("noindex");
+  });
   it("preserves the image suffix when redirecting a trailing-slash alias", async () => {
     vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(null))
       .mockResolvedValueOnce(Response.json({ data: { slug: "canonical" } }));
     const response = await proxy(request("/linktree/alias/share-image/"));
     expect(response.status).toBe(308);
-    expect(new URL(response.headers.get("location")!).pathname).toBe("/linktree/canonical/share-image");
+    expect(new URL(response.headers.get("location")!).pathname).toBe(
+      "/linktree/canonical/share-image",
+    );
   });
 });

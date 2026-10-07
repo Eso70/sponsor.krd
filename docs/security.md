@@ -329,8 +329,8 @@ theft mitigations, not this header check.
 
 "Cookie-authenticated" is decided by a list of session cookie names kept in
 `backend/src/common/request-origin.ts` and mirrored in the proxy's
-`lib/security/request-origin.ts`: `business_session` and
-`platform_admin_session`. A session type missing from that list is not
+`lib/security/request-origin.ts`: `business_session`,
+`platform_admin_session` and `signup_session`. A session type missing from that list is not
 recognised as authenticated, so the check is **skipped rather than failed**
 and that surface silently loses this defence. Add the cookie to both lists
 when a new session type is introduced.
@@ -529,3 +529,12 @@ requires the proxy secret; certificate permission requires loopback and is block
 at the edge. Primary selection checks the public TLS certificate at a configured
 origin IP. Private business/platform APIs and dashboard authentication remain on
 Sponsor.krd hosts. See [Custom domains](custom-domains.md) for lifecycle details.
+
+Business authentication derives the tenant from the preserved `Host` using the
+same single-label parser as public routing. Unauthenticated `X-Forwarded-Host`
+and nested hostname labels cannot select a business. Only an authenticated
+internal proxy may supply an explicit tenant header. Signup availability reads
+require a signup session and are limited to 120 per user per minute. Domain DNS
+results use short-lived PostgreSQL row-version comparisons so an older success
+cannot reverse a newer revocation. Internal endpoints are blocked at both Caddy
+and the Next.js forwarding boundary.

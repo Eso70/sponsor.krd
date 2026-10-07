@@ -34,11 +34,26 @@ async function proxyRequest(
   const { path } = await params;
   const pathname = `/api/${path.join("/")}`;
   const url = new URL(pathname + request.nextUrl.search, BACKEND_URL);
+  // Normalize before checking: decoded route parameters can contain encoded
+  // slashes or dot segments. Never lend internal proxy credentials to a browser.
+  let normalizedPath: string;
+  try {
+    normalizedPath = new URL(decodeURIComponent(url.pathname), BACKEND_URL)
+      .pathname;
+  } catch {
+    return NextResponse.json({ message: "Not Found" }, { status: 404 });
+  }
+  if (
+    !normalizedPath.startsWith("/api/") ||
+    /^\/api\/internal(?:\/|$)/.test(normalizedPath)
+  ) {
+    return NextResponse.json({ message: "Not Found" }, { status: 404 });
+  }
 
   const host = request.headers.get("host") || "";
   const subdomain = extractSubdomain(
     host,
-    request.headers.get('x-subdomain') || undefined,
+    request.headers.get("x-subdomain") || undefined,
     process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
   );
   const cookieHeader = request.headers.get("cookie");
@@ -61,10 +76,7 @@ async function proxyRequest(
   }
 
   const contentLength = Number(request.headers.get("content-length"));
-  if (
-    Number.isFinite(contentLength) &&
-    contentLength > MAX_REQUEST_BYTES
-  ) {
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
     return payloadTooLargeResponse();
   }
 

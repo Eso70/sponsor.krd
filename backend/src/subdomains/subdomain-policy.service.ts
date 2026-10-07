@@ -17,7 +17,9 @@ export class SubdomainPolicyService {
     );
     return {
       system: [...RESERVED_BUSINESS_SUBDOMAINS].sort(),
-      custom: result.rows.map((row) => row.subdomain),
+      custom: result.rows
+        .map((row) => row.subdomain)
+        .filter((name) => !RESERVED_BUSINESS_SUBDOMAINS.has(name)),
     };
   }
 

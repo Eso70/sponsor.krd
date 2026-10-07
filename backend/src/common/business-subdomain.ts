@@ -33,6 +33,7 @@ export const RESERVED_BUSINESS_SUBDOMAINS: ReadonlySet<string> = new Set([
   'www',
   'api',
   'domains',
+  'extension',
   'admin',
   'platform',
   'system',

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { createContentSecurityPolicy } from "@/lib/security/content-security-policy";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { resolvePublicOrigin } from "@/lib/public/public-origin";
-import { resolveBusinessHost } from '@/lib/public/domain-routing';
+import { resolveBusinessHost } from "@/lib/public/domain-routing";
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import {
   INTERNAL_PROXY_KEY_HEADER,
@@ -32,7 +32,8 @@ function isPlatformAdminPath(pathname: string): boolean {
 
 function withCsp(response: NextResponse, csp: string): NextResponse {
   response.headers.set("Content-Security-Policy", csp);
-  if (response.status >= 400) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  if (response.status >= 400)
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }
 
@@ -105,18 +106,35 @@ async function isRegisteredSubdomain(
   }
 }
 
-async function publicPageAvailability(backendUrl: string, subdomain: string, identifier: string, clientIp: string): Promise<{ status: number; slug?: string }> {
+async function publicPageAvailability(
+  backendUrl: string,
+  subdomain: string,
+  identifier: string,
+  clientIp: string,
+): Promise<{ status: number; slug?: string }> {
   try {
-    const response = await fetch(`${backendUrl}/api/public/linktree-status/${encodeURIComponent(identifier)}`, {
-      headers: { "x-subdomain": subdomain, [INTERNAL_PROXY_KEY_HEADER]: internalProxyKey() || "", "x-forwarded-for": clientIp },
-      cache: "no-store", signal: AbortSignal.timeout(5_000),
-    });
+    const response = await fetch(
+      `${backendUrl}/api/public/linktree-status/${encodeURIComponent(identifier)}`,
+      {
+        headers: {
+          "x-subdomain": subdomain,
+          [INTERNAL_PROXY_KEY_HEADER]: internalProxyKey() || "",
+          "x-forwarded-for": clientIp,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
     if (response.ok) {
-      const body = await response.json() as { data?: { slug?: string } };
+      const body = (await response.json()) as { data?: { slug?: string } };
       return { status: 200, slug: body.data?.slug };
     }
-    return { status: [400, 403, 404, 410].includes(response.status) ? 404 : 503 };
-  } catch { return { status: 503 }; }
+    return {
+      status: [400, 403, 404, 410].includes(response.status) ? 404 : 503,
+    };
+  } catch {
+    return { status: 503 };
+  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -131,6 +149,9 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("x-public-path", pathname);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
+  if (/^\/api\/internal(?:\/|$)/.test(pathname)) {
+    return withCsp(new NextResponse(null, { status: 404 }), csp);
+  }
 
   if (
     pathname.startsWith("/__public-not-found") ||
@@ -146,9 +167,20 @@ export async function proxy(request: NextRequest) {
   const scope = resolveLinktreeHost(host, ROOT_DOMAIN);
   let verified: Awaited<ReturnType<typeof resolveBusinessHost>> = null;
   if (!scope.isPlatformRoot) {
-    try { verified = await resolveBusinessHost(host); }
-    catch {
-      if (!scope.subdomain) return withCsp(new NextResponse('Temporarily unavailable', { status: 503, headers: { 'Retry-After': '60', 'Cache-Control': 'no-store' } }), csp);
+    try {
+      verified = await resolveBusinessHost(host);
+    } catch {
+      if (
+        !scope.subdomain ||
+        (!pathname.startsWith("/business") && !pathname.startsWith("/api"))
+      )
+        return withCsp(
+          new NextResponse("Temporarily unavailable", {
+            status: 503,
+            headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+          }),
+          csp,
+        );
     }
   }
   const subdomain = verified?.subdomain || scope.subdomain;
@@ -156,25 +188,74 @@ export async function proxy(request: NextRequest) {
     return rewriteNotFound(request, "/__root-not-found", requestHeaders, csp);
   }
   if (verified?.isCustom) {
-    if (pathname.startsWith('/business')) {
-      const tenantOrigin = resolvePublicOrigin(`${subdomain}.${ROOT_DOMAIN}`, ROOT_DOMAIN, getAppBaseUrl());
-      if (tenantOrigin) return withCsp(NextResponse.redirect(new URL('/business/workspace-entry', tenantOrigin.origin), 307), csp);
+    if (pathname.startsWith("/business")) {
+      const tenantOrigin = resolvePublicOrigin(
+        `${subdomain}.${ROOT_DOMAIN}`,
+        ROOT_DOMAIN,
+        getAppBaseUrl(),
+      );
+      if (tenantOrigin)
+        return withCsp(
+          NextResponse.redirect(
+            new URL("/business/workspace-entry", tenantOrigin.origin),
+            307,
+          ),
+          csp,
+        );
     }
-    if (pathname.startsWith('/join') || isPlatformAdminPath(pathname) ||
-      (pathname.startsWith('/api/') && !/^\/api\/public(?:\/|$)/.test(pathname))) {
-      return rewriteNotFound(request, '/__public-not-found', requestHeaders, csp);
+    if (
+      pathname.startsWith("/join") ||
+      isPlatformAdminPath(pathname) ||
+      (pathname.startsWith("/api/") && !/^\/api\/public(?:\/|$)/.test(pathname))
+    ) {
+      return rewriteNotFound(
+        request,
+        "/__public-not-found",
+        requestHeaders,
+        csp,
+      );
     }
   }
-  if (verified?.primaryHostname && !pathname.startsWith('/api') && !pathname.startsWith('/business') &&
-    host.toLowerCase().split(':')[0] !== verified.primaryHostname) {
-    const target = new URL(`https://${verified.primaryHostname}`);
-    target.pathname = pathname; target.search = request.nextUrl.search;
-    return withCsp(NextResponse.redirect(target, 307), csp);
+  if (
+    verified &&
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/business")
+  ) {
+    const canonical = resolvePublicOrigin(
+      host,
+      ROOT_DOMAIN,
+      getAppBaseUrl(),
+      verified,
+    );
+    if (
+      canonical &&
+      host.toLowerCase().split(":")[0].replace(/\.$/, "") !==
+        new URL(canonical.origin).hostname
+    ) {
+      const target = new URL(canonical.origin);
+      target.pathname = pathname;
+      target.search = request.nextUrl.search;
+      const response = NextResponse.redirect(target, 307);
+      response.headers.set("Cache-Control", "no-store");
+      return withCsp(response, csp);
+    }
   }
-  const rootHostname = ROOT_DOMAIN.split(":")[0].toLowerCase().replace(/\.$/, "");
-  if (host.split(":")[0].toLowerCase().replace(/\.$/, "") === `www.${rootHostname}`) {
+  const rootHostname = ROOT_DOMAIN.split(":")[0]
+    .toLowerCase()
+    .replace(/\.$/, "");
+  if (
+    host.split(":")[0].toLowerCase().replace(/\.$/, "") ===
+    `www.${rootHostname}`
+  ) {
     const context = resolvePublicOrigin(host, ROOT_DOMAIN, getAppBaseUrl());
-    if (context) return withCsp(NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, context.origin), 308), csp);
+    if (context)
+      return withCsp(
+        NextResponse.redirect(
+          new URL(`${pathname}${request.nextUrl.search}`, context.origin),
+          308,
+        ),
+        csp,
+      );
   }
 
   // Block unregistered subdomains entirely
@@ -208,27 +289,63 @@ export async function proxy(request: NextRequest) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
   }
 
-  const publicPageMatch = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})(?:\/share-image)?\/?$/);
-  if ((pathname === "/linktree" || pathname.startsWith("/linktree/")) && !publicPageMatch) {
+  const publicPageMatch = pathname.match(
+    /^\/linktree\/([a-z0-9-]{1,50})(?:\/share-image)?\/?$/,
+  );
+  if (
+    (pathname === "/linktree" || pathname.startsWith("/linktree/")) &&
+    !publicPageMatch
+  ) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
   }
   if (publicPageMatch) {
-    const availability = await publicPageAvailability(backendUrl, subdomain, publicPageMatch[1],
-      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "");
+    const availability = await publicPageAvailability(
+      backendUrl,
+      subdomain,
+      publicPageMatch[1],
+      request.headers.get("x-forwarded-for") ||
+        request.headers.get("x-real-ip") ||
+        "",
+    );
     const { status, slug } = availability;
-    if (status === 404) return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
+    if (status === 404)
+      return rewriteNotFound(
+        request,
+        "/__public-not-found",
+        requestHeaders,
+        csp,
+      );
     if (status === 503) {
-      const url = request.nextUrl.clone(); url.pathname = "/status/unavailable"; url.search = "";
-      const response = NextResponse.rewrite(url, { status: 503, request: { headers: requestHeaders } });
+      const url = request.nextUrl.clone();
+      url.pathname = "/status/unavailable";
+      url.search = "";
+      const response = NextResponse.rewrite(url, {
+        status: 503,
+        request: { headers: requestHeaders },
+      });
       response.headers.set("Retry-After", "60");
       response.headers.set("Cache-Control", "no-store");
       return withCsp(response, csp);
     }
     if (slug && /^[a-z0-9-]{1,50}$/.test(slug) && slug !== publicPageMatch[1]) {
-      const context = resolvePublicOrigin(host, ROOT_DOMAIN, getAppBaseUrl(), verified);
+      const context = resolvePublicOrigin(
+        host,
+        ROOT_DOMAIN,
+        getAppBaseUrl(),
+        verified,
+      );
       if (context) {
         const suffix = /\/share-image\/?$/.test(pathname) ? "/share-image" : "";
-        return withCsp(NextResponse.redirect(new URL(`/linktree/${slug}${suffix}${request.nextUrl.search}`, context.origin), 308), csp);
+        return withCsp(
+          NextResponse.redirect(
+            new URL(
+              `/linktree/${slug}${suffix}${request.nextUrl.search}`,
+              context.origin,
+            ),
+            308,
+          ),
+          csp,
+        );
       }
     }
   }
@@ -323,8 +440,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  if (pathname.startsWith("/business") || pathname.startsWith("/api") ||
-      (subdomain && pathname === "/") || pathname.startsWith("/advertising")) {
+  if (
+    pathname.startsWith("/business") ||
+    pathname.startsWith("/api") ||
+    (subdomain && pathname === "/") ||
+    pathname.startsWith("/advertising")
+  ) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   return withCsp(response, csp);

@@ -5,6 +5,8 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
@@ -48,14 +50,17 @@ export class DomainsService {
   get enabled(): boolean {
     return this.config.get<boolean>('CUSTOM_DOMAINS_ENABLED', false);
   }
-  private requireEnabled() {
-    if (
-      !this.enabled ||
-      !(
+  private get configured(): boolean {
+    return (
+      this.enabled &&
+      !!(
         this.dns.addresses('CUSTOM_DOMAIN_IPV4').length ||
         this.dns.addresses('CUSTOM_DOMAIN_IPV6').length
       )
-    )
+    );
+  }
+  private requireEnabled() {
+    if (!this.configured)
       throw new ServiceUnavailableException(
         'Custom domains are not enabled or configured',
       );
@@ -72,7 +77,7 @@ export class DomainsService {
       [businessId],
     );
     return {
-      enabled: this.enabled,
+      enabled: this.configured,
       target: this.config.get<string>(
         'CUSTOM_DOMAIN_TARGET',
         'domains.sponsor.krd',
@@ -89,6 +94,7 @@ export class DomainsService {
             ? 'disconnected'
             : row.status,
         isPrimary:
+          row.status === 'active' &&
           row.is_primary &&
           !!row.valid_until &&
           row.valid_until.getTime() > Date.now(),
@@ -179,11 +185,14 @@ export class DomainsService {
       actorId &&
       (await this.redis.isRateLimited(`rl:domain-verify:${businessId}`, 10, 60))
     )
-      throw new BadRequestException(
+      throw new HttpException(
         'Too many verification attempts; try again shortly',
+        HttpStatus.TOO_MANY_REQUESTS,
       );
-    const result = await this.db.query<DomainRow>(
-      'SELECT * FROM business_domains WHERE business_id=$1 AND id=$2',
+    const result = await this.db.query<DomainRow & { revision: string }>(
+      `SELECT d.*, d.xmin::text AS revision FROM business_domains d
+       WHERE d.business_id=$1 AND d.id=$2 AND EXISTS
+       (SELECT 1 FROM businesses b WHERE b.id=d.business_id AND b.account_type='business' AND b.status='active')`,
       [businessId, id],
     );
     const row = result.rows[0];
@@ -201,8 +210,9 @@ export class DomainsService {
         `UPDATE business_domains SET status=$3, last_error=$4::text, checked_at=now(),
         verified_at=CASE WHEN $4::text IS NULL THEN now() ELSE verified_at END,
         valid_until=CASE WHEN $4::text IS NULL THEN now()+interval '48 hours' ELSE NULL END,
-        is_primary=CASE WHEN $4::text IS NULL THEN is_primary ELSE false END
-        WHERE business_id=$1 AND id=$2 AND verification_token=$5 RETURNING *`,
+        is_primary=CASE WHEN $4::text IS NULL AND status='active' AND valid_until>now() THEN is_primary ELSE false END
+        WHERE business_id=$1 AND id=$2 AND verification_token=$5 AND xmin::text=$6
+        AND EXISTS (SELECT 1 FROM businesses b WHERE b.id=business_id AND b.account_type='business' AND b.status='active') RETURNING *`,
         [
           businessId,
           id,
@@ -213,9 +223,15 @@ export class DomainsService {
             : 'active',
           failure,
           row.verification_token,
+          row.revision,
         ],
       );
-      if (!current.rows[0]) throw new NotFoundException('Domain not found');
+      // DNS runs outside the transaction. A newer check, removal or maintenance
+      // claim must invalidate this result rather than allowing stale activation.
+      if (!current.rows[0])
+        throw new ConflictException(
+          'Domain changed during verification; refresh and try again',
+        );
       if (actorId || current.rows[0].status !== row.status)
         await this.audit(
           client,
@@ -256,8 +272,16 @@ export class DomainsService {
     actorId: string,
   ): Promise<BusinessDomains> {
     this.requireEnabled();
+    if (
+      await this.redis.isRateLimited(`rl:domain-primary:${businessId}`, 10, 60)
+    )
+      throw new HttpException(
+        'Too many HTTPS checks; try again shortly',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     const candidate = await this.db.query<{ hostname: string }>(
-      "SELECT hostname FROM business_domains WHERE id=$1 AND business_id=$2 AND status='active' AND valid_until>now()",
+      `SELECT d.hostname FROM business_domains d WHERE d.id=$1 AND d.business_id=$2 AND d.status='active' AND d.valid_until>now()
+       AND EXISTS (SELECT 1 FROM businesses b WHERE b.id=d.business_id AND b.account_type='business' AND b.status='active')`,
       [id, businessId],
     );
     if (!candidate.rows[0])
@@ -266,9 +290,12 @@ export class DomainsService {
       );
     await this.tls.assertReady(candidate.rows[0].hostname);
     await this.db.transaction(async (client) => {
-      await client.query('SELECT id FROM businesses WHERE id=$1 FOR UPDATE', [
-        businessId,
-      ]);
+      const business = await client.query(
+        "SELECT id FROM businesses WHERE id=$1 AND account_type='business' AND status='active' FOR UPDATE",
+        [businessId],
+      );
+      if (!business.rowCount)
+        throw new NotFoundException('Active business not found');
       const result = await client.query<DomainRow>(
         "SELECT * FROM business_domains WHERE id=$1 AND business_id=$2 AND status='active' AND valid_until>now() FOR UPDATE",
         [id, businessId],
@@ -336,7 +363,7 @@ export class DomainsService {
   }
 
   async recheck(): Promise<void> {
-    if (!this.enabled || this.rechecking) return;
+    if (!this.configured || this.rechecking) return;
     this.rechecking = true;
     try {
       // Atomic claims distribute bounded work across backend processes.

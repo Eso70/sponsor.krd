@@ -64,7 +64,7 @@ truth.
 ## Proportionate verification
 
 Custom-domain coverage verifies automatic activation for many businesses across clustered
-workers, corrected-DNS reconnection, expired/suspended exclusions, configurable
+workers, corrected-DNS reconnection, expired/suspended exclusions,
 one-domain-per-business enforcement, bounded concurrency and retry after worker failures. Shared dashboard
 tests cover automatic status updates in business and platform contexts, hidden
 tabs, request overlap and unmount cancellation. The domain e2e suite uses only its
@@ -74,6 +74,11 @@ DNS verification tests cover configured trusted resolvers, invalid resolver
 configuration, missing versus mismatched proofs, token-free diagnostic logging,
 and transient lookup errors. Both dashboard integrations cover current lookup
 errors taking precedence over previously recorded ownership failures.
+Routing tests cover default-only/public custom-only transitions, uncached alias
+redirects, fail-closed resolver outages, and deletion restoring default routing.
+Business/platform integration tests cover confirmation layering, keyboard
+focus restoration, keeping the parent dialog open and successful removal. The
+shared confirmation has a keyboard focus-trap regression test.
 
 Subdomain policy coverage includes permanent/custom reservations, occupied names,
 administrator-only policy mutations, stale signup availability responses, inline
@@ -198,29 +203,33 @@ deterministic.
 
 ### Running the e2e suite
 
-`pnpm test:e2e` on its own fails by design: the development `DB_NAME`
-(`sponsor_krd`) has no `e2e`/`test` segment, and the fixtures are destructive.
-It needs a disposable database, created once and provisioned with the same
-consolidated schema:
+The suite loads connection settings through `test/e2e-environment.ts` and selects
+a disposable database name. Use a local or dedicated test PostgreSQL/Redis
+instance; never point these fixtures at valuable data. The domain and subdomain
+policy fixtures create and remove their own generated databases:
 
 ```bash
-# once: create the database, then apply full_schema.sql to it
-DB_NAME=linktree_e2e pnpm db:migrate
-
-# every run: the suite reads DB_* from the environment, not from .env
-DB_HOST=... DB_PORT=... DB_USER=... DB_PASSWORD=... DB_NAME=linktree_e2e pnpm test:e2e
+pnpm --filter backend test:e2e -- custom-domains subdomain-policy
 ```
 
-The `DB_*` variables must be exported rather than left to `.env`: the e2e
-fixtures open their own pools before Nest's config module loads, so an unset
-`DB_PASSWORD` surfaces as `SASL: client password must be a string` rather than
-as a missing-configuration error.
+Process environment values take precedence over `.env`. The shared setup runs
+before fixture pools are opened, so connection settings do not depend on Nest's
+configuration module starting first.
 ## Custom domains
 
 `backend/test/custom-domains.e2e-spec.ts` creates a disposable database to verify
 baseline/migration reruns, unique hostname claims, tenant-scoped mutations,
 ownership loss, lease expiry, HTTPS-gated primary selection and concurrent primary
-changes. DNS and TLS unit tests use controlled responses. Frontend tests cover
+changes. It also covers out-of-order DNS results, removal during verification,
+transient failures preserving leases, expiry clearing primary selection, and
+suspension during HTTPS activation. DNS and TLS unit tests use controlled responses. Frontend tests cover
 both domain-panel integrations, read-only capability controls and custom-host
 routing, private-route rejection, aliases and resolver failures. Real DNS and
 certificate issuance require the production checks in [Custom domains](custom-domains.md).
+
+Security regression tests cover forged forwarding headers, nested tenant hosts,
+signup-session origin protection, rate-limited availability and HTTPS checks,
+missing resolver credentials, and browser attempts to reach internal endpoints
+through decoded/dot-segment paths. Shared dialog tests cover duplicate deletion
+submission; platform integration tests cover tenant selection resetting nested
+domain dialogs.

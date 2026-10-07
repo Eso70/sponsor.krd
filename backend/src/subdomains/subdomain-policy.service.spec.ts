@@ -62,6 +62,21 @@ describe('SubdomainPolicyService', () => {
     );
     expect(database.query).not.toHaveBeenCalled();
   });
+  it('does not expose duplicate removable entries for newly reserved service labels', async () => {
+    database.query.mockResolvedValue({
+      rows: [{ subdomain: 'extension' }, { subdomain: 'support' }],
+    });
+    const list = await service.list();
+    expect(list.system).toContain('extension');
+    expect(list.custom).toEqual(['support']);
+    expect(await service.availability('extension')).toMatchObject({
+      available: false,
+      reason: 'blocked',
+    });
+    await expect(service.remove('extension', 'admin')).rejects.toThrow(
+      'reserved',
+    );
+  });
 
   it('maps assignment races to a safe conflict', async () => {
     database.query.mockRejectedValue({

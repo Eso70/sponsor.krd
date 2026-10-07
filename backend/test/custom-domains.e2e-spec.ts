@@ -99,6 +99,10 @@ describe('durable custom domain tenancy', () => {
   });
   beforeEach(async () => {
     await db.query('DELETE FROM business_domains');
+    await db.query(
+      "UPDATE businesses SET status='active' WHERE id=ANY($1::uuid[])",
+      [[owner, other]],
+    );
     dns.check.mockReset();
     dns.check.mockResolvedValue(null);
     tls.assertReady.mockReset();
@@ -109,6 +113,94 @@ describe('durable custom domain tenancy', () => {
     await service.verify(owner, domain.id, owner);
     return domain;
   }
+  it.each(['ownership', null] as const)(
+    'discards an older DNS result when a newer check returned %s',
+    async (latest) => {
+      const domain = await verifiedDomain();
+      let finishOld!: (result: 'ownership' | null) => void;
+      let started!: () => void;
+      const waiting = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      dns.check
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finishOld = resolve;
+              started();
+            }),
+        )
+        .mockResolvedValueOnce(latest);
+      const old = service.verify(owner, domain.id, owner);
+      const rejected = expect(old).rejects.toThrow(
+        'changed during verification',
+      );
+      await waiting;
+      await worker().verify(owner, domain.id, owner);
+      finishOld(latest === null ? 'ownership' : null);
+      await rejected;
+      expect((await service.list(owner)).domains[0]).toMatchObject({
+        status: latest === null ? 'active' : 'disconnected',
+        lastError: latest,
+      });
+    },
+  );
+  it('renews an expired lease without silently restoring primary selection', async () => {
+    const domain = await verifiedDomain();
+    await service.primary(owner, domain.id, owner);
+    await service.verify(owner, domain.id, owner);
+    expect((await service.list(owner)).domains[0].isPrimary).toBe(true);
+    await db.query(
+      "UPDATE business_domains SET valid_until=now()-interval '1 second' WHERE id=$1",
+      [domain.id],
+    );
+    await service.verify(owner, domain.id, owner);
+    expect((await service.list(owner)).domains[0]).toMatchObject({
+      status: 'active',
+      isPrimary: false,
+    });
+    expect(await service.resolve('wafaye.sponsor.krd')).toMatchObject({
+      primaryHostname: null,
+    });
+  });
+  it('cannot reactivate a removed claim after DNS work finishes', async () => {
+    const domain = await verifiedDomain();
+    dns.check.mockImplementationOnce(async () => {
+      await service.remove(owner, domain.id, owner);
+      return null;
+    });
+    await expect(service.verify(owner, domain.id, owner)).rejects.toThrow(
+      'changed during verification',
+    );
+    expect(await service.resolve(domain.hostname)).toBeNull();
+    expect((await service.list(owner)).domains).toEqual([]);
+  });
+  it('preserves the current lease on transient DNS errors', async () => {
+    const domain = await verifiedDomain();
+    await service.primary(owner, domain.id, owner);
+    const before = (await service.list(owner)).domains[0];
+    dns.check.mockRejectedValueOnce(new Error('DNS unavailable'));
+    await expect(service.verify(owner, domain.id, owner)).rejects.toThrow(
+      'DNS unavailable',
+    );
+    expect((await service.list(owner)).domains[0]).toEqual(before);
+  });
+  it('rejects activation if the business is suspended during the HTTPS check', async () => {
+    const domain = await verifiedDomain();
+    tls.assertReady.mockImplementationOnce(async () => {
+      await db.query("UPDATE businesses SET status='suspended' WHERE id=$1", [
+        owner,
+      ]);
+    });
+    await expect(service.primary(owner, domain.id, owner)).rejects.toThrow(
+      'Active business not found',
+    );
+    await expect(service.verify(owner, domain.id, owner)).rejects.toThrow(
+      'Domain not found',
+    );
+    expect((await service.list(owner)).domains[0].isPrimary).toBe(false);
+    expect(await service.resolve(domain.hostname)).toBeNull();
+  });
   it('requires verification, prevents duplicate assignments, and scopes mutations to the owner', async () => {
     const domain = (await service.add(owner, 'WAFAYE.com', owner)).domains[0];
     expect(domain.verificationToken).toMatch(/^[a-f0-9]{64}$/);
@@ -168,7 +260,15 @@ describe('durable custom domain tenancy', () => {
       [domain.id],
     );
     expect(await service.resolve('wafaye.com')).toBeNull();
+    await service.verify(owner, domain.id, owner);
+    await service.primary(owner, domain.id, owner);
     await service.remove(owner, domain.id, owner);
+    expect(await service.resolve('wafaye.com')).toBeNull();
+    expect(await service.resolve('wafaye.sponsor.krd')).toMatchObject({
+      subdomain: 'wafaye',
+      isCustom: false,
+      primaryHostname: null,
+    });
     expect((await service.list(owner)).domains).toEqual([]);
     const audit = await db.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM billing_policy_audit_events WHERE business_id=$1 AND resource_type='business.domains'",

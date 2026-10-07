@@ -15,7 +15,7 @@ describe('normalizeBusinessSubdomain', () => {
     expect(normalizeBusinessSubdomain('  Acme-Coffee  ')).toBe('acme-coffee');
   });
 
-  it.each(['www', 'api', 'admin', 'bio', 'linktree'])(
+  it.each(['www', 'api', 'admin', 'bio', 'linktree', 'domains', 'extension'])(
     'refuses %s, which the platform answers on itself',
     (reserved) => {
       expect(() => normalizeBusinessSubdomain(reserved)).toThrow(

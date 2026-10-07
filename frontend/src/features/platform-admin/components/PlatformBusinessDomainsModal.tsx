@@ -20,6 +20,7 @@ export function PlatformBusinessDomainsModal({
       onClose={onClose}
     >
       <BusinessDomainsPanel
+        key={business.id}
         scope={{ surface: "platform", businessId: business.id }}
         locale={locale}
       />

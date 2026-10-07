@@ -143,6 +143,12 @@ explicitly. Verified primary origins drive public routing, canonicals, sitemap
 and share images; dashboard authentication remains on the Sponsor.krd subdomain.
 See [Custom domains](custom-domains.md).
 
+Public domain redirects and canonical origins share `resolvePublicOrigin`.
+The default address remains canonical until a custom domain is HTTPS-ready and
+primary. Alias redirects are temporary and uncached so removing the domain
+immediately restores the default address. Domain deletion places the shared
+confirmation above management dialogs and retains the parent dialog on cancel.
+
 
 Platform Settings > Blocked subdomains lists permanent system reservations and
 database-backed custom blocks. Administrators can add or remove custom blocks;

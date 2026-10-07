@@ -2,7 +2,7 @@
 
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
-import { memo } from "react";
+import { memo, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Loader2, Trash2, X } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
@@ -37,12 +37,19 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
   zIndexClassName = "z-50",
   tone = "danger",
 }: ConfirmDeleteModalProps) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const confirming = useRef(false);
   const handleConfirm = async () => {
+    if (isDeleting || confirming.current) return;
+    confirming.current = true;
     try {
       await onConfirm();
       onClose();
     } catch (error) {
       console.error("Delete error:", error);
+    } finally {
+      confirming.current = false;
     }
   };
 
@@ -58,6 +65,7 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
     onEnter: handleConfirm,
     enterEnabled: !isDeleting,
     escapeEnabled: !isDeleting,
+    dialogRef,
   });
 
   if (!isOpen) return null;
@@ -69,13 +77,21 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
       dir="ltr"
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl
           bg-white dark:bg-[#161B22]
           border border-slate-200 dark:border-white/10
         "
       >
         <div className="p-5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-850 dark:text-gray-100 font-kurdish">
+          <h3
+            id={titleId}
+            className="text-lg font-bold text-slate-850 dark:text-gray-100 font-kurdish"
+          >
             {title}
           </h3>
           <Tooltip content={closeLabel} side="bottom">
@@ -121,7 +137,9 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
             >
               {isDeleting ? (
                 <>
-                  <MotionSpinner><Loader2 className="h-5 w-5 "  /></MotionSpinner>
+                  <MotionSpinner>
+                    <Loader2 className="h-5 w-5 " />
+                  </MotionSpinner>
                   <span>{loadingLabel}</span>
                 </>
               ) : (

@@ -51,10 +51,10 @@ const en = {
   address: "A / AAAA record values",
   apex: "For a root domain, use the A/AAAA values below. A root CNAME is also supported when your provider offers flattening. Use DNS-only routing; a CDN proxy will prevent the routing check.",
   primaryHelp:
-    "Making a domain primary redirects public visits from other business addresses to it. Dashboard login remains on the Sponsor.krd subdomain.",
+    "Only the primary address serves your public website. Until you make this domain primary, it redirects to your Sponsor.krd address. Dashboard login remains on the Sponsor.krd subdomain.",
   deleteTitle: "Remove domain?",
   deleteMessage:
-    "This domain will stop serving the business website. Existing Sponsor.krd access will remain available.",
+    "This domain will disconnect. Your public website will automatically return to its default Sponsor.krd address.",
   of: "of",
   previous: "Previous page",
   next: "Next page",
@@ -109,10 +109,10 @@ export const domainCopy = {
     address: "قيم سجلات A / AAAA",
     apex: "للنطاق الرئيسي استخدم قيم A/AAAA أدناه، أو CNAME إذا كان المزود يدعم التسطيح. استخدم DNS فقط دون وكيل CDN.",
     primaryHelp:
-      "تعيين نطاق رئيسي يعيد توجيه الزيارات العامة إليه. يبقى دخول لوحة التحكم على نطاق Sponsor.krd الفرعي.",
+      "العنوان الرئيسي وحده يعرض الموقع العام. حتى تعيين هذا النطاق كرئيسي، يعيد التوجيه إلى عنوان Sponsor.krd. يبقى دخول لوحة التحكم على نطاق Sponsor.krd الفرعي.",
     deleteTitle: "إزالة النطاق؟",
     deleteMessage:
-      "سيتوقف النطاق عن عرض الموقع. يبقى الوصول عبر Sponsor.krd متاحًا.",
+      "سيتم فصل هذا النطاق. يعود الموقع العام تلقائيًا إلى عنوان Sponsor.krd الافتراضي.",
     of: "من",
     previous: "الصفحة السابقة",
     next: "الصفحة التالية",
@@ -172,10 +172,10 @@ export const domainCopy = {
     address: "بەهاکانی A / AAAA",
     apex: "بۆ دۆمەینی سەرەکی A/AAAA بەکاربهێنە، یان CNAME ئەگەر دابینکەرەکەت flattening پشتگیری دەکات. DNS-only بەکاربهێنە بەبێ پرۆکسی CDN.",
     primaryHelp:
-      "دۆمەینی سەرەکی سەردانە گشتییەکان بۆ خۆی ڕەوانە دەکات. چوونەژوورەوەی داشبۆرد لە ساب‌دۆمەینی Sponsor.krd دەمێنێتەوە.",
+      "تەنها ناونیشانی سەرەکی ماڵپەڕە گشتییەکە پیشان دەدات. تا ئەم دۆمەینە دەکەیت بە سەرەکی، بۆ ناونیشانی Sponsor.krd ڕەوانە دەکرێت. چوونەژوورەوەی داشبۆرد لە ساب‌دۆمەینی Sponsor.krd دەمێنێتەوە.",
     deleteTitle: "دۆمەین لاببرێت؟",
     deleteMessage:
-      "ئەم دۆمەینە چیتر ماڵپەڕەکە پیشان نادات. Sponsor.krd بەردەست دەمێنێتەوە.",
+      "ئەم دۆمەینە دەبڕێت. ماڵپەڕە گشتییەکە بە خۆکار دەگەڕێتەوە بۆ ناونیشانی بنەڕەتی Sponsor.krd.",
     of: "لە",
     previous: "پەڕەی پێشوو",
     next: "پەڕەی دواتر",

@@ -57,6 +57,20 @@ describe("verified custom-domain routing", () => {
       "wafaye",
     );
   });
+  it.each(["sponsor.krd", "wafaye.sponsor.krd", "wafaye.com"])(
+    "blocks internal endpoints before resolution on %s",
+    async (host) => {
+      const calls = resolve.mock.calls.length;
+      expect(
+        (
+          await proxy(
+            request("/api/internal/domains/resolve?host=victim.com", host),
+          )
+        ).status,
+      ).toBe(404);
+      expect(resolve.mock.calls.length).toBe(calls);
+    },
+  );
   it("keeps dashboard login on the business subdomain", async () => {
     const response = await proxy(request("/business/settings"));
     expect(response.headers.get("location")).toBe(
@@ -82,6 +96,7 @@ describe("verified custom-domain routing", () => {
       request("/linktree/menu?source=qr", "wafaye.sponsor.krd"),
     );
     expect(response.status).toBe(307);
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("location")).toBe(
       "https://wafaye.com/linktree/menu?source=qr",
     );
@@ -105,5 +120,45 @@ describe("verified custom-domain routing", () => {
     expect((await proxy(request("/"))).status).toBe(404);
     resolve.mockRejectedValue(new Error("offline"));
     expect((await proxy(request("/"))).status).toBe(503);
+  });
+  it("keeps the default domain as the only public address until custom activation", async () => {
+    resolve.mockResolvedValue({
+      hostname: "wafaye.com",
+      subdomain: "wafaye",
+      primaryHostname: null,
+      isCustom: true,
+    });
+    const response = await proxy(request("/linktree/menu?source=qr"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://wafaye.sponsor.krd/linktree/menu?source=qr",
+    );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    resolve.mockResolvedValue({
+      hostname: "wafaye.sponsor.krd",
+      subdomain: "wafaye",
+      primaryHostname: null,
+      isCustom: false,
+    });
+    expect((await proxy(request("/", "wafaye.sponsor.krd"))).status).toBe(200);
+  });
+  it("restores the default website and rejects the removed custom mapping", async () => {
+    resolve.mockResolvedValue(null);
+    const restored = await proxy(
+      request("/linktree/menu", "wafaye.sponsor.krd"),
+    );
+    expect(restored.status).toBe(200);
+    expect(restored.headers.get("location")).toBeNull();
+    expect((await proxy(request("/"))).status).toBe(404);
+  });
+  it("does not serve a second public address when domain resolution is unavailable", async () => {
+    resolve.mockRejectedValue(new Error("offline"));
+    const response = await proxy(request("/", "wafaye.sponsor.krd"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(
+      (await proxy(request("/business/workspace-entry", "wafaye.sponsor.krd")))
+        .status,
+    ).toBe(200);
   });
 });

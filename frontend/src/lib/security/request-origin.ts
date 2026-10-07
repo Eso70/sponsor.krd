@@ -11,9 +11,13 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_COOKIE_NAMES = [
   "business_session",
   "platform_admin_session",
+  "signup_session",
 ] as const;
 
-export function isAuthenticatedMutation(method: string, cookieHeader: string | null): boolean {
+export function isAuthenticatedMutation(
+  method: string,
+  cookieHeader: string | null,
+): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) return false;
   // Split rather than match: a name built into a `RegExp` has to be escaped,
   // and a template literal silently eats the `\s` that made the old pattern
@@ -41,11 +45,21 @@ export function isSameOriginBrowserRequest(
 
   try {
     const internalUrl = new URL(requestUrl);
-    const publicHost = firstForwardedValue(hostHeader) || firstForwardedValue(forwardedHostHeader);
-    const publicProtocol = firstForwardedValue(forwardedProtoHeader) || internalUrl.protocol.slice(0, -1);
+    const publicHost =
+      firstForwardedValue(hostHeader) ||
+      firstForwardedValue(forwardedHostHeader);
+    const publicProtocol =
+      firstForwardedValue(forwardedProtoHeader) ||
+      internalUrl.protocol.slice(0, -1);
 
-    if (publicHost && (publicProtocol === "http" || publicProtocol === "https")) {
-      return new URL(source).origin === new URL(`${publicProtocol}://${publicHost}`).origin;
+    if (
+      publicHost &&
+      (publicProtocol === "http" || publicProtocol === "https")
+    ) {
+      return (
+        new URL(source).origin ===
+        new URL(`${publicProtocol}://${publicHost}`).origin
+      );
     }
 
     return new URL(source).origin === internalUrl.origin;

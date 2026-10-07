@@ -25,7 +25,7 @@ describe("verified public domain origins", () => {
       origin: "https://wafaye.com",
     });
   });
-  it("keeps a verified alias on its own domain until a primary is selected", () => {
+  it("uses the default origin until the custom domain is made primary", () => {
     expect(
       resolvePublicOrigin("wafaye.com", "sponsor.krd", "https://sponsor.krd", {
         hostname: "wafaye.com",
@@ -33,6 +33,6 @@ describe("verified public domain origins", () => {
         subdomain: "wafaye",
         isCustom: true,
       })?.origin,
-    ).toBe("https://wafaye.com");
+    ).toBe("https://wafaye.sponsor.krd");
   });
 });

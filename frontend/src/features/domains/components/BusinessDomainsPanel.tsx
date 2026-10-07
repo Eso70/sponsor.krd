@@ -296,6 +296,7 @@ export function BusinessDomainsPanel({
       {deleting && (
         <ConfirmDeleteModal
           isOpen
+          zIndexClassName="z-[160]"
           title={copy.deleteTitle}
           message={`${deleting.hostname}: ${copy.deleteMessage}`}
           confirmLabel={copy.remove}

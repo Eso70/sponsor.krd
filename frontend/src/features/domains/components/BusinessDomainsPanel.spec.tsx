@@ -41,6 +41,41 @@ const data = {
   domains: [domain],
 };
 describe("shared custom-domain management", () => {
+  it("clears the previous tenant and nested dialogs when platform selection changes", async () => {
+    const { rerender } = render(
+      <PlatformLocaleProvider initialLocale="en">
+        <PlatformBusinessDomainsModal
+          business={{ id: "wafaye-id", name: "Wafaye" }}
+          onClose={vi.fn()}
+        />
+      </PlatformLocaleProvider>,
+    );
+    await screen.findAllByText("wafaye.com");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "DNS setup: wafaye.com" })[0],
+    );
+    expect(
+      screen.getByDisplayValue("_sponsor-verification.wafaye.com"),
+    ).toBeInTheDocument();
+    load.mockResolvedValue({ ...data, subdomain: "other", domains: [] });
+    rerender(
+      <PlatformLocaleProvider initialLocale="en">
+        <PlatformBusinessDomainsModal
+          business={{ id: "other-id", name: "Other" }}
+          onClose={vi.fn()}
+        />
+      </PlatformLocaleProvider>,
+    );
+    await screen.findByText("No custom domains connected");
+    expect(
+      screen.queryByDisplayValue("_sponsor-verification.wafaye.com"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("wafaye.com")).not.toBeInTheDocument();
+    expect(load).toHaveBeenLastCalledWith(
+      "/api/platform/businesses/other-id/domains",
+      expect.any(AbortSignal),
+    );
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -241,6 +276,71 @@ describe("shared custom-domain management", () => {
       "Remove it before connecting a different domain",
     );
   });
+  it.each(["business", "platform"] as const)(
+    "keeps the delete confirmation above %s management and restores the empty domain state",
+    async (surface) => {
+      const close = vi.fn();
+      load.mockResolvedValue({
+        ...data,
+        domains: [{ ...domain, status: "active", isPrimary: true }],
+      });
+      action.mockResolvedValue({ ...data, domains: [] });
+      render(
+        surface === "business" ? (
+          <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />
+        ) : (
+          <PlatformLocaleProvider initialLocale="en">
+            <PlatformBusinessDomainsModal
+              business={{ id: "wafaye-id", name: "Wafaye" }}
+              onClose={close}
+            />
+          </PlatformLocaleProvider>
+        ),
+      );
+      await screen.findAllByText("wafaye.com");
+      const trigger = screen.getAllByRole("button", {
+        name: "Remove: wafaye.com",
+      })[0];
+      trigger.focus();
+      fireEvent.click(trigger);
+      const dialog = screen.getByRole("dialog", { name: "Remove domain?" });
+      expect(dialog.parentElement).toHaveClass("z-[160]");
+      expect(dialog).toHaveFocus();
+      expect(
+        within(dialog).getByText(
+          /automatically return to its default Sponsor.krd address/,
+        ),
+      ).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(
+        screen.queryByRole("dialog", { name: "Remove domain?" }),
+      ).not.toBeInTheDocument();
+      expect(close).not.toHaveBeenCalled();
+      expect(trigger).toHaveFocus();
+      fireEvent.click(trigger);
+      fireEvent.click(
+        within(
+          screen.getByRole("dialog", { name: "Remove domain?" }),
+        ).getByRole("button", { name: "Remove" }),
+      );
+      await screen.findByText("No custom domains connected");
+      expect(action).toHaveBeenCalledWith(
+        surface === "business"
+          ? "/api/business/domains"
+          : "/api/platform/businesses/wafaye-id/domains",
+        "domain-id",
+        "remove",
+      );
+      expect(
+        screen.queryByRole("dialog", { name: "Remove domain?" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add domain" })).toBeEnabled();
+      if (surface === "platform")
+        expect(
+          screen.getByRole("dialog", { name: "Custom domains: Wafaye" }),
+        ).toBeInTheDocument();
+    },
+  );
   it.each(["business", "platform"] as const)(
     "shows the current server DNS failure instead of an old ownership failure on %s",
     async (surface) => {

@@ -9,7 +9,7 @@ export async function resolveBusinessHost(
   host: string,
 ): Promise<ResolvedBusinessDomain | null> {
   const key = internalProxyKey();
-  if (!key) return null;
+  if (!key) throw new Error("Domain resolution is not configured");
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/internal/domains/resolve?host=${encodeURIComponent(host)}`,
     {

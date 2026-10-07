@@ -1,8 +1,12 @@
 # Business custom domains
 
-Customer domains serve the same business and published pages as its Sponsor.krd
-subdomain. No second installation, database, or per-customer release is created.
-Content and deployed application updates apply to every connected address.
+The latest review and regression results are recorded in
+[Domain and signup audit](domain-security-audit.md).
+
+Customer domains reuse the existing business and published pages. One selected
+address serves the website; the other redirects to it. No second installation,
+database, or per-customer release is created. Content and deployed application
+updates apply to the business automatically.
 
 ## Management
 
@@ -54,11 +58,20 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
   not immediately revoke it, but its 48-hour verification lease expires closed.
   Removing a domain, suspending/deleting a business, or lease expiry immediately
   stops domain resolution; active mappings are not persistently cached.
+- DNS checks commit only if the database row version still matches the snapshot
+  taken before the lookup. A later check, removal or maintenance claim invalidates
+  older results. Renewing an expired lease clears primary selection; the owner must
+  select it again after HTTPS readiness. Verification and primary activation reject
+  inactive businesses. Manual DNS and HTTPS checks each allow ten attempts per
+  business per minute and return 429 when exceeded.
 - Caddy asks the loopback-only `/api/internal/domains/tls` endpoint before issuing
   a customer certificate. Only active, verified domains for active businesses
   are allowed. Edge configuration blocks all `/api/internal/*` routes and strips
   incoming tenant/proxy headers. The resolver additionally authenticates its
   internal caller with the existing proxy secret. Enable strict SNI/Host matching.
+  Next.js also blocks internal endpoints before forwarding browser requests,
+  including decoded paths and dot segments; direct frontend access cannot borrow
+  its internal credentials. Missing resolver credentials fail closed.
 - Making a domain primary first probes HTTPS against a configured origin IP with
   SNI and normal public certificate-chain/hostname verification. It never connects
   to an arbitrary customer-provided IP. If issuance is still in progress, retry.
@@ -67,11 +80,26 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
   remain on Sponsor.krd addresses. Visiting `/business*` on a custom domain
   redirects to the original business workspace entry. Host-only dashboard
   cookies and Google callback configuration are unchanged.
-- Public aliases redirect to a verified primary domain with a temporary 307,
-  preserving path and query. Temporary redirects avoid permanently cached
+- Only one address serves public website pages. Before primary activation, a
+  DNS-verified custom domain redirects to the default Sponsor.krd address. After
+  HTTPS readiness and primary activation, the default public address redirects
+  to the custom domain. Deletion immediately restores the default website and
+  revokes the removed hostname mapping. Dashboard/private API addresses remain
+  unchanged; this does not create a second public website.
+- Public aliases redirect to the selected address with a temporary 307 and
+  `Cache-Control: no-store`, preserving path and query. Temporary redirects avoid permanently cached
   redirects after disconnection or primary changes. Canonicals, sitemap and share
   images use the verified primary origin. Public tracking keeps the existing
   page/business identity and the existing TikTok placement boundaries.
+  Resolver outages return 503 for public business pages instead of serving an
+  uncertain second address. Dashboard entry remains available during that outage.
+
+Domain deletion uses the shared confirmation at a layer above the platform
+management dialog, with focus trapping and restoration. Escape dismisses only
+the confirmation; the platform domain-management dialog remains open.
+Repeated confirmation clicks cannot duplicate an in-flight deletion. Switching
+the platform's selected business resets domain state and nested dialogs. The Add
+button remains disabled when origin addresses have not been configured.
 
 ## One-time production setup
 
@@ -152,7 +180,7 @@ Live DNS, public HTTPS issuance, CAA policy, and Caddy's production configuratio
 must be checked after this manual setup. Repository tests use a disposable
 PostgreSQL database and stub external DNS/TLS; they do not provision a real
 customer certificate or modify client DNS.
-The default `domains` label is system-reserved for new business assignments.
+The `domains` and `extension` labels are system-reserved for new business assignments.
 If an existing installation already assigned that label, choose another unused
 platform-owned target name before configuring its DNS record.
 

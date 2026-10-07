@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { SessionService } from './session.service';
 import type { SessionUser } from './session.service';
 import type { FastifyRequest } from 'fastify';
-import { rootDomainHostname } from '../common/root-domain';
+import { publicSubdomainFromHost } from '../common/root-domain';
 import {
   INTERNAL_PROXY_KEY_HEADER,
   isTrustedInternalProxy,
@@ -110,25 +110,10 @@ export class BusinessGuard implements CanActivate {
     }
 
     // Fallback: parse from host header
-    const host = this.firstHeaderValue(
-      request.headers?.['x-forwarded-host'] || request.headers?.['host'],
-    );
-
-    // Remove port if present
-    const hostWithoutPort = rootDomainHostname(host);
-    const rootDomain = rootDomainHostname(this.rootDomain);
-
-    // Check if host ends with the root domain
-    const rootDomainSuffix = `.${rootDomain}`;
-    if (hostWithoutPort.endsWith(rootDomainSuffix)) {
-      const subdomain = hostWithoutPort
-        .slice(0, -rootDomainSuffix.length)
-        .split('.')[0];
-      return this.normalizeSubdomain(subdomain);
-    }
-
-    // Host is the root domain itself or doesn't match — no subdomain
-    return null;
+    // Caddy preserves Host. A browser-supplied forwarding header is never a
+    // tenant authority, and nested subdomains must not alias a tenant label.
+    const host = this.firstHeaderValue(request.headers?.['host']);
+    return publicSubdomainFromHost(host, this.rootDomain) || null;
   }
 
   private firstHeaderValue(value: unknown): string {
