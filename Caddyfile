@@ -1,3 +1,12 @@
+{
+    on_demand_tls {
+        ask http://127.0.0.1:4000/api/internal/domains/tls
+    }
+    servers {
+        strict_sni_host on
+    }
+}
+
 # Caddyfile for Sponsor.krd Platform
 # This reverse proxy handles:
 # - Wildcard TLS for *.sponsor.krd
@@ -13,11 +22,16 @@
     # Never trust a tenant header supplied by an external client. The backend
     # derives the tenant from the preserved Host header for direct API traffic.
     request_header -x-subdomain
+    request_header -x-tenant-proxy-key
+    request_header -x-forwarded-host
+    @internal path /api/internal/*
+    respond @internal 404
 
     @api path /api/*
     header @api X-Robots-Tag "noindex, nofollow, noarchive"
     reverse_proxy @api localhost:4000 {
         header_up Host {host}
+        header_up X-Forwarded-Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -25,6 +39,7 @@
 
     reverse_proxy localhost:3011 {
         header_up Host {host}
+        header_up X-Forwarded-Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -39,11 +54,16 @@ sponsor.krd, www.sponsor.krd {
     # Never trust a tenant header supplied by an external client. The backend
     # derives the tenant from the preserved Host header for direct API traffic.
     request_header -x-subdomain
+    request_header -x-tenant-proxy-key
+    request_header -x-forwarded-host
+    @internal path /api/internal/*
+    respond @internal 404
 
     @api path /api/*
     header @api X-Robots-Tag "noindex, nofollow, noarchive"
     reverse_proxy @api localhost:4000 {
         header_up Host {host}
+        header_up X-Forwarded-Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -51,8 +71,38 @@ sponsor.krd, www.sponsor.krd {
 
     reverse_proxy localhost:3011 {
         header_up Host {host}
+        header_up X-Forwarded-Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
     }
 }
+
+# Customer-owned domains: certificates are allowed only for verified active mappings.
+https:// {
+    tls {
+        on_demand
+    }
+    request_header -x-subdomain
+    request_header -x-tenant-proxy-key
+    request_header -x-forwarded-host
+    @internal path /api/internal/*
+    respond @internal 404
+    @api path /api/*
+    header @api X-Robots-Tag "noindex, nofollow, noarchive"
+    reverse_proxy @api localhost:4000 {
+        header_up Host {host}
+        header_up X-Forwarded-Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    reverse_proxy localhost:3011 {
+        header_up Host {host}
+        header_up X-Forwarded-Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+

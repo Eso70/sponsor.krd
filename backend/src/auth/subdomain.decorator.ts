@@ -6,6 +6,7 @@ import {
 import { publicSubdomainFromHost } from '../common/root-domain';
 
 import type { FastifyRequest } from 'fastify';
+import type { DomainRequest } from '../domains/custom-domain.guard';
 import {
   INTERNAL_PROXY_KEY_HEADER,
   isTrustedInternalProxy,
@@ -14,6 +15,8 @@ import {
 export const Subdomain = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest<FastifyRequest>();
+    if ((request as DomainRequest).customDomainSubdomain)
+      return (request as DomainRequest).customDomainSubdomain;
 
     // The x-subdomain header is only authoritative when it came from a
     // verified internal proxy call — see internal-proxy-trust.ts. An

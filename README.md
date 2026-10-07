@@ -5,6 +5,7 @@ Sponsor.krd is a production-ready, multi-tenant platform for creating branded Li
 It includes:
 
 - Multi-tenant architecture
+- Verified customer-owned domains with shared content and automatic HTTPS
 - Business dashboard
 - Platform administration console
 - Public Linktree builder

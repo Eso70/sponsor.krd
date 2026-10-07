@@ -4,6 +4,11 @@ import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { PlatformBrandingFields } from "./PlatformBrandingFields";
+import { BlockedSubdomainsSettings } from "./BlockedSubdomainsSettings";
+import { SettingsField as Field } from "@/components/shared/SettingsField";
+import { SettingsActionButton as SaveButton } from "@/components/shared/SettingsActionButton";
+import { settingsInputClass as inputClass } from "@/components/shared/settings-styles";
+import { subdomainCopy } from "@/features/subdomains/copy";
 import {
   Archive,
   Database,
@@ -14,7 +19,6 @@ import {
   Monitor,
   Palette,
   RefreshCw,
-  Save,
   ShieldCheck,
   Trash2,
   Radio,
@@ -62,7 +66,7 @@ import { arabicTikTokPixelCopy } from "@/features/analytics/tiktok-pixel-arabic-
 import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
 
 type Tab =
-  "general" | "security" | "retention" | "media" | "tiktok" | "tiktok-ads";
+  "general" | "security" | "retention" | "media" | "tiktok" | "tiktok-ads" | "subdomains";
 
 type PlatformSettings = {
   id: string;
@@ -575,6 +579,11 @@ export function PlatformSettingsPage() {
       icon: React.ComponentType<{ className?: string }>;
     }
   > = {
+    subdomains: {
+      title: subdomainCopy[locale].title,
+      description: subdomainCopy[locale].description,
+      icon: Globe,
+    },
     general: {
       title: t("ڕێکخستنە گشتییەکان"),
       description: t("ناوی سیستەم، ڕەنگ و لۆگۆی پلاتفۆرم دیاری بکە."),
@@ -651,12 +660,13 @@ export function PlatformSettingsPage() {
       </StatCardGrid>
 
       <SegmentedTabs
-        tabs={tabs.map((item) => ({ ...item, label: t(item.label) }))}
+        tabs={[...tabs.map((item) => ({ ...item, label: t(item.label) })), { id: "subdomains" as const, label: subdomainCopy[locale].title, icon: Globe }]}
         value={tab}
         onChange={changeTab}
         accent="var(--sponsor-krd-accent)"
       />
 
+      {tab === "subdomains" && <BlockedSubdomainsSettings />}
       {tab === "tiktok" && (
         <ThemeProvider websiteColor={accentColor}>
           <BusinessTikTokPixelConfigPage
@@ -1432,34 +1442,6 @@ function formatSecurityDate(value: string, locale: string, t: (source: string) =
   return Number.isNaN(date.getTime()) ? t("Unknown time") : date.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ");
 }
 
-const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:ring-2 dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500 dark:[color-scheme:dark]";
-
-function SaveButton({
-  label,
-  onClick,
-  icon: Icon,
-  disabled = false,
-}: {
-  label: string;
-  onClick: () => void;
-  icon?: typeof Save;
-  disabled?: boolean;
-}) {
-  const Ico = Icon || Save;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="sa-gradient sa-gradient-hover flex h-10 cursor-pointer items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <Ico className="h-4 w-4" />
-      {label}
-    </button>
-  );
-}
-
 function Toggle({
   enabled,
   onChange,
@@ -1486,21 +1468,3 @@ function Toggle({
     </div>
   );
 }
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-

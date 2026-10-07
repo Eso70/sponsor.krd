@@ -66,6 +66,24 @@ const LINK_FIELDS = {
 
 const ALL_PERMISSION_DEFINITIONS = [
   permission({
+    key: 'business:domains:read',
+    category: 'Business account',
+    resource: 'business.domains',
+    action: 'read',
+    description: 'View business custom domains and DNS instructions',
+    riskLevel: 'standard',
+    displayOrder: 41,
+  }),
+  permission({
+    key: 'business:domains:manage',
+    category: 'Business account',
+    resource: 'business.domains',
+    action: 'manage',
+    description: 'Add, verify, remove and select business custom domains',
+    riskLevel: 'sensitive',
+    displayOrder: 42,
+  }),
+  permission({
     key: 'business:dashboard:view',
     category: 'Business navigation',
     resource: 'business.dashboard',
@@ -1053,6 +1071,8 @@ export const Capability = {
   BusinessSettingsSecurityAccess: 'business:settings:security-access',
   BusinessSettingsIntegrationsAccess: 'business:settings:integrations-access',
   BusinessProfileRead: 'business:profile:read',
+  BusinessDomainsRead: 'business:domains:read',
+  BusinessDomainsManage: 'business:domains:manage',
   BusinessProfileUpdate: 'business:profile:update',
   BusinessProfileAssetsUpload: 'business:profile-assets:upload',
   BusinessDefaultsRead: 'business:defaults:read',

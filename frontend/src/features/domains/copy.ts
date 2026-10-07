@@ -1,0 +1,182 @@
+const en = {
+  title: "Custom domains",
+  description:
+    "Connect your own domain to this business website. Your pages and platform updates stay in sync.",
+  add: "Add domain",
+  hostname: "Domain",
+  placeholder: "wafaye.com",
+  hint: "Each business can connect one custom domain. Enter a domain you own, without https:// or a path.",
+  limit:
+    "This business already has a custom domain. Remove it before connecting a different domain.",
+  status: "Status",
+  actions: "Actions",
+  pending: "Awaiting verification",
+  automatic:
+    "DNS is checked automatically after you add the records. You can also verify now.",
+  active: "DNS verified",
+  disconnected: "Disconnected",
+  primary: "Primary",
+  verify: "Verify DNS",
+  makePrimary: "Make primary",
+  instructions: "DNS setup",
+  remove: "Remove",
+  cancel: "Cancel",
+  close: "Close",
+  saving: "Saving…",
+  empty: "No custom domains connected",
+  setup:
+    "Custom domains need to be enabled by the platform administrator before you can add one.",
+  error: "Unable to update domains. Please try again.",
+  conflict: "This domain is already connected or awaiting verification.",
+  invalid:
+    "Enter a valid domain you own. Sponsor.krd addresses and IP addresses cannot be added.",
+  unavailable:
+    "Verification is temporarily unavailable. Check that the platform is enabled and try again.",
+  tlsPending:
+    "HTTPS is not ready yet. Check the server setup, then try again shortly.",
+  loadError: "Unable to load domains. Please try again.",
+  refresh: "Refresh",
+  ownership:
+    "The ownership TXT record is missing or does not match. Check the records below and verify again.",
+  routing:
+    "This domain does not point only to the platform server. Check its A and AAAA records and verify again.",
+  dnsHelp:
+    "Add these records with your DNS provider. Keep the TXT record for ongoing ownership checks. Leave email records unchanged. HTTPS is provisioned automatically after verification.",
+  txtName: "TXT record name",
+  txtValue: "TXT record value",
+  cnameName: "CNAME record name",
+  cnameValue: "CNAME target",
+  address: "A / AAAA record values",
+  apex: "For a root domain, use the A/AAAA values below. A root CNAME is also supported when your provider offers flattening. Use DNS-only routing; a CDN proxy will prevent the routing check.",
+  primaryHelp:
+    "Making a domain primary redirects public visits from other business addresses to it. Dashboard login remains on the Sponsor.krd subdomain.",
+  deleteTitle: "Remove domain?",
+  deleteMessage:
+    "This domain will stop serving the business website. Existing Sponsor.krd access will remain available.",
+  of: "of",
+  previous: "Previous page",
+  next: "Next page",
+  copy: "Copy",
+  copied: "Copied",
+  copyFailed: "Unable to copy",
+};
+export const domainCopy = {
+  en,
+  ar: {
+    ...en,
+    automatic: "يُفحص DNS تلقائيًا بعد إضافة السجلات. يمكنك أيضًا التحقق الآن.",
+    limit: "هذا النشاط التجاري لديه نطاق مخصص بالفعل. أزله قبل ربط نطاق مختلف.",
+    tlsPending: "HTTPS غير جاهز بعد. راجع إعداد الخادم وحاول مجددًا بعد قليل.",
+    title: "النطاقات المخصصة",
+    description:
+      "اربط نطاقك الخاص بموقع النشاط التجاري. تبقى الصفحات وتحديثات المنصة متزامنة.",
+    add: "إضافة نطاق",
+    hostname: "النطاق",
+    hint: "يمكن لكل نشاط تجاري ربط نطاق مخصص واحد. أدخل نطاقًا تملكه دون https:// أو مسار.",
+    status: "الحالة",
+    actions: "الإجراءات",
+    pending: "بانتظار التحقق",
+    active: "تم التحقق من DNS",
+    disconnected: "غير متصل",
+    primary: "رئيسي",
+    verify: "التحقق من DNS",
+    makePrimary: "تعيين كرئيسي",
+    instructions: "إعداد DNS",
+    remove: "إزالة",
+    cancel: "إلغاء",
+    close: "إغلاق",
+    saving: "جارٍ الحفظ…",
+    empty: "لا توجد نطاقات مخصصة",
+    setup: "يجب على مسؤول المنصة تفعيل النطاقات المخصصة أولًا.",
+    error: "تعذّر تحديث النطاقات. حاول مجددًا.",
+    conflict: "هذا النطاق متصل أو بانتظار التحقق بالفعل.",
+    invalid:
+      "أدخل نطاقًا صالحًا تملكه. لا يمكن إضافة عناوين Sponsor.krd أو IP.",
+    unavailable: "التحقق غير متاح مؤقتًا. تأكد من تفعيل الميزة وحاول مجددًا.",
+    loadError: "تعذّر تحميل النطاقات.",
+    refresh: "تحديث",
+    ownership: "سجل TXT للملكية مفقود أو غير مطابق. راجع السجلات وأعد التحقق.",
+    routing: "النطاق لا يشير إلى خادم المنصة فقط. راجع سجلات A وAAAA.",
+    dnsHelp:
+      "أضف هذه السجلات عند مزود DNS. احتفظ بسجل TXT للتحقق المستمر من الملكية. اترك سجلات البريد دون تغيير. يتم إعداد HTTPS تلقائيًا بعد التحقق.",
+    txtName: "اسم سجل TXT",
+    txtValue: "قيمة سجل TXT",
+    cnameName: "اسم سجل CNAME",
+    cnameValue: "وجهة CNAME",
+    address: "قيم سجلات A / AAAA",
+    apex: "للنطاق الرئيسي استخدم قيم A/AAAA أدناه، أو CNAME إذا كان المزود يدعم التسطيح. استخدم DNS فقط دون وكيل CDN.",
+    primaryHelp:
+      "تعيين نطاق رئيسي يعيد توجيه الزيارات العامة إليه. يبقى دخول لوحة التحكم على نطاق Sponsor.krd الفرعي.",
+    deleteTitle: "إزالة النطاق؟",
+    deleteMessage:
+      "سيتوقف النطاق عن عرض الموقع. يبقى الوصول عبر Sponsor.krd متاحًا.",
+    of: "من",
+    previous: "الصفحة السابقة",
+    next: "الصفحة التالية",
+    copy: "نسخ",
+    copied: "تم النسخ",
+    copyFailed: "تعذّر النسخ",
+  },
+  ckb: {
+    ...en,
+    automatic:
+      "دوای زیادکردنی تۆمارەکان، DNS بە خۆکار پشکنین دەکرێت. دەتوانیت ئێستاش پشکنین بکەیت.",
+    limit:
+      "ئەم بزنسە پێشتر دۆمەینێکی تایبەتی هەیە. پێش بەستنی دۆمەینێکی تر، ئەوەی ئێستا لاببە.",
+    tlsPending:
+      "HTTPS هێشتا ئامادە نییە. ڕێکخستنی سێرڤەر بپشکنە و دووبارە هەوڵ بدە.",
+    title: "دۆمەینی تایبەت",
+    description:
+      "دۆمەینی خۆت بە ماڵپەڕی بزنسەکەتەوە ببەستە. پەڕەکان و نوێکارییەکانی پلاتفۆرم هەمیشە هاوکاتن.",
+    add: "زیادکردنی دۆمەین",
+    hostname: "دۆمەین",
+    hint: "هەر بزنسێک دەتوانێت یەک دۆمەینی تایبەت ببەستێت. دۆمەینێک بنووسە کە هی خۆتە، بەبێ https:// یان ڕێڕەو.",
+    status: "دۆخ",
+    actions: "کردارەکان",
+    pending: "چاوەڕوانی پشتڕاستکردنەوە",
+    active: "DNS پشتڕاستکراوە",
+    disconnected: "پچڕاوە",
+    primary: "سەرەکی",
+    verify: "پشکنینی DNS",
+    makePrimary: "کردن بە سەرەکی",
+    instructions: "ڕێکخستنی DNS",
+    remove: "لابردن",
+    cancel: "پاشگەزبوونەوە",
+    close: "داخستن",
+    saving: "پاشەکەوت دەکرێت…",
+    empty: "هیچ دۆمەینێکی تایبەت نەبەستراوە",
+    setup: "بەڕێوەبەری پلاتفۆرم دەبێت سەرەتا دۆمەینی تایبەت چالاک بکات.",
+    error: "نوێکردنەوەی دۆمەینەکان سەرکەوتوو نەبوو. دووبارە هەوڵ بدە.",
+    conflict: "ئەم دۆمەینە بەستراوە یان چاوەڕوانی پشتڕاستکردنەوەیە.",
+    invalid:
+      "دۆمەینێکی دروست کە هی خۆتە بنووسە. ناونیشانی Sponsor.krd یان IP زیاد ناکرێت.",
+    unavailable:
+      "پشکنین کاتیًا بەردەست نییە. چالاکبوونی تایبەتمەندییەکە بپشکنە و دووبارە هەوڵ بدە.",
+    loadError: "بارکردنی دۆمەینەکان سەرکەوتوو نەبوو.",
+    refresh: "نوێکردنەوە",
+    ownership:
+      "تۆماری TXT بۆ خاوەندارێتی نییە یان ناگونجێت. تۆمارەکان بپشکنە و دووبارە هەوڵ بدە.",
+    routing:
+      "دۆمەینەکە تەنها بۆ سێرڤەری پلاتفۆرم نیشان نادات. تۆمارەکانی A و AAAA بپشکنە.",
+    dnsHelp:
+      "ئەم تۆمارانە لە دابینکەری DNS زیاد بکە. TXT بۆ پشکنینی بەردەوامی خاوەندارێتی بهێڵەوە. تۆمارەکانی ئیمەیڵ مەگۆڕە. HTTPS دوای پشتڕاستکردنەوە خۆکارانە ڕێکدەخرێت.",
+    txtName: "ناوی تۆماری TXT",
+    txtValue: "بەهای تۆماری TXT",
+    cnameName: "ناوی تۆماری CNAME",
+    cnameValue: "ئامانجی CNAME",
+    address: "بەهاکانی A / AAAA",
+    apex: "بۆ دۆمەینی سەرەکی A/AAAA بەکاربهێنە، یان CNAME ئەگەر دابینکەرەکەت flattening پشتگیری دەکات. DNS-only بەکاربهێنە بەبێ پرۆکسی CDN.",
+    primaryHelp:
+      "دۆمەینی سەرەکی سەردانە گشتییەکان بۆ خۆی ڕەوانە دەکات. چوونەژوورەوەی داشبۆرد لە ساب‌دۆمەینی Sponsor.krd دەمێنێتەوە.",
+    deleteTitle: "دۆمەین لاببرێت؟",
+    deleteMessage:
+      "ئەم دۆمەینە چیتر ماڵپەڕەکە پیشان نادات. Sponsor.krd بەردەست دەمێنێتەوە.",
+    of: "لە",
+    previous: "پەڕەی پێشوو",
+    next: "پەڕەی دواتر",
+    copy: "کۆپی",
+    copied: "کۆپی کرا",
+    copyFailed: "کۆپی سەرکەوتوو نەبوو",
+  },
+};
+export type DomainLocale = keyof typeof domainCopy;

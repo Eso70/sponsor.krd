@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessSignupWizard } from "./BusinessSignupWizard";
 import { RootPublicLocaleProvider } from "@/features/public-site/RootPublicLocaleProvider";
 import { getRootDomain } from "@/lib/utils/app-url";
+import { ApiRequestError } from "@/lib/api/request";
 
 const { apiRequest, toast } = vi.hoisted(() => ({
   apiRequest: vi.fn(),
@@ -13,12 +14,29 @@ const { apiRequest, toast } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/lib/api/request", () => ({ apiRequest }));
+vi.mock("@/lib/api/request", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/api/request")>(), apiRequest }));
 vi.mock("sonner", () => ({ toast }));
 
 describe("BusinessSignupWizard application status", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("replaces an available result when saving loses a reservation race", async () => {
+    apiRequest.mockImplementation((path: string, options?: { method?: string }) => {
+      if (path.startsWith("/api/signup/subdomain-availability")) return Promise.resolve({ reason: "available", available: true });
+      if (options?.method === "PATCH") return Promise.reject(new ApiRequestError("Subdomain is unavailable", { status: 409, code: "CONFLICT" }));
+      return Promise.resolve({ status: "draft", ownerEmail: "owner@example.com", preferredLocale: "en" });
+    });
+    render(<RootPublicLocaleProvider initialLocale="en"><BusinessSignupWizard /></RootPublicLocaleProvider>);
+    fireEvent.change(await screen.findByPlaceholderText("Enter business name"), { target: { value: "Acme Studio" } });
+    fireEvent.change(screen.getByPlaceholderText("Enter mobile number"), { target: { value: "7501234567" } });
+    fireEvent.change(screen.getByPlaceholderText("Enter subdomain"), { target: { value: "acme-studio" } });
+    expect(await screen.findByRole("status")).toHaveTextContent("Checking availability");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Available"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("already taken or reserved"));
+    expect(screen.getByPlaceholderText("Enter subdomain")).toHaveValue("acme-studio");
   });
 
   it("refreshes a pending application and displays its approved state", async () => {
@@ -111,7 +129,7 @@ describe("BusinessSignupWizard application status", () => {
       if (path === "/api/signup/application" && !options?.method) {
         return Promise.resolve({ status: "draft", ownerEmail: "owner@example.com", businessName: "", phone: "", requestedSubdomain: null });
       }
-      if (path.startsWith("/api/signup/subdomain-availability")) return Promise.resolve({ available: true });
+      if (path.startsWith("/api/signup/subdomain-availability")) return Promise.resolve({ available: true, reason: "available" });
       if (path === "/api/signup/application/submit") return Promise.resolve({ status: "pending", ownerEmail: "owner@example.com" });
       return Promise.resolve({});
     });
@@ -127,7 +145,7 @@ describe("BusinessSignupWizard application status", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter business name"), { target: { value: "Acme Studio" } });
     fireEvent.change(screen.getByPlaceholderText("Enter mobile number"), { target: { value: "7501234567" } });
     fireEvent.change(screen.getByPlaceholderText("Enter subdomain"), { target: { value: "acme-studio" } });
-    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining("/api/signup/subdomain-availability")));
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining("/api/signup/subdomain-availability"), expect.objectContaining({ signal: expect.any(AbortSignal) })));
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     fireEvent.click(screen.getByRole("option", { name: "العربية" }));
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));

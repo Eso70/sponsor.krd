@@ -16,6 +16,8 @@ const KURDISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:settings:integrations-access":
     "کردنەوەی بەشی ڕێکخستنەکانی پەیوەستکراوەکان",
   "business:profile:read": "بینینی پڕۆفایلی بزنس",
+  "business:domains:read": "بینینی دۆمەینە تایبەتەکان و ڕێنمایی DNS",
+  "business:domains:manage": "زیادکردن، پشتڕاستکردنەوە و بەڕێوەبردنی دۆمەینی تایبەت",
   "business:profile:update":
     "نوێکردنەوەی خانە تۆمارکراوەکانی پڕۆفایلی بزنس",
   "business:profile-assets:upload":
@@ -69,6 +71,8 @@ const ARABIC_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:settings:security-access": "فتح قسم أمان الحساب",
   "business:settings:integrations-access": "فتح قسم التكاملات",
   "business:profile:read": "عرض ملف النشاط التجاري",
+  "business:domains:read": "عرض النطاقات المخصصة وتعليمات DNS",
+  "business:domains:manage": "إضافة النطاقات المخصصة والتحقق منها وإدارتها",
   "business:profile:update": "تحديث حقول ملف النشاط التجاري المسجّلة",
   "business:profile-assets:upload": "رفع صور وملفات علامة النشاط التجاري",
   "business:defaults:read": "عرض الإعدادات الافتراضية للنشاط التجاري",
@@ -117,6 +121,8 @@ const ENGLISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:settings:security-access": "Open account security settings",
   "business:settings:integrations-access": "Open integrations settings",
   "business:profile:read": "View the business profile",
+  "business:domains:read": "View custom domains and DNS instructions",
+  "business:domains:manage": "Add, verify and manage custom domains",
   "business:profile:update": "Update registered business profile fields",
   "business:profile-assets:upload": "Upload business brand images and files",
   "business:defaults:read": "View business defaults",

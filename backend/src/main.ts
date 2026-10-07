@@ -4,6 +4,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { DomainsService } from './domains/domains.service';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import fastifyCookie, { type FastifyCookieOptions } from '@fastify/cookie';
@@ -175,6 +176,7 @@ async function bootstrap() {
     }
     return false;
   }
+  const domains = app.get(DomainsService);
   app.enableCors({
     origin: (origin, callback) => {
       // No origin = non-browser request (curl, server-to-server) — allow
@@ -186,10 +188,24 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
-      // Surface the rejected origin in the error so production debugging
-      // is straightforward. Nest's default exception filter still returns
-      // 500 to the browser, but the log will show the offending origin.
-      callback(new Error(`Not allowed by CORS: ${origin}`), false);
+      // Customer browser origins are admitted only through an active mapping.
+      try {
+        const candidate = new URL(origin);
+        if (
+          candidate.protocol === 'https:' &&
+          !candidate.port &&
+          candidate.origin === origin
+        ) {
+          void domains
+            .resolve(candidate.hostname)
+            .then((resolved) => callback(null, !!resolved?.isCustom))
+            .catch(() => callback(null, false));
+          return;
+        }
+      } catch {
+        /* Invalid origins are denied below. */
+      }
+      callback(null, false);
     },
     allowedHeaders: [
       'Content-Type',

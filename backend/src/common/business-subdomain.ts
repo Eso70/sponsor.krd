@@ -11,6 +11,16 @@ import { BadRequestException } from '@nestjs/common';
 export const BUSINESS_SUBDOMAIN_PATTERN =
   /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+export function isSubdomainPolicyViolation(error: unknown): boolean {
+  const failure = error as { code?: string; constraint?: string } | null;
+  return (
+    failure?.code === '23514' &&
+    ['subdomain_not_blocked', 'signup_subdomain_available'].includes(
+      failure.constraint ?? '',
+    )
+  );
+}
+
 /**
  * Labels the platform answers on itself.
  *
@@ -22,6 +32,7 @@ export const BUSINESS_SUBDOMAIN_PATTERN =
 export const RESERVED_BUSINESS_SUBDOMAINS: ReadonlySet<string> = new Set([
   'www',
   'api',
+  'domains',
   'admin',
   'platform',
   'system',

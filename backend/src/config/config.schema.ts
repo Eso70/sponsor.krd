@@ -1,5 +1,6 @@
 import * as Joi from 'joi';
 
+import { isIP } from 'node:net';
 export const configValidationSchema = Joi.object({
   PORT: Joi.number().default(4000),
   NODE_ENV: Joi.string()
@@ -25,6 +26,24 @@ export const configValidationSchema = Joi.object({
   PLATFORM_ADMIN_NAME: Joi.string().allow('').optional(),
   PLATFORM_ADMIN_EMAIL: Joi.string().email().lowercase().allow('').optional(),
   ROOT_DOMAIN: Joi.string().default('localhost'),
+  CUSTOM_DOMAINS_ENABLED: Joi.boolean().default(false),
+  CUSTOM_DOMAIN_TARGET: Joi.string().hostname().default('domains.sponsor.krd'),
+  CUSTOM_DOMAIN_IPV4: Joi.string()
+    .allow('')
+    .default('')
+    .custom((value: string, helpers) =>
+      value.split(',').every((ip) => isIP(ip.trim()) === 4)
+        ? value
+        : helpers.error('any.invalid'),
+    ),
+  CUSTOM_DOMAIN_IPV6: Joi.string()
+    .allow('')
+    .default('')
+    .custom((value: string, helpers) =>
+      value.split(',').every((ip) => isIP(ip.trim()) === 6)
+        ? value
+        : helpers.error('any.invalid'),
+    ),
   APP_BASE_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .optional(),

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createContentSecurityPolicy } from "@/lib/security/content-security-policy";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { resolvePublicOrigin } from "@/lib/public/public-origin";
+import { resolveBusinessHost } from '@/lib/public/domain-routing';
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import {
   INTERNAL_PROXY_KEY_HEADER,
@@ -27,10 +28,6 @@ function isPlatformAdminPath(pathname: string): boolean {
     (pathname === PLATFORM_ADMIN_PATH ||
       pathname.startsWith(`${PLATFORM_ADMIN_PATH}/`))
   );
-}
-
-function extractSubdomain(hostHeader: string): string {
-  return resolveLinktreeHost(hostHeader, ROOT_DOMAIN).subdomain;
 }
 
 function withCsp(response: NextResponse, csp: string): NextResponse {
@@ -146,10 +143,33 @@ export async function proxy(request: NextRequest) {
   }
 
   // Extract subdomain
-  const subdomain = extractSubdomain(host);
   const scope = resolveLinktreeHost(host, ROOT_DOMAIN);
-  if (!scope.isPlatformRoot && !scope.subdomain) {
+  let verified: Awaited<ReturnType<typeof resolveBusinessHost>> = null;
+  if (!scope.isPlatformRoot) {
+    try { verified = await resolveBusinessHost(host); }
+    catch {
+      if (!scope.subdomain) return withCsp(new NextResponse('Temporarily unavailable', { status: 503, headers: { 'Retry-After': '60', 'Cache-Control': 'no-store' } }), csp);
+    }
+  }
+  const subdomain = verified?.subdomain || scope.subdomain;
+  if (!scope.isPlatformRoot && !subdomain) {
     return rewriteNotFound(request, "/__root-not-found", requestHeaders, csp);
+  }
+  if (verified?.isCustom) {
+    if (pathname.startsWith('/business')) {
+      const tenantOrigin = resolvePublicOrigin(`${subdomain}.${ROOT_DOMAIN}`, ROOT_DOMAIN, getAppBaseUrl());
+      if (tenantOrigin) return withCsp(NextResponse.redirect(new URL('/business/workspace-entry', tenantOrigin.origin), 307), csp);
+    }
+    if (pathname.startsWith('/join') || isPlatformAdminPath(pathname) ||
+      (pathname.startsWith('/api/') && !/^\/api\/public(?:\/|$)/.test(pathname))) {
+      return rewriteNotFound(request, '/__public-not-found', requestHeaders, csp);
+    }
+  }
+  if (verified?.primaryHostname && !pathname.startsWith('/api') && !pathname.startsWith('/business') &&
+    host.toLowerCase().split(':')[0] !== verified.primaryHostname) {
+    const target = new URL(`https://${verified.primaryHostname}`);
+    target.pathname = pathname; target.search = request.nextUrl.search;
+    return withCsp(NextResponse.redirect(target, 307), csp);
   }
   const rootHostname = ROOT_DOMAIN.split(":")[0].toLowerCase().replace(/\.$/, "");
   if (host.split(":")[0].toLowerCase().replace(/\.$/, "") === `www.${rootHostname}`) {
@@ -205,7 +225,7 @@ export async function proxy(request: NextRequest) {
       return withCsp(response, csp);
     }
     if (slug && /^[a-z0-9-]{1,50}$/.test(slug) && slug !== publicPageMatch[1]) {
-      const context = resolvePublicOrigin(host, ROOT_DOMAIN, getAppBaseUrl());
+      const context = resolvePublicOrigin(host, ROOT_DOMAIN, getAppBaseUrl(), verified);
       if (context) {
         const suffix = /\/share-image\/?$/.test(pathname) ? "/share-image" : "";
         return withCsp(NextResponse.redirect(new URL(`/linktree/${slug}${suffix}${request.nextUrl.search}`, context.origin), 308), csp);

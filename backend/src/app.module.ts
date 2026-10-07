@@ -1,5 +1,6 @@
 ﻿import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
+import { DomainsModule } from './domains/domains.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
@@ -25,6 +26,7 @@ import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.modul
     ObservabilityModule,
     CommunicationModule,
     AuthModule,
+    DomainsModule,
     AnalyticsModule,
     LinktreesModule,
     AdvertisingModule,

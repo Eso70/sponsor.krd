@@ -34,7 +34,7 @@ export default function PlatformAdminLoginPage() {
     >
       <AuthenticationCard
         title={ar ? "تسجيل دخول المدير" : en ? "Administrator login" : "چوونەژوورەوەی بەڕێوەبەر"}
-        description={ar ? "سجّل الدخول باستخدام Google أو البريد الإلكتروني" : en ? "Log in with Google or email" : "بە گوگڵ یان ئیمێڵ بڕۆ ژوورەوە"}
+        description={ar ? "سجّل الدخول باستخدام جوجل أو البريد الإلكتروني" : en ? "Log in with Google or email" : "بە گوگڵ یان ئیمێڵ بڕۆ ژوورەوە"}
       >
         <AuthenticationMethods
           rememberDevice
@@ -46,7 +46,7 @@ export default function PlatformAdminLoginPage() {
           emailCodeTitle={ar ? "أدخل رمز تسجيل الدخول" : en ? "Enter login code" : "کۆدی چوونەژوورەوە بنووسە"}
           emailVerifyActionLabel={ar ? "تسجيل الدخول" : en ? "Log in" : "چوونەژوورەوە"}
           copy={ar ? {
-            google: "المتابعة باستخدام Google",
+            google: "المتابعة باستخدام جوجل",
             or: "أو",
             remember: "البقاء مسجّلًا على هذا الجهاز",
             changeEmail: "تغيير البريد الإلكتروني",
@@ -59,7 +59,7 @@ export default function PlatformAdminLoginPage() {
           } : en ? {
             google: "Continue with Google", or: "or", remember: "Remember this device", changeEmail: "Change email", codeSent: "We sent a 6-digit code to {email}. It expires in 10 minutes.", loginCode: "Login code", resend: "Resend", resendIn: "Resend in {seconds} seconds", emailAddress: "Email address", error: "Could not complete the request. Please try again.",
           } : {
-            google: "بە Google بەردەوام بە",
+            google: "بە گوگڵ بەردەوام بە",
             or: "یان",
             remember: "لەم ئامێرەدا چوونەژوورەوەکەم بهێڵەوە",
             changeEmail: "گۆڕینی ئیمەیڵ",

@@ -7,7 +7,7 @@ describe("PlatformAdminLoginPage", () => {
   it("offers Google and email-code platform administrator authentication", () => {
     render(<PlatformLocaleProvider initialLocale="ckb"><PlatformAdminLoginPage /></PlatformLocaleProvider>);
     expect(
-      screen.getByRole("link", { name: "بە Google بەردەوام بە" }),
+      screen.getByRole("link", { name: "بە گوگڵ بەردەوام بە" }),
     ).toHaveAttribute("href", "/api/platform/auth/google/start?remember=1");
     expect(
       screen.getByRole("textbox", { name: "ناونیشانی ئیمەیڵ" }),
@@ -18,7 +18,7 @@ describe("PlatformAdminLoginPage", () => {
   it("shows Arabic authentication copy", () => {
     render(<PlatformLocaleProvider initialLocale="ar"><PlatformAdminLoginPage /></PlatformLocaleProvider>);
     expect(screen.getByRole("heading", { name: "تسجيل دخول المدير" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "المتابعة باستخدام Google" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "المتابعة باستخدام جوجل" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "المتابعة بالبريد الإلكتروني" })).toBeInTheDocument();
   });
 

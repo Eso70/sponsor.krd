@@ -1,6 +1,10 @@
 # Architecture
 
 ## Invite-only business identity
+Business custom domains map to the existing tenant through the shared DomainsModule;
+they do not create separate deployments. See [Custom domains](custom-domains.md)
+for ownership verification, public-only routing, certificate permissions and lifecycle.
+
 
 Business identity uses invite-only Google OAuth authorization-code flow. One
 fixed root-domain callback verifies PKCE, state, nonce, token signature,
@@ -198,6 +202,11 @@ primitives and pure domain functions; keep API calls, permissions, state
 transitions, and data contracts in their owning feature.
 
 ## Backend boundaries
+
+`SubdomainsModule` owns the database-backed blocked-name policy and shared signup
+availability lookup. Platform Settings and onboarding use this module. System
+reservations remain in the shared subdomain normalizer, and PostgreSQL triggers
+enforce custom reservations on all assignment paths, including backup imports.
 
 NestJS modules own their HTTP controllers and application services
 (`backend/src/`):

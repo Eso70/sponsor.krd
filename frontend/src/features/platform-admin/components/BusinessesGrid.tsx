@@ -1,4 +1,5 @@
 "use client";
+import { BusinessDomainManagementButton } from './BusinessDomainManagementButton';
 
 import { memo, useState } from "react";
 import Image from "next/image";
@@ -32,6 +33,7 @@ interface BusinessesGridProps {
   onViewAnalytics?: (business: Business) => void;
   onManageSessions?: (business: Business) => void;
   onOpenDashboard?: (business: Business) => void;
+  onManageDomains?: (business: Business) => void;
 }
 
 const BusinessCard = memo(function BusinessCard({
@@ -41,6 +43,7 @@ const BusinessCard = memo(function BusinessCard({
   onViewAnalytics,
   onManageSessions,
   onOpenDashboard,
+  onManageDomains,
 }: {
   item: Business;
   onEdit?: (business: Business) => void;
@@ -48,6 +51,7 @@ const BusinessCard = memo(function BusinessCard({
   onViewAnalytics?: (business: Business) => void;
   onManageSessions?: (business: Business) => void;
   onOpenDashboard?: (business: Business) => void;
+  onManageDomains?: (business: Business) => void;
 }) {
   const copy = usePlatformCopy();
   const [imgError, setImgError] = useState(false);
@@ -146,7 +150,8 @@ const BusinessCard = memo(function BusinessCard({
             </button>
           </Tooltip>
         )}
-        {onManageSessions && (
+        {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
+          {onManageSessions && (
           <Tooltip content={copy.sessions} side="top">
             <button
               type="button"
@@ -197,6 +202,7 @@ export const BusinessesGrid = memo(function BusinessesGrid({
   onViewAnalytics,
   onManageSessions,
   onOpenDashboard,
+  onManageDomains,
   pagination,
 }: BusinessesGridProps) {
   const copy = usePlatformCopy();
@@ -225,8 +231,10 @@ export const BusinessesGrid = memo(function BusinessesGrid({
           onViewAnalytics={onViewAnalytics}
           onManageSessions={onManageSessions}
           onOpenDashboard={onOpenDashboard}
+          onManageDomains={onManageDomains}
         />
       )}
     />
   );
 });
+

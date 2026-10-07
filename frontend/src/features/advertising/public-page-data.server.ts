@@ -87,7 +87,7 @@ async function readPublic<T>(
 export async function loadAdvertisingPublicData(): Promise<AdvertisingPublicData | null> {
   const headerStore = await headers();
   const host = headerStore.get("host") || "";
-  const subdomain = extractSubdomain(host, undefined, ROOT_DOMAIN);
+  const subdomain = extractSubdomain(host, headerStore.get('x-subdomain') || undefined, ROOT_DOMAIN);
   if (!subdomain) return null;
 
   const [business, config, linktrees] = await Promise.all([

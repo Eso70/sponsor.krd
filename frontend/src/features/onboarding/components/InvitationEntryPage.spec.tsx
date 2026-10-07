@@ -30,7 +30,7 @@ describe("InvitationEntryPage", () => {
     const view = render(<RootPublicLocaleProvider initialLocale="ckb"><InvitationEntryPage /></RootPublicLocaleProvider>);
 
     const continueLink = await screen.findByRole("link", {
-      name: "بە Google بەردەوام بە",
+      name: "بە گوگڵ بەردەوام بە",
     });
     await waitFor(() => expect(window.location.search).toBe(""));
 
@@ -72,7 +72,7 @@ describe("InvitationEntryPage", () => {
 
   it("shows Arabic invitation controls for an Arabic visitor", async () => {
     render(<RootPublicLocaleProvider initialLocale="ar"><InvitationEntryPage /></RootPublicLocaleProvider>);
-    expect(await screen.findByRole("link", { name: "المتابعة باستخدام Google" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "المتابعة باستخدام جوجل" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "البريد الإلكتروني" })).toBeInTheDocument();
   });
 });

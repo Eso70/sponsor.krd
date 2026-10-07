@@ -1,5 +1,15 @@
 # Database
 
+Custom-domain automatic verification uses `business_domains_retry`, a partial
+index on pending/disconnected check timestamps. Apply
+`2026-10-07_custom_domain_automation.sql` through the normal migration
+workflow; the fresh baseline includes it. Maintenance claims batches atomically
+with `SKIP LOCKED` so clustered workers do not process the same due claim.
+`2026-10-07_single_custom_domain_per_business.sql` adds a unique business-owner
+index alongside global hostname uniqueness. It refuses existing duplicate
+assignments without deleting data; remove extra domains through the dashboard
+before applying it. The fresh baseline includes the same index.
+
 The consolidated baseline part `92_root_public_slugs.sql` provides the
 concurrency-safe root public slug registry for platform-owned Linktrees.
 
@@ -14,6 +24,20 @@ workspace. The public tracking resolver still checks route publication and the
 underlying advertising-page entitlement where applicable.
 
 ## Business identity and applications
+
+`platform_blocked_subdomains` stores custom exact-label reservations, their
+creating administrator, and creation time. Permanent system reservations remain
+in `common/business-subdomain.ts`. Baseline part `91_subdomain_policy.sql` and
+forward migration `2026-10-07_blocked_subdomains.sql` install the same policy.
+Apply the forward migration with `pnpm db:migrate` before running this release;
+no reset is required.
+
+Database triggers reject blocked names during business creation/renaming and
+active signup application writes. Adding a block rejects existing businesses
+and active application reservations. Per-name transaction advisory locks
+serialize assignments against new blocks, including concurrent requests.
+Rejected/deleted applications do not reserve names. Block/unblock changes are
+recorded atomically in `billing_policy_audit_events`.
 
 `users.preferred_locale` stores each person's dashboard language (`ckb`, `ar`, or
 `en`, database default `ckb`). New invitation-signup users explicitly start in
@@ -379,3 +403,10 @@ nothing is published until the owner publishes it.
 
 No demo or fixture businesses are created — every business in a database is a
 real one, created through the platform administrator.
+## Business custom domains
+
+`business_domains` stores globally unique hostnames, business ownership, DNS proof,
+verification leases and primary selection. A partial unique index enforces one
+primary per business. The additive `2026-10-07_custom_business_domains.sql` migration
+also registers domain permissions and initializes plan access from existing
+settings access. Fresh baselines include part 92. See [Custom domains](custom-domains.md).

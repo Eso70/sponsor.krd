@@ -133,6 +133,34 @@ dispatch primitives. Individual landing, join, and advertising components
 must not call TikTok directly.
 
 ## Private business onboarding
+Business Settings includes a Custom domains tab. Platform business directory
+actions open the same domain-management panel. Both reuse shared compact tables,
+modal inputs and footer controls. Pending/disconnected domain statuses refresh
+automatically while the panel is visible. The same polling and cancellation apply
+on both dashboards. Verified primary origins drive public routing, canonicals,
+sitemap and share images; dashboard authentication remains on the Sponsor.krd
+subdomain. See [Custom domains](custom-domains.md).
+
+
+Platform Settings > Blocked subdomains lists permanent system reservations and
+database-backed custom blocks. Administrators can add or remove custom blocks;
+an assigned business name or a name reserved by an active application cannot
+be blocked. This platform-only policy editor is a standalone component.
+It reuses the shared ManagementTable in compact mode with subdomain, type, and action columns,
+pagination, loading skeletons, and mobile cards. The header Add button opens
+the shared ManagementModal with SettingsField, ModalTextInput (including its
+reusable domain-suffix option), and ModalFooterActions.
+Manual blocks can be deleted; permanent system reservations display a disabled
+delete action and a lock indicator. Failed additions keep the modal open with
+inline feedback. Refresh and individual removals show their own progress.
+
+The signup subdomain field checks the backend after a 350 ms debounce and
+shows checking, available, blocked, taken, invalid, or connection-error feedback
+inline in Kurdish, Arabic, or English. Requests are cancelled on input changes
+and stale responses cannot replace the current result. Availability reflects
+business ownership, active application reservations, and custom/system blocks;
+wildcard DNS resolution is not an availability test. The server remains the
+authority when the application is saved, submitted, or approved.
 
 `/join?token=...` validates an administrator-issued, one-time 24-hour invitation before showing
 Google authentication. `/join/application` additionally requires HttpOnly

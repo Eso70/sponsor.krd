@@ -506,3 +506,16 @@ INSERT INTO public.auth_permissions (
    'Delete Sponsor.krd root-domain Linktrees', 'critical', 775, false, 'active'),
   ('platform:linktrees:upload', 'Platform Linktrees', 'platform.linktrees', 'upload',
    'Upload assets for Sponsor.krd root-domain Linktrees', 'sensitive', 776, false, 'active');
+INSERT INTO public.auth_permissions (permission_key,resource,action,description,risk_level,category,display_order)
+VALUES ('business:domains:read','business.domains','read','View business custom domains and DNS instructions','standard','Business account',41),
+       ('business:domains:manage','business.domains','manage','Add, verify, remove and select business custom domains','sensitive','Business account',42)
+ON CONFLICT (permission_key) DO NOTHING;
+-- Existing plans inherit domain access from their settings access. Explicit denials stay denied.
+INSERT INTO public.billing_plan_permissions (plan_configuration_id,permission_id,access_mode)
+SELECT grants.plan_configuration_id, domains.id, CASE WHEN grants.access_mode='direct' THEN 'direct' ELSE 'deny' END
+FROM public.billing_plan_permissions grants
+JOIN public.auth_permissions settings ON settings.id=grants.permission_id AND settings.permission_key='business:pages:settings-access'
+CROSS JOIN public.auth_permissions domains
+WHERE domains.permission_key IN ('business:domains:read','business:domains:manage')
+ON CONFLICT (plan_configuration_id,permission_id) DO NOTHING;
+

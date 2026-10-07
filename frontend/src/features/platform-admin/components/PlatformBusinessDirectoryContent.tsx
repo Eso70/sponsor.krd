@@ -1,4 +1,6 @@
 import { Search, Users } from "lucide-react";
+import { useState } from "react";
+import { PlatformBusinessDomainsModal } from "./PlatformBusinessDomainsModal";
 import type { PlatformBusiness as Business } from "@linktree/types";
 import { BusinessesGrid } from "@/features/platform-admin/components/BusinessesGrid";
 import { BusinessesTable } from "@/features/platform-admin/components/BusinessesTable";
@@ -35,6 +37,7 @@ export function PlatformBusinessDirectoryContent({
   onOpenDashboard,
 }: PlatformBusinessDirectoryContentProps) {
   const copy = usePlatformCopy();
+  const [domainBusiness, setDomainBusiness] = useState<Business | null>(null);
   // The server pages this list, so both views take the same page number rather
   // than each drawing its own footer.
   const listPagination: ManagementTablePagination = {
@@ -69,6 +72,7 @@ export function PlatformBusinessDirectoryContent({
           onViewAnalytics={onViewAnalytics}
           onManageSessions={onManageSessions}
           onOpenDashboard={onOpenDashboard}
+          onManageDomains={setDomainBusiness}
         />
       ) : (
         <BusinessesTable
@@ -79,6 +83,13 @@ export function PlatformBusinessDirectoryContent({
           onViewAnalytics={onViewAnalytics}
           onManageSessions={onManageSessions}
           onOpenDashboard={onOpenDashboard}
+          onManageDomains={setDomainBusiness}
+        />
+      )}
+      {domainBusiness && (
+        <PlatformBusinessDomainsModal
+          business={domainBusiness}
+          onClose={() => setDomainBusiness(null)}
         />
       )}
     </div>

@@ -40,6 +40,20 @@ the query marker and routes the callback to a nonexistent page.
 
 ## Business email-code login
 
+Subdomain policy is owned by `SubdomainsModule`. The signup availability
+endpoint requires a verified signup session and returns `{ subdomain,
+available, reason }`, with reason `available`, `invalid`, `blocked`, or `taken`.
+The lookup excludes the caller's own application but includes all other draft,
+pending, changes-requested, and approved reservations and existing businesses.
+
+Platform Settings exposes `GET/POST /api/platform/settings/blocked-subdomains`
+and `DELETE /api/platform/settings/blocked-subdomains/:subdomain`. All require
+platform authentication; reads require `PlatformSettingsRead`, and mutations
+require the existing `PlatformBusinessesUpdate` routing-management capability.
+Only custom blocks can be removed. Policy writes are audited. The database
+enforces assignments independently of browser availability checks, so imports
+and platform business edits cannot bypass custom blocks.
+
 Approved active business members can request a login code from their own
 subdomain through `POST /api/auth/email/request`, then verify it through
 `POST /api/auth/email/verify`. Configure `SMTP_HOST`, `SMTP_PORT`,
@@ -617,3 +631,14 @@ uniqueness constraint provides the final exactly-once boundary. Guest uploads
 reuse the shared media policy and require database-confirmed tenant ownership;
 guest analytics resolve the only permitted page from the invitation rather
 than a request parameter.
+## Custom domain management
+
+DomainsModule owns domain validation, scoped management, DNS verification,
+cluster-safe rechecks, public host resolution and the Caddy certificate allowlist.
+Maintenance automatically verifies pending domains, retries disconnected domains,
+and uses bounded parallel checks. Each business may connect one custom hostname;
+the service and database both enforce this. Ownership and routing requirements apply equally
+to automatic and manual verification.
+Business routes use authenticated ownership plus domain capabilities; platform
+routes use administrator guards plus existing business capabilities. Custom hosts
+are public-only. See [Custom domains](custom-domains.md) for endpoints and deployment.

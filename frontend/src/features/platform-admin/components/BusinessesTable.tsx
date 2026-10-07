@@ -1,4 +1,5 @@
 "use client";
+import { BusinessDomainManagementButton } from './BusinessDomainManagementButton';
 
 import { memo, useMemo, useState } from "react";
 import Image from "next/image";
@@ -28,6 +29,7 @@ interface BusinessesTableProps {
   onViewAnalytics?: (business: Business) => void;
   onManageSessions?: (business: Business) => void;
   onOpenDashboard?: (business: Business) => void;
+  onManageDomains?: (business: Business) => void;
 }
 
 /**
@@ -66,6 +68,7 @@ const TableRow = memo(function TableRow({
   onViewAnalytics,
   onManageSessions,
   onOpenDashboard,
+  onManageDomains,
 }: {
   item: Business;
   onEdit?: (business: Business) => void;
@@ -73,6 +76,7 @@ const TableRow = memo(function TableRow({
   onViewAnalytics?: (business: Business) => void;
   onManageSessions?: (business: Business) => void;
   onOpenDashboard?: (business: Business) => void;
+  onManageDomains?: (business: Business) => void;
 }) {
   const copy = usePlatformCopy();
   return (
@@ -160,6 +164,7 @@ const TableRow = memo(function TableRow({
               </button>
             </Tooltip>
           )}
+          {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
           {onManageSessions && (
             <Tooltip content={copy.sessions} side="top">
               <button
@@ -197,6 +202,7 @@ const MobileCard = memo(function MobileCard({
   onViewAnalytics,
   onManageSessions,
   onOpenDashboard,
+  onManageDomains,
 }: {
   item: Business;
   onEdit?: (business: Business) => void;
@@ -204,6 +210,7 @@ const MobileCard = memo(function MobileCard({
   onViewAnalytics?: (business: Business) => void;
   onManageSessions?: (business: Business) => void;
   onOpenDashboard?: (business: Business) => void;
+  onManageDomains?: (business: Business) => void;
 }) {
   const copy = usePlatformCopy();
   const [imgError, setImgError] = useState(false);
@@ -285,7 +292,8 @@ const MobileCard = memo(function MobileCard({
                 </button>
               </Tooltip>
             )}
-            {onManageSessions && (
+            {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
+          {onManageSessions && (
               <Tooltip content={copy.sessions} side="top">
                 <button
                   onClick={() => onManageSessions(item)}
@@ -339,6 +347,7 @@ export const BusinessesTable = memo(function BusinessesTable({
   onViewAnalytics,
   onManageSessions,
   onOpenDashboard,
+  onManageDomains,
 }: BusinessesTableProps) {
   const copy = usePlatformCopy();
   const { locale } = usePlatformLocale();
@@ -369,6 +378,7 @@ export const BusinessesTable = memo(function BusinessesTable({
           onViewAnalytics={onViewAnalytics}
           onManageSessions={onManageSessions}
           onOpenDashboard={onOpenDashboard}
+          onManageDomains={onManageDomains}
         />
       )}
       renderCard={(item) => (
@@ -379,8 +389,10 @@ export const BusinessesTable = memo(function BusinessesTable({
           onViewAnalytics={onViewAnalytics}
           onManageSessions={onManageSessions}
           onOpenDashboard={onOpenDashboard}
+          onManageDomains={onManageDomains}
         />
       )}
     />
   );
 });
+

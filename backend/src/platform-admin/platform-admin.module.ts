@@ -1,5 +1,6 @@
 ﻿import { Module } from '@nestjs/common';
 import { BusinessAdministrationService } from './business-administration.service';
+import { SubdomainsModule } from '../subdomains/subdomains.module';
 import { BusinessAdministrationController } from './business-administration.controller';
 import { PlatformSettingsController } from './platform-settings.controller';
 import { AdvertisingModule } from '../advertising/advertising.module';
@@ -29,6 +30,7 @@ import { PlatformContentWorkspaceModule } from '../platform-workspace/platform-c
   // AdvertisingModule so a plan or subscription change can drop the published
   // advertising payload cached for that business's subdomain.
   imports: [
+    SubdomainsModule,
     AuthModule,
     StorageModule,
     AdvertisingModule,

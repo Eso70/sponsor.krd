@@ -63,6 +63,22 @@ truth.
 
 ## Proportionate verification
 
+Custom-domain coverage verifies automatic activation for many businesses across clustered
+workers, corrected-DNS reconnection, expired/suspended exclusions, configurable
+one-domain-per-business enforcement, bounded concurrency and retry after worker failures. Shared dashboard
+tests cover automatic status updates in business and platform contexts, hidden
+tabs, request overlap and unmount cancellation. The domain e2e suite uses only its
+disposable database with stub DNS/TLS; production DNS and certificate issuance
+still require deployment verification.
+
+Subdomain policy coverage includes permanent/custom reservations, occupied names,
+administrator-only policy mutations, stale signup availability responses, inline
+request failures, and Kurdish/Arabic/English settings. The focused database suite
+`backend/test/subdomain-policy.e2e-spec.ts` creates and drops only its own
+`sponsor_krd_subdomain_test_<pid>` database. It verifies fresh baseline and forward
+migration reruns, direct-write enforcement, block removal, existing reservations,
+and concurrent block/assignment writes without changing the configured database.
+
 Do not run every repository test after every localized change. Verification
 must be proportional to the scope and risk of the work:
 
@@ -195,3 +211,12 @@ The `DB_*` variables must be exported rather than left to `.env`: the e2e
 fixtures open their own pools before Nest's config module loads, so an unset
 `DB_PASSWORD` surfaces as `SASL: client password must be a string` rather than
 as a missing-configuration error.
+## Custom domains
+
+`backend/test/custom-domains.e2e-spec.ts` creates a disposable database to verify
+baseline/migration reruns, unique hostname claims, tenant-scoped mutations,
+ownership loss, lease expiry, HTTPS-gated primary selection and concurrent primary
+changes. DNS and TLS unit tests use controlled responses. Frontend tests cover
+both domain-panel integrations, read-only capability controls and custom-host
+routing, private-route rejection, aliases and resolver failures. Real DNS and
+certificate issuance require the production checks in [Custom domains](custom-domains.md).

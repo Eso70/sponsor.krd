@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { SubdomainsModule } from '../subdomains/subdomains.module';
 import { StorageModule } from '../storage/storage.module';
 import {
   BusinessSignupController,
@@ -11,7 +12,7 @@ import { BusinessOnboardingService } from './business-onboarding.service';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [AuthModule, StorageModule, MailModule],
+  imports: [AuthModule, StorageModule, MailModule, SubdomainsModule],
   controllers: [
     GoogleBusinessAuthController,
     PlatformGoogleAuthController,

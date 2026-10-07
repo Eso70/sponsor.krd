@@ -14,6 +14,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PlatformSettingsService } from './platform-settings.service';
+import { SubdomainPolicyService } from '../subdomains/subdomain-policy.service';
+import { BlockedSubdomainDto } from './dto/blocked-subdomain.dto';
 import { StorageService } from '../storage/storage.service';
 import { PlatformAdminGuard } from '../auth/platform-admin.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -45,7 +47,38 @@ export class PlatformSettingsController {
     private readonly platformSettingsService: PlatformSettingsService,
     private readonly storageService: StorageService,
     private readonly dataRetentionService: DataRetentionService,
+    private readonly subdomains: SubdomainPolicyService,
   ) {}
+
+  @Get('blocked-subdomains')
+  @RequireCapabilities(Capability.PlatformSettingsRead)
+  async blockedSubdomains() {
+    return { success: true, data: await this.subdomains.list() };
+  }
+
+  @Post('blocked-subdomains')
+  @RequireCapabilities(Capability.PlatformBusinessesUpdate)
+  async blockSubdomain(
+    @Body() body: BlockedSubdomainDto,
+    @CurrentUser() user: SessionUser,
+  ) {
+    return {
+      success: true,
+      data: await this.subdomains.add(body.subdomain, user.id),
+    };
+  }
+
+  @Delete('blocked-subdomains/:subdomain')
+  @RequireCapabilities(Capability.PlatformBusinessesUpdate)
+  async unblockSubdomain(
+    @Param('subdomain') subdomain: string,
+    @CurrentUser() user: SessionUser,
+  ) {
+    return {
+      success: true,
+      data: await this.subdomains.remove(subdomain, user.id),
+    };
+  }
 
   @Get('tiktok')
   @RequireCapabilities(Capability.PlatformSettingsTikTokRead)

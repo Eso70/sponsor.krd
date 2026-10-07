@@ -22,7 +22,10 @@ import { toText } from '../common/coerce';
 import type { LinkRow } from '../links/link.types';
 import { RedisService } from '../redis/redis.service';
 import { StorageService } from '../storage/storage.service';
-import { normalizeBusinessSubdomain } from '../common/business-subdomain';
+import {
+  normalizeBusinessSubdomain,
+  isSubdomainPolicyViolation,
+} from '../common/business-subdomain';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { createHash, randomUUID } from 'crypto';
 import { SecretCryptoService } from '../auth/secret-crypto.service';
@@ -718,7 +721,11 @@ export class BusinessAdministrationService {
     }
     if (subdomain && subdomain !== current.subdomain) {
       const check = await this.databaseService.query<ExistsProbeRow>(
-        'SELECT 1 FROM businesses WHERE subdomain = $1 AND id != $2',
+        `SELECT 1 FROM businesses WHERE subdomain = $1 AND id != $2
+         UNION ALL SELECT 1 FROM platform_blocked_subdomains WHERE subdomain = $1
+         UNION ALL SELECT 1 FROM business_signup_applications
+           WHERE requested_subdomain = $1 AND business_id IS DISTINCT FROM $2::uuid
+             AND status IN ('draft', 'pending', 'changes_requested', 'approved')`,
         [subdomain, id],
       );
       if (check.rows.length > 0)
@@ -787,41 +794,42 @@ export class BusinessAdministrationService {
     };
     const primaryTikTok = this.primaryTikTokConfig(resolved.tiktok_configs);
 
-    const result = await this.databaseService.transaction(async (client) => {
-      const businessUpdate = await client.query<BusinessRow>(
-        `UPDATE businesses SET username = $1, name = $2, phone = $3, email = $4, subdomain = $5, status = $6, updated_at = NOW()
+    const result = await this.databaseService
+      .transaction(async (client) => {
+        const businessUpdate = await client.query<BusinessRow>(
+          `UPDATE businesses SET username = $1, name = $2, phone = $3, email = $4, subdomain = $5, status = $6, updated_at = NOW()
          WHERE id = $7
          RETURNING id, username, name, phone, email, subdomain, status, plan, max_linktrees, created_at, updated_at`,
-        [
-          resolved.username,
-          resolved.name,
-          resolved.phone,
-          resolved.email,
-          resolved.subdomain,
-          resolved.status,
-          id,
-        ],
-      );
+          [
+            resolved.username,
+            resolved.name,
+            resolved.phone,
+            resolved.email,
+            resolved.subdomain,
+            resolved.status,
+            id,
+          ],
+        );
 
-      const brandingUpdate = await client.query<BrandingRow>(
-        `INSERT INTO business_branding (business_id, logo, favicon, default_avatar, website_color)
+        const brandingUpdate = await client.query<BrandingRow>(
+          `INSERT INTO business_branding (business_id, logo, favicon, default_avatar, website_color)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (business_id) DO UPDATE SET
            logo = EXCLUDED.logo, favicon = EXCLUDED.favicon,
            default_avatar = EXCLUDED.default_avatar, website_color = EXCLUDED.website_color,
            updated_at = NOW()
          RETURNING logo, favicon, default_avatar, website_color`,
-        [
-          id,
-          resolved.logo,
-          resolved.favicon,
-          resolved.default_avatar,
-          resolved.website_color,
-        ],
-      );
+          [
+            id,
+            resolved.logo,
+            resolved.favicon,
+            resolved.default_avatar,
+            resolved.website_color,
+          ],
+        );
 
-      const defaultsUpdate = await client.query<BusinessDefaultsRow>(
-        `INSERT INTO business_defaults (business_id, footer_text, footer_phone, template_key, background_color, footer_hidden, whatsapp_enabled)
+        const defaultsUpdate = await client.query<BusinessDefaultsRow>(
+          `INSERT INTO business_defaults (business_id, footer_text, footer_phone, template_key, background_color, footer_hidden, whatsapp_enabled)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (business_id) DO UPDATE SET
            footer_text = EXCLUDED.footer_text, footer_phone = EXCLUDED.footer_phone,
@@ -831,101 +839,101 @@ export class BusinessAdministrationService {
          RETURNING footer_text AS default_footer_text, footer_phone AS default_footer_phone,
                    template_key AS default_template, background_color AS default_background_color,
                    footer_hidden AS default_footer_hidden, whatsapp_enabled AS default_whatsapp_enabled`,
-        [
-          id,
-          resolved.default_footer_text,
-          resolved.default_footer_phone,
+          [
+            id,
+            resolved.default_footer_text,
+            resolved.default_footer_phone,
+            resolved.default_template,
+            resolved.default_background_color,
+            resolved.default_footer_hidden,
+            resolved.default_whatsapp_enabled,
+          ],
+        );
+
+        await this.replaceNormalizedTikTok(client, id, resolved.tiktok_configs);
+
+        const templateConfig = this.defaultTemplateConfig(
           resolved.default_template,
-          resolved.default_background_color,
-          resolved.default_footer_hidden,
-          resolved.default_whatsapp_enabled,
-        ],
-      );
+        );
+        templateConfig.whatsapp_modal.enabled =
+          resolved.default_whatsapp_enabled ?? false;
 
-      await this.replaceNormalizedTikTok(client, id, resolved.tiktok_configs);
-
-      const templateConfig = this.defaultTemplateConfig(
-        resolved.default_template,
-      );
-      templateConfig.whatsapp_modal.enabled =
-        resolved.default_whatsapp_enabled ?? false;
-
-      await client.query(
-        `UPDATE linktrees
+        await client.query(
+          `UPDATE linktrees
          SET name = COALESCE($1, name), image = $2, background_color = $3,
              template_key = $4, template_config = $5::jsonb,
              whatsapp_modal_enabled = $6, footer_text = $7, footer_phone = $8,
              footer_hidden = $9, updated_at = NOW()
          WHERE business_id = $10 AND is_default = true`,
-        [
-          resolved.name,
-          resolved.logo || null,
-          resolved.default_background_color ||
-            resolved.website_color ||
-            '#0f121d',
-          resolved.default_template || 'spectrum',
-          JSON.stringify(templateConfig),
-          resolved.default_whatsapp_enabled ?? false,
-          resolved.default_footer_text || null,
-          resolved.default_footer_phone || null,
-          resolved.default_footer_hidden ?? false,
-          id,
-        ],
-      );
-
-      if (data.links && Array.isArray(data.links)) {
-        const ltRes = await client.query<{ id: string }>(
-          `SELECT id FROM linktrees WHERE business_id = $1 AND is_default = true LIMIT 1`,
-          [id],
+          [
+            resolved.name,
+            resolved.logo || null,
+            resolved.default_background_color ||
+              resolved.website_color ||
+              '#0f121d',
+            resolved.default_template || 'spectrum',
+            JSON.stringify(templateConfig),
+            resolved.default_whatsapp_enabled ?? false,
+            resolved.default_footer_text || null,
+            resolved.default_footer_phone || null,
+            resolved.default_footer_hidden ?? false,
+            id,
+          ],
         );
-        if (ltRes.rows.length > 0) {
-          const linktreeId = ltRes.rows[0].id;
-          await client.query(`DELETE FROM links WHERE linktree_id = $1`, [
-            linktreeId,
-          ]);
-          for (let i = 0; i < data.links.length; i++) {
-            const link = data.links[i];
-            await client.query(
-              `INSERT INTO links (
+
+        if (data.links && Array.isArray(data.links)) {
+          const ltRes = await client.query<{ id: string }>(
+            `SELECT id FROM linktrees WHERE business_id = $1 AND is_default = true LIMIT 1`,
+            [id],
+          );
+          if (ltRes.rows.length > 0) {
+            const linktreeId = ltRes.rows[0].id;
+            await client.query(`DELETE FROM links WHERE linktree_id = $1`, [
+              linktreeId,
+            ]);
+            for (let i = 0; i < data.links.length; i++) {
+              const link = data.links[i];
+              await client.query(
+                `INSERT INTO links (
                  linktree_id, business_id, platform, url, display_name, display_order,
                  original_input, country_code, gps_lat, gps_lng, custom_color, custom_icon
                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-              [
-                linktreeId,
-                id,
-                link.platform,
-                link.url,
-                link.display_name || null,
-                i,
-                link.metadata?.original_input || null,
-                link.metadata?.country_code || null,
-                link.metadata?.gps_lat !== undefined
-                  ? Number(link.metadata.gps_lat)
-                  : null,
-                link.metadata?.gps_lng !== undefined
-                  ? Number(link.metadata.gps_lng)
-                  : null,
-                link.metadata?.custom_color || null,
-                link.metadata?.custom_icon || null,
-              ],
-            );
+                [
+                  linktreeId,
+                  id,
+                  link.platform,
+                  link.url,
+                  link.display_name || null,
+                  i,
+                  link.metadata?.original_input || null,
+                  link.metadata?.country_code || null,
+                  link.metadata?.gps_lat !== undefined
+                    ? Number(link.metadata.gps_lat)
+                    : null,
+                  link.metadata?.gps_lng !== undefined
+                    ? Number(link.metadata.gps_lng)
+                    : null,
+                  link.metadata?.custom_color || null,
+                  link.metadata?.custom_icon || null,
+                ],
+              );
+            }
           }
         }
-      }
 
-      if (data.subscriptionPlanId) {
-        const planRes = await client.query<SubscriptionPlanLookupRow>(
-          `SELECT sp.id AS subscription_plan_id, sp.permission_profile_id AS plan_id,
+        if (data.subscriptionPlanId) {
+          const planRes = await client.query<SubscriptionPlanLookupRow>(
+            `SELECT sp.id AS subscription_plan_id, sp.permission_profile_id AS plan_id,
                   pc.id AS plan_configuration_id
            FROM billing_subscription_plans sp
            LEFT JOIN billing_plan_configurations pc ON pc.plan_id = sp.permission_profile_id
            WHERE sp.id = $1::uuid AND sp.status = 'active'`,
-          [data.subscriptionPlanId],
-        );
-        if (planRes.rows.length > 0) {
-          const p = planRes.rows[0];
-          await client.query(
-            `INSERT INTO business_subscriptions
+            [data.subscriptionPlanId],
+          );
+          if (planRes.rows.length > 0) {
+            const p = planRes.rows[0];
+            await client.query(
+              `INSERT INTO business_subscriptions
                 (business_id, subscription_plan_id, plan_id, plan_configuration_id, status, current_period_start, current_period_end)
               VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'active', NOW(), NOW() + INTERVAL '1 year')
               ON CONFLICT (business_id) DO UPDATE SET
@@ -936,20 +944,25 @@ export class BusinessAdministrationService {
                 current_period_start = EXCLUDED.current_period_start,
                 current_period_end = EXCLUDED.current_period_end,
                 ended_at = NULL`,
-            [id, p.subscription_plan_id, p.plan_id, p.plan_configuration_id],
-          );
+              [id, p.subscription_plan_id, p.plan_id, p.plan_configuration_id],
+            );
+          }
         }
-      }
 
-      return {
-        ...businessUpdate.rows[0],
-        ...brandingUpdate.rows[0],
-        ...defaultsUpdate.rows[0],
-        pixel_id: primaryTikTok.pixel_id || null,
-        events_token: primaryTikTok.events_token || null,
-        tiktok_configs: resolved.tiktok_configs,
-      };
-    });
+        return {
+          ...businessUpdate.rows[0],
+          ...brandingUpdate.rows[0],
+          ...defaultsUpdate.rows[0],
+          pixel_id: primaryTikTok.pixel_id || null,
+          events_token: primaryTikTok.events_token || null,
+          tiktok_configs: resolved.tiktok_configs,
+        };
+      })
+      .catch((error: unknown) => {
+        if (isSubdomainPolicyViolation(error))
+          throw new ConflictException('Subdomain is unavailable');
+        throw error;
+      });
 
     await this.storageService.claimBusinessAssets(id, resolved);
     await this.storageService.deleteUnreferencedFromValues(
@@ -1708,222 +1721,228 @@ export class BusinessAdministrationService {
     const pages = this.validateBackupPages(backup.linktrees, true);
     const businessId = toText(business.id);
 
-    const result = await this.databaseService.transaction(async (client) => {
-      const conflict = await client.query<ExistsProbeRow>(
-        `SELECT 1 FROM businesses
+    const result = await this.databaseService
+      .transaction(async (client) => {
+        const conflict = await client.query<ExistsProbeRow>(
+          `SELECT 1 FROM businesses
          WHERE id=$1::uuid OR username=$2 OR subdomain=$3 LIMIT 1`,
-        [businessId, toText(business.username), toText(business.subdomain)],
-      );
-      if (conflict.rows.length) {
-        throw new ConflictException(
-          'A business with this ID, username, or subdomain already exists',
+          [businessId, toText(business.username), toText(business.subdomain)],
         );
-      }
-      if (hasOwner) {
-        const ownerConflict = await client.query<ExistsProbeRow>(
-          `SELECT 1 FROM users WHERE id=$1::uuid OR email=$2 LIMIT 1`,
-          [owner.id, toText(owner.email).trim().toLowerCase()],
-        );
-        if (ownerConflict.rows.length) {
+        if (conflict.rows.length) {
           throw new ConflictException(
-            'A user with this ID or email already exists',
+            'A business with this ID, username, or subdomain already exists',
           );
         }
-      }
-      if (hasIdentity) {
-        const identityConflict = await client.query<ExistsProbeRow>(
-          `SELECT 1 FROM user_identities
-           WHERE id=$1::uuid OR (provider=$2 AND provider_subject=$3) LIMIT 1`,
-          [identity.id, identity.provider, identity.provider_subject],
-        );
-        if (identityConflict.rows.length) {
-          throw new ConflictException('This login identity already exists');
+        if (hasOwner) {
+          const ownerConflict = await client.query<ExistsProbeRow>(
+            `SELECT 1 FROM users WHERE id=$1::uuid OR email=$2 LIMIT 1`,
+            [owner.id, toText(owner.email).trim().toLowerCase()],
+          );
+          if (ownerConflict.rows.length) {
+            throw new ConflictException(
+              'A user with this ID or email already exists',
+            );
+          }
         }
-      }
-      const plan = await client.query<SubscriptionPlanLookupRow>(
-        `SELECT sp.id AS subscription_plan_id, sp.permission_profile_id AS plan_id,
+        if (hasIdentity) {
+          const identityConflict = await client.query<ExistsProbeRow>(
+            `SELECT 1 FROM user_identities
+           WHERE id=$1::uuid OR (provider=$2 AND provider_subject=$3) LIMIT 1`,
+            [identity.id, identity.provider, identity.provider_subject],
+          );
+          if (identityConflict.rows.length) {
+            throw new ConflictException('This login identity already exists');
+          }
+        }
+        const plan = await client.query<SubscriptionPlanLookupRow>(
+          `SELECT sp.id AS subscription_plan_id, sp.permission_profile_id AS plan_id,
                 pc.id AS plan_configuration_id
          FROM billing_subscription_plans sp
          JOIN billing_plan_configurations pc ON pc.plan_id=sp.permission_profile_id
          WHERE sp.code=$1 AND sp.status='active' LIMIT 1`,
-        [toText(subscription.plan_code)],
-      );
-      if (!plan.rows.length) {
-        throw new BadRequestException(
-          `Subscription plan is unavailable: ${toText(subscription.plan_code)}`,
+          [toText(subscription.plan_code)],
         );
-      }
+        if (!plan.rows.length) {
+          throw new BadRequestException(
+            `Subscription plan is unavailable: ${toText(subscription.plan_code)}`,
+          );
+        }
 
-      await client.query(
-        `INSERT INTO businesses (
+        await client.query(
+          `INSERT INTO businesses (
            id, username, name, email, phone, subdomain, status, plan, max_linktrees,
            last_login_at, profile_changed_at,
            onboarding_step, onboarding_version, onboarding_completed_at,
            account_type, created_at, updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'business',$15,$16)`,
-        [
-          businessId,
-          toText(business.username).trim().toLowerCase(),
-          toText(business.name).trim(),
-          toText(business.email).trim() || null,
-          toText(business.phone).trim() || null,
-          toText(business.subdomain).trim().toLowerCase(),
-          business.status === 'suspended' ? 'suspended' : 'active',
-          ['trial', 'premium', 'enterprise'].includes(toText(business.plan))
-            ? business.plan
-            : 'trial',
-          Number(business.max_linktrees) > 0
-            ? Number(business.max_linktrees)
-            : 5,
-          business.last_login_at || null,
-          business.profile_changed_at || null,
-          [1, 2, 3].includes(Number(business.onboarding_step))
-            ? Number(business.onboarding_step)
-            : 3,
-          toText(business.onboarding_version) || '2026-08',
-          business.onboarding_completed_at || null,
-          business.created_at || new Date(),
-          business.updated_at || new Date(),
-        ],
-      );
-      // The insert trigger creates the current default plan; replace that row
-      // with the exported subscription below.
-      await client.query(
-        'DELETE FROM business_subscriptions WHERE business_id=$1::uuid',
-        [businessId],
-      );
-      if (hasOwner) {
-        await client.query(
-          `INSERT INTO users
-             (id,email,display_name,avatar_url,status,last_login_at,created_at,updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
           [
-            owner.id,
-            toText(owner.email).trim().toLowerCase(),
-            owner.display_name,
-            toText(owner.avatar_url) || null,
-            owner.status === 'suspended' ? 'suspended' : 'active',
-            owner.last_login_at || null,
-            owner.created_at || new Date(),
-            owner.updated_at || new Date(),
+            businessId,
+            toText(business.username).trim().toLowerCase(),
+            toText(business.name).trim(),
+            toText(business.email).trim() || null,
+            toText(business.phone).trim() || null,
+            normalizeBusinessSubdomain(toText(business.subdomain)),
+            business.status === 'suspended' ? 'suspended' : 'active',
+            ['trial', 'premium', 'enterprise'].includes(toText(business.plan))
+              ? business.plan
+              : 'trial',
+            Number(business.max_linktrees) > 0
+              ? Number(business.max_linktrees)
+              : 5,
+            business.last_login_at || null,
+            business.profile_changed_at || null,
+            [1, 2, 3].includes(Number(business.onboarding_step))
+              ? Number(business.onboarding_step)
+              : 3,
+            toText(business.onboarding_version) || '2026-08',
+            business.onboarding_completed_at || null,
+            business.created_at || new Date(),
+            business.updated_at || new Date(),
           ],
         );
-        if (hasIdentity) {
+        // The insert trigger creates the current default plan; replace that row
+        // with the exported subscription below.
+        await client.query(
+          'DELETE FROM business_subscriptions WHERE business_id=$1::uuid',
+          [businessId],
+        );
+        if (hasOwner) {
           await client.query(
-            `INSERT INTO user_identities (
+            `INSERT INTO users
+             (id,email,display_name,avatar_url,status,last_login_at,created_at,updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [
+              owner.id,
+              toText(owner.email).trim().toLowerCase(),
+              owner.display_name,
+              toText(owner.avatar_url) || null,
+              owner.status === 'suspended' ? 'suspended' : 'active',
+              owner.last_login_at || null,
+              owner.created_at || new Date(),
+              owner.updated_at || new Date(),
+            ],
+          );
+          if (hasIdentity) {
+            await client.query(
+              `INSERT INTO user_identities (
                id,user_id,provider,provider_subject,provider_email,email_verified,
                profile,last_authenticated_at,created_at,updated_at)
              VALUES ($1,$2,'google',$3,$4,$5,$6::jsonb,$7,$8,$9)`,
+              [
+                identity.id,
+                owner.id,
+                identity.provider_subject,
+                toText(identity.provider_email).trim().toLowerCase(),
+                identity.email_verified === true,
+                JSON.stringify(asRecord(identity.profile)),
+                identity.last_authenticated_at || new Date(),
+                identity.created_at || new Date(),
+                identity.updated_at || new Date(),
+              ],
+            );
+          }
+          await client.query(
+            `INSERT INTO business_memberships
+             (id,business_id,user_id,role,status,created_at,updated_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
             [
-              identity.id,
+              membership.id,
+              businessId,
               owner.id,
-              identity.provider_subject,
-              toText(identity.provider_email).trim().toLowerCase(),
-              identity.email_verified === true,
-              JSON.stringify(asRecord(identity.profile)),
-              identity.last_authenticated_at || new Date(),
-              identity.created_at || new Date(),
-              identity.updated_at || new Date(),
+              ['owner', 'admin', 'member'].includes(toText(membership.role))
+                ? membership.role
+                : 'owner',
+              membership.status === 'suspended' ? 'suspended' : 'active',
+              membership.created_at || new Date(),
+              membership.updated_at || new Date(),
             ],
           );
         }
         await client.query(
-          `INSERT INTO business_memberships
-             (id,business_id,user_id,role,status,created_at,updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [
-            membership.id,
-            businessId,
-            owner.id,
-            ['owner', 'admin', 'member'].includes(toText(membership.role))
-              ? membership.role
-              : 'owner',
-            membership.status === 'suspended' ? 'suspended' : 'active',
-            membership.created_at || new Date(),
-            membership.updated_at || new Date(),
-          ],
-        );
-      }
-      await client.query(
-        `INSERT INTO business_branding
+          `INSERT INTO business_branding
            (business_id,logo,favicon,default_avatar,website_color,updated_at)
          VALUES ($1,$2,$3,$4,$5,$6)`,
-        [
-          businessId,
-          toText(branding.logo) || BUSINESS_LOGO_PLACEHOLDER,
-          toText(branding.favicon) || BUSINESS_FAVICON_PLACEHOLDER,
-          toText(branding.default_avatar) || DEFAULT_AVATAR,
-          toText(branding.website_color) || null,
-          branding.updated_at || new Date(),
-        ],
-      );
-      await client.query(
-        `INSERT INTO business_defaults (
+          [
+            businessId,
+            toText(branding.logo) || BUSINESS_LOGO_PLACEHOLDER,
+            toText(branding.favicon) || BUSINESS_FAVICON_PLACEHOLDER,
+            toText(branding.default_avatar) || DEFAULT_AVATAR,
+            toText(branding.website_color) || null,
+            branding.updated_at || new Date(),
+          ],
+        );
+        await client.query(
+          `INSERT INTO business_defaults (
            business_id,footer_text,footer_phone,footer_hidden,template_key,
            background_color,whatsapp_enabled,updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [
-          businessId,
-          toText(defaults.footer_text) || null,
-          toText(defaults.footer_phone) || null,
-          defaults.footer_hidden !== false,
-          toText(defaults.template_key) || DEFAULT_LINKTREE_TEMPLATE_KEY,
-          toText(defaults.background_color) ||
-            DEFAULT_LINKTREE_BACKGROUND_COLOR,
-          defaults.whatsapp_enabled === true,
-          defaults.updated_at || new Date(),
-        ],
-      );
-      const resolvedPlan = plan.rows[0];
-      await client.query(
-        `INSERT INTO business_subscriptions (
+          [
+            businessId,
+            toText(defaults.footer_text) || null,
+            toText(defaults.footer_phone) || null,
+            defaults.footer_hidden !== false,
+            toText(defaults.template_key) || DEFAULT_LINKTREE_TEMPLATE_KEY,
+            toText(defaults.background_color) ||
+              DEFAULT_LINKTREE_BACKGROUND_COLOR,
+            defaults.whatsapp_enabled === true,
+            defaults.updated_at || new Date(),
+          ],
+        );
+        const resolvedPlan = plan.rows[0];
+        await client.query(
+          `INSERT INTO business_subscriptions (
            id,business_id,subscription_plan_id,plan_id,plan_configuration_id,
            status,billing_cycle,starts_at,current_period_start,current_period_end,
            cancels_at,ended_at,metadata,created_at,updated_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15)`,
-        [
-          UUID_PATTERN.test(toText(subscription.id))
-            ? subscription.id
-            : randomUUID(),
-          businessId,
-          resolvedPlan.subscription_plan_id,
-          resolvedPlan.plan_id,
-          resolvedPlan.plan_configuration_id,
           [
-            'trialing',
-            'active',
-            'past_due',
-            'grace_period',
-            'paused',
-            'canceled',
-            'expired',
-            'incomplete',
-          ].includes(toText(subscription.status))
-            ? subscription.status
-            : 'active',
-          ['free', 'monthly', 'yearly', 'custom'].includes(
-            toText(subscription.billing_cycle),
-          )
-            ? subscription.billing_cycle
-            : 'free',
-          subscription.starts_at || new Date(),
-          subscription.current_period_start || new Date(),
-          subscription.current_period_end || null,
-          subscription.cancels_at || null,
-          subscription.ended_at || null,
-          JSON.stringify(asRecord(subscription.metadata)),
-          subscription.created_at || new Date(),
-          subscription.updated_at || new Date(),
-        ],
-      );
-      const imported = await this.importLinktreePages(
-        client,
-        businessId,
-        pages,
-        true,
-      );
-      return { business_id: businessId, ...imported };
-    });
+            UUID_PATTERN.test(toText(subscription.id))
+              ? subscription.id
+              : randomUUID(),
+            businessId,
+            resolvedPlan.subscription_plan_id,
+            resolvedPlan.plan_id,
+            resolvedPlan.plan_configuration_id,
+            [
+              'trialing',
+              'active',
+              'past_due',
+              'grace_period',
+              'paused',
+              'canceled',
+              'expired',
+              'incomplete',
+            ].includes(toText(subscription.status))
+              ? subscription.status
+              : 'active',
+            ['free', 'monthly', 'yearly', 'custom'].includes(
+              toText(subscription.billing_cycle),
+            )
+              ? subscription.billing_cycle
+              : 'free',
+            subscription.starts_at || new Date(),
+            subscription.current_period_start || new Date(),
+            subscription.current_period_end || null,
+            subscription.cancels_at || null,
+            subscription.ended_at || null,
+            JSON.stringify(asRecord(subscription.metadata)),
+            subscription.created_at || new Date(),
+            subscription.updated_at || new Date(),
+          ],
+        );
+        const imported = await this.importLinktreePages(
+          client,
+          businessId,
+          pages,
+          true,
+        );
+        return { business_id: businessId, ...imported };
+      })
+      .catch((error: unknown) => {
+        if (isSubdomainPolicyViolation(error))
+          throw new ConflictException('Subdomain is unavailable');
+        throw error;
+      });
     await this.restoreBackupAssets(businessId, backup);
     await this.refreshBusinessRuntimeState(businessId);
     return result;

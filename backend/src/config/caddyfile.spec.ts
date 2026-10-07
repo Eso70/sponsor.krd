@@ -54,6 +54,6 @@ describe('Caddyfile Configuration Validation', () => {
       caddyfileContent.match(
         /header @api X-Robots-Tag "noindex, nofollow, noarchive"/g,
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 });

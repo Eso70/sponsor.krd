@@ -518,3 +518,12 @@ were previously listed here: password authentication has since been removed
 entirely, audit rows are excluded from retention cleanup, and production scripts
 use request nonces instead of `'unsafe-inline'`. Regression coverage
 for these boundaries is listed in [docs/testing.md](testing.md).
+## Customer domain security
+
+Custom domains require a unique business mapping, exact DNS TXT ownership proof,
+origin-address verification and a renewable 48-hour lease. Unknown, disconnected,
+expired and suspended-tenant mappings fail closed. Internal domain resolution
+requires the proxy secret; certificate permission requires loopback and is blocked
+at the edge. Primary selection checks the public TLS certificate at a configured
+origin IP. Private business/platform APIs and dashboard authentication remain on
+Sponsor.krd hosts. See [Custom domains](custom-domains.md) for lifecycle details.

@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, Loader2, ShieldCheck } from "lucide-react";
-import { apiRequest } from "@/lib/api/request";
+import { apiRequest, ApiRequestError } from "@/lib/api/request";
+import { useSubdomainAvailability } from "@/features/subdomains/use-subdomain-availability";
+import { subdomainCopy } from "@/features/subdomains/copy";
+import { SubdomainAvailabilityMessage } from "@/features/subdomains/SubdomainAvailabilityMessage";
 import { getBusinessWorkspaceEntryUrl, getRootDomain } from "@/lib/utils/app-url";
 import { AuthenticationCard } from "@/components/shared/AuthenticationCard";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
@@ -54,7 +57,11 @@ export function BusinessSignupWizard() {
     requestedSubdomain: "",
     preferredLocale: "en",
   });
-  const [available, setAvailable] = useState<boolean | null>(null);
+  const checkedAvailability = useSubdomainAvailability(form.requestedSubdomain);
+  const [conflictingSubdomain, setConflictingSubdomain] = useState<string | null>(null);
+  const availabilityStatus = conflictingSubdomain === form.requestedSubdomain ? "taken" : checkedAvailability.status;
+  const available = availabilityStatus === "taken" ? false : checkedAvailability.available;
+  const availabilityCopy = subdomainCopy[locale];
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,18 +112,6 @@ export function BusinessSignupWizard() {
     }
   }
 
-  useEffect(() => {
-    if (!form.requestedSubdomain) return;
-    const timer = window.setTimeout(() => {
-      void apiRequest<{ available: boolean }>(
-        `/api/signup/subdomain-availability?value=${encodeURIComponent(form.requestedSubdomain)}`,
-      )
-        .then((result) => setAvailable(result.available))
-        .catch(() => setAvailable(false));
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [form.requestedSubdomain]);
-
   async function submit() {
     const nextErrors = validateSignupApplication(form, available, locale);
     setErrors(nextErrors);
@@ -134,7 +129,12 @@ export function BusinessSignupWizard() {
           method: "POST",
         }),
       );
-    } catch {
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.status === 409) {
+        setConflictingSubdomain(form.requestedSubdomain);
+        setErrors((current) => ({ ...current, subdomainAvailability: availabilityCopy.taken }));
+        setErrorsLocale(locale);
+      }
       setError("SIGNUP_SUBMIT_FAILED");
     } finally {
       setBusy(false);
@@ -290,9 +290,6 @@ export function BusinessSignupWizard() {
           <EditorField
             label={copy.subdomain}
             required
-            hint={
-              available === null ? "" : available ? copy.available : copy.unavailableSubdomain
-            }
             error={visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability}
           >
             <div className="flex items-center gap-2">
@@ -304,13 +301,15 @@ export function BusinessSignupWizard() {
                       visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
                     ),
                 )}
-                aria-invalid={Boolean(
+                aria-invalid={available === false || Boolean(
                   visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
                 )}
                 value={form.requestedSubdomain}
+                maxLength={63}
                 placeholder={copy.subdomainPlaceholder}
                 onChange={(event) => {
-                  setAvailable(null);
+                  setErrors((current) => ({ ...current, requestedSubdomain: undefined, subdomainAvailability: undefined }));
+                  setConflictingSubdomain(null);
                   setForm({
                     ...form,
                     requestedSubdomain: slug(event.target.value),
@@ -319,6 +318,7 @@ export function BusinessSignupWizard() {
               />
               <span className="shrink-0 text-xs text-slate-400">.{getRootDomain().split(":")[0]}</span>
             </div>
+            <SubdomainAvailabilityMessage status={availabilityStatus} locale={locale} />
           </EditorField>
           <LanguagePreferenceSelect
             label={copy.defaultLanguage}

@@ -82,6 +82,8 @@ export interface ManagementTableEmptyState {
 }
 
 export interface ManagementTableProps<T> {
+  /** Tighter cell and mobile-card spacing for concise management lists. */
+  compact?: boolean;
   data: T[];
   columns: ManagementTableColumn[];
   getRowKey: (item: T) => string;
@@ -154,6 +156,7 @@ export function useManagementPagination<T>(
 }
 
 export function ManagementTable<T>({
+  compact = false,
   data,
   columns,
   getRowKey,
@@ -194,9 +197,9 @@ export function ManagementTable<T>({
   }
 
   return (
-    <div className={`w-full ${className}`} dir="ltr">
+    <div className={`w-full ${compact ? "[&_tbody_td]:px-3 [&_tbody_td]:py-2" : ""} ${className}`} dir="ltr">
       {/* Mobile cards */}
-      <div className="md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10">
+      <div className={`md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10 ${compact ? "[&>div>div]:p-3 [&>div>div]:gap-2" : ""}`}>
         {visibleData.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-600 dark:text-gray-400">
             {noDataLabel}
@@ -216,7 +219,7 @@ export function ManagementTable<T>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 ${
+                  className={`px-3 ${compact ? "py-2" : "py-3"} text-left text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 ${
                     column.hideBelow ? HIDE_BELOW_CLASSES[column.hideBelow] : ""
                   } ${column.width || ""} ${column.className || ""}`}
                 >

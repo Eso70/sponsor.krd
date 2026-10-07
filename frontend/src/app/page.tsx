@@ -58,7 +58,7 @@ export default async function Home() {
 
   const headerStore = await headers();
   const host = headerStore.get("host") || "";
-  const subdomain = extractSubdomain(host, undefined, ROOT_DOMAIN);
+  const subdomain = extractSubdomain(host, headerStore.get('x-subdomain') || undefined, ROOT_DOMAIN);
   if (!subdomain) {
     const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
     return <HomeLanding initialLocale={locale} />;
@@ -133,7 +133,7 @@ export default async function Home() {
 export async function generateMetadata() {
   const headerStore = await headers();
   const host = (headerStore.get("host") || "").split(":")[0].toLowerCase();
-  const subdomain = extractSubdomain(host, undefined, ROOT_DOMAIN);
+  const subdomain = extractSubdomain(host, headerStore.get('x-subdomain') || undefined, ROOT_DOMAIN);
 
   if (subdomain) {
     const cookieStore = await cookies();

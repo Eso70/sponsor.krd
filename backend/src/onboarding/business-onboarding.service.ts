@@ -20,7 +20,11 @@ import {
 } from 'crypto';
 import type { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
-import { normalizeBusinessSubdomain } from '../common/business-subdomain';
+import { SubdomainPolicyService } from '../subdomains/subdomain-policy.service';
+import {
+  normalizeBusinessSubdomain,
+  isSubdomainPolicyViolation,
+} from '../common/business-subdomain';
 import { RedisService } from '../redis/redis.service';
 import {
   GoogleIdentityService,
@@ -144,6 +148,9 @@ export class BusinessOnboardingService {
     private readonly storage: StorageService,
     private readonly config: ConfigService,
     private readonly mail?: MailService,
+    private readonly subdomains: SubdomainPolicyService = new SubdomainPolicyService(
+      database,
+    ),
   ) {}
 
   private hash(value: string): string {
@@ -1252,6 +1259,9 @@ export class BusinessOnboardingService {
       if ((error as { code?: string }).code === '23505') {
         throw new ConflictException('Subdomain is already reserved');
       }
+      if (isSubdomainPolicyViolation(error)) {
+        throw new ConflictException('Subdomain is unavailable');
+      }
       throw error;
     }
     return this.application(sessionToken);
@@ -1289,17 +1299,7 @@ export class BusinessOnboardingService {
 
   async subdomainAvailable(sessionToken: string, raw: string) {
     const session = await this.signupSession(sessionToken);
-    const subdomain = normalizeBusinessSubdomain(raw);
-    const result = await this.database.query(
-      `SELECT 1 FROM businesses WHERE subdomain = $1
-       UNION ALL
-       SELECT 1 FROM business_signup_applications
-       WHERE requested_subdomain = $1 AND id != $2
-         AND status IN ('draft', 'pending', 'changes_requested', 'approved')
-       LIMIT 1`,
-      [subdomain, session.applicationId],
-    );
-    return { subdomain, available: !result.rows[0] };
+    return this.subdomains.availability(raw, session.applicationId);
   }
 
   private async signupSession(token: string): Promise<SignupSession> {
@@ -1363,34 +1363,35 @@ export class BusinessOnboardingService {
     adminId: string,
     planId: string,
   ) {
-    return this.database.transaction(async (client) => {
-      const applicationResult = await client.query<{
-        id: string;
-        invitation_id: string;
-        user_id: string;
-        owner_email: string;
-        business_name: string;
-        phone: string;
-        requested_subdomain: string;
-        logo: string;
-        favicon: string;
-        default_avatar: string;
-        website_color: string;
-      }>(
-        `SELECT * FROM business_signup_applications
+    return this.database
+      .transaction(async (client) => {
+        const applicationResult = await client.query<{
+          id: string;
+          invitation_id: string;
+          user_id: string;
+          owner_email: string;
+          business_name: string;
+          phone: string;
+          requested_subdomain: string;
+          logo: string;
+          favicon: string;
+          default_avatar: string;
+          website_color: string;
+        }>(
+          `SELECT * FROM business_signup_applications
          WHERE id = $1 AND status = 'pending' FOR UPDATE`,
-        [applicationId],
-      );
-      const application = applicationResult.rows[0];
-      if (!application)
-        throw new ConflictException('Application is not pending');
-      const assignment = await client.query<{
-        subscription_plan_id: string;
-        plan_id: string;
-        configuration_id: string;
-        trial_days: number;
-      }>(
-        `SELECT subscription_plan.id AS subscription_plan_id,
+          [applicationId],
+        );
+        const application = applicationResult.rows[0];
+        if (!application)
+          throw new ConflictException('Application is not pending');
+        const assignment = await client.query<{
+          subscription_plan_id: string;
+          plan_id: string;
+          configuration_id: string;
+          trial_days: number;
+        }>(
+          `SELECT subscription_plan.id AS subscription_plan_id,
                 subscription_plan.permission_profile_id AS plan_id,
                 configuration.id AS configuration_id,
                 subscription_plan.trial_days::int AS trial_days
@@ -1399,37 +1400,37 @@ export class BusinessOnboardingService {
            ON configuration.plan_id = subscription_plan.permission_profile_id
          WHERE subscription_plan.id = $1 AND subscription_plan.status = 'active'
          LIMIT 1`,
-        [planId],
-      );
-      if (!assignment.rows[0])
-        throw new BadRequestException('Selected plan is unavailable');
-      const businessResult = await client.query<{
-        id: string;
-        username: string;
-        name: string;
-        phone: string;
-        email: string;
-        subdomain: string;
-        logo?: string;
-        favicon?: string;
-        default_avatar?: string;
-      }>(
-        `INSERT INTO businesses
+          [planId],
+        );
+        if (!assignment.rows[0])
+          throw new BadRequestException('Selected plan is unavailable');
+        const businessResult = await client.query<{
+          id: string;
+          username: string;
+          name: string;
+          phone: string;
+          email: string;
+          subdomain: string;
+          logo?: string;
+          favicon?: string;
+          default_avatar?: string;
+        }>(
+          `INSERT INTO businesses
           (username, name, phone, email, subdomain, status,
            onboarding_step, onboarding_completed_at)
          VALUES ($1, $2, $3, $4, $1, 'active', 1, NULL)
          RETURNING id, username, name, phone, email, subdomain`,
-        [
-          application.requested_subdomain,
-          application.business_name,
-          application.phone,
-          application.owner_email,
-        ],
-      );
-      const business = businessResult.rows[0];
-      const plan = assignment.rows[0];
-      await client.query(
-        `INSERT INTO business_subscriptions
+          [
+            application.requested_subdomain,
+            application.business_name,
+            application.phone,
+            application.owner_email,
+          ],
+        );
+        const business = businessResult.rows[0];
+        const plan = assignment.rows[0];
+        await client.query(
+          `INSERT INTO business_subscriptions
           (business_id, subscription_plan_id, plan_id, plan_configuration_id,
            status, billing_cycle, current_period_start, current_period_end,
            created_by)
@@ -1446,72 +1447,77 @@ export class BusinessOnboardingService {
            current_period_end = EXCLUDED.current_period_end,
            ended_at = NULL,
            created_by = EXCLUDED.created_by`,
-        [
-          business.id,
-          plan.subscription_plan_id,
-          plan.plan_id,
-          plan.configuration_id,
-          plan.trial_days > 0 ? 'trialing' : 'active',
-          plan.trial_days,
-          adminId,
-        ],
-      );
-      await client.query(
-        `INSERT INTO business_branding
+          [
+            business.id,
+            plan.subscription_plan_id,
+            plan.plan_id,
+            plan.configuration_id,
+            plan.trial_days > 0 ? 'trialing' : 'active',
+            plan.trial_days,
+            adminId,
+          ],
+        );
+        await client.query(
+          `INSERT INTO business_branding
           (business_id, logo, favicon, default_avatar, website_color)
          VALUES ($1, $2, $3, $4, $5)`,
-        [
-          business.id,
-          application.logo || BUSINESS_LOGO_PLACEHOLDER,
-          application.favicon || BUSINESS_FAVICON_PLACEHOLDER,
-          application.default_avatar || DEFAULT_AVATAR,
-          application.website_color || DEFAULT_SPONSOR_KRD_WEBSITE_COLOR,
-        ],
-      );
-      await client.query(
-        `INSERT INTO business_defaults
+          [
+            business.id,
+            application.logo || BUSINESS_LOGO_PLACEHOLDER,
+            application.favicon || BUSINESS_FAVICON_PLACEHOLDER,
+            application.default_avatar || DEFAULT_AVATAR,
+            application.website_color || DEFAULT_SPONSOR_KRD_WEBSITE_COLOR,
+          ],
+        );
+        await client.query(
+          `INSERT INTO business_defaults
           (business_id, footer_text, footer_phone, template_key,
            background_color, footer_hidden, whatsapp_enabled)
          VALUES ($1, $2, $3, $4, $5, true, false)`,
-        [
-          business.id,
-          application.business_name,
-          application.phone,
-          DEFAULT_LINKTREE_TEMPLATE_KEY,
-          DEFAULT_LINKTREE_BACKGROUND_COLOR,
-        ],
-      );
-      await client.query(
-        `INSERT INTO business_memberships (business_id, user_id, role)
+          [
+            business.id,
+            application.business_name,
+            application.phone,
+            DEFAULT_LINKTREE_TEMPLATE_KEY,
+            DEFAULT_LINKTREE_BACKGROUND_COLOR,
+          ],
+        );
+        await client.query(
+          `INSERT INTO business_memberships (business_id, user_id, role)
          VALUES ($1, $2, 'owner')`,
-        [business.id, application.user_id],
-      );
-      await client.query(
-        `UPDATE business_signup_applications SET status = 'approved',
+          [business.id, application.user_id],
+        );
+        await client.query(
+          `UPDATE business_signup_applications SET status = 'approved',
            business_id = $1, reviewed_at = NOW(), reviewed_by = $2,
            selected_subscription_plan_id = $3, review_reason = NULL
          WHERE id = $4`,
-        [business.id, adminId, planId, application.id],
-      );
-      await client.query(
-        `UPDATE business_signup_invitations SET consumed_at = NOW()
+          [business.id, adminId, planId, application.id],
+        );
+        await client.query(
+          `UPDATE business_signup_invitations SET consumed_at = NOW()
          WHERE id = $1`,
-        [application.invitation_id],
-      );
-      await this.recordReviewEvent(
-        application.id,
-        adminId,
-        'approved',
-        undefined,
-        client,
-      );
-      return {
-        ...business,
-        logo: application.logo,
-        favicon: application.favicon,
-        default_avatar: application.default_avatar,
-      };
-    });
+          [application.invitation_id],
+        );
+        await this.recordReviewEvent(
+          application.id,
+          adminId,
+          'approved',
+          undefined,
+          client,
+        );
+        return {
+          ...business,
+          logo: application.logo,
+          favicon: application.favicon,
+          default_avatar: application.default_avatar,
+        };
+      })
+      .catch((error: unknown) => {
+        if (isSubdomainPolicyViolation(error))
+          throw new ConflictException('Subdomain is unavailable');
+        throw error;
+      });
   }
 
   private async recordReviewEvent(

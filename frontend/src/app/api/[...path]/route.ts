@@ -38,7 +38,7 @@ async function proxyRequest(
   const host = request.headers.get("host") || "";
   const subdomain = extractSubdomain(
     host,
-    undefined,
+    request.headers.get('x-subdomain') || undefined,
     process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
   );
   const cookieHeader = request.headers.get("cookie");

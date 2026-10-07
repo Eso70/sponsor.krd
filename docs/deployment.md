@@ -191,6 +191,14 @@ they always act on exactly the applications that file defines.
 ---
 
 # Reverse Proxy
+Customer-owned domains use the added Caddy catch-all with an internal certificate
+allowlist. Activation requires environment values, DNS-only origin records, the
+additive migration and a validated Caddy reload. See the
+[custom-domain setup procedure](custom-domains.md#one-time-production-setup).
+This is one-time platform configuration. Subsequent domains use dashboard
+ownership records, automatic verification and automatic certificates without
+per-domain proxy edits or restarts. Clients still configure their own DNS records.
+
 
 The repository includes a Caddy configuration.
 

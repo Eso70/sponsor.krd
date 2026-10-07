@@ -9,7 +9,7 @@ export type BusinessDashboardPage =
   | "settings";
 
 export type BusinessSettingsTab =
-  "profile" | "defaults" | "security" | "messages";
+  "profile" | "defaults" | "security" | "messages" | "domains";
 
 interface AccessManifestLike {
   permissions?: Record<string, { outcome?: PermissionOutcome } | undefined>;
@@ -46,6 +46,7 @@ const SETTINGS_TAB_PERMISSIONS: Record<
   string
 > = {
   profile: "business:settings:profile-access",
+  domains: 'business:domains:read',
   defaults: "business:settings:defaults-access",
   security: "business:settings:security-access",
 };

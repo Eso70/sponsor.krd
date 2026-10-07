@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { businessMessages } from "@/features/business/i18n/messages";
+import { BusinessDomainsPanel } from '@/features/domains/components/BusinessDomainsPanel';
+import { domainCopy, type DomainLocale } from '@/features/domains/copy';
 import Image from "next/image";
 import {
   Building2,
+  Globe,
   Clock3,
   MessageSquare,
   Palette,
@@ -56,7 +59,7 @@ import {
   LOGO_MIME_TYPES,
 } from "@/lib/brand/brand-assets";
 
-type Tab = "profile" | "defaults" | "security" | "messages";
+type Tab = "profile" | "defaults" | "security" | "messages" | "domains";
 type SettingsData = {
   name: string;
   username: string;
@@ -110,6 +113,7 @@ const inputClass =
 export function BusinessSettingsPage() {
   const t = useTranslations("SettingsPage");
   const locale = useLocale();
+  const domainLocale: DomainLocale = locale === 'ar' || locale === 'en' ? locale : 'ckb';
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() =>
@@ -262,6 +266,7 @@ export function BusinessSettingsPage() {
   const tabs = useMemo(
     () => [
       { id: "profile" as const, label: t("profileTab"), icon: UserRound },
+      { id: 'domains' as const, label: domainCopy[domainLocale].title, icon: Globe },
       {
         id: "defaults" as const,
         label: t("defaultsTab"),
@@ -278,7 +283,7 @@ export function BusinessSettingsPage() {
         icon: MessageSquare,
       },
     ],
-    [t],
+    [t, domainLocale],
   );
   const activeTab = tabs.some((item) => item.id === tab) ? tab : "profile";
   const tabLocked = isBusinessSettingsTabLocked(activeTab, effectiveAccess);
@@ -424,6 +429,7 @@ export function BusinessSettingsPage() {
           description={t("upgradeRequired")}
         >
           <DashboardSurface>
+            {activeTab === 'domains' && <BusinessDomainsPanel scope={{ surface: 'business' }} locale={domainLocale} canManage={effectiveAccess?.permissions?.['business:domains:manage']?.outcome === 'allow'} />}
             {activeTab === "profile" && (
               <PageHeaderSection
                 icon={Building2}
