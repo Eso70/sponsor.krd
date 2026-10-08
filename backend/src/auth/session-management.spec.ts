@@ -24,6 +24,32 @@ describe('SessionService business session management', () => {
       service.getBusinessLoginSecurity('business-id', 'current-token'),
     ).resolves.toEqual({ sessions });
   });
+  it('rejects a revoked platform session even if Redis still contains it', async () => {
+    const database = {
+      query: jest.fn().mockResolvedValue({ rows: [] }),
+    } as unknown as DatabaseService;
+    const cached = {
+      id: 'admin-id',
+      username: 'admin',
+      name: 'Admin',
+      role: 'platform-admin',
+    };
+    const sessionRedis = {
+      get: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(cached),
+      del: jest.fn().mockResolvedValue(true),
+    } as unknown as RedisService;
+    const service = new SessionService(database, sessionRedis);
+    await expect(
+      service.getSessionUser('revoked-platform-token'),
+    ).resolves.toBeNull();
+    expect(sessionRedis.del).toHaveBeenCalledWith(
+      'session:revoked-platform-token',
+    );
+    expect(mockArg(database.query, 0, 1)).toEqual([
+      'revoked-platform-token',
+      'admin-id',
+    ]);
+  });
 
   it('revokes a selected session from PostgreSQL and Redis', async () => {
     const database = {
@@ -93,7 +119,7 @@ describe('SessionService business session management', () => {
     const database = {
       query: jest
         .fn()
-        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ impersonation_started_at: null }] })
         .mockResolvedValueOnce({ rows: [] }),
     } as unknown as DatabaseService;
     const service = new SessionService(database, redis);
@@ -126,7 +152,7 @@ describe('SessionService business session management', () => {
     const database = {
       query: jest
         .fn()
-        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ impersonation_started_at: null }] })
         .mockResolvedValueOnce({ rows: [] }),
     } as unknown as DatabaseService;
     const sessionRedis = {

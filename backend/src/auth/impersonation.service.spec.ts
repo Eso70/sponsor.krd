@@ -23,7 +23,7 @@ function createService(businessRow?: Record<string, unknown>) {
     destroySession: jest.fn().mockResolvedValue(undefined),
   } as unknown as SessionService;
   const config = {
-    get: jest.fn((key: string) =>
+    get: jest.fn((key: string): unknown =>
       key === 'APP_BASE_URL' ? 'http://lvh.me:3011' : undefined,
     ),
   };
@@ -33,7 +33,7 @@ function createService(businessRow?: Record<string, unknown>) {
     sessions,
     config as never,
   );
-  return { service, database, redis, sessions };
+  return { service, database, redis, sessions, config };
 }
 
 const activeBusiness = {
@@ -46,6 +46,30 @@ const activeBusiness = {
 
 describe('ImpersonationService.start', () => {
   beforeEach(() => jest.clearAllMocks());
+  it('opens the selected custom dashboard with a hostname-bound handoff', async () => {
+    const { service, database, redis, config } = createService(activeBusiness);
+    config.get.mockImplementation((key: string) =>
+      key === 'CUSTOM_DOMAINS_ENABLED'
+        ? true
+        : key === 'APP_BASE_URL'
+          ? 'https://sponsor.krd'
+          : undefined,
+    );
+    (database.query as jest.Mock)
+      .mockResolvedValueOnce({ rows: [activeBusiness] })
+      .mockResolvedValueOnce({ rows: [{ hostname: 'zhirsaz.com' }] });
+    const result = await service.start({
+      businessId: 'business-id',
+      admin,
+      context,
+    });
+    expect(new URL(result.redirectUrl).origin).toBe('https://zhirsaz.com');
+    expect(redis.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ hostname: 'zhirsaz.com', subdomain: 'ismail' }),
+      AUTH_HANDOFF_TTL_SECONDS,
+    );
+  });
 
   it('mints a single-use tenant handoff instead of a credential', async () => {
     const { service, redis } = createService(activeBusiness);

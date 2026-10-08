@@ -27,6 +27,9 @@ export class DomainRoutingController {
   @Get('tls')
   async tls(@Query('domain') domain: string, @Req() request: FastifyRequest) {
     if (
+      request.headers['x-forwarded-for'] ||
+      request.headers['x-forwarded-host'] ||
+      request.headers['x-real-ip'] ||
       !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
         request.raw.socket.remoteAddress || '',
       )

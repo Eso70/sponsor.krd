@@ -35,6 +35,7 @@ const loadAppUrl = async (env: Record<string, string | undefined>) => {
 };
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   process.env = { ...ORIGINAL_ENV };
   vi.resetModules();
 });
@@ -78,6 +79,17 @@ describe("getBusinessWorkspaceEntryUrl on the server", () => {
 });
 
 describe("getSubdomainPageUrl on the server", () => {
+  it("keeps tenant links on the current custom domain in the browser", async () => {
+    const { getSubdomainPageUrl } = await loadAppUrl({
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+    });
+    vi.stubGlobal("window", {
+      location: new URL("https://zhirsaz.com/business"),
+    });
+    expect(getSubdomainPageUrl("eso", "/advertising")).toBe(
+      "https://zhirsaz.com/advertising",
+    );
+  });
   it("builds a subdomain path with the served scheme", async () => {
     const { getSubdomainPageUrl } = await loadAppUrl({
       NEXT_PUBLIC_APP_URL: "http://lvh.me:3011",

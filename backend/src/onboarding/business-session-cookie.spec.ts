@@ -72,6 +72,26 @@ describe('Business session cookie', () => {
   });
 
   describe('email-code sign-in', () => {
+    it('writes a secure host-only session on the custom business hostname', async () => {
+      await controller.verifyEmailCode(
+        { challengeId: 'challenge-1', code: '123456' },
+        'eso',
+        request({
+          headers: { host: 'zhirsaz.com', 'x-forwarded-proto': 'https' },
+        }),
+        reply,
+      );
+      expect(businessCookieOptions()).toMatchObject({
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+      });
+      expect(businessCookieOptions().domain).toBeUndefined();
+      expect(onboarding.verifyBusinessEmailCode).toHaveBeenCalledWith(
+        expect.objectContaining({ subdomain: 'eso' }),
+      );
+    });
     it('sets a host-only, httpOnly, lax cookie scoped to the whole tenant', async () => {
       await controller.verifyEmailCode(
         { challengeId: 'challenge-1', code: '123456' },

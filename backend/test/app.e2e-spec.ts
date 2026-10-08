@@ -22,6 +22,8 @@ const cookiePlugin = ((fastifyCookie as unknown as { default?: unknown })
 const BUSINESS_A_ID = '81000000-0000-4000-8000-000000000001';
 const BUSINESS_B_ID = '81000000-0000-4000-8000-000000000002';
 const ADMIN_ID = '81000000-0000-4000-8000-000000000003';
+const USER_A_ID = '81000000-0000-4000-8000-000000000004';
+const USER_B_ID = '81000000-0000-4000-8000-000000000005';
 const ULTRA_PLAN_ID = '45fe1328-6fb2-4b91-9c30-fd51c3861027';
 const ULTRA_CONFIGURATION_ID = '3d7529e1-9c5e-4d75-bfc4-ab6553d5c0bd';
 const ULTRA_SUBSCRIPTION_PLAN_ID = '9e00fefd-0eba-4d41-bebd-41091e1bbb98';
@@ -101,6 +103,17 @@ describe('critical architecture matrix (e2e)', () => {
        VALUES ($1,'h8-admin','H8 Administrator')`,
       [ADMIN_ID],
     );
+    await fixturePool.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [
+      [USER_A_ID, USER_B_ID],
+    ]);
+    await fixturePool.query(
+      `INSERT INTO users (id,email,display_name) VALUES ($1,'h8-a@example.test','Owner A'),($2,'h8-b@example.test','Owner B')`,
+      [USER_A_ID, USER_B_ID],
+    );
+    await fixturePool.query(
+      'INSERT INTO business_memberships (business_id,user_id) VALUES ($1,$2),($3,$4)',
+      [BUSINESS_A_ID, USER_A_ID, BUSINESS_B_ID, USER_B_ID],
+    );
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -150,6 +163,9 @@ describe('critical architecture matrix (e2e)', () => {
       await fixturePool.query('DELETE FROM platform_admins WHERE id=$1', [
         ADMIN_ID,
       ]);
+      await fixturePool.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [
+        [USER_A_ID, USER_B_ID],
+      ]);
       await fixturePool.end();
     }
   });
@@ -175,7 +191,7 @@ describe('critical architecture matrix (e2e)', () => {
     const [tenantA, tenantB, platform] = await Promise.all([
       sessions.createBusinessSession({
         businessId: BUSINESS_A_ID,
-        userId: null,
+        userId: USER_A_ID,
         ...context,
         sessionUser: {
           username: 'h8-tenant-a',
@@ -185,7 +201,7 @@ describe('critical architecture matrix (e2e)', () => {
       }),
       sessions.createBusinessSession({
         businessId: BUSINESS_B_ID,
-        userId: null,
+        userId: USER_B_ID,
         ...context,
         sessionUser: {
           username: 'h8-tenant-b',

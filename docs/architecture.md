@@ -3,7 +3,7 @@
 ## Invite-only business identity
 Business custom domains map to the existing tenant through the shared DomainsModule;
 they do not create separate deployments. See [Custom domains](custom-domains.md)
-for ownership verification, public-only routing, certificate permissions and lifecycle.
+for ownership verification, selected-host public/dashboard routing, certificate permissions and lifecycle.
 
 
 Business identity uses invite-only Google OAuth authorization-code flow. One

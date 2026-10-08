@@ -34,7 +34,9 @@ exact root-domain `/api/auth/google/callback` URL registered in Google Cloud.
 Integration requests only `openid email profile` and retains no Google access
 or refresh token. Missing configuration disables Google signup/sign-in with a
 safe service-unavailable response.
-Tenant OAuth handoff redirects must be built with `buildTenantUrl`; never assign
+Tenant OAuth and impersonation handoff destinations use `selectedTenantUrl` to
+read a live primary custom hostname, falling back to `buildTenantUrl`. Handoffs
+are bound to the exact destination host as well as the business. Never assign
 a path containing `?` directly to `URL.pathname`, because that percent-encodes
 the query marker and routes the callback to a nonexistent page.
 

@@ -4,6 +4,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
+import { preventPrivateApiCaching } from './common/private-api-cache';
 import { DomainsService } from './domains/domains.service';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,7 @@ import type { FastifyPluginCallback, FastifyPluginOptions } from 'fastify';
 import { RequestBoundaryPipe } from './common/request-boundary.pipe';
 import {
   isAuthenticatedMutation,
+  hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
 } from './common/request-origin';
 import { OperationalMetricsService } from './observability/operational-metrics.service';
@@ -83,9 +85,12 @@ async function bootstrap() {
   await app.register(cookiePlugin, {
     secret: configService.get<string>('SESSION_SECRET'),
   });
+  fastify.addHook('onSend', preventPrivateApiCaching);
   fastify.addHook('preValidation', async (request, reply) => {
     if (
-      isAuthenticatedMutation(request.method, request.cookies) &&
+      (isAuthenticatedMutation(request.method, request.cookies) ||
+        (!!request.headers.origin &&
+          hasAuthenticatedSessionCookie(request.cookies))) &&
       !isSameOriginBrowserRequest(
         request.headers.origin,
         request.headers.referer,
@@ -198,7 +203,13 @@ async function bootstrap() {
         ) {
           void domains
             .resolve(candidate.hostname)
-            .then((resolved) => callback(null, !!resolved?.isCustom))
+            .then((resolved) =>
+              callback(
+                null,
+                !!resolved?.isCustom &&
+                  resolved.primaryHostname === resolved.hostname,
+              ),
+            )
             .catch(() => callback(null, false));
           return;
         }

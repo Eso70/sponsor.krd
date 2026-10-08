@@ -161,6 +161,7 @@ export class GoogleBusinessAuthController {
     const session = await this.onboarding.consumeHandoff({
       code: body.code,
       subdomain,
+      hostname: request.headers.host,
       ipAddress: requestIp(request),
       userAgent: request.headers['user-agent'] || '',
     });

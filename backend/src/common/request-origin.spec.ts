@@ -1,9 +1,16 @@
 import {
   isAuthenticatedMutation,
+  hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
 } from './request-origin';
 
 describe('request origin protection', () => {
+  it('recognizes authenticated read cookies independently of method for origin enforcement', () => {
+    expect(hasAuthenticatedSessionCookie({ business_session: 'token' })).toBe(
+      true,
+    );
+    expect(hasAuthenticatedSessionCookie({ other: 'token' })).toBe(false);
+  });
   it('identifies cookie-authenticated mutations', () => {
     expect(isAuthenticatedMutation('POST', { business_session: 'token' })).toBe(
       true,

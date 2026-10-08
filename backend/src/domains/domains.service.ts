@@ -325,6 +325,9 @@ export class DomainsService {
 
   async resolve(raw: string): Promise<ResolvedBusinessDomain | null> {
     if (!this.enabled) return null;
+    // HTTP Host may carry a port; assignment still accepts hostname-only input.
+    const authority = raw.trim().toLowerCase();
+    if (!/^[a-z0-9.-]+(?::\d{1,5})?$/.test(authority)) return null;
     const subdomain = publicSubdomainFromHost(
       raw,
       this.config.get<string>('ROOT_DOMAIN', 'localhost'),
@@ -332,7 +335,7 @@ export class DomainsService {
     let hostname: string;
     try {
       hostname = normalizeDomain(
-        raw,
+        authority.split(':')[0],
         this.config.get<string>('ROOT_DOMAIN', 'localhost'),
       );
     } catch {
@@ -356,7 +359,7 @@ export class DomainsService {
     if (!row) return null;
     return {
       subdomain: row.subdomain,
-      hostname: hostname || raw.toLowerCase().split(':')[0],
+      hostname: hostname || authority.split(':')[0],
       primaryHostname: row.primary_hostname,
       isCustom: !!hostname,
     };

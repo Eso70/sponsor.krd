@@ -10,9 +10,12 @@ const MAX_REQUEST_BYTES =
   1024;
 import {
   isAuthenticatedMutation,
+  hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
 } from "@/lib/security/request-origin";
 import { extractSubdomain } from "@/lib/subdomain-utils";
+import { resolveBusinessHost } from "@/lib/public/domain-routing";
+import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { classifyUpstreamFailure } from "@/lib/api/upstream-failure";
 import {
   INTERNAL_PROXY_KEY_HEADER,
@@ -50,21 +53,17 @@ async function proxyRequest(
     return NextResponse.json({ message: "Not Found" }, { status: 404 });
   }
 
-  const host = request.headers.get("host") || "";
-  const subdomain = extractSubdomain(
-    host,
-    request.headers.get("x-subdomain") || undefined,
-    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
-  );
+  const host = request.headers.get("host") || request.nextUrl.host;
   const cookieHeader = request.headers.get("cookie");
-
   if (
-    isAuthenticatedMutation(request.method, cookieHeader) &&
+    (isAuthenticatedMutation(request.method, cookieHeader) ||
+      (!!request.headers.get("origin") &&
+        hasAuthenticatedSessionCookie(cookieHeader))) &&
     !isSameOriginBrowserRequest(
       request.url,
       request.headers.get("origin"),
       request.headers.get("referer"),
-      request.headers.get("host"),
+      host,
       request.headers.get("x-forwarded-host"),
       request.headers.get("x-forwarded-proto"),
     )
@@ -74,7 +73,37 @@ async function proxyRequest(
       { status: 403 },
     );
   }
-
+  let subdomain = extractSubdomain(
+    host,
+    undefined,
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
+  );
+  const scope = resolveLinktreeHost(
+    host,
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
+  );
+  if (!scope.isPlatformRoot) {
+    if (
+      /^\/api\/(?:platform|signup)(?:\/|$)/.test(normalizedPath) ||
+      normalizedPath === "/api/auth/google/callback"
+    )
+      return NextResponse.json({ message: "Not Found" }, { status: 404 });
+    try {
+      const domain = await resolveBusinessHost(host);
+      if (domain?.isCustom) {
+        if (domain.primaryHostname !== domain.hostname)
+          return NextResponse.json({ message: "Not Found" }, { status: 404 });
+        subdomain = domain.subdomain;
+      } else if (!scope.subdomain || domain?.primaryHostname) {
+        return NextResponse.json({ message: "Not Found" }, { status: 404 });
+      }
+    } catch {
+      return NextResponse.json(
+        { message: "Temporarily unavailable" },
+        { status: 503 },
+      );
+    }
+  }
   const contentLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
     return payloadTooLargeResponse();
@@ -82,6 +111,18 @@ async function proxyRequest(
 
   // Build headers to forward
   const headers = new Headers();
+  headers.set("host", host);
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  headers.set(
+    "x-forwarded-proto",
+    forwardedProto === "https"
+      ? "https"
+      : request.nextUrl.protocol.replace(":", ""),
+  );
+  for (const name of ["origin", "referer"]) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
   headers.set("x-subdomain", subdomain);
   const proxyKey = internalProxyKey();
   if (proxyKey) {
@@ -159,7 +200,6 @@ async function proxyRequest(
         response.headers.set(key, value);
       }
     });
-
     // Forward Set-Cookie headers
     const setCookieHeaders = backendRes.headers.getSetCookie();
     if (setCookieHeaders && setCookieHeaders.length > 0) {
@@ -199,8 +239,18 @@ function payloadTooLargeResponse() {
   );
 }
 
-export const GET = proxyRequest;
-export const POST = proxyRequest;
-export const PUT = proxyRequest;
-export const PATCH = proxyRequest;
-export const DELETE = proxyRequest;
+async function handleRequest(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
+  const response = await proxyRequest(request, context);
+  // Also protect failures generated before any upstream response exists.
+  response.headers.set("Cache-Control", "no-store, private");
+  return response;
+}
+
+export const GET = handleRequest;
+export const POST = handleRequest;
+export const PUT = handleRequest;
+export const PATCH = handleRequest;
+export const DELETE = handleRequest;

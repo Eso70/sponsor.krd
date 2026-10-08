@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   isAuthenticatedMutation,
+  hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
 } from "@/lib/security/request-origin";
 
 describe("request origin protection", () => {
+  it("recognizes authenticated read cookies independently of method for origin enforcement", () => {
+    expect(hasAuthenticatedSessionCookie("business_session=token")).toBe(true);
+    expect(hasAuthenticatedSessionCookie("not_business_session=token")).toBe(
+      false,
+    );
+  });
   it("identifies authenticated state-changing requests", () => {
     expect(isAuthenticatedMutation("POST", "business_session=token")).toBe(
       true,

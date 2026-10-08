@@ -1,10 +1,16 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "./route";
+const { resolveDomain } = vi.hoisted(() => ({ resolveDomain: vi.fn() }));
+vi.mock("@/lib/public/domain-routing", () => ({
+  resolveBusinessHost: resolveDomain,
+}));
 
 describe("API proxy redirects", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    resolveDomain.mockReset();
+    resolveDomain.mockResolvedValue(null);
   });
   it.each([
     ["internal", "domains", "resolve"],
@@ -67,5 +73,91 @@ describe("API proxy redirects", () => {
     );
     expect(response.status).toBe(403);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("forwards the custom hostname and verified tenant for business APIs", async () => {
+    resolveDomain.mockResolvedValue({
+      hostname: "zhirsaz.com",
+      primaryHostname: "zhirsaz.com",
+      subdomain: "eso",
+      isCustom: true,
+    });
+    const upstream = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    const response = await GET(
+      new NextRequest("https://zhirsaz.com/api/auth/profile", {
+        headers: {
+          host: "zhirsaz.com",
+          "x-subdomain": "victim",
+          cookie: "business_session=token",
+        },
+      }),
+      { params: Promise.resolve({ path: ["auth", "profile"] }) },
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store, private");
+    const headers = upstream.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get("host")).toBe("zhirsaz.com");
+    expect(headers.get("x-subdomain")).toBe("eso");
+    expect(headers.get("cookie")).toBe("business_session=token");
+    expect(headers.get("x-forwarded-proto")).toBe("https");
+  });
+  it.each([
+    "platform/businesses",
+    "signup/email/request",
+    "auth/google/callback",
+  ])(
+    "blocks %s on customer and default tenant hosts before forwarding",
+    async (path) => {
+      resolveDomain.mockResolvedValue({
+        hostname: "zhirsaz.com",
+        primaryHostname: "zhirsaz.com",
+        subdomain: "eso",
+        isCustom: true,
+      });
+      const upstream = vi.spyOn(globalThis, "fetch");
+      for (const host of ["zhirsaz.com", "eso.localhost"]) {
+        const response = await GET(
+          new NextRequest(`https://${host}/api/${path}`, { headers: { host } }),
+          { params: Promise.resolve({ path: path.split("/") }) },
+        );
+        expect(response.status).toBe(404);
+        expect(response.headers.get("cache-control")).toBe("no-store, private");
+      }
+      expect(upstream).not.toHaveBeenCalled();
+    },
+  );
+  it("rejects cross-origin custom dashboard mutations before resolving or forwarding", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch");
+    const response = await POST(
+      new NextRequest("https://zhirsaz.com/api/auth/logout", {
+        method: "POST",
+        headers: {
+          host: "zhirsaz.com",
+          origin: "https://evil.com",
+          cookie: "business_session=token",
+        },
+      }),
+      { params: Promise.resolve({ path: ["auth", "logout"] }) },
+    );
+    expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+    expect(resolveDomain).not.toHaveBeenCalled();
+  });
+  it("rejects cross-origin authenticated reads despite an admitted customer CORS origin", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch");
+    const response = await GET(
+      new NextRequest("https://zhirsaz.com/api/auth/profile", {
+        headers: {
+          host: "zhirsaz.com",
+          origin: "https://another-business.com",
+          cookie: "business_session=token",
+        },
+      }),
+      { params: Promise.resolve({ path: ["auth", "profile"] }) },
+    );
+    expect(response.status).toBe(403);
+    expect(upstream).not.toHaveBeenCalled();
+    expect(resolveDomain).not.toHaveBeenCalled();
   });
 });

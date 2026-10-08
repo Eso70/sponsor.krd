@@ -30,6 +30,7 @@ import {
 } from "../api";
 import { AddDomainModal } from "./AddDomainModal";
 import { DomainDnsModal } from "./DomainDnsModal";
+import { openSelectedBusinessWorkspace } from "../domain-navigation";
 
 export function BusinessDomainsPanel({
   scope,
@@ -116,6 +117,7 @@ export function BusinessDomainsPanel({
       setData(result);
       if (action === "verify") setSelectedId(id);
       if (action === "remove") setDeleting(null);
+      if (scope.surface === "business") openSelectedBusinessWorkspace(result);
     } catch (cause) {
       setError(
         action === "primary" &&

@@ -16,6 +16,10 @@ const { load, add, action } = vi.hoisted(() => ({
   add: vi.fn(),
   action: vi.fn(),
 }));
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+vi.mock("../domain-navigation", () => ({
+  openSelectedBusinessWorkspace: navigate,
+}));
 vi.mock("../api", async (original) => ({
   ...(await original<typeof import("../api")>()),
   loadDomains: load,
@@ -89,6 +93,40 @@ describe("shared custom-domain management", () => {
       domains: [{ ...domain, status: "active" }],
     });
   });
+  it.each(["business", "platform"] as const)(
+    "moves only the owner dashboard after primary activation on %s",
+    async (surface) => {
+      load.mockResolvedValue({
+        ...data,
+        domains: [{ ...domain, status: "active" }],
+      });
+      const result = {
+        ...data,
+        domains: [{ ...domain, status: "active", isPrimary: true }],
+      };
+      action.mockResolvedValue(result);
+      render(
+        <BusinessDomainsPanel
+          scope={
+            surface === "business"
+              ? { surface: "business" }
+              : { surface: "platform", businessId: "wafaye-id" }
+          }
+          locale="en"
+        />,
+      );
+      await screen.findAllByText("wafaye.com");
+      fireEvent.click(
+        screen.getAllByRole("button", { name: "Make primary: wafaye.com" })[0],
+      );
+      await waitFor(() => expect(action).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(screen.getAllByText(/Primary/).length).toBeGreaterThan(0),
+      );
+      if (surface === "business") expect(navigate).toHaveBeenCalledWith(result);
+      else expect(navigate).not.toHaveBeenCalled();
+    },
+  );
   it.each(["business", "platform"] as const)(
     "loads the same panel through the %s integration",
     async (surface) => {

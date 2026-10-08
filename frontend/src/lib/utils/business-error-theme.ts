@@ -43,7 +43,9 @@ export function extractSubdomainFromHost(host: string): string {
 
 function getSubdomainThemeUrl(subdomain: string): string {
   if (typeof window !== "undefined") {
-    return `/api/auth/subdomain-theme/${subdomain}`;
+    return subdomain
+      ? `/api/auth/subdomain-theme/${subdomain}`
+      : "/api/auth/subdomain-theme";
   }
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   return `${backendUrl}/api/auth/subdomain-theme/${subdomain}`;
@@ -52,7 +54,7 @@ function getSubdomainThemeUrl(subdomain: string): string {
 export async function fetchBusinessSubdomainTheme(
   subdomain: string,
 ): Promise<BusinessSubdomainTheme> {
-  if (!subdomain) {
+  if (!subdomain && typeof window === "undefined") {
     return EMPTY_THEME;
   }
 
@@ -66,7 +68,8 @@ export async function fetchBusinessSubdomainTheme(
     }
 
     const data = await res.json();
-    const footer = await fetchBusinessFooterData(subdomain);
+    const resolvedSubdomain = data.subdomain || subdomain;
+    const footer = await fetchBusinessFooterData(resolvedSubdomain);
     return {
       websiteColor: parseWebsiteColor(
         data.website_color || DEFAULT_BUSINESS_ACCENT,
@@ -74,7 +77,7 @@ export async function fetchBusinessSubdomainTheme(
       favicon: data.favicon || null,
       logo: data.logo || null,
       name: data.name || null,
-      subdomain: data.subdomain || subdomain,
+      subdomain: resolvedSubdomain,
       ...footer,
     };
   } catch {
@@ -144,7 +147,11 @@ export async function fetchBusinessFooterData(
 
     if (linktreesRes.ok) {
       const payload = (await linktreesRes.json()) as {
-        data?: Array<{ name?: string | null; uid?: string | null; seo_name?: string | null }>;
+        data?: Array<{
+          name?: string | null;
+          uid?: string | null;
+          seo_name?: string | null;
+        }>;
       };
       footer.linktrees = (payload.data || [])
         .filter((item) => item.name && (item.uid || item.seo_name))
@@ -165,8 +172,7 @@ export async function loadBusinessSubdomainTheme(): Promise<BusinessSubdomainThe
     return EMPTY_THEME;
   }
 
-  const subdomain = extractSubdomainFromHost(window.location.hostname);
-  const theme = await fetchBusinessSubdomainTheme(subdomain);
+  const theme = await fetchBusinessSubdomainTheme("");
 
   document.documentElement.style.setProperty(
     "--business-website-color",

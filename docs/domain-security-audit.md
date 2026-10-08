@@ -26,8 +26,10 @@ This reviews the repository; it does not certify the running production server.
 
 One custom hostname per business is enforced by PostgreSQL as well as the service.
 Global hostname uniqueness, exact TXT ownership, configured-origin A/AAAA checks,
-HTTPS certificate validation, scoped management permissions, and temporary uncached
-canonical redirects remain in place. Removal disconnects the custom hostname and
+HTTPS certificate validation and scoped management permissions remain in place.
+The subsequent selected-host change serves both public and dashboard routes on
+the primary custom domain and returns uncached 404 on the inactive address.
+Removal disconnects the custom hostname and
 restores the default address. DNS failures preserve the existing lease until its
 expiry. DNS work never fetches customer URLs; TLS probes use configured origin IPs.
 
@@ -57,3 +59,51 @@ do not replace that key blindly. No production credentials were changed by this 
 
 Live customer DNS and Caddy certificate issuance were not changed or provisioned
 by these repository checks.
+
+## Selected-host dashboard update
+
+The selected customer domain now serves business login, dashboard and private
+tenant APIs as well as public pages. The previous address returns 404 without
+redirecting. Removal restores the default address. The preserved HTTP Host is
+resolved against the live database mapping before business authentication;
+registered Fastify route names enforce the platform/internal boundary even for
+encoded URLs. Host headers with a valid port resolve normally, while domain
+assignment still rejects ports. Host-only cookies are unchanged. OAuth and
+administrator handoffs bind the exact destination host and reject replay on
+another authority. A failed Redis handoff write returns service unavailable.
+Cookie-authenticated browser reads also reject cross-origin requests.
+
+Verification passed for the frontend suite (976 tests), backend suite plus
+affected domain/authentication regressions, 23 disposable PostgreSQL tests,
+actual Fastify HTTP authentication, real Next.js custom-host login/public pages,
+TypeScript, lint, and both production builds. Business/platform panel tests
+verify that only the owner's dashboard changes host after activation; the
+platform console stays on root. No new environment variables or schema changes
+are required. Deploy frontend and backend together. Google retains the existing
+fixed callback and returns directly to the selected customer hostname.
+
+## Follow-up authentication audit
+
+- Cached business sessions now recheck PostgreSQL session expiry, business
+  status, user status and membership status on every authenticated request.
+  Deleted sessions cannot survive in Redis. Impersonation requires a live
+  administrator, and cached platform sessions also recheck their durable session.
+- Business session issuance applies the same active-principal predicate inside
+  the insert. A login handoff issued before suspension cannot create fresh access.
+- Platform, signup, internal and root Google callback APIs are blocked on
+  default tenant subdomains as well as custom hosts, including encoded routes.
+- Certificate permission rejects forwarded public requests even if the reverse
+  proxy connects from loopback. Direct Caddy permission requests still work.
+- Private backend API responses, including errors, override caching with
+  `no-store, private`. The frontend API proxy also prevents response caching.
+
+Real PostgreSQL regressions cover business, user and membership suspension,
+durable-session deletion, warm and cold cache paths and denied fresh issuance.
+The real application suite uses active owner memberships rather than legacy
+unbound session fixtures. No new schema or environment settings are needed.
+
+Follow-up verification passed: 181 frontend files (976 tests), updated API proxy
+regressions, 117 backend suites (734 tests), and three PostgreSQL/application E2E
+suites (31 tests). Workspace TypeScript and lint passed, both production builds
+passed, and real Next.js HTTP checks confirmed custom-host login/public pages,
+inactive-host 404 without redirection and automatic default-host restoration.

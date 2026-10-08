@@ -304,11 +304,17 @@ try {
       assert.equal((await get("localhost", path)).status, 404);
     }
     customDomainActive = true;
-    for (const path of ["/", "/linktree/same-slug?source=qr"]) {
+    for (const path of [
+      "/",
+      "/linktree/same-slug?source=qr",
+      "/business/workspace-entry",
+      "/api/auth/profile",
+    ]) {
       const alias = await get("alpha.localhost", path);
-      assert.equal(alias.status, 307);
-      assert.equal(alias.headers.location, `https://${customHost}${path}`);
-      assert.equal(alias.headers["cache-control"], "no-store");
+      assert.equal(alias.status, 404);
+      assert.equal(alias.headers.location, undefined);
+      // Next development replaces page cache headers with mandatory revalidation.
+      assert.match(alias.headers["cache-control"], /no-store|no-cache/);
     }
     for (const path of [
       "/business/workspace-entry",
@@ -327,18 +333,18 @@ try {
         assert.equal(normalized.pathname, "/business/workspace-entry");
         entry = await get(customHost, normalized.pathname);
       }
-      assert.equal(entry.status, 307);
-      assert.equal(
-        entry.headers.location,
-        `http://alpha.localhost:${frontendPort}/business/workspace-entry`,
-      );
-      assert.equal(entry.headers["cache-control"], "no-store, private");
+      assert.equal(entry.status, path === "/business/settings" ? 404 : 200);
+      assert.equal(entry.headers.location, undefined);
+      assert.match(entry.headers["cache-control"], /no-store|no-cache/);
     }
-    const entryPage = await get("alpha.localhost", "/business/workspace-entry");
+    const entryPage = await get(customHost, "/business/workspace-entry");
     assert.equal(entryPage.status, 200);
     assert.match(entryPage.body.toString(), /\/api\/auth\/google\/start/);
     assert.equal((await get(customHost, "/linktree/same-slug")).status, 200);
-    assert.equal((await get(customHost, "/api/auth/profile")).status, 404);
+    assert.equal(
+      (await get(customHost, "/api/platform/businesses")).status,
+      404,
+    );
     customDomainActive = false;
     assert.equal(
       (await get("alpha.localhost", "/linktree/same-slug")).status,
@@ -346,7 +352,7 @@ try {
     );
     assert.equal((await get(customHost, "/linktree/same-slug")).status, 404);
     console.log(
-      "SEO HTTP smoke passed: tenant isolation, SEO, public redirects, custom-domain dashboard entry, removal fallback, and blocked private/internal APIs.",
+      "SEO HTTP smoke passed: tenant isolation, SEO, selected-host enforcement, custom-domain dashboard entry, removal fallback, and blocked platform/internal APIs.",
     );
   }
 } catch (error) {

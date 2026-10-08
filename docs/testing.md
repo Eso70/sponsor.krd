@@ -6,10 +6,11 @@ HTML, two tenants with identical slugs, robots/sitemaps, share images, real
 anchors, noindex, crawler agents and HTTP status/redirect behavior. See
 [SEO verification and live deployment checks](seo.md).
 
-The HTTP fixture also exercises custom-domain dashboard-entry redirects through
-the real Next.js server, verifies the destination sign-in page renders, keeps
-private APIs blocked, checks default public URLs redirect to the custom hostname,
-and restores the default public page after domain removal.
+The HTTP fixture also serves custom-domain dashboard entry through the real
+Next.js server without changing host, rejects inactive default-host pages and
+APIs without redirects, blocks platform/internal APIs on customer hosts, and
+restores the default public page after domain removal. Backend tests verify
+server-resolved business sessions and hostname-bound single-use handoffs.
 
 Everything, in one command:
 
@@ -79,8 +80,9 @@ DNS verification tests cover configured trusted resolvers, invalid resolver
 configuration, missing versus mismatched proofs, token-free diagnostic logging,
 and transient lookup errors. Both dashboard integrations cover current lookup
 errors taking precedence over previously recorded ownership failures.
-Routing tests cover default-only/public custom-only transitions, uncached alias
-redirects, fail-closed resolver outages, and deletion restoring default routing.
+Routing tests cover default-only/custom-only transitions for public pages,
+dashboard and APIs, uncached inactive-host 404s, fail-closed resolver outages,
+and deletion restoring default routing.
 Business/platform integration tests cover confirmation layering, keyboard
 focus restoration, keeping the parent dialog open and successful removal. The
 shared confirmation has a keyboard focus-trap regression test.
@@ -238,3 +240,10 @@ missing resolver credentials, and browser attempts to reach internal endpoints
 through decoded/dot-segment paths. Shared dialog tests cover duplicate deletion
 submission; platform integration tests cover tenant selection resetting nested
 domain dialogs.
+
+Session regressions additionally cover immediate revocation with warm Redis
+metadata, active business/user/membership checks against real PostgreSQL, cold
+cache denial and login issuance after suspension. Cached platform session
+revocation is covered separately. Actual Fastify requests verify private cache
+headers on successes, encoded paths and errors; proxy regressions verify uncached
+errors and platform-only route rejection on both kinds of tenant hostname.

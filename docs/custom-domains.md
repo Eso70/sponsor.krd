@@ -4,7 +4,7 @@ The latest review and regression results are recorded in
 [Domain and signup audit](domain-security-audit.md).
 
 Customer domains reuse the existing business and published pages. One selected
-address serves the website; the other redirects to it. No second installation,
+address serves both the website and business dashboard; the other returns 404. No second installation,
 database, or per-customer release is created. Content and deployed application
 updates apply to the business automatically.
 
@@ -75,29 +75,35 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
 - Making a domain primary first probes HTTPS against a configured origin IP with
   SNI and normal public certificate-chain/hostname verification. It never connects
   to an arbitrary customer-provided IP. If issuance is still in progress, retry.
-- Customer domains expose public pages and `/api/public/*` only. Login, signup,
-  platform administration, private analytics, uploads and business-management APIs
-  remain on Sponsor.krd addresses. Visiting `/business*` on a custom domain
-  redirects to the original business workspace entry. Host-only dashboard
-  cookies and Google callback configuration are unchanged.
-  These dashboard-entry redirects use `Cache-Control: no-store, private` and
-  noindex headers. For example, `zhirsaz.com/business/workspace-entry` opens
-  `eso.sponsor.krd/business/workspace-entry` for sign-in, while the public website
-  continues to use `zhirsaz.com`. The default public URL redirects to the custom
-  domain; it is not a second independently served website.
-- Only one address serves public website pages. Before primary activation, a
-  DNS-verified custom domain redirects to the default Sponsor.krd address. After
-  HTTPS readiness and primary activation, the default public address redirects
-  to the custom domain. Deletion immediately restores the default website and
-  revokes the removed hostname mapping. Dashboard/private API addresses remain
-  unchanged; this does not create a second public website.
-- Public aliases redirect to the selected address with a temporary 307 and
-  `Cache-Control: no-store`, preserving path and query. Temporary redirects avoid permanently cached
-  redirects after disconnection or primary changes. Canonicals, sitemap and share
+- The selected custom domain serves public pages, `/business/*`, business login,
+  and tenant-scoped APIs including analytics and uploads. The global backend
+  domain guard resolves the preserved Host from PostgreSQL; BusinessGuard compares
+  that server-resolved tenant with the authenticated session. Browser-supplied
+  tenant headers cannot select another business. Platform administration, signup,
+  internal endpoints, and the fixed Google callback are blocked on custom hosts.
+- Before primary activation, only the default Sponsor.krd address works; the
+  verified custom address returns 404. After HTTPS readiness and primary
+  activation, only the custom address works for public pages, dashboard and APIs.
+  The old subdomain returns an uncached 404 without redirecting. Removal or lease
+  expiry immediately restores the default address and revokes the custom mapping.
+  Resolver outages fail closed with 503, including dashboard entry.
+- Email-code login stays on the selected host. Google still uses its one fixed
+  registered root-domain callback, then a single-use handoff returns directly to
+  the live selected hostname. Handoffs bind both business/subdomain and exact
+  destination authority; consumption on another host is rejected. Administrator
+  impersonation uses the same selected destination and consume endpoint.
+  Cookies remain HttpOnly, Secure in HTTPS and host-only. Moving between hosts
+  requires a new login; cookies are never copied or widened. When an owner makes
+  a domain primary, removes it or verifies a failing primary from their dashboard, the shared management
+  panel opens the new host's login page. Platform management remains on root.
+- For example, primary `zhirsaz.com` serves `/business/workspace-entry`, the
+  dashboard and the public website. `eso.sponsor.krd` returns 404 until that
+  primary mapping is removed. No domain-to-domain redirects are used.
+  Canonicals, sitemap and share
   images use the verified primary origin. Public tracking keeps the existing
   page/business identity and the existing TikTok placement boundaries.
-  Resolver outages return 503 for public business pages instead of serving an
-  uncertain second address. Dashboard entry remains available during that outage.
+  Dashboard pages and inactive-host 404 responses use `Cache-Control: no-store,
+  private` and noindex headers so host changes do not persist in shared caches.
 
 Domain deletion uses the shared confirmation at a layer above the platform
 management dialog, with focus trapping and restoration. Escape dismisses only
@@ -177,9 +183,8 @@ other email records. If choosing `www.wafaye.com` instead, use its CNAME to
 `domains.sponsor.krd` and its generated TXT at `_sponsor-verification.www`.
 The business connects one of these hostnames. Verification happens automatically after DNS
 propagation; Verify DNS optionally checks immediately. Once verified, select
-Make primary for `wafaye.com`. Public requests to
-`wafaye.sponsor.krd` then redirects to `wafaye.com`;
-the original Sponsor.krd dashboard still works.
+Make primary for `wafaye.com`. Its public website and dashboard then use
+`wafaye.com`; `wafaye.sponsor.krd` returns 404 until the custom mapping is removed.
 
 Live DNS, public HTTPS issuance, CAA policy, and Caddy's production configuration
 must be checked after this manual setup. Repository tests use a disposable

@@ -1,6 +1,7 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { businessSessionPrincipalSql } from './business-session-principal';
 import { RedisService } from '../redis/redis.service';
 import { createHash, randomBytes } from 'crypto';
 import { isIP } from 'net';
@@ -90,9 +91,11 @@ export class SessionService {
          ip_address, user_agent, remembered, last_used_at,
          impersonated_by_platform_admin_id, impersonation_reason,
          impersonation_started_at)
-       VALUES ($1, $2, $3, NOW() + ($4::int * INTERVAL '1 second'),
+       SELECT $1, $2, $3, NOW() + ($4::int * INTERVAL '1 second'),
                NULLIF($5, '')::inet, $6, $7, NOW(),
-               $8, $9, CASE WHEN $8::uuid IS NULL THEN NULL ELSE NOW() END)
+               $8, $9, CASE WHEN $8::uuid IS NULL THEN NULL ELSE NOW() END
+       FROM businesses a WHERE a.id=$1 AND a.status='active' AND a.account_type='business'
+         AND ${businessSessionPrincipalSql('$2::uuid', '$8::uuid')}
        RETURNING impersonation_started_at`,
       [
         input.businessId,
@@ -106,6 +109,8 @@ export class SessionService {
         input.impersonation?.reason?.trim() || null,
       ],
     );
+    if (!inserted.rows.length)
+      throw new UnauthorizedException('Business access is no longer active');
     // The per-business session cap only ever evicts real sign-ins, and is only
     // ever counted over them. An administrator opening a dashboard must not
     // push a real owner's oldest session out, and an impersonated session must
@@ -236,6 +241,39 @@ export class SessionService {
     ]);
     const cachedUser = cachedBusiness || cachedPlatform;
     if (cachedUser) {
+      if (cachedUser.role === 'business') {
+        // Redis is metadata, never the authority for a durable session or membership.
+        const live = await this.databaseService.query(
+          `SELECT s.id FROM business_sessions s JOIN businesses a ON a.id=s.business_id
+           WHERE s.session_token_hash=$1 AND a.id=$2 AND a.subdomain=$3
+             AND s.user_id IS NOT DISTINCT FROM $4::uuid
+             AND s.impersonated_by_platform_admin_id IS NOT DISTINCT FROM $5::uuid
+             AND s.session_expires_at>now() AND a.status='active' AND a.account_type='business'
+             AND ${businessSessionPrincipalSql('s.user_id', 's.impersonated_by_platform_admin_id')}`,
+          [
+            businessTokenHash,
+            cachedUser.id,
+            cachedUser.subdomain || null,
+            cachedUser.userId || null,
+            cachedUser.impersonation?.platformAdminId || null,
+          ],
+        );
+        if (!live.rows.length) {
+          await this.redisService.del(`session:${businessTokenHash}`);
+          return null;
+        }
+      } else {
+        const live = await this.databaseService.query(
+          `SELECT s.id FROM platform_admin_sessions s
+           JOIN platform_admins admin ON admin.id=s.platform_admin_id
+           WHERE s.session_token=$1 AND admin.id=$2 AND s.session_expires_at>now()`,
+          [sessionToken, cachedUser.id],
+        );
+        if (!live.rows.length) {
+          await this.redisService.del(`session:${sessionToken}`);
+          return null;
+        }
+      }
       return cachedUser;
     }
 
@@ -266,7 +304,8 @@ export class SessionService {
        LEFT JOIN platform_admins admin ON admin.id = s.impersonated_by_platform_admin_id
        WHERE s.session_token_hash = $1
          AND s.session_expires_at > NOW()
-         AND a.status = 'active'`,
+         AND a.status = 'active' AND a.account_type='business'
+         AND ${businessSessionPrincipalSql('s.user_id', 's.impersonated_by_platform_admin_id')}`,
       [businessTokenHash],
     );
 

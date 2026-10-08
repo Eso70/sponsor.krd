@@ -1,3 +1,5 @@
+import { resolveLinktreeHost } from "@/lib/public/linktree-host";
+
 function getLocalBaseUrl(): string {
   const port = process.env.PORT || 3011;
   return `http://localhost:${port}`;
@@ -52,6 +54,11 @@ export function getSubdomainPageUrl(subdomain: string, path: string): string {
   }
 
   const protocol = window.location.protocol;
+  const configuredRoot = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost";
+  const scope = resolveLinktreeHost(window.location.host, configuredRoot);
+  if (!scope.isPlatformRoot && !scope.subdomain) {
+    return `${window.location.origin}${normalizedPath}`;
+  }
   const root = getRootDomain();
 
   return `${protocol}//${subdomain}.${root}${normalizedPath}`;

@@ -24,6 +24,12 @@ export function isAuthenticatedMutation(
   cookies: Record<string, string | undefined>,
 ): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) return false;
+  return hasAuthenticatedSessionCookie(cookies);
+}
+
+export function hasAuthenticatedSessionCookie(
+  cookies: Record<string, string | undefined>,
+): boolean {
   return SESSION_COOKIE_NAMES.some((cookieName) => cookieName in cookies);
 }
 

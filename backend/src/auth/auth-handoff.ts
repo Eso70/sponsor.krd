@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'crypto';
  * The cross-origin sign-in handoff shared by every tenant authentication path.
  *
  * A handoff is minted on the root domain (Google callback, platform-admin
- * impersonation) and consumed once on the tenant subdomain, which is the only
+ * impersonation) and consumed once on the selected tenant hostname, which is the only
  * place a host-only `business_session` cookie can be written. The code itself
  * is never stored: Redis holds the SHA-256 digest as its key, so a dump of the
  * temporary store cannot be replayed as a sign-in.
@@ -31,6 +31,7 @@ export interface AuthHandoffPayload {
   user_id: string | null;
   business_id: string;
   subdomain: string;
+  hostname?: string;
   username?: string;
   business_name?: string;
   rememberDevice?: boolean;

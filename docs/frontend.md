@@ -140,13 +140,14 @@ automatically while the panel is visible. The same polling and cancellation appl
 on both dashboards. The DNS dialog prioritizes a current request failure over a
 previous ownership failure, and reports temporary server DNS lookup failures
 explicitly. Verified primary origins drive public routing, canonicals, sitemap
-and share images; dashboard authentication remains on the Sponsor.krd subdomain.
+and share images; dashboard authentication also uses the selected hostname.
 See [Custom domains](custom-domains.md).
 
-Public domain redirects and canonical origins share `resolvePublicOrigin`.
+Selected domain routing and canonical origins share `resolvePublicOrigin`.
 The default address remains canonical until a custom domain is HTTPS-ready and
-primary. Alias redirects are temporary and uncached so removing the domain
-immediately restores the default address. Domain deletion places the shared
+primary. The inactive address returns an uncached 404 for public, dashboard and
+API routes without redirects. Removing the domain immediately restores the
+default address. Domain deletion places the shared
 confirmation above management dialogs and retains the parent dialog on cancel.
 
 

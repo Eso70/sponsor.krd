@@ -20,6 +20,15 @@ describe('certificate permission endpoint', () => {
     ).rejects.toThrow();
     expect(resolve).not.toHaveBeenCalled();
   });
+  it.each(['x-forwarded-for', 'x-forwarded-host', 'x-real-ip'])(
+    'rejects edge-forwarded requests carrying %s even on a loopback socket',
+    async (name) => {
+      const req = request('127.0.0.1');
+      req.headers[name] = '203.0.113.1';
+      await expect(controller.tls('wafaye.com', req)).rejects.toThrow();
+      expect(resolve).not.toHaveBeenCalled();
+    },
+  );
   it('allows loopback only for an active customer mapping', async () => {
     resolve.mockResolvedValue({ isCustom: true });
     await expect(

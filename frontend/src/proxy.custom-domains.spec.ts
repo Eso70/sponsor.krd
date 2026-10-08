@@ -71,41 +71,37 @@ describe("verified custom-domain routing", () => {
       expect(resolve.mock.calls.length).toBe(calls);
     },
   );
-  it.each([
-    "/business/settings",
-    "/business/workspace-entry",
-    "/business/workspace-entry/",
-  ])("keeps dashboard login on the business subdomain for %s", async (path) => {
-    const response = await proxy(request(path));
-    expect(response.headers.get("location")).toBe(
-      "https://wafaye.sponsor.krd/business/workspace-entry",
-    );
+  it("serves login on the selected custom host without redirecting", async () => {
+    const response = await proxy(request("/business/workspace-entry"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
     expect(response.headers.get("cache-control")).toBe("no-store, private");
     expect(response.headers.get("x-robots-tag")).toContain("noindex");
   });
   it.each([
-    "/api/auth/profile",
     "/api/platform/businesses",
-    "/api/business/domains",
+    "/api/signup/email/request",
+    "/api/auth/google/callback",
     "/join",
   ])("rejects private route %s", async (path) => {
     expect((await proxy(request(path))).status).toBe(404);
   });
-  it("redirects public aliases preserving path and query", async () => {
+  it.each([
+    "/",
+    "/linktree/menu?source=qr",
+    "/business/workspace-entry",
+    "/api/auth/profile",
+  ])("disables the old address without redirecting: %s", async (path) => {
     resolve.mockResolvedValue({
       hostname: "wafaye.sponsor.krd",
       subdomain: "wafaye",
       primaryHostname: "wafaye.com",
       isCustom: false,
     });
-    const response = await proxy(
-      request("/linktree/menu?source=qr", "wafaye.sponsor.krd"),
-    );
-    expect(response.status).toBe(307);
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("location")).toBe(
-      "https://wafaye.com/linktree/menu?source=qr",
-    );
+    const response = await proxy(request(path, "wafaye.sponsor.krd"));
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store, private");
+    expect(response.headers.get("location")).toBeNull();
   });
   it("does not redirect to an authority supplied in the path", async () => {
     resolve.mockResolvedValue({
@@ -117,9 +113,8 @@ describe("verified custom-domain routing", () => {
     const response = await proxy(
       request("//evil.com/path", "wafaye.sponsor.krd"),
     );
-    expect(new URL(response.headers.get("location")!).hostname).toBe(
-      "wafaye.com",
-    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("location")).toBeNull();
   });
   it("rejects unknown hosts and distinguishes resolver outages", async () => {
     resolve.mockResolvedValue(null);
@@ -135,11 +130,8 @@ describe("verified custom-domain routing", () => {
       isCustom: true,
     });
     const response = await proxy(request("/linktree/menu?source=qr"));
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(
-      "https://wafaye.sponsor.krd/linktree/menu?source=qr",
-    );
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("location")).toBeNull();
     resolve.mockResolvedValue({
       hostname: "wafaye.sponsor.krd",
       subdomain: "wafaye",
@@ -165,6 +157,24 @@ describe("verified custom-domain routing", () => {
     expect(
       (await proxy(request("/business/workspace-entry", "wafaye.sponsor.krd")))
         .status,
-    ).toBe(200);
+    ).toBe(503);
+  });
+  it.each([
+    "/api/auth/profile",
+    "/api/business/domains",
+    "/api/analytics/v2/dashboard",
+    "/api/auth/email/request",
+  ])("permits business APIs on the selected host: %s", async (path) => {
+    expect((await proxy(request(path))).status).toBe(200);
+  });
+  it("requires a session before rendering custom-domain settings", async () => {
+    expect((await proxy(request("/business/settings"))).status).toBe(404);
+    const authenticated = new NextRequest(
+      "https://wafaye.com/business/settings",
+      {
+        headers: { host: "wafaye.com", cookie: "business_session=token" },
+      },
+    );
+    expect((await proxy(authenticated)).status).toBe(200);
   });
 });

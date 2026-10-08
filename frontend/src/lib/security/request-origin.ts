@@ -19,6 +19,12 @@ export function isAuthenticatedMutation(
   cookieHeader: string | null,
 ): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) return false;
+  return hasAuthenticatedSessionCookie(cookieHeader);
+}
+
+export function hasAuthenticatedSessionCookie(
+  cookieHeader: string | null,
+): boolean {
   // Split rather than match: a name built into a `RegExp` has to be escaped,
   // and a template literal silently eats the `\s` that made the old pattern
   // read as whitespace.

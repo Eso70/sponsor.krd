@@ -46,4 +46,19 @@ describe('business hostname boundary', () => {
       guard.canActivate(context('wafaye.sponsor.krd', 'other.sponsor.krd')),
     ).resolves.toBe(true);
   });
+  it('accepts the server-resolved custom tenant and rejects a different tenant session', async () => {
+    const request = {
+      cookies: { business_session: 'session' },
+      headers: { host: 'wafaye.com', 'x-subdomain': 'other' },
+      customDomainSubdomain: 'wafaye',
+    };
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as unknown as ExecutionContext;
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    request.customDomainSubdomain = 'other';
+    await expect(guard.canActivate(ctx)).rejects.toThrow(
+      'Invalid business session',
+    );
+  });
 });

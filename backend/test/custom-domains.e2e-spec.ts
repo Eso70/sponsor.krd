@@ -8,6 +8,13 @@ import { DomainsService } from '../src/domains/domains.service';
 import { DomainDnsService } from '../src/domains/domain-dns.service';
 import { DomainTlsService } from '../src/domains/domain-tls.service';
 import { RedisService } from '../src/redis/redis.service';
+import {
+  CustomDomainGuard,
+  type DomainRequest,
+} from '../src/domains/custom-domain.guard';
+import type { ExecutionContext } from '@nestjs/common';
+import { selectedTenantUrl } from '../src/common/selected-tenant-url';
+import { SessionService } from '../src/auth/session.service';
 
 const databaseName = `sponsor_krd_domains_test_${process.pid}`;
 const connection = {
@@ -113,6 +120,80 @@ describe('durable custom domain tenancy', () => {
     await service.verify(owner, domain.id, owner);
     return domain;
   }
+  it.each(['business', 'user', 'membership', 'session'] as const)(
+    'rejects a cached session and new handoffs after %s access is revoked',
+    async (revoked) => {
+      const user = await db.query<{ id: string }>(
+        'INSERT INTO users (email,display_name) VALUES ($1,$2) RETURNING id',
+        [`domain-${revoked}@example.test`, 'Domain owner'],
+      );
+      const userId = user.rows[0].id;
+      const cache = new Map<string, unknown>();
+      const sessionRedis = {
+        get: async (key: string) => cache.get(key) || null,
+        set: async (key: string, value: unknown) => {
+          cache.set(key, value);
+          return true;
+        },
+        del: async (key: string) => cache.delete(key),
+        trackBusinessSession: async () => true,
+        untrackBusinessSession: async () => true,
+      } as unknown as RedisService;
+      const sessions = new SessionService(adapter, sessionRedis);
+      try {
+        await db.query(
+          'INSERT INTO business_memberships (business_id,user_id) VALUES ($1,$2)',
+          [owner, userId],
+        );
+        const input = {
+          businessId: owner,
+          userId,
+          ipAddress: '127.0.0.1',
+          userAgent: 'security-regression',
+          sessionUser: {
+            username: 'domain-owner',
+            name: 'Wafaye',
+            subdomain: 'wafaye',
+          },
+        };
+        const { sessionToken } = await sessions.createBusinessSession(input);
+        expect(await sessions.getSessionUser(sessionToken)).toMatchObject({
+          id: owner,
+          userId,
+        });
+        if (revoked === 'business')
+          await db.query(
+            "UPDATE businesses SET status='suspended' WHERE id=$1",
+            [owner],
+          );
+        if (revoked === 'user')
+          await db.query("UPDATE users SET status='suspended' WHERE id=$1", [
+            userId,
+          ]);
+        if (revoked === 'membership')
+          await db.query(
+            "UPDATE business_memberships SET status='suspended' WHERE user_id=$1",
+            [userId],
+          );
+        if (revoked === 'session')
+          await db.query('DELETE FROM business_sessions WHERE business_id=$1', [
+            owner,
+          ]);
+        expect(await sessions.getSessionUser(sessionToken)).toBeNull();
+        // Cache misses must reject the same principal; a pending handoff cannot mint a new session.
+        expect(await sessions.getSessionUser(sessionToken)).toBeNull();
+        if (revoked !== 'session')
+          await expect(sessions.createBusinessSession(input)).rejects.toThrow(
+            'Business access is no longer active',
+          );
+      } finally {
+        await db.query('DELETE FROM users WHERE id=$1', [userId]);
+        await db.query('DELETE FROM business_sessions WHERE business_id=$1', [
+          owner,
+        ]);
+      }
+    },
+  );
   it.each(['ownership', null] as const)(
     'discards an older DNS result when a newer check returned %s',
     async (latest) => {
@@ -252,6 +333,53 @@ describe('durable custom domain tenancy', () => {
       isPrimary: false,
       lastError: 'ownership',
     });
+  });
+  it('enforces the selected hostname for dashboard APIs and restores default login after removal', async () => {
+    const domain = await verifiedDomain();
+    const config = new ConfigService({
+      ROOT_DOMAIN: 'sponsor.krd',
+      CUSTOM_DOMAINS_ENABLED: true,
+    });
+    const guard = new CustomDomainGuard(service, config);
+    const authorize = async (host: string) => {
+      const request = {
+        headers: { host, 'x-subdomain': 'other' },
+        url: '/api/auth/profile',
+        raw: { socket: { remoteAddress: '203.0.113.2' } },
+      } as unknown as DomainRequest;
+      const context = {
+        switchToHttp: () => ({ getRequest: () => request }),
+      } as unknown as ExecutionContext;
+      await guard.canActivate(context);
+      return request.customDomainSubdomain;
+    };
+    await expect(authorize('wafaye.com')).rejects.toThrow();
+    await service.primary(owner, domain.id, owner);
+    expect(await authorize('wafaye.com')).toBe('wafaye');
+    expect(await authorize('WAFAYE.COM:443')).toBe('wafaye');
+    expect(await service.resolve('wafaye.com:invalid')).toBeNull();
+    await expect(authorize('wafaye.sponsor.krd')).rejects.toThrow();
+    expect(
+      await selectedTenantUrl(
+        adapter,
+        config,
+        'https://sponsor.krd',
+        'wafaye',
+        '/business/auth/consume?code=test',
+      ),
+    ).toBe('https://wafaye.com/business/auth/consume?code=test');
+    await service.remove(owner, domain.id, owner);
+    await expect(authorize('wafaye.com')).rejects.toThrow();
+    await expect(authorize('wafaye.sponsor.krd')).resolves.toBeUndefined();
+    expect(
+      await selectedTenantUrl(
+        adapter,
+        config,
+        'https://sponsor.krd',
+        'wafaye',
+        '/business/workspace-entry',
+      ),
+    ).toBe('https://wafaye.sponsor.krd/business/workspace-entry');
   });
   it('expires stale verifications and invalidates routing immediately after removal', async () => {
     const domain = await verifiedDomain();

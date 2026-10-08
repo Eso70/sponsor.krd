@@ -66,13 +66,15 @@ function rewriteNotFound(
   const url = request.nextUrl.clone();
   url.pathname = targetPath;
   url.search = "";
-  return withCsp(
+  const response = withCsp(
     NextResponse.rewrite(url, {
       status: 404,
       request: { headers: requestHeaders },
     }),
     csp,
   );
+  response.headers.set("Cache-Control", "no-store, private");
+  return response;
 }
 
 /**
@@ -170,17 +172,13 @@ export async function proxy(request: NextRequest) {
     try {
       verified = await resolveBusinessHost(host);
     } catch {
-      if (
-        !scope.subdomain ||
-        (!pathname.startsWith("/business") && !pathname.startsWith("/api"))
-      )
-        return withCsp(
-          new NextResponse("Temporarily unavailable", {
-            status: 503,
-            headers: { "Retry-After": "60", "Cache-Control": "no-store" },
-          }),
-          csp,
-        );
+      return withCsp(
+        new NextResponse("Temporarily unavailable", {
+          status: 503,
+          headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+        }),
+        csp,
+      );
     }
   }
   const subdomain = verified?.subdomain || scope.subdomain;
@@ -188,26 +186,11 @@ export async function proxy(request: NextRequest) {
     return rewriteNotFound(request, "/__root-not-found", requestHeaders, csp);
   }
   if (verified?.isCustom) {
-    if (pathname.startsWith("/business")) {
-      const tenantOrigin = resolvePublicOrigin(
-        `${subdomain}.${ROOT_DOMAIN}`,
-        ROOT_DOMAIN,
-        getAppBaseUrl(),
-      );
-      if (tenantOrigin) {
-        const response = NextResponse.redirect(
-          new URL("/business/workspace-entry", tenantOrigin.origin),
-          307,
-        );
-        response.headers.set("Cache-Control", "no-store, private");
-        response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-        return withCsp(response, csp);
-      }
-    }
     if (
       pathname.startsWith("/join") ||
       isPlatformAdminPath(pathname) ||
-      (pathname.startsWith("/api/") && !/^\/api\/public(?:\/|$)/.test(pathname))
+      /^\/api\/(?:platform|signup)(?:\/|$)/.test(pathname) ||
+      pathname === "/api/auth/google/callback"
     ) {
       return rewriteNotFound(
         request,
@@ -217,11 +200,7 @@ export async function proxy(request: NextRequest) {
       );
     }
   }
-  if (
-    verified &&
-    !pathname.startsWith("/api") &&
-    !pathname.startsWith("/business")
-  ) {
+  if (verified) {
     const canonical = resolvePublicOrigin(
       host,
       ROOT_DOMAIN,
@@ -233,12 +212,12 @@ export async function proxy(request: NextRequest) {
       host.toLowerCase().split(":")[0].replace(/\.$/, "") !==
         new URL(canonical.origin).hostname
     ) {
-      const target = new URL(canonical.origin);
-      target.pathname = pathname;
-      target.search = request.nextUrl.search;
-      const response = NextResponse.redirect(target, 307);
-      response.headers.set("Cache-Control", "no-store");
-      return withCsp(response, csp);
+      return rewriteNotFound(
+        request,
+        "/__public-not-found",
+        requestHeaders,
+        csp,
+      );
     }
   }
   const rootHostname = ROOT_DOMAIN.split(":")[0]
@@ -441,6 +420,9 @@ export async function proxy(request: NextRequest) {
   }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+  if (pathname.startsWith("/business")) {
+    response.headers.set("Cache-Control", "no-store, private");
+  }
   if (
     pathname.startsWith("/business") ||
     pathname.startsWith("/api") ||

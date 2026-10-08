@@ -15,6 +15,7 @@ import {
   isTrustedInternalProxy,
 } from '../common/internal-proxy-trust';
 import { impersonationDenialReason } from './impersonation-policy';
+import type { DomainRequest } from '../domains/custom-domain.guard';
 
 type BusinessRequest = FastifyRequest & {
   user?: SessionUser;
@@ -90,6 +91,8 @@ export class BusinessGuard implements CanActivate {
    * Returns null/empty string if no subdomain can be determined (root domain).
    */
   private extractSubdomain(request: BusinessRequest): string | null {
+    const verified = (request as DomainRequest).customDomainSubdomain;
+    if (verified) return verified;
     // The x-subdomain header is only authoritative when accompanied by a
     // valid internal proxy key: see internal-proxy-trust.ts for why an
     // unverified header must never be trusted here. An external caller that

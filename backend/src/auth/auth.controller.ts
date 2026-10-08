@@ -128,6 +128,7 @@ export class AuthController {
       user: {
         id: business.id,
         username: business.username,
+        subdomain: user.subdomain,
         name: business.name,
         phone: business.phone || null,
         email: business.email || null,
@@ -266,6 +267,7 @@ export class AuthController {
       user: {
         id: business.id,
         username: business.username,
+        subdomain: user.subdomain,
         name: business.name,
         phone: business.phone || null,
         email: business.email || null,
@@ -487,6 +489,12 @@ export class AuthController {
    * Returns 200 { exists: true } if found, 404 if not.
    * No auth required — the response reveals nothing sensitive.
    */
+  @Get('subdomain-theme')
+  async getCurrentSubdomainTheme(@Subdomain() subdomain: string) {
+    if (!subdomain) throw new HttpException('Not found', HttpStatus.NOT_FOUND);
+    return { ...(await this.getSubdomainTheme(subdomain)), subdomain };
+  }
+
   @Get('subdomain-check')
   @HttpCode(HttpStatus.OK)
   async checkSubdomain(@Subdomain() subdomain: string) {

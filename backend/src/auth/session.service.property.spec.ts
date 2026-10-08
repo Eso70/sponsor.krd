@@ -70,8 +70,8 @@ describe('SessionService - Property Tests', () => {
 
     mockDatabaseService = {
       query: jest.fn(async () => ({
-        rows: [],
-        rowCount: 0,
+        rows: [{ id: 'active-session' }],
+        rowCount: 1,
       })) as unknown as DatabaseService['query'],
     };
 

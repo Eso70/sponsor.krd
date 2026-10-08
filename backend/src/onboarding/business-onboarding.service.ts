@@ -46,7 +46,7 @@ import type {
   UpdateSignupApplicationDto,
 } from './dto/onboarding.dto';
 import { MailService } from '../mail/mail.service';
-import { buildTenantUrl } from '../common/root-domain';
+import { selectedTenantUrl } from '../common/selected-tenant-url';
 import {
   authHandoffKey,
   createAuthHandoffCode,
@@ -174,8 +174,14 @@ export class BusinessOnboardingService {
     return new URL(path, this.applicationBaseUrl()).toString();
   }
 
-  private tenantUrl(subdomain: string, path: string): string {
-    return buildTenantUrl(this.applicationBaseUrl(), subdomain, path);
+  private tenantUrl(subdomain: string, path: string): Promise<string> {
+    return selectedTenantUrl(
+      this.database,
+      this.config,
+      this.applicationBaseUrl(),
+      subdomain,
+      path,
+    );
   }
 
   private applicationBaseUrl(): string {
@@ -1125,12 +1131,17 @@ export class BusinessOnboardingService {
         'Google account has no access to this business',
       );
     const handoff = createAuthHandoffCode();
+    const redirectUrl = await this.tenantUrl(
+      membership.subdomain,
+      `/business/auth/consume?code=${encodeURIComponent(handoff)}`,
+    );
     const payload: AuthHandoffPayload = {
       ...membership,
       kind: 'login',
+      hostname: new URL(redirectUrl).host,
       rememberDevice: Boolean(oauth.rememberDevice),
     };
-    await Promise.all([
+    const [stored] = await Promise.all([
       this.redis.set(
         authHandoffKey(handoff),
         payload,
@@ -1141,18 +1152,20 @@ export class BusinessOnboardingService {
         [membership.user_id],
       ),
     ]);
+    if (!stored)
+      throw new ServiceUnavailableException(
+        'Authentication is temporarily unavailable',
+      );
     return {
       mode: 'signin' as const,
-      redirectUrl: this.tenantUrl(
-        membership.subdomain,
-        `/business/auth/consume?code=${encodeURIComponent(handoff)}`,
-      ),
+      redirectUrl,
     };
   }
 
   async consumeHandoff(input: {
     code: string;
     subdomain: string;
+    hostname?: string;
     ipAddress: string;
     userAgent: string;
   }) {
@@ -1161,7 +1174,11 @@ export class BusinessOnboardingService {
       authHandoffKey(input.code || ''),
     );
     const subdomain = normalizeBusinessSubdomain(input.subdomain);
-    if (!handoff || handoff.subdomain !== subdomain) {
+    if (
+      !handoff ||
+      handoff.subdomain !== subdomain ||
+      (handoff.hostname && handoff.hostname !== input.hostname?.toLowerCase())
+    ) {
       throw new UnauthorizedException('Sign-in handoff expired');
     }
     // One consume path produces both session kinds. An impersonation handoff

@@ -526,9 +526,18 @@ administrator-configured trusted DNS resolvers; customers cannot select a resolv
 Failure logs exclude expected and returned token values. Unknown, disconnected,
 expired and suspended-tenant mappings fail closed. Internal domain resolution
 requires the proxy secret; certificate permission requires loopback and is blocked
-at the edge. Primary selection checks the public TLS certificate at a configured
-origin IP. Private business/platform APIs and dashboard authentication remain on
-Sponsor.krd hosts. See [Custom domains](custom-domains.md) for lifecycle details.
+at the edge. The certificate permission endpoint also rejects forwarded request
+headers so a public reverse-proxy request cannot inherit loopback permission.
+Primary selection checks the public TLS certificate at a configured
+origin IP. The selected custom domain also serves tenant-scoped business APIs
+and dashboard authentication, with host-only cookies and destination-bound OAuth
+handoffs. Platform APIs, signup, internal endpoints and the fixed Google callback
+remain restricted to platform hosts. The previous tenant hostname returns 404
+while a custom primary is active. See [Custom domains](custom-domains.md).
+Customer CORS origins require a live primary mapping. Cookie-authenticated
+browser requests with an Origin header must be same-origin even for reads;
+admitting another business origin to CORS never grants access to a logged-in
+tenant's data. Mutations also enforce the existing Referer fallback.
 
 Business authentication derives the tenant from the preserved `Host` using the
 same single-label parser as public routing. Unauthenticated `X-Forwarded-Host`
@@ -538,3 +547,12 @@ require a signup session and are limited to 120 per user per minute. Domain DNS
 results use short-lived PostgreSQL row-version comparisons so an older success
 cannot reverse a newer revocation. Internal endpoints are blocked at both Caddy
 and the Next.js forwarding boundary.
+
+PostgreSQL remains authoritative even when session metadata is cached. Every
+business session checks its durable expiry, active business, active user and
+active membership; administrator impersonation checks the administrator still
+exists. Issuance performs the same eligibility check in its insert, preventing
+a pending login handoff from reviving suspended access. Cached platform sessions
+also require an unexpired database session. Private API responses and errors
+use `Cache-Control: no-store, private`. Platform-only endpoints are denied on
+both default tenant subdomains and custom domains.

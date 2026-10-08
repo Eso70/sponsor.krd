@@ -11,6 +11,11 @@ Register exact production callback
 `GOOGLE_OAUTH_REDIRECT_URI`. Redis 6.2+ is required for atomic `GETDEL`
 consumption of OAuth state and handoff codes. Verify wildcard TLS and DNS for
 tenant subdomains before enabling owner sign-in.
+Primary custom domains serve both public pages and the business dashboard.
+Deploy frontend and backend together; existing Caddy API forwarding and the
+single registered Google callback remain unchanged. No per-customer environment
+or OAuth redirect registration is needed. Verify custom-host login by email and
+Google, old-host 404s, uploads, and default-host restoration after removal.
 
 This document describes the supported deployment workflow for Sponsor.krd.
 

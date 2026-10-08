@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
-import { buildTenantUrl } from '../common/root-domain';
+import { selectedTenantUrl } from '../common/selected-tenant-url';
 import { SessionService, type SessionUser } from './session.service';
 import {
   authHandoffKey,
@@ -108,6 +108,13 @@ export class ImpersonationService {
     }
 
     const code = createAuthHandoffCode();
+    const redirectUrl = await selectedTenantUrl(
+      this.database,
+      this.config,
+      this.applicationBaseUrl(),
+      target.subdomain,
+      `/business/auth/consume?code=${encodeURIComponent(code)}`,
+    );
     const payload: AuthHandoffPayload = {
       kind: 'impersonation',
       // Intentionally unattributed: the session belongs to no owner account, so
@@ -115,6 +122,7 @@ export class ImpersonationService {
       user_id: null,
       business_id: target.id,
       subdomain: target.subdomain,
+      hostname: new URL(redirectUrl).host,
       username: target.username,
       business_name: target.name,
       rememberDevice: false,
@@ -124,18 +132,18 @@ export class ImpersonationService {
         ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
       },
     };
-    await this.redis.set(
+    const stored = await this.redis.set(
       authHandoffKey(code),
       payload,
       AUTH_HANDOFF_TTL_SECONDS,
     );
+    if (!stored)
+      throw new ServiceUnavailableException(
+        'Authentication is temporarily unavailable',
+      );
 
     return {
-      redirectUrl: buildTenantUrl(
-        this.applicationBaseUrl(),
-        target.subdomain,
-        `/business/auth/consume?code=${encodeURIComponent(code)}`,
-      ),
+      redirectUrl,
       expiresInSeconds: AUTH_HANDOFF_TTL_SECONDS,
     };
   }
