@@ -71,11 +71,17 @@ describe("verified custom-domain routing", () => {
       expect(resolve.mock.calls.length).toBe(calls);
     },
   );
-  it("keeps dashboard login on the business subdomain", async () => {
-    const response = await proxy(request("/business/settings"));
+  it.each([
+    "/business/settings",
+    "/business/workspace-entry",
+    "/business/workspace-entry/",
+  ])("keeps dashboard login on the business subdomain for %s", async (path) => {
+    const response = await proxy(request(path));
     expect(response.headers.get("location")).toBe(
       "https://wafaye.sponsor.krd/business/workspace-entry",
     );
+    expect(response.headers.get("cache-control")).toBe("no-store, private");
+    expect(response.headers.get("x-robots-tag")).toContain("noindex");
   });
   it.each([
     "/api/auth/profile",

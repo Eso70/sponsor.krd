@@ -9,6 +9,8 @@ const require = createRequire(new URL("../package.json", import.meta.url));
 const frontendDirectory = fileURLToPath(new URL("..", import.meta.url));
 const frontendPort = 4312;
 const backendPort = 4313;
+const customHost = "alpha-custom.example.com";
+let customDomainActive = false;
 const names = {
   alpha: "Alpha Business",
   beta: "بزنس بێتا",
@@ -22,11 +24,18 @@ const fixture = createServer((req, res) => {
     res.end(JSON.stringify({ success: status === 200, data }));
   };
   if (url.pathname === "/api/internal/domains/resolve") {
+    if (req.headers["x-tenant-proxy-key"] !== "disposable-seo-smoke-secret")
+      return respond(null, 403);
+    const host = (url.searchParams.get("host") || "").split(":")[0];
     return respond(
-      null,
-      req.headers["x-tenant-proxy-key"] === "disposable-seo-smoke-secret"
-        ? 200
-        : 403,
+      customDomainActive && [customHost, "alpha.localhost"].includes(host)
+        ? {
+            hostname: host,
+            subdomain: "alpha",
+            primaryHostname: customHost,
+            isCustom: host === customHost,
+          }
+        : null,
     );
   }
   if (url.pathname.endsWith("/subdomain-check"))
@@ -294,8 +303,50 @@ try {
     ]) {
       assert.equal((await get("localhost", path)).status, 404);
     }
+    customDomainActive = true;
+    for (const path of ["/", "/linktree/same-slug?source=qr"]) {
+      const alias = await get("alpha.localhost", path);
+      assert.equal(alias.status, 307);
+      assert.equal(alias.headers.location, `https://${customHost}${path}`);
+      assert.equal(alias.headers["cache-control"], "no-store");
+    }
+    for (const path of [
+      "/business/workspace-entry",
+      "/business/workspace-entry/",
+      "/business/settings",
+    ]) {
+      let entry = await get(customHost, path);
+      if (path.endsWith("/")) {
+        // Next normalizes the slash before Proxy; follow that same-host step.
+        assert.equal(entry.status, 308);
+        const normalized = new URL(
+          entry.headers.location,
+          `http://${customHost}:${frontendPort}`,
+        );
+        assert.equal(normalized.hostname, customHost);
+        assert.equal(normalized.pathname, "/business/workspace-entry");
+        entry = await get(customHost, normalized.pathname);
+      }
+      assert.equal(entry.status, 307);
+      assert.equal(
+        entry.headers.location,
+        `http://alpha.localhost:${frontendPort}/business/workspace-entry`,
+      );
+      assert.equal(entry.headers["cache-control"], "no-store, private");
+    }
+    const entryPage = await get("alpha.localhost", "/business/workspace-entry");
+    assert.equal(entryPage.status, 200);
+    assert.match(entryPage.body.toString(), /\/api\/auth\/google\/start/);
+    assert.equal((await get(customHost, "/linktree/same-slug")).status, 200);
+    assert.equal((await get(customHost, "/api/auth/profile")).status, 404);
+    customDomainActive = false;
+    assert.equal(
+      (await get("alpha.localhost", "/linktree/same-slug")).status,
+      200,
+    );
+    assert.equal((await get(customHost, "/linktree/same-slug")).status, 404);
     console.log(
-      "SEO HTTP smoke passed: two tenants, raw HTML, robots, sitemaps, real links, OG images, 404/503/308, noindex, hostile hosts, and blocked internal endpoints.",
+      "SEO HTTP smoke passed: tenant isolation, SEO, public redirects, custom-domain dashboard entry, removal fallback, and blocked private/internal APIs.",
     );
   }
 } catch (error) {

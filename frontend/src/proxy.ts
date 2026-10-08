@@ -194,14 +194,15 @@ export async function proxy(request: NextRequest) {
         ROOT_DOMAIN,
         getAppBaseUrl(),
       );
-      if (tenantOrigin)
-        return withCsp(
-          NextResponse.redirect(
-            new URL("/business/workspace-entry", tenantOrigin.origin),
-            307,
-          ),
-          csp,
+      if (tenantOrigin) {
+        const response = NextResponse.redirect(
+          new URL("/business/workspace-entry", tenantOrigin.origin),
+          307,
         );
+        response.headers.set("Cache-Control", "no-store, private");
+        response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+        return withCsp(response, csp);
+      }
     }
     if (
       pathname.startsWith("/join") ||

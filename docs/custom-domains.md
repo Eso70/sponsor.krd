@@ -80,6 +80,11 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
   remain on Sponsor.krd addresses. Visiting `/business*` on a custom domain
   redirects to the original business workspace entry. Host-only dashboard
   cookies and Google callback configuration are unchanged.
+  These dashboard-entry redirects use `Cache-Control: no-store, private` and
+  noindex headers. For example, `zhirsaz.com/business/workspace-entry` opens
+  `eso.sponsor.krd/business/workspace-entry` for sign-in, while the public website
+  continues to use `zhirsaz.com`. The default public URL redirects to the custom
+  domain; it is not a second independently served website.
 - Only one address serves public website pages. Before primary activation, a
   DNS-verified custom domain redirects to the default Sponsor.krd address. After
   HTTPS readiness and primary activation, the default public address redirects

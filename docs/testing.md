@@ -6,6 +6,11 @@ HTML, two tenants with identical slugs, robots/sitemaps, share images, real
 anchors, noindex, crawler agents and HTTP status/redirect behavior. See
 [SEO verification and live deployment checks](seo.md).
 
+The HTTP fixture also exercises custom-domain dashboard-entry redirects through
+the real Next.js server, verifies the destination sign-in page renders, keeps
+private APIs blocked, checks default public URLs redirect to the custom hostname,
+and restores the default public page after domain removal.
+
 Everything, in one command:
 
 ```bash
