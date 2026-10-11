@@ -1011,8 +1011,6 @@ export class BusinessAdministrationService {
       .filter(Boolean) as string[];
     const ownedAssets = await this.storageService.getBusinessAssetUrls(id);
 
-    await this.redisService.clearBusinessSessions(id);
-
     await this.databaseService.transaction(async (client) => {
       await client.query(
         `WITH closed AS (
@@ -1037,6 +1035,9 @@ export class BusinessAdministrationService {
       if (result.rowCount === 0)
         throw new NotFoundException('Business not found');
     });
+
+    // Failed database deletions must not sign out an otherwise intact business.
+    await this.redisService.clearBusinessSessions(id);
 
     if (business.subdomain) {
       try {

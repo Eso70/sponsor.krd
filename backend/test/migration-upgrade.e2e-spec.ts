@@ -73,6 +73,105 @@ describe('consolidated database schema commands (e2e)', () => {
     }
   });
 
+  it('reproduces the audited-business deletion error and upgrades without rewriting history', async () => {
+    const client = await fixture.connect();
+    await client.query('BEGIN');
+    try {
+      const business = (
+        await client.query<{ id: string }>(
+          "INSERT INTO businesses(username,name,subdomain) VALUES('audit-delete-test','Audit deletion','audit-delete-test') RETURNING id",
+        )
+      ).rows[0].id;
+      const plan = (
+        await client.query<{ id: string }>(
+          "INSERT INTO billing_plans(code,name) VALUES('audit-delete-test','Audit deletion') RETURNING id",
+        )
+      ).rows[0].id;
+      const configuration = (
+        await client.query<{ id: string }>(
+          'INSERT INTO billing_plan_configurations(plan_id) VALUES($1) RETURNING id',
+          [plan],
+        )
+      ).rows[0].id;
+      const audit = (
+        await client.query<{ id: string }>(
+          `INSERT INTO billing_policy_audit_events(event_type,business_id,plan_id,plan_configuration_id,resource_type,resource_id,before_value,after_value)
+        VALUES('test.business.created',$1,$2,$3,'business',$1,'{}','{"status":"active"}') RETURNING *`,
+          [business, plan, configuration],
+        )
+      ).rows[0];
+      // Recreate the conflicting production schema; the fresh baseline omits it.
+      for (const [column, parent] of [
+        ['business_id', 'businesses'],
+        ['plan_id', 'billing_plans'],
+        ['plan_configuration_id', 'billing_plan_configurations'],
+      ]) {
+        await client.query(
+          `ALTER TABLE billing_policy_audit_events ADD CONSTRAINT billing_policy_audit_events_${column}_fkey FOREIGN KEY (${column}) REFERENCES ${parent}(id) ON DELETE SET NULL`,
+        );
+      }
+      await client.query('SAVEPOINT old_schema');
+      await expect(
+        client.query('DELETE FROM businesses WHERE id=$1', [business]),
+      ).rejects.toThrow('billing policy audit events are immutable');
+      await client.query('ROLLBACK TO SAVEPOINT old_schema');
+      const migration = readFileSync(
+        join(
+          migrationsDirectory,
+          '2026-10-11_immutable_audit_entity_deletion.sql',
+        ),
+        'utf8',
+      );
+      await client.query(migration);
+      await client.query(migration);
+      expect(
+        (await client.query('DELETE FROM businesses WHERE id=$1', [business]))
+          .rowCount,
+      ).toBe(1);
+      expect(
+        (
+          await client.query(
+            'SELECT 1 FROM business_subscriptions WHERE business_id=$1',
+            [business],
+          )
+        ).rowCount,
+      ).toBe(0);
+      expect(
+        (
+          await client.query(
+            'DELETE FROM billing_plan_configurations WHERE id=$1',
+            [configuration],
+          )
+        ).rowCount,
+      ).toBe(1);
+      expect(
+        (await client.query('DELETE FROM billing_plans WHERE id=$1', [plan]))
+          .rowCount,
+      ).toBe(1);
+      expect(
+        (
+          await client.query(
+            'SELECT * FROM billing_policy_audit_events WHERE id=$1',
+            [audit.id],
+          )
+        ).rows[0],
+      ).toEqual(audit);
+      for (const sql of [
+        "UPDATE billing_policy_audit_events SET reason='changed' WHERE id=$1",
+        'DELETE FROM billing_policy_audit_events WHERE id=$1',
+      ]) {
+        await client.query('SAVEPOINT immutable_guard');
+        await expect(client.query(sql, [audit.id])).rejects.toThrow(
+          'billing policy audit events are immutable',
+        );
+        await client.query('ROLLBACK TO SAVEPOINT immutable_guard');
+      }
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  });
+
   it('keeps fresh and upgraded Basic/Pro Linktree allowances consistent', async () => {
     const readLimits = async () =>
       (

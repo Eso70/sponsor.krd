@@ -1,5 +1,17 @@
 # Database
 
+## Business deletion and immutable billing audits
+
+Apply `2026-10-11_immutable_audit_entity_deletion.sql` using `pnpm db:migrate`
+before retrying a production business deletion. Audit `business_id`, `plan_id`
+and `plan_configuration_id` are historical identifiers rather than foreign keys
+that change when their parent is removed. The old `ON DELETE SET NULL` constraints
+conflicted with the immutable audit trigger and could turn an authorized deletion
+into HTTP 500. The migration removes only those three constraints, retains every
+audit record and original identifier, and leaves the immutable trigger enabled.
+The fresh baseline uses the same design; operational tenant data keeps its existing
+foreign keys and cascade rules.
+
 Custom-domain automatic verification uses `business_domains_retry`, a partial
 index on pending/disconnected check timestamps. Apply
 `2026-10-07_custom_domain_automation.sql` through the normal migration

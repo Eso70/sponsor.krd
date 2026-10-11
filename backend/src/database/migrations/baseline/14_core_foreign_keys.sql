@@ -57,27 +57,9 @@ ALTER TABLE ONLY public.billing_plan_templates
 
 
 --
--- Name: billing_policy_audit_events billing_policy_audit_events_business_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.billing_policy_audit_events
-    ADD CONSTRAINT billing_policy_audit_events_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(id) ON DELETE SET NULL;
-
-
---
--- Name: billing_policy_audit_events billing_policy_audit_events_plan_configuration_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.billing_policy_audit_events
-    ADD CONSTRAINT billing_policy_audit_events_plan_configuration_id_fkey FOREIGN KEY (plan_configuration_id) REFERENCES public.billing_plan_configurations(id) ON DELETE SET NULL;
-
-
---
--- Name: billing_policy_audit_events billing_policy_audit_events_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.billing_policy_audit_events
-    ADD CONSTRAINT billing_policy_audit_events_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.billing_plans(id) ON DELETE SET NULL;
+-- Immutable audit identifiers intentionally outlive businesses, plans and
+-- configurations. Foreign-key SET NULL actions would rewrite these records
+-- and conflict with trg_billing_policy_audit_immutable.
 
 
 --

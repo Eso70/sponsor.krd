@@ -537,6 +537,12 @@ which is the intended review point.
 
 ## Resolved security findings
 
+Billing audit records remain immutable after a business, plan or configuration
+is deleted. Their historical identifiers deliberately have no mutating foreign
+keys; authorized writers still resolve entity ownership before inserting audit
+events. Neither entity deletion nor its migration disables the immutable trigger
+or deletes/rewrites the audit history.
+
 The August 2026 security-hardening migration closed the remaining findings that
 were previously listed here: password authentication has since been removed
 entirely, audit rows are excluded from retention cleanup, and production scripts

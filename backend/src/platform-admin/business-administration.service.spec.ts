@@ -71,6 +71,21 @@ describe('BusinessAdministrationService', () => {
       'business_name = NULL, phone = NULL',
     );
     expect(clientQuery.mock.calls[0][0]).toContain("'business_deleted'");
+    expect(database.transaction.mock.invocationCallOrder[0]).toBeLessThan(
+      redis.clearBusinessSessions.mock.invocationCallOrder[0],
+    );
+
+    redis.clearBusinessSessions.mockClear();
+    redis.del.mockClear();
+    storage.deleteUnreferencedFromValues.mockClear();
+    database.transaction.mockRejectedValueOnce(new Error('Deletion failed'));
+
+    await expect(
+      service.deleteBusiness('business-1', 'admin-1'),
+    ).rejects.toThrow('Deletion failed');
+    expect(redis.clearBusinessSessions).not.toHaveBeenCalled();
+    expect(redis.del).not.toHaveBeenCalled();
+    expect(storage.deleteUnreferencedFromValues).not.toHaveBeenCalled();
   });
 
   function buildService(query: jest.Mock) {
