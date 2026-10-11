@@ -64,3 +64,43 @@ export function canPreviewQuestions(questions: FormQuestion[]): boolean {
     )
   );
 }
+
+/** Shared readiness check for the full form and each card's required answers. */
+export function canSubmitQuestions(
+  questions: FormQuestion[],
+  answers: Record<string, string>,
+  phoneCountryCodes: Record<string, string>,
+): boolean {
+  return (
+    canPreviewQuestions(questions) &&
+    questions.every((question) => {
+      const value = (answers[question.id] ?? "").trim();
+      if (question.type === "conditional" && question.conditional) {
+        const selection = conditionalSelection(question.conditional, value);
+        return !question.required || selection.every(Boolean);
+      }
+      if (!value) return !question.required;
+      if (question.type === "choice") return question.options.includes(value);
+      if (question.type === "email")
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      if (question.type === "phone") {
+        const code = phoneCountryCodes[question.id] || "964";
+        let digits = value.replace(/[\s()-]/g, "");
+        if (digits.startsWith("+")) {
+          if (!digits.startsWith(`+${code}`)) return false;
+          digits = digits.slice(code.length + 1);
+        } else if (code === "964") digits = digits.replace(/^0/, "");
+        return /^\d{4,14}$/.test(digits) && code.length + digits.length <= 15;
+      }
+      if (question.type === "date")
+        return (
+          /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+          !Number.isNaN(Date.parse(value)) &&
+          new Date(value).toISOString().slice(0, 10) === value
+        );
+      if (question.labelKey === "age")
+        return /^\d{1,3}$/.test(value) && Number(value) <= 130;
+      return true;
+    })
+  );
+}

@@ -197,3 +197,5 @@ containers cannot clip the explanation or policy links. Browser tab titles use
 the form name; tab icons use the uploaded introduction logo, then the current
 owner's public business logo, then the shared placeholder. Shared list dropdowns
 use compact neutral selection/hover states with reduced-motion support.
+
+The shared public/preview Send action stays disabled until all visible required answers are valid and required privacy acknowledgement is checked. Card Next actions validate their current questions; the final Send checks the entire visible form, including earlier cards. Hidden conditional questions do not block submission. Native form validation and server validation remain enforced; the browser `SubmitForm` conversion runs only after an accepted server receipt.

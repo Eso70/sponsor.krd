@@ -15,7 +15,7 @@ import { FormPreviewHeader } from "./FormPreviewHeader";
 import { useFormPreviewResponses } from "../use-form-preview-responses";
 import { useFormPreviewNavigation } from "../use-form-preview-navigation";
 import { FormPreviewNavigation } from "./FormPreviewNavigation";
-import { canPreviewQuestions } from "../form-preview-answers";
+import { canSubmitQuestions } from "../form-preview-answers";
 /** Same draft model as the editor; responses exist only for this preview instance. */
 export function FormFlowPreview({
   form,
@@ -149,7 +149,11 @@ export function FormFlowPreview({
         placeholders={placeholders}
         lastStep
         currentStep={0}
-        canSubmit={!submission.busy && canPreviewQuestions(visibleQuestions)}
+        canSubmit={
+          !submission.busy &&
+          (!form.consentRequired || consent) &&
+          canSubmitQuestions(visibleQuestions, answers, phoneCountryCodes)
+        }
       />
     </FormPreviewSurface>
   );

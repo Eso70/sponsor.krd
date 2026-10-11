@@ -14,7 +14,7 @@ import { FormPreviewHeader } from "./FormPreviewHeader";
 import { useFormPreviewResponses } from "../use-form-preview-responses";
 import { useFormPreviewNavigation } from "../use-form-preview-navigation";
 import { FormPreviewNavigation } from "./FormPreviewNavigation";
-import { canPreviewQuestions } from "../form-preview-answers";
+import { canSubmitQuestions } from "../form-preview-answers";
 export function FormCardPreview({
   form,
   onSubmit,
@@ -54,6 +54,11 @@ export function FormCardPreview({
   const advance = () => {
     if (welcome) onStart?.();
     if (currentIndex === pages.length) {
+      if (
+        (form.consentRequired && !consent) ||
+        !canSubmitQuestions(questions, answers, phoneCountryCodes)
+      )
+        return;
       void submission.submit({ answers, phoneCountryCodes, consent }, () =>
         goTo("final"),
       );
@@ -188,7 +193,17 @@ export function FormCardPreview({
             lastStep={currentIndex === pages.length}
             currentStep={currentIndex}
             canSubmit={
-              !submission.busy && canPreviewQuestions(page?.questions ?? [])
+              !submission.busy &&
+              (currentIndex !== pages.length ||
+                !form.consentRequired ||
+                consent) &&
+              canSubmitQuestions(
+                currentIndex === pages.length
+                  ? questions
+                  : (page?.questions ?? []),
+                answers,
+                phoneCountryCodes,
+              )
             }
             onBack={() => goTo(allIds[currentIndex - 1])}
             onAction={onAction}

@@ -11,6 +11,7 @@ import { FormMediaPreview } from "./FormMediaPreview";
 import { isFormImage } from "../form-media";
 import {
   canPreviewQuestions,
+  canSubmitQuestions,
   conditionalSelection,
 } from "../form-preview-answers";
 
@@ -87,6 +88,8 @@ export function FormQuestionsPreview({
                 ?.focus();
               return;
             }
+            if (!canSubmitQuestions(questions, answers, phoneCountryCodes))
+              return;
             onAdvance();
           }}
           className="space-y-3"
