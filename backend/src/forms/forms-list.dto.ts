@@ -5,7 +5,13 @@ import {
   Matches,
   MaxLength,
   IsDateString,
+  IsUUID,
+  MinLength,
 } from 'class-validator';
+export class FormTitleDto {
+  @IsString() @MinLength(1) @MaxLength(100) title!: string;
+  @IsOptional() @IsUUID() excludeId?: string;
+}
 export class FormsPageDto {
   @IsOptional() @Matches(/^\d{1,6}$/) page = '0';
 }

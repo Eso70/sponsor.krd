@@ -225,6 +225,7 @@ export function FormsManagementPage({
             initialForm={editor?.form ?? null}
             previewOnly={editor?.preview ?? opening?.preview ?? false}
             isNew={editor?.isNew}
+            scope={scope}
             headerControls={headerControls}
             copy={copy}
             direction={locale === "en" ? "ltr" : "rtl"}

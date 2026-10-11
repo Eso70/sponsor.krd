@@ -172,10 +172,14 @@ function cookie(name: string): string | undefined {
       `(?:^|;\\s*)${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]+)`,
     ),
   );
-  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+  try {
+    return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-function attribution(): {
+export function getAnalyticsAttribution(): {
   pageUrl?: string;
   referrer?: string;
   ttclid?: string;
@@ -227,7 +231,7 @@ function createEvent(input: {
     visitorId: getVisitorId(),
     sessionId: getAnalyticsSessionId(),
     occurredAt: new Date().toISOString(),
-    ...attribution(),
+    ...getAnalyticsAttribution(),
     // Marketing tracking is automatic on allowlisted public pages. Keep the
     // existing transport field for backward-compatible API and database rows.
     consentState: "granted",

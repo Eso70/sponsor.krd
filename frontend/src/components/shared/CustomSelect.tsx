@@ -96,6 +96,7 @@ export function CustomSelect<T extends string>({
     maxHeight: number;
   } | null>(null);
   const [portalThemeStyle, setPortalThemeStyle] = useState<CSSProperties>();
+  const [portalDark, setPortalDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const firstOptionRef = useRef<HTMLButtonElement>(null);
@@ -139,10 +140,17 @@ export function CustomSelect<T extends string>({
     // The menu is portaled to <body>, so explicitly carry the effective theme
     // variables across that boundary instead of falling back to a solid color.
     const computedStyle = window.getComputedStyle(trigger);
+    const appearance = trigger.closest(".dark, .light");
+    setPortalDark(
+      appearance
+        ? appearance.classList.contains("dark")
+        : computedStyle.colorScheme === "dark",
+    );
     const inheritedTheme = [
       "--theme-primary",
       "--theme-css",
       "--theme-ink",
+      "--theme-text-primary",
       "--sponsor-krd-accent",
       "--sponsor-krd-accent-gradient",
       "--sponsor-krd-accent-ink",
@@ -310,158 +318,161 @@ export function CustomSelect<T extends string>({
         isOpen &&
         menuPosition &&
         createPortal(
-          <div
-            id={menuId}
-            ref={menuRef}
-            className={`${styles.menuShell} custom-scrollbar theme-custom-scrollbar fixed z-[150] select-none rounded-xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-[#1c222b] ${menuLayout === "grid" ? styles.gridShell : "overflow-y-auto overscroll-contain p-1"} ${inheritAppearance ? styles.isolatedMenu : ""}`}
-            data-placement={
-              menuPosition.bottom !== undefined ? "top" : "bottom"
-            }
-            style={{
-              ...menuPosition,
-              maxHeight:
-                menuLayout === "grid" ? undefined : menuPosition.maxHeight,
-              ...portalThemeStyle,
-              ...accentStyle,
-            }}
-            role="listbox"
-            tabIndex={-1}
-            aria-label={label}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsOpen(false);
-                triggerRef.current?.focus({ preventScroll: true });
-                return;
-              }
-              const items = Array.from(
-                menuRef.current?.querySelectorAll<HTMLButtonElement>(
-                  "[role=option]:not(:disabled)",
-                ) ?? [],
-              );
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                event.preventDefault();
-                const position = items.indexOf(
-                  document.activeElement as HTMLButtonElement,
-                );
-                const next =
-                  position < 0
-                    ? event.key === "ArrowDown"
-                      ? 0
-                      : items.length - 1
-                    : (position +
-                        (event.key === "ArrowDown" ? 1 : -1) +
-                        items.length) %
-                      items.length;
-                items[next]?.focus({ preventScroll: true });
-                items[next]?.scrollIntoView?.({ block: "nearest" });
-              } else if (
-                searchable &&
-                event.key === "Enter" &&
-                event.target === searchRef.current
-              ) {
-                event.preventDefault();
-                event.stopPropagation();
-                items[0]?.click();
-              } else if (
-                searchable &&
-                event.target !== searchRef.current &&
-                !event.ctrlKey &&
-                !event.metaKey &&
-                !event.altKey &&
-                (event.key.length === 1 || event.key === "Backspace")
-              ) {
-                event.preventDefault();
-                setSearchQuery((current) =>
-                  event.key === "Backspace"
-                    ? current.slice(0, -1)
-                    : current + event.key,
-                );
-                searchRef.current?.focus({ preventScroll: true });
-              }
-            }}
-            dir="ltr"
-          >
-            {searchable && (
-              <div className={styles.searchRow}>
-                <input
-                  data-custom-select-search
-                  ref={searchRef}
-                  type="search"
-                  aria-label={searchPlaceholder}
-                  placeholder={searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  className={styles.searchInput}
-                />
-              </div>
-            )}
-            {!displayedOptions.length && (
-              <p role="status" className="px-3 py-4 text-xs opacity-70">
-                {emptyLabel}
-              </p>
-            )}
+          <div className={portalDark ? "dark" : "light"}>
             <div
-              className={menuLayout === "grid" ? styles.gridMenu : undefined}
-              style={
-                menuLayout === "grid"
-                  ? { maxHeight: menuPosition.maxHeight }
-                  : undefined
+              id={menuId}
+              ref={menuRef}
+              className={`${styles.menuShell} custom-scrollbar theme-custom-scrollbar fixed z-[150] select-none rounded-xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-[#1c222b] ${menuLayout === "grid" ? styles.gridShell : "overflow-y-auto overscroll-contain p-1"} ${inheritAppearance ? styles.isolatedMenu : ""}`}
+              data-placement={
+                menuPosition.bottom !== undefined ? "top" : "bottom"
               }
+              style={{
+                ...menuPosition,
+                maxHeight:
+                  menuLayout === "grid" ? undefined : menuPosition.maxHeight,
+                ...portalThemeStyle,
+                ...accentStyle,
+              }}
+              role="listbox"
+              tabIndex={-1}
+              aria-label={label}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsOpen(false);
+                  triggerRef.current?.focus({ preventScroll: true });
+                  return;
+                }
+                const items = Array.from(
+                  menuRef.current?.querySelectorAll<HTMLButtonElement>(
+                    "[role=option]:not(:disabled)",
+                  ) ?? [],
+                );
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const position = items.indexOf(
+                    document.activeElement as HTMLButtonElement,
+                  );
+                  const next =
+                    position < 0
+                      ? event.key === "ArrowDown"
+                        ? 0
+                        : items.length - 1
+                      : (position +
+                          (event.key === "ArrowDown" ? 1 : -1) +
+                          items.length) %
+                        items.length;
+                  items[next]?.focus({ preventScroll: true });
+                  items[next]?.scrollIntoView?.({ block: "nearest" });
+                } else if (
+                  searchable &&
+                  event.key === "Enter" &&
+                  event.target === searchRef.current
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  items[0]?.click();
+                } else if (
+                  searchable &&
+                  event.target !== searchRef.current &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  !event.altKey &&
+                  (event.key.length === 1 || event.key === "Backspace")
+                ) {
+                  event.preventDefault();
+                  setSearchQuery((current) =>
+                    event.key === "Backspace"
+                      ? current.slice(0, -1)
+                      : current + event.key,
+                  );
+                  searchRef.current?.focus({ preventScroll: true });
+                }
+              }}
+              dir="ltr"
             >
-              {displayedOptions.map((option, index) => (
-                <Fragment key={option.value}>
-                  {option.group &&
-                    option.group !== displayedOptions[index - 1]?.group && (
-                      <div
-                        role="presentation"
-                        className="px-3 pb-1 pt-2 text-[10px] font-bold text-slate-400"
-                      >
-                        {option.group}
-                      </div>
-                    )}
-                  <button
-                    ref={
-                      option === displayedOptions.find((item) => !item.disabled)
-                        ? firstOptionRef
-                        : undefined
-                    }
-                    type="button"
-                    role="option"
-                    aria-selected={option.value === value}
-                    disabled={option.disabled}
-                    onClick={() => {
-                      onChange(option.value);
-                      setIsOpen(false);
-                      setSearchQuery("");
-                      if (menuLayout === "grid" || searchable)
-                        triggerRef.current?.focus({ preventScroll: true });
-                    }}
-                    className={`${styles.option} ${menuLayout === "grid" ? styles.gridOption : "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs"} transition disabled:opacity-40 ${
-                      option.value === value
-                        ? menuLayout === "grid"
-                          ? "theme-fill font-bold text-[var(--theme-ink)]"
-                          : `${styles.selectedOption} font-semibold`
-                        : "text-slate-600 dark:text-slate-300"
-                    }`}
-                  >
-                    {menuLayout === "grid" && option.icon && (
-                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                        <option.icon
-                          aria-hidden
-                          className="size-6"
-                          strokeWidth={1.5}
-                        />
-                      </span>
-                    )}
-                    <span>{option.label}</span>
-                    {option.value === value && (
-                      <Check className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </Fragment>
-              ))}
+              {searchable && (
+                <div className={styles.searchRow}>
+                  <input
+                    data-custom-select-search
+                    ref={searchRef}
+                    type="search"
+                    aria-label={searchPlaceholder}
+                    placeholder={searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+              )}
+              {!displayedOptions.length && (
+                <p role="status" className="px-3 py-4 text-xs opacity-70">
+                  {emptyLabel}
+                </p>
+              )}
+              <div
+                className={menuLayout === "grid" ? styles.gridMenu : undefined}
+                style={
+                  menuLayout === "grid"
+                    ? { maxHeight: menuPosition.maxHeight }
+                    : undefined
+                }
+              >
+                {displayedOptions.map((option, index) => (
+                  <Fragment key={option.value}>
+                    {option.group &&
+                      option.group !== displayedOptions[index - 1]?.group && (
+                        <div
+                          role="presentation"
+                          className="px-3 pb-1 pt-2 text-[10px] font-bold text-slate-400"
+                        >
+                          {option.group}
+                        </div>
+                      )}
+                    <button
+                      ref={
+                        option ===
+                        displayedOptions.find((item) => !item.disabled)
+                          ? firstOptionRef
+                          : undefined
+                      }
+                      type="button"
+                      role="option"
+                      aria-selected={option.value === value}
+                      disabled={option.disabled}
+                      onClick={() => {
+                        onChange(option.value);
+                        setIsOpen(false);
+                        setSearchQuery("");
+                        if (menuLayout === "grid" || searchable)
+                          triggerRef.current?.focus({ preventScroll: true });
+                      }}
+                      className={`${styles.option} ${menuLayout === "grid" ? styles.gridOption : "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs"} transition disabled:opacity-40 ${
+                        option.value === value
+                          ? menuLayout === "grid"
+                            ? "theme-fill font-bold text-[var(--theme-ink)]"
+                            : `${styles.selectedOption} font-semibold`
+                          : "text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      {menuLayout === "grid" && option.icon && (
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                          <option.icon
+                            aria-hidden
+                            className="size-6"
+                            strokeWidth={1.5}
+                          />
+                        </span>
+                      )}
+                      <span>{option.label}</span>
+                      {option.value === value && (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </Fragment>
+                ))}
+              </div>
             </div>
           </div>,
           document.body,

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { Download, RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { DashboardHeaderActionButton } from "@/components/shared/DashboardHeaderActionButton";
 import { Tooltip } from "@/components/shared/Tooltip";
 import type { FormsCopy } from "../forms-copy";
+import { FormExportMenu } from "./FormExportMenu";
 
 export function FormInsightsActions({
   copy,
@@ -14,6 +15,7 @@ export function FormInsightsActions({
   canDelete,
   onRefresh,
   onExport,
+  onExportRange,
   onDelete,
 }: {
   copy: FormsCopy;
@@ -25,6 +27,7 @@ export function FormInsightsActions({
   canDelete: boolean;
   onRefresh: () => void;
   onExport: () => void;
+  onExportRange: () => void;
   onDelete: () => void;
 }) {
   const className = "!size-9 !p-0";
@@ -40,16 +43,12 @@ export function FormInsightsActions({
           <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
         </DashboardHeaderActionButton>
       </Tooltip>
-      <Tooltip content={copy.exportCsv} side="bottom">
-        <DashboardHeaderActionButton
-          className={className}
-          aria-label={copy.exportCsv}
-          disabled={exportDisabled}
-          onClick={onExport}
-        >
-          <Download className="size-4" />
-        </DashboardHeaderActionButton>
-      </Tooltip>
+      <FormExportMenu
+        copy={copy}
+        disabled={exportDisabled}
+        onExport={onExport}
+        onExportRange={onExportRange}
+      />
       {canDelete && (
         <Tooltip content={copy.deleteResponses} side="bottom">
           <DashboardHeaderActionButton

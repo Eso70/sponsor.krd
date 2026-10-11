@@ -1,10 +1,12 @@
 .trigger,
 .menuShell {
   --select-neutral-border: #e2e8f0;
+  --select-option-text: #334155;
 }
 :global(.dark) .trigger,
 :global(.dark) .menuShell {
   --select-neutral-border: rgb(255 255 255 / 10%);
+  --select-option-text: #e2e8f0;
 }
 
 .menuShell {
@@ -27,16 +29,16 @@
 .option:not(.gridOption):not(:disabled):focus-visible {
   background-color: color-mix(
     in srgb,
-    var(--select-text, var(--theme-text-primary, #64748b)) 7%,
+    var(--select-text, var(--select-option-text)) 7%,
     transparent
   ) !important;
   outline: none;
 }
 .selectedOption {
-  color: var(--select-text, var(--theme-text-primary, #334155)) !important;
+  color: var(--select-text, var(--select-option-text)) !important;
   background: color-mix(
     in srgb,
-    var(--select-text, var(--theme-text-primary, #64748b)) 10%,
+    var(--select-text, var(--select-option-text)) 10%,
     transparent
   ) !important;
 }

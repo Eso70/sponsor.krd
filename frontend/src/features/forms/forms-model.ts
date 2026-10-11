@@ -22,11 +22,9 @@ export function createQuestion(type: QuestionType = "short"): FormQuestion {
   };
 }
 
-/** Dashboard names are derived without introducing a second required editor field. */
+/** The management title is independent of the optional public introduction. */
 export function formDraftName(form: FormDraft): string {
-  return (
-    form.headline.trim().slice(0, 100) || formEditorCopy(form.language).untitled
-  );
+  return form.name.trim().slice(0, 100);
 }
 
 export function createForm(language: FormLanguage = "ckb"): FormDraft {

@@ -20,6 +20,19 @@ import { FormValidationContext } from "./FormValidationContext";
 import { FormValidationSummary } from "./FormValidationSummary";
 import type { FormsCopy } from "../forms-copy";
 import type { FormDraft } from "../types";
+import { formsApi, type FormsScope } from "../api";
+import { useFormTitleAvailability } from "../use-form-title-availability";
+import dynamic from "next/dynamic";
+import {
+  FormImageCropContext,
+  type FormImageCropRequest,
+} from "./FormImageCropContext";
+
+const ImageCropEditor = dynamic(() =>
+  import("@/components/shared/ImageCropEditor").then(
+    (module) => module.ImageCropEditor,
+  ),
+);
 
 export function FormEditorDrawer({
   initialForm,
@@ -31,7 +44,9 @@ export function FormEditorDrawer({
   isNew = false,
   headerControls,
   direction = "ltr",
+  scope = "business",
 }: {
+  scope?: FormsScope;
   initialForm: FormDraft | null;
   onSave: (form: FormDraft) => void | Promise<void>;
   onClose: () => void;
@@ -44,6 +59,16 @@ export function FormEditorDrawer({
 }) {
   const saveLock = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [cropRequest, setCropRequest] = useState<FormImageCropRequest | null>(
+    null,
+  );
+  const [cropBusy, setCropBusy] = useState(false);
+  const [cropFooter, setCropFooter] = useState<HTMLDivElement | null>(null);
+  const cancelCrop = () => {
+    const target = cropRequest?.returnFocus;
+    setCropRequest(null);
+    requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+  };
   const [failedImage, setFailedImage] = useState<{
     image: string;
     message: string;
@@ -66,11 +91,22 @@ export function FormEditorDrawer({
   const fittedBody = step === "editor";
   const contentRef = useRef<HTMLDivElement>(null);
   const loading = !initialForm;
+  const titleAvailability = useFormTitleAvailability(
+    scope,
+    form.name,
+    isNew ? undefined : form.id,
+    !loading && step === "editor" && !previewOnly,
+  );
+  const [titleConflict, setTitleConflict] = useState<string | null>(null);
   useEffect(() => {
     if (!loading) contentRef.current?.focus({ preventScroll: true });
   }, [step, loading]);
   const close = () => {
-    if (saving) return;
+    if (saving || cropBusy) return;
+    if (cropRequest) {
+      cancelCrop();
+      return;
+    }
     if (loading) {
       onClose();
       return;
@@ -80,6 +116,12 @@ export function FormEditorDrawer({
     else onClose();
   };
   const issues = formEditorIssues(form, copy);
+  if (titleAvailability.status === "taken" || titleConflict === form.name)
+    issues.unshift({
+      field: "name",
+      section: "title",
+      message: copy.titleTaken,
+    });
   const uploadIssues = failedImage
     ? formUploadIssues(form, failedImage.image, copy)
     : [];
@@ -97,6 +139,20 @@ export function FormEditorDrawer({
     setSaving(true);
 
     try {
+      const available = await formsApi.titleAvailability(
+        scope,
+        form.name.trim(),
+        isNew ? undefined : form.id,
+      );
+      if (!available.available) {
+        setTitleConflict(form.name);
+        setSelectedIssue({
+          field: "name",
+          section: "title",
+          message: copy.titleTaken,
+        });
+        return;
+      }
       await onSave({
         ...form,
         name: formDraftName(form),
@@ -118,6 +174,16 @@ export function FormEditorDrawer({
                 : copy.saveImageError;
         setFailedImage({ image: error.image, message });
         setSelectedIssue(formUploadIssues(form, error.image, copy)[0] ?? null);
+      } else if (
+        requestError instanceof ApiRequestError &&
+        requestError.code === "FORM_TITLE_TAKEN"
+      ) {
+        setTitleConflict(form.name);
+        setSelectedIssue({
+          field: "name",
+          section: "title",
+          message: copy.titleTaken,
+        });
       } else {
         setSaveError(
           status === 409
@@ -157,15 +223,18 @@ export function FormEditorDrawer({
       <ManagementDrawer
         isOpen
         onClose={close}
+        busy={saving || cropBusy}
         title={
-          previewOnly
-            ? copy.preview
-            : step === "layout"
-              ? copy.chooseLayout
-              : copy.editor
+          cropRequest
+            ? copy.imageCrop.title
+            : previewOnly
+              ? copy.preview
+              : step === "layout"
+                ? copy.chooseLayout
+                : copy.editor
         }
         description={
-          loading
+          loading || cropRequest
             ? undefined
             : step === "layout"
               ? copy.chooseLayoutDescription
@@ -180,7 +249,14 @@ export function FormEditorDrawer({
           step === "layout" ? "centered" : fittedBody ? "contained" : "scroll"
         }
         footer={
-          loading ? undefined : previewOnly ? (
+          cropRequest ? (
+            <div
+              ref={setCropFooter}
+              data-crop-footer
+              className="flex w-full gap-3"
+              dir={direction}
+            />
+          ) : loading ? undefined : previewOnly ? (
             <ModalStepActions primaryLabel={copy.close} onPrimary={onClose} />
           ) : step === "layout" ? (
             <ModalStepActions primaryLabel={copy.next} onPrimary={next} />
@@ -262,28 +338,58 @@ export function FormEditorDrawer({
               copy={copy}
             />
           ) : (
-            <fieldset disabled={saving} className="contents" aria-busy={saving}>
-              <FormValidationContext.Provider
-                value={{
-                  issues,
-                  attempted,
-                  failedImage,
-                  selected: selectedIssue,
-                  select: setSelectedIssue,
-                }}
+            <FormImageCropContext.Provider value={setCropRequest}>
+              {cropRequest && (
+                <div className="h-full overflow-y-auto pb-2">
+                  <ImageCropEditor
+                    src={cropRequest.src}
+                    aspect={cropRequest.aspect}
+                    maxEdge={cropRequest.maxEdge}
+                    copy={copy.imageCrop}
+                    cancelLabel={copy.cancel}
+                    onClose={cancelCrop}
+                    onBusyChange={setCropBusy}
+                    footerTarget={cropFooter}
+                    onConfirm={async (file) => {
+                      await cropRequest.onConfirm(file);
+                      cancelCrop();
+                    }}
+                  />
+                </div>
+              )}
+              <div
+                hidden={!!cropRequest}
+                className={cropRequest ? "hidden" : "contents"}
               >
-                <FormBuilder
-                  form={form}
-                  onChange={(patch) =>
-                    setEditedForm((current) => ({
-                      ...(current ?? form),
-                      ...patch,
-                    }))
-                  }
-                  copy={copy}
-                />
-              </FormValidationContext.Provider>
-            </fieldset>
+                <fieldset
+                  disabled={saving}
+                  className="contents"
+                  aria-busy={saving}
+                >
+                  <FormValidationContext.Provider
+                    value={{
+                      issues,
+                      attempted,
+                      failedImage,
+                      selected: selectedIssue,
+                      select: setSelectedIssue,
+                    }}
+                  >
+                    <FormBuilder
+                      form={form}
+                      titleAvailability={titleAvailability}
+                      onChange={(patch) =>
+                        setEditedForm((current) => ({
+                          ...(current ?? form),
+                          ...patch,
+                        }))
+                      }
+                      copy={copy}
+                    />
+                  </FormValidationContext.Provider>
+                </fieldset>
+              </div>
+            </FormImageCropContext.Provider>
           )}
         </div>
       </ManagementDrawer>

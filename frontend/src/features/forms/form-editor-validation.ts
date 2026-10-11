@@ -6,7 +6,8 @@ import type { FormsCopy } from "./forms-copy";
 
 export type FormEditorIssue = {
   field: string;
-  section: "introduction" | "questions" | "final" | "banner" | "component";
+  section:
+    "title" | "introduction" | "questions" | "final" | "banner" | "component";
   message: string;
   questionId?: string;
   actionId?: string;
@@ -19,11 +20,11 @@ export function formEditorIssues(
   copy: FormsCopy,
 ): FormEditorIssue[] {
   const issues: FormEditorIssue[] = [];
-  if (!form.headline.trim())
+  if (!form.name.trim())
     issues.push({
-      field: "headline",
-      section: "introduction",
-      message: copy.headlineError,
+      field: "name",
+      section: "title",
+      message: copy.nameError,
     });
   if (!form.questions.length)
     issues.push({
@@ -204,7 +205,7 @@ export function formEditorIssues(
         ? issue.section === "final" || issue.message === copy.imageError
         : validation === "questions"
           ? issue.section === "questions"
-          : issue.field === "headline",
+          : issue.field === "name",
     )
   )
     issues.push({

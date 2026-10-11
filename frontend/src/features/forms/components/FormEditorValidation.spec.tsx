@@ -1,16 +1,79 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formEditorCopy } from "../form-editor-copy";
 import { FormUploadError } from "../form-upload-error";
 import { ApiRequestError } from "@/lib/api/request";
 import { FormEditorDrawer } from "./FormEditorDrawer";
 import { createForm, createQuestion } from "../forms-model";
 import { formsCopy } from "../forms-copy";
+import { formsApi } from "../api";
+vi.mock("../api", () => ({
+  formsApi: {
+    titleAvailability: vi.fn(async () => ({
+      slug: "contact",
+      available: true,
+    })),
+  },
+}));
+beforeEach(() =>
+  vi
+    .mocked(formsApi.titleAvailability)
+    .mockResolvedValue({ slug: "contact", available: true }),
+);
+
+it.each(["business", "platform"] as const)(
+  "blocks an unavailable title inline during creation and editing in %s",
+  async (scope) => {
+    const copy = formsCopy("en");
+    for (const isNew of [true, false]) {
+      const save = vi.fn();
+      vi.mocked(formsApi.titleAvailability).mockResolvedValue({
+        slug: "taken",
+        available: false,
+      });
+      const view = render(
+        <FormEditorDrawer
+          scope={scope}
+          initialForm={{ ...createForm("en"), name: "Taken" }}
+          isNew={isNew}
+          copy={copy}
+          onSave={save}
+          onClose={vi.fn()}
+        />,
+      );
+      if (isNew)
+        fireEvent.click(screen.getByRole("button", { name: copy.next }));
+      fireEvent.click(
+        screen.getByRole("button", { name: isNew ? copy.create : copy.save }),
+      );
+      const field = screen.getByRole("textbox", { name: copy.name });
+      await waitFor(() =>
+        expect(field).toHaveAccessibleDescription(copy.titleTaken),
+      );
+      await waitFor(() => expect(field).toHaveFocus());
+      expect(save).not.toHaveBeenCalled();
+      fireEvent.change(field, { target: { value: "Available title" } });
+      vi.mocked(formsApi.titleAvailability).mockResolvedValue({
+        slug: "available-title",
+        available: true,
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: isNew ? copy.create : copy.save }),
+      );
+      await waitFor(() =>
+        expect(save).toHaveBeenCalledWith(
+          expect.objectContaining({ name: "Available title", headline: "" }),
+        ),
+      );
+      view.unmount();
+    }
+  },
+);
 
 for (const layout of ["form", "card"] as const) {
   describe(`${layout} inline creation validation`, () => {
     for (const locale of ["en", "ar", "ckb"] as const) {
-      it(`reveals and focuses the missing headline in ${locale} without saving`, async () => {
+      it(`reveals and focuses the missing title in ${locale} without saving`, async () => {
         const copy = formsCopy(locale),
           save = vi.fn();
         render(
@@ -24,20 +87,20 @@ for (const layout of ["form", "card"] as const) {
         );
         fireEvent.click(screen.getByRole("button", { name: copy.next }));
         fireEvent.click(screen.getByRole("button", { name: copy.create }));
-        const field = screen.getByRole("textbox", { name: copy.headline });
+        const field = screen.getByRole("textbox", { name: copy.name });
         expect(field).toHaveFocus();
         expect(field).toHaveAttribute("aria-invalid", "true");
-        expect(field).toHaveAccessibleDescription(copy.headlineError);
+        expect(field).toHaveAccessibleDescription(copy.nameError);
         expect(save).not.toHaveBeenCalled();
         fireEvent.change(field, { target: { value: "Contact us" } });
         expect(field).not.toHaveAttribute("aria-invalid", "true");
-        expect(screen.queryByText(copy.headlineError)).not.toBeInTheDocument();
+        expect(screen.queryByText(copy.nameError)).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: copy.create }));
         await waitFor(() =>
           expect(save).toHaveBeenCalledWith(
             expect.objectContaining({
               name: "Contact us",
-              headline: "Contact us",
+              headline: "",
               layout,
             }),
           ),
@@ -64,6 +127,7 @@ describe("editor error feedback", () => {
             initialForm={{
               ...createForm(language),
               layout,
+              name: "Images",
               headline: "Images",
               logo: image,
             }}
@@ -117,7 +181,7 @@ describe("editor error feedback", () => {
       expect(
         screen
           .getAllByRole("tooltip")
-          .some((tooltip) => tooltip.textContent?.includes(copy.headlineError)),
+          .some((tooltip) => tooltip.textContent?.includes(copy.nameError)),
       ).toBe(true),
     );
   });
@@ -132,7 +196,11 @@ describe("editor error feedback", () => {
   ] as const) {
     it(`uses a safe inline save message for status ${status} and allows retry`, async () => {
       const copy = formsCopy("en"),
-        form = { ...createForm("en"), headline: "Keep changes" };
+        form = {
+          ...createForm("en"),
+          name: "Keep changes",
+          headline: "Keep changes",
+        };
       const save = vi
         .fn()
         .mockRejectedValueOnce(
@@ -172,6 +240,7 @@ describe("editor error feedback", () => {
       };
     const form = {
       ...createForm("en"),
+      name: "Choices",
       headline: "Choices",
       status: "active" as const,
       actionsEnabled: false,

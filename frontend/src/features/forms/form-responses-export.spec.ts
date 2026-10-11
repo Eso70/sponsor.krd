@@ -5,8 +5,9 @@ import { exportFormResponses, formResponsesCsv } from "./form-responses-export";
 import { formsCopy } from "./forms-copy";
 import { createForm } from "./forms-model";
 import type { FormSubmission } from "./types";
+import { formResponsesTable } from "./form-responses-table";
 
-vi.mock("./api", () => ({ formsApi: { submissions: vi.fn() } }));
+vi.mock("./api", () => ({ formsApi: { submissions: vi.fn(), get: vi.fn() } }));
 vi.mock("@/lib/utils/download", () => ({ downloadBlob: vi.fn() }));
 const copy = formsCopy("en"),
   form = { ...createForm("en"), slug: "contact", name: "Contact" };
@@ -23,7 +24,10 @@ const response: FormSubmission = {
   ],
   attribution: { campaign: "launch", source: "newsletter" },
 };
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(formsApi.get).mockResolvedValue(form);
+});
 describe("form CSV export", () => {
   it("includes multilingual text, safe spreadsheet cells, metadata and questions from old revisions", () => {
     const csv = formResponsesCsv(
@@ -46,9 +50,42 @@ describe("form CSV export", () => {
     expect(csv).toContain('"\'=HYPERLINK()"');
     expect(csv).toContain('"\' =1+1"');
     expect(csv).toContain('"2026-10-10T10:00:00.000Z"');
-    expect(csv).toContain('"newsletter","launch"');
+    expect(csv).toContain('"newsletter","form_submit","launch"');
     expect(csv).toContain('"15","Accepted","2026-10","2"');
     expect(csv.endsWith("\r\n")).toBe(true);
+  });
+  it("uses reference-style metadata first, unique answer columns last, and leaves unknown attribution blank", () => {
+    const table = formResponsesTable(form, [response], copy, [
+      {
+        id: "name",
+        type: "short",
+        label: "Name",
+        required: false,
+        options: [],
+      },
+      {
+        id: "optional",
+        type: "short",
+        label: "Name",
+        required: false,
+        options: [],
+      },
+    ]);
+    expect(table.headers.slice(0, 5)).toEqual([
+      "response_id",
+      "created_time_utc",
+      "form_id",
+      "form_name",
+      "form_url",
+    ]);
+    expect(table.headers.slice(-3)).toEqual([
+      "Name",
+      "Name (optional)",
+      "Phone",
+    ]);
+    expect(table.rows[0][table.headers.indexOf("device")]).toBeNull();
+    expect(table.rows[0].at(-2)).toBeNull();
+    expect(table.headers).not.toContain("ad_id");
   });
   it.each(["business", "platform"] as const)(
     "exports all filtered pages using the server snapshot for %s",
@@ -72,7 +109,7 @@ describe("form CSV export", () => {
       await exportFormResponses(
         scope,
         form,
-        { q: "customer", from: "2026-10-01" },
+        { q: "customer", from: "2026-10-01", to: "2026-10-10" },
         copy,
         controller.signal,
         progress,
@@ -86,6 +123,7 @@ describe("form CSV export", () => {
         {
           q: "customer",
           from: "2026-10-01",
+          to: "2026-10-10",
           pageSize: 100,
           before: "2026-10-10T12:00:00Z",
         },
@@ -93,7 +131,7 @@ describe("form CSV export", () => {
       expect(progress).toHaveBeenLastCalledWith(101, 101);
       expect(downloadBlob).toHaveBeenCalledWith(
         expect.any(Blob),
-        expect.stringMatching(/^contact-responses-.*\.csv$/),
+        "contact-responses-2026-10-01-to-2026-10-10.csv",
       );
     },
   );

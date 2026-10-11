@@ -21,7 +21,7 @@ export function IconActionButton({
   onClick?: () => void;
   /** Used as both the tooltip and the accessible name. */
   label: string;
-  tone?: "neutral" | "danger";
+  tone?: "neutral" | "danger" | "surface";
   disabled?: boolean;
   expanded?: boolean;
   children: ReactNode;
@@ -29,7 +29,9 @@ export function IconActionButton({
   const toneClasses =
     tone === "danger"
       ? "text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
-      : "text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200";
+      : tone === "surface"
+        ? "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+        : "text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200";
 
   return (
     <Tooltip content={label} side="top">

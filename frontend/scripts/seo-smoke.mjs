@@ -82,8 +82,11 @@ const fixture = createServer((req, res) => {
         buttonText: "",
         buttonUrl: "",
       },
-      analytics: { pixelIds: [], actions: {} },
-      privacyVersion: "2026-10-10",
+      analytics: {
+        pixelIds: [`FORM_${(tenant || "platform").toUpperCase()}_PIXEL`],
+        actions: {},
+      },
+      privacyVersion: "2026-10-11",
     });
   }
   if (url.pathname === "/api/public/sitemap") {
@@ -331,6 +334,23 @@ try {
             : /content="index, follow"/,
         );
         assert.match(html, /loading="eager"/);
+        assert.match(html, /analytics\.tiktok\.com/);
+        const ownerPixel = `FORM_${host.startsWith("alpha.") ? "ALPHA" : host.startsWith("beta.") ? "BETA" : "PLATFORM"}_PIXEL`;
+        assert.ok(
+          html.includes(ownerPixel),
+          "served form HTML must contain its owner Pixel base code",
+        );
+        for (const pixel of [
+          "FORM_ALPHA_PIXEL",
+          "FORM_BETA_PIXEL",
+          "FORM_PLATFORM_PIXEL",
+        ]) {
+          if (pixel !== ownerPixel)
+            assert.ok(
+              !html.includes(pixel),
+              "form must never include another owner Pixel",
+            );
+        }
         assert.doesNotMatch(
           html,
           /name="twitter:card" content="summary_large_image"[^>]*data:/,

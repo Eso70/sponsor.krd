@@ -9,6 +9,7 @@ import { SkeletonTable } from "@/components/shared/Skeleton";
 import { FormsStatsSkeleton } from "./FormSkeletons";
 import { FormAnalyticsOverview } from "./FormAnalyticsOverview";
 import { FormResponseFilters } from "./FormResponseFilters";
+import { FormExportRange } from "./FormExportRange";
 import { exportFormResponses } from "../form-responses-export";
 import { FormRequestError } from "./FormRequestError";
 import { FormSubmissionsTable } from "./FormSubmissionsTable";
@@ -46,6 +47,7 @@ export function FormInsightsModal({
     pageSize: 20,
   });
   const [exporting, setExporting] = useState(false);
+  const [showExportRange, setShowExportRange] = useState(false);
   const [exportProgress, setExportProgress] = useState({ count: 0, total: 0 });
   const [exportFailed, setExportFailed] = useState(false);
   const exportController = useRef<AbortController | null>(null);
@@ -109,7 +111,8 @@ export function FormInsightsModal({
     setStatsLoading(true);
     setStatsRevision((value) => value + 1);
   };
-  const exportResponses = async () => {
+  const exportResponses = async (range?: { from: string; to: string }) => {
+    if (exportController.current) return;
     const controller = new AbortController();
     exportController.current = controller;
     setExporting(true);
@@ -119,7 +122,7 @@ export function FormInsightsModal({
       await exportFormResponses(
         scope,
         form,
-        filters,
+        { ...filters, from: range?.from, to: range?.to },
         copy,
         controller.signal,
         (count, total) => setExportProgress({ count, total }),
@@ -197,6 +200,7 @@ export function FormInsightsModal({
             onExport={() => {
               void exportResponses();
             }}
+            onExportRange={() => setShowExportRange(true)}
             onDelete={() => {
               setDeleteFailed(false);
               setConfirmDelete(true);
@@ -205,6 +209,17 @@ export function FormInsightsModal({
         }
       >
         <div dir={locale === "en" ? "ltr" : "rtl"} className="space-y-5">
+          {showExportRange && (
+            <FormExportRange
+              copy={copy}
+              locale={locale}
+              disabled={exporting || deleting}
+              onClose={() => setShowExportRange(false)}
+              onExport={(range) => {
+                void exportResponses(range);
+              }}
+            />
+          )}
           <section aria-label={copy.analytics}>
             {statsLoading ? (
               <FormsStatsSkeleton compact label={copy.loading} />

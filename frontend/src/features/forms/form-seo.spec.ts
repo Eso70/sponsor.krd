@@ -12,6 +12,7 @@ const form = {
   ...createForm("en"),
   status: "active" as const,
   slug: "book-consultation",
+  name: "Book a consultation",
   headline: "Book a consultation",
   description: "Schedule a consultation with our team in Erbil.",
   banner: "/images/upload/banner.png",
@@ -44,6 +45,7 @@ describe("public form discovery", () => {
         .robots,
     ).toMatchObject({ index: false });
     expect(indexableFormSql()).toContain("f.definition->>'description'");
+    expect(indexableFormSql()).toContain("f.definition->>'headline'");
   });
   it("isolates canonicals, sharing images and locale by validated origin", () => {
     const metadata = buildFormMetadata(
@@ -68,13 +70,13 @@ describe("public form discovery", () => {
       ).twitter,
     ).toMatchObject({ card: "summary" });
   });
-  it("uses the form name and uploaded logo with a business-logo fallback", () => {
+  it("uses the public headline and uploaded logo with a business-logo fallback", () => {
     const own = buildFormMetadata(
       { ...form, name: "Form name", logo: "/images/upload/logo.png" },
       "https://a.sponsor.krd",
       "/images/upload/business.png",
     );
-    expect(own.title).toEqual({ absolute: "Form name" });
+    expect(own.title).toEqual({ absolute: form.headline });
     expect(own.icons).toMatchObject({
       icon: "https://a.sponsor.krd/images/upload/logo.png",
     });
@@ -87,6 +89,15 @@ describe("public form discovery", () => {
     ).toMatchObject({
       icon: "https://a.sponsor.krd/images/upload/business.png",
     });
+  });
+  it("never substitutes the internal name for an empty public headline", () => {
+    const metadata = buildFormMetadata(
+      { ...form, name: "Internal campaign name", headline: "" },
+      "https://a.sponsor.krd",
+    );
+    expect(metadata.robots).toMatchObject({ index: false });
+    expect(JSON.stringify({ title: metadata.title, openGraph: metadata.openGraph, twitter: metadata.twitter }))
+      .not.toContain("Internal campaign name");
   });
   it("keeps mixed sitemap routes distinct even with identical slugs", () => {
     const xml = sitemapXml(

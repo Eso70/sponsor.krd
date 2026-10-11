@@ -1,5 +1,12 @@
 # Frontend
 
+The shared Form/Card editor has a required title above its tabs, independent of
+the optional Introduction headline. The same field and live owner-scoped URL
+availability feedback serve Business and Platform creation/editing. Title changes
+warn before changing a public link. The analytics drawer's shared Export menu
+offers CSV for all responses or an inclusive date range, using one response table
+model. See [Forms](forms.md) for naming, concurrency and export safeguards.
+
 Forms at `/business/forms` and the Platform console share `FormsManagementPage`,
 the authenticated dashboard layout, six real stat cards and paginated management
 grid/table views. The shared toolbar provides search, refresh, view switch and
@@ -108,9 +115,12 @@ New forms start with a layout chooser inside the existing drawer: select Form
 (all questions on one page) or Card (custom questions on individual cards and personal fields together), then press Next to
 open the second step. Back returns to the chooser without discarding draft
 data. Its footer uses shared compact Back and Create/Save actions without Cancel.
-The editor omits a separate Form name field. On save, every draft uses
-its nonempty headline as its dashboard name;
-editing the headline updates the name on save. Invalid links show inline errors and block save requests; incomplete drafts in both layouts may be saved privately to the server.
+The editor requires a separate internal Form title above the content tabs. It controls
+the dashboard name and URL, with shared inline availability checks for creation and editing.
+The optional Introduction headline is independent: changing it never changes the internal
+name or URL. Both public layouts omit empty introduction headings and never substitute
+the internal title; browser/share metadata uses public content with a generic localized fallback.
+Invalid links show inline errors and block save requests; incomplete drafts in both layouts may be saved privately to the server.
 Existing valid drafts retain their data when
 changing layout and saving. Editing and previewing saved forms bypass the initial
 creation step.
@@ -712,8 +722,8 @@ future segments remain visible at reduced opacity.
 - Approved public marketing routes load a business's TikTok pixel and report
   through `createPageTracker`
   (`features/analytics/page-tracking.ts`). Adding tracking to anything on
-  either page follows [docs/tracking.md](tracking.md); mounting the pixel on a
-  third surface fails `components/analytics/pixel-placement.spec.ts`.
+  a published Linktree or form follows [docs/tracking.md](tracking.md); mounting the pixel on an
+  unapproved surface fails `components/analytics/pixel-placement.spec.ts`.
 - Why-choose-us items use a rotating accessible color palette for their icon
   badges, with translucent fills that remain visible in light and dark modes.
 - The public services/products section uses prominent two-column showcase

@@ -5,7 +5,7 @@ Events API delivery are an optional, narrower layer on top of that pipeline.
 
 ## Placement rule
 
-TikTok marketing tracking is allowed only on published public Linktree pages.
+TikTok marketing tracking is allowed only on published public Linktree and form pages.
 It must not be mounted or forwarded from:
 
 - the Sponsor.krd root website;
@@ -25,7 +25,7 @@ browser boundary. `forwardsToTikTok` and its tests enforce the server boundary.
 
 ## Shared page tracker
 
-Public Linktree interactions report through
+Public Linktree and form interactions report through
 `frontend/src/features/analytics/page-tracking.ts`. A component must not call
 the TikTok queue directly.
 
@@ -63,7 +63,7 @@ would have no authoritative shared event name.
 ## Browser Pixel
 
 `TikTokPixelBaseCode` provides the server-rendered base snippet for public
-Linktree HTML. `TikTokPixel` handles client route state, and
+Linktree and form HTML. `TikTokPixel` handles client route state, and
 `tiktok-dispatch.ts` is the only runtime owner of `window.ttq`.
 
 Pixel IDs come from the public page owner's database configuration. All active
@@ -86,7 +86,7 @@ TikTok catalog types. Browser Pixel and Events API payloads omit
 or `product_group`, and these events do not describe catalog products.
 The server delivery boundary also omits it for previously queued events.
 
-The backend ingests first-party analytics idempotently. Eligible Linktree
+The backend ingests first-party analytics idempotently. Eligible Linktree and form
 events create transactional `marketing_event_outbox` rows for active,
 entitled business destinations. The outbox worker performs delivery, retry,
 backoff, error recording, and permanent-failure notification.
@@ -135,9 +135,11 @@ milestones. They remain available to Sponsor.krd analytics.
    navigation delivery, and TikTok eligibility.
 7. Run the placement test to prove no new surface mounts the Pixel.
 
-Any request to add TikTok tracking to a non-Linktree surface is an architecture
+Any request to add TikTok tracking to a surface outside the Linktree/form allowlist is an architecture
 and privacy-policy change, not a component-level implementation detail.
 
 ## Persisted forms
 
-Public `/form/<slug>` pages use the shared first-party tracker for views, starts and final actions. Accepted submissions call `UnifiedAnalyticsService` atomically with response storage and link the analytics event for attribution. Actions are registered through the form public-page trigger. Forms have no Pixel IDs and remain outside the TikTok allowlist; no response contact values enter event properties or marketing delivery. See [Forms](forms.md).
+Public `/form/<slug>` pages use the shared first-party tracker for views, starts and final actions. Accepted submissions call `UnifiedAnalyticsService` atomically with response storage and link the analytics event for attribution. Actions are registered through the form public-page trigger. Published forms resolve owner-scoped Pixel IDs through `PublicPageAnalyticsService`, including the platform workspace. Both SSR base code and the browser Pixel are restricted to public routes. Accepted submissions enqueue `SubmitForm` in the same transaction as response storage; the browser fires `trackServerConversion` only after success with the submission request ID. Retry receipts do not create another server event. The generic analytics endpoint rejects claimed form conversions. Starts remain internal engagement. The form outbound allowlist accepts page views, transaction-backed submissions and registered final button clicks; it does not emit checkout, purchase or registration events, trust visitor-supplied conversion names, or invent monetary value/currency for leads. The shared attribution reader carries bounded `ttclid` and `_ttp` alongside server IP/user agent and a hashed visitor identity; no response values enter marketing delivery. Active owner entitlement, encrypted destination tokens, bot filtering, outbox batching and retry/dead-letter handling are reused. Verify a real published URL with TikTok Pixel Helper and Events Manager Test Events after deployment; a Pixel ID enables browser delivery, and each destination needs its own valid Events API token for server delivery. See [Forms](forms.md).
+
+Implementation references: [TikTok Events API](https://ads.tiktok.com/resources/help/article/events-api?lang=en), [standard events](https://ads.tiktok.com/resources/help/article/standard-events-parameters?lang=en), and [deduplication](https://ads.tiktok.com/resources/help/article/event-deduplication?lang=en). Use matching event names and IDs on both channels; do not infer registration or purchase events from a lead submission.

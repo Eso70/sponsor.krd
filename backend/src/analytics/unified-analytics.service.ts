@@ -33,12 +33,12 @@ interface PublicPageRow {
 }
 
 /**
- * Only public Linktree identities may be forwarded to TikTok. Fixed platform
+ * Only published public Linktree and form identities may be forwarded to TikTok. Fixed platform
  * routes, business landing pages, and advertising pages remain first-party
  * analytics only.
  */
 const TIKTOK_FORWARDED_PAGE_TYPES: ReadonlySet<PublicPageRow['page_type']> =
-  new Set(['linktree']);
+  new Set(['linktree', 'form']);
 
 /**
  * Internal events that describe engagement rather than a conversion.
@@ -81,6 +81,15 @@ export function forwardsToTikTok(input: {
   hasAction: boolean;
 }): boolean {
   if (!TIKTOK_FORWARDED_PAGE_TYPES.has(input.pageType)) return false;
+  if (input.pageType === 'form') {
+    // Public forms expose views, accepted submissions and registered final
+    // buttons. They are not a checkout/registration funnel.
+    return (
+      input.eventName === 'page_view' ||
+      input.eventName === 'form_submit' ||
+      (input.eventName === 'button_click' && input.hasAction)
+    );
+  }
   if (!input.hasAction && ENGAGEMENT_ONLY_EVENTS.has(input.eventName))
     return false;
   return true;
@@ -459,8 +468,9 @@ export class UnifiedAnalyticsService {
     action: ActionRow | null,
   ): string {
     if (eventName === 'page_view') return 'ViewContent';
-    if (eventName === 'form_submit' || eventName === 'lead_created')
-      return 'Lead';
+    if (eventName === 'form_submit')
+      return action?.tiktok_event || 'SubmitForm';
+    if (eventName === 'lead_created') return action?.tiktok_event || 'Lead';
     if (eventName === 'checkout_started') return 'InitiateCheckout';
     if (eventName === 'order_completed') return 'CompletePayment';
     if (eventName === 'download') return 'Download';
@@ -523,6 +533,20 @@ export class UnifiedAnalyticsService {
         if (!form.rows.length) throw new NotFoundException('Form not found');
       }
       const action = await this.resolveAction(client, page.id, input.actionId);
+      // Form conversions must originate in the accepted submission transaction,
+      // never from a visitor posting a conversion to the generic tracking API.
+      if (
+        page.page_type === 'form' &&
+        !transactionClient &&
+        (input.eventName === 'form_submit' ||
+          input.eventName === 'lead_created' ||
+          action?.tiktok_event === 'SubmitForm' ||
+          input.browserEventName === 'SubmitForm')
+      ) {
+        throw new BadRequestException(
+          'Submit through the form submission endpoint',
+        );
+      }
 
       const visitorResult = await client.query<{ id: string }>(
         `INSERT INTO analytics_visitors (
@@ -713,8 +737,10 @@ export class UnifiedAnalyticsService {
         // `ClickButton` here — and TikTok would then count the pair twice
         // instead of collapsing it.
         const tikTokName =
-          (input.browserDispatched && input.browserEventName) ||
-          this.tiktokEvent(input.eventName, action);
+          page.page_type === 'form'
+            ? this.tiktokEvent(input.eventName, action)
+            : (input.browserDispatched && input.browserEventName) ||
+              this.tiktokEvent(input.eventName, action);
         const identity = properties;
         const rawPlatform =
           action?.metadata &&
@@ -738,8 +764,14 @@ export class UnifiedAnalyticsService {
           content_ids: [action?.id || page.id],
           content_type: action ? action.action_type : page.page_type,
           content_name: contentName,
-          value: isConversion ? input.conversionValue || 0 : undefined,
-          currency: isConversion ? input.currency || 'USD' : undefined,
+          value:
+            isConversion && page.page_type !== 'form'
+              ? input.conversionValue || 0
+              : undefined,
+          currency:
+            isConversion && page.page_type !== 'form'
+              ? input.currency || 'USD'
+              : undefined,
           ip: context.ip,
           user_agent: userAgent,
           ttclid: input.ttclid || attribution.ttclid || sessionTtclid,

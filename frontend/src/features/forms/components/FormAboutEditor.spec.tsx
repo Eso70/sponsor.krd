@@ -68,8 +68,10 @@ describe("About us component", () => {
       );
       expect(screen.getByText(labels.componentImageHint)).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /Crop/ }),
-      ).not.toBeInTheDocument();
+        screen.getByRole("button", {
+          name: `${copy.imageCrop.title}: ${labels.image} 1`,
+        }),
+      ).toBeEnabled();
     },
   );
 });

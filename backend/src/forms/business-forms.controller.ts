@@ -19,7 +19,7 @@ import { Capability } from '../auth/capabilities';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { SessionUser } from '../auth/session.service';
 import { StorageService } from '../storage/storage.service';
-import { FormsListDto, FormResponsesDto } from './forms-list.dto';
+import { FormsListDto, FormResponsesDto, FormTitleDto } from './forms-list.dto';
 import { FormsService } from './forms.service';
 import { uploadFormImage } from './form-upload';
 @Controller('api/forms')
@@ -46,6 +46,21 @@ export class BusinessFormsController {
   @RequireCapabilities(Capability.BusinessFormsRead)
   async stats(@CurrentUser() user: SessionUser) {
     return { success: true, data: await this.forms.stats(user.id) };
+  }
+  @Get('title-availability')
+  @RequireCapabilities(Capability.BusinessFormsRead)
+  async titleAvailability(
+    @CurrentUser() user: SessionUser,
+    @Query() query: FormTitleDto,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.titleAvailability(
+        user.id,
+        query.title,
+        query.excludeId,
+      ),
+    };
   }
   @Get(':id')
   @RequireCapabilities(Capability.BusinessFormsRead)

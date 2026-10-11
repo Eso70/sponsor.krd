@@ -23,7 +23,10 @@ import { describe, expect, it } from "vitest";
 const SOURCE_ROOT = join(process.cwd(), "src");
 
 /** The only files permitted to mount the pixel, relative to `src`. */
-const ALLOWED = new Set(["components/public/LinktreePage.tsx"]);
+const ALLOWED = new Set([
+  "components/public/LinktreePage.tsx",
+  "features/forms/components/PublicFormPage.tsx",
+]);
 
 function sourceFiles(directory: string, found: string[] = []): string[] {
   for (const entry of readdirSync(directory)) {
@@ -104,15 +107,18 @@ describe("TikTok pixel placement", () => {
     ]);
   });
 
-  it("server-renders the base code from the public Linktree page only", () => {
+  it("server-renders base code only from approved Linktree and form routes", () => {
     // The inline base code is what TikTok's verifier finds in the served
     // HTML, so it is subject to the same placement rule as the client pixel:
-    // the Linktree public page, and nowhere else.
+    // public Linktree and form routes, and nowhere else.
     const pages = filesMounting(
       /from "@\/components\/analytics\/TikTokPixelBaseCode"/,
     );
 
-    expect(pages.sort()).toEqual(["app/linktree/[uid]/page.tsx"]);
+    expect(pages.sort()).toEqual([
+      "app/form/[slug]/page.tsx",
+      "app/linktree/[uid]/page.tsx",
+    ]);
 
     // And the snippet is generated in the shared builder — plain, without
     // "use client", so the server component may call it — with the component

@@ -61,6 +61,52 @@ describe('deduplication pairing', () => {
  * page's own. See docs/tracking.md.
  */
 describe('forwardsToTikTok', () => {
+  it('forwards public form views and accepted submissions, but not starts', () => {
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'page_view',
+        hasAction: false,
+      }),
+    ).toBe(true);
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'form_submit',
+        hasAction: true,
+      }),
+    ).toBe(true);
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'form_view',
+        hasAction: false,
+      }),
+    ).toBe(false);
+  });
+  it('does not turn public form activity into checkout or unregistered button conversions', () => {
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'checkout_started',
+        hasAction: true,
+      }),
+    ).toBe(false);
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'button_click',
+        hasAction: false,
+      }),
+    ).toBe(false);
+    expect(
+      forwardsToTikTok({
+        pageType: 'form',
+        eventName: 'button_click',
+        hasAction: true,
+      }),
+    ).toBe(true);
+  });
   it('does not forward an advertising public page', () => {
     expect(
       forwardsToTikTok({

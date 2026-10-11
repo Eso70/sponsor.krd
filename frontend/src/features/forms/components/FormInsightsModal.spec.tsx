@@ -10,6 +10,26 @@ import { FormInsightsModal } from "./FormInsightsModal";
 import { formsApi } from "../api";
 import { formsCopy } from "../forms-copy";
 import { createForm } from "../forms-model";
+import { exportFormResponses } from "../form-responses-export";
+
+vi.mock("../form-responses-export", () => ({ exportFormResponses: vi.fn() }));
+vi.mock("@/components/shared/DateTimeInput", () => ({
+  DateTimeInput: ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+  }) => (
+    <input
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}));
 
 vi.mock("../api", () => ({
   formsApi: {
@@ -66,6 +86,54 @@ beforeEach(() => {
   });
 });
 describe("combined form insights", () => {
+  it.each(["business", "platform"] as const)(
+    "exports a selected range without changing table filters in %s",
+    async (scope) => {
+      show(scope);
+      const exportButton = screen.getByRole("button", {
+        name: copy.exportData,
+      });
+      await waitFor(() => expect(exportButton).toBeEnabled());
+      fireEvent.click(exportButton);
+      fireEvent.click(screen.getByRole("option", { name: copy.exportRange }));
+      const panel = screen.getByRole("region", { name: copy.exportRange });
+      fireEvent.change(
+        within(panel).getByRole("textbox", { name: copy.exportFrom }),
+        { target: { value: "2026-10-01" } },
+      );
+      fireEvent.change(
+        within(panel).getByRole("textbox", { name: copy.exportTo }),
+        { target: { value: "2026-10-10" } },
+      );
+      fireEvent.click(
+        within(panel).getByRole("button", { name: copy.exportCsv }),
+      );
+      await waitFor(() =>
+        expect(exportFormResponses).toHaveBeenCalledWith(
+          scope,
+          expect.anything(),
+          expect.objectContaining({ from: "2026-10-01", to: "2026-10-10" }),
+          copy,
+          expect.any(AbortSignal),
+          expect.any(Function),
+        ),
+      );
+      expect(formsApi.submissions).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(exportButton).toBeEnabled());
+      fireEvent.click(exportButton);
+      fireEvent.click(screen.getByRole("option", { name: copy.exportCsv }));
+      await waitFor(() =>
+        expect(exportFormResponses).toHaveBeenLastCalledWith(
+          scope,
+          expect.anything(),
+          expect.objectContaining({ from: undefined, to: undefined }),
+          copy,
+          expect.any(AbortSignal),
+          expect.any(Function),
+        ),
+      );
+    },
+  );
   it.each(["business", "platform"] as const)(
     "%s can clear tracking when there are no submissions",
     async (scope) => {
@@ -132,8 +200,14 @@ describe("combined form insights", () => {
         "button",
       );
       expect(
-        actions.slice(0, 3).map((button) => button.getAttribute("aria-label")),
-      ).toEqual([copy.refreshData, copy.exportCsv, copy.deleteResponses]);
+        actions
+          .filter((button) => button.hasAttribute("aria-label"))
+          .slice(0, 3)
+          .map((button) => button.getAttribute("aria-label")),
+      ).toEqual([copy.refreshData, copy.exportData, copy.deleteResponses]);
+      expect(
+        screen.getByRole("button", { name: copy.exportData }),
+      ).toBeInTheDocument();
       expect(actions.at(-1)).toHaveAttribute("aria-label", copy.close);
 
       fireEvent.click(

@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef } from "react";
+import { TikTokPixel } from "@/components/analytics/TikTokPixel";
+import { getAnalyticsAttribution } from "@/lib/utils/client-queue";
 import type { PublicFormPayload } from "@linktree/types";
 import { FormPreview, type FormResponseValues } from "./FormPreview";
 import { PublicFormShell } from "./PublicFormShell";
@@ -50,10 +52,10 @@ export function PublicFormPage({
       tracking: {
         visitorId: getVisitorId(),
         sessionId: getAnalyticsSessionId(),
-        pageUrl: window.location.href,
-        referrer: document.referrer,
+        ...getAnalyticsAttribution(),
       },
     });
+    tracker.trackServerConversion("form:submit", requestId.current);
   };
   return (
     <PublicFormShell
@@ -62,6 +64,7 @@ export function PublicFormPage({
       language={form.language}
       onChangeCapture={start}
     >
+      <TikTokPixel pixelIds={analytics.pixelIds} pageKey={form.id} />
       <FormPreview
         presentation="public"
         completionFooter={

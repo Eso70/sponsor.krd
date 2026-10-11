@@ -1,6 +1,6 @@
 import { PublicService } from '../src/public/public.service';
 import type { RedisService } from '../src/redis/redis.service';
-import type { PublicPageAnalyticsService } from '../src/analytics/public-page-analytics.service';
+import { PublicPageAnalyticsService } from '../src/analytics/public-page-analytics.service';
 import { Pool, type PoolClient } from 'pg';
 import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'fs';
@@ -136,6 +136,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       } as PlatformContentWorkspaceService,
       { areBusinessAssetsOwned: async () => true } as unknown as StorageService,
       analytics,
+      new PublicPageAnalyticsService(db),
     );
   });
   afterAll(async () => {
@@ -148,6 +149,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('blocks public forms after downgrade while preserving their data', async () => {
     const form = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Plan access',
       headline: 'Plan access',
     });
     try {
@@ -174,16 +176,19 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('discovers only useful active owner forms in the sitemap', async () => {
     const useful = await forms.create(ownerA, {
       ...fixture(),
+      name: 'SEO consultation',
       headline: 'SEO consultation',
       description: 'Schedule a consultation with our business team.',
     });
     const empty = await forms.create(ownerA, {
       ...fixture(),
+      name: 'SEO empty',
       headline: 'SEO empty',
       description: '',
     });
     const paused = await forms.create(ownerA, {
       ...fixture(),
+      name: 'SEO paused',
       headline: 'SEO paused',
       description: 'This consultation is currently unavailable.',
     });
@@ -225,6 +230,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('matches retained sessions to saved responses and summarizes choice answers', async () => {
     const form = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Analytics insights',
       headline: 'Analytics insights',
       questions: [
         ...fixture().questions,
@@ -349,14 +355,44 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     ).toMatchObject({ starts: 0, responses: 0, rate: null });
     await expect(forms.getAnalytics(ownerB, form.id)).rejects.toThrow();
   });
-  it('allocates concurrent headline slugs per tenant and protects cross-tenant reads and writes', async () => {
-    const [a, b] = await Promise.all([
+  it('reserves title URLs atomically per tenant and protects cross-tenant reads and writes', async () => {
+    const results = await Promise.allSettled([
       forms.create(ownerA, fixture()),
       forms.create(ownerA, fixture()),
     ]);
-    expect(new Set([a.slug, b.slug])).toEqual(
-      new Set(['contact', 'contact-2']),
-    );
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toHaveLength(1);
+    const a = (
+      results.find(
+        (result) => result.status === 'fulfilled',
+      ) as PromiseFulfilledResult<FormDraft>
+    ).value;
+    expect(a.slug).toBe('contact');
+    expect(await forms.titleAvailability(ownerA, '  Contact  ')).toEqual({
+      slug: 'contact',
+      available: false,
+    });
+    expect(await forms.titleAvailability(ownerA, 'Contact', a.id)).toEqual({
+      slug: 'contact',
+      available: true,
+    });
+    await expect(
+      forms.titleAvailability(ownerB, 'Contact', a.id),
+    ).rejects.toThrow('Form not found');
+    const reserved = await forms.create(ownerA, {
+      ...fixture(),
+      name: 'Reserved',
+      headline: '',
+    });
+    await expect(
+      forms.update(ownerA, a.id, { ...a, name: 'Reserved' }),
+    ).rejects.toThrow('already in use');
+    expect((await forms.get(ownerA, a.id)).revision).toBe(1);
+    expect((await forms.get(ownerA, reserved.id)).headline).toBe('');
     await expect(forms.status(ownerA, a.id, ['active'])).rejects.toThrow(
       'Invalid form status',
     );
@@ -376,16 +412,24 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     expect(publicA.analytics.actions['form:return']).toBeDefined();
     const edited = await forms.update(ownerA, a.id, {
       ...a,
+      name: 'New title',
       headline: 'New title',
     });
     expect(edited.name).toBe('New title');
-    expect(edited.slug).toBe(a.slug);
+    expect(edited.slug).toBe('new-title');
+    await expect(forms.publicForm('forms-a', a.slug!)).rejects.toThrow(
+      'Form not found',
+    );
+    expect((await forms.publicForm('forms-a', edited.slug!)).form.name).toBe(
+      'New title',
+    );
     expect(edited.revision).toBe(2);
     await expect(forms.update(ownerA, a.id, a)).rejects.toThrow('changed');
   });
   it('keeps archive independent of activation, public access, and response history', async () => {
     const incomplete = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Incomplete',
       headline: 'Incomplete',
       questions: [
         {
@@ -407,6 +451,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     for (const currentStatus of ['active', 'paused'] as const) {
       const form = await forms.create(ownerA, {
         ...fixture(),
+        name: `Archive ${currentStatus}`,
         headline: `Archive ${currentStatus}`,
       });
       await forms.status(ownerA, form.id, currentStatus);
@@ -447,6 +492,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
         await expect(forms.publicForm('forms-a', form.slug!)).rejects.toThrow();
       const edited = await forms.update(ownerA, form.id, {
         ...archived,
+        name: form.name + ' updated',
         headline: form.name + ' updated',
         isArchived: false,
       });
@@ -475,6 +521,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('can pause and activate a form while it remains archived', async () => {
     const form = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Archived controls',
       headline: 'Archived controls',
     });
     await forms.archive(ownerA, form.id, true);
@@ -550,6 +597,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       entries.push(
         await forms.create(ownerB, {
           ...fixture(),
+          name: `Paged item ${i}`,
           headline: `Paged item ${i}`,
         }),
       );
@@ -562,13 +610,18 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     await forms.archive(ownerB, entries[0].id, true);
     expect((await forms.list(ownerB, 0, 'Paged item')).total).toBe(21);
     expect((await forms.list(ownerB, 0, 'Paged item', true)).total).toBe(1);
-    await forms.create(ownerB, { ...fixture(), headline: 'Literal 100%_sale' });
+    await forms.create(ownerB, {
+      ...fixture(),
+      name: 'Literal 100%_sale',
+      headline: 'Literal 100%_sale',
+    });
     expect((await forms.list(ownerB, 0, '%_')).total).toBe(1);
     expect((await forms.list(ownerA, 0, '%_')).total).toBe(0);
   });
   it('filters and pages hundreds of responses with a stable export cutoff and owner isolation', async () => {
     const form = await forms.create(ownerB, {
       ...fixture(),
+      name: 'Response report',
       headline: 'Response report',
     });
     await pool.query(
@@ -618,6 +671,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('rolls back the response and counter if conversion recording fails', async () => {
     const form = await forms.create(ownerB, {
       ...fixture(),
+      name: 'Atomic response',
       headline: 'Atomic response',
     });
     const body = {
@@ -645,6 +699,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     const previousMetrics = await forms.stats(ownerA);
     const form = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Response',
       headline: 'Response',
     });
     const requestId = randomUUID();
@@ -831,6 +886,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
   it('publishes platform forms on the root and rejects suspended owners', async () => {
     const root = await forms.create(platformOwner, {
       ...fixture(),
+      name: 'Root form',
       headline: 'Root form',
       layout: 'card',
     });
@@ -849,11 +905,13 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     ]);
     const first = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Clear answers',
       headline: 'Clear answers',
       status: 'active',
     });
     const other = await forms.create(ownerB, {
       ...fixture(),
+      name: 'Keep answers',
       headline: 'Keep answers',
       status: 'active',
     });
@@ -875,6 +933,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     expect((await forms.submissions(ownerA, first.id, 0)).total).toBe(2);
     const shared = await forms.create(ownerA, {
       ...fixture(),
+      name: 'Keep shared visitor',
       headline: 'Keep shared visitor',
       status: 'active',
     });
@@ -974,5 +1033,102 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
     expect((await forms.get(ownerA, first.id)).submissionCount).toBe(
       (await forms.submissions(ownerA, first.id, 0)).total,
     );
+  });
+  it('delivers owner-scoped form conversions through the transactional outbox on both public hosts', async () => {
+    for (const [owner, host, pixel] of [
+      [ownerA, 'forms-a', 'FORM_BUSINESS_PIXEL'],
+      [platformOwner, '', 'FORM_PLATFORM_PIXEL'],
+    ]) {
+      await pool.query(
+        'INSERT INTO business_tiktok_pixels(business_id,pixel_id,encrypted_events_token) VALUES($1,$2,$3)',
+        [owner, pixel, Buffer.from('test-token-not-used-for-network-delivery')],
+      );
+      const form = await forms.create(owner, {
+        ...fixture(),
+        status: 'active',
+        name: `Marketing ${pixel}`,
+      });
+      const payload = await forms.publicForm(host, form.slug!);
+      expect(payload.analytics.pixelIds).toEqual([pixel]);
+      const requestId = randomUUID();
+      const context = {
+        ip: '127.0.0.1',
+        userAgent: 'Mozilla/5.0 Chrome/130.0',
+      };
+      const body = {
+        requestId,
+        privacyVersion: PRIVACY_VERSION,
+        revision: form.revision!,
+        consent: true,
+        answers: { phone: '7501234567' },
+        phoneCountryCodes: { phone: '964' },
+        tracking: {
+          visitorId: 'marketing-visitor',
+          sessionId: 'marketing-session',
+          pageUrl: `https://forms-a.localhost/form/${form.slug}`,
+          ttclid: 'ad-click',
+          ttp: 'pixel-cookie',
+        },
+      };
+      const first = await forms.submit(host, form.slug!, body, context);
+      expect(await forms.submit(host, form.slug!, body, context)).toEqual(
+        first,
+      );
+      const jobs = await pool.query<{
+        business_id: string;
+        event_name: string;
+        payload: Record<string, unknown>;
+      }>(
+        'SELECT business_id,event_name,payload FROM marketing_event_outbox WHERE external_event_id=$1',
+        [requestId],
+      );
+      expect(jobs.rows).toHaveLength(1);
+      expect(jobs.rows[0]).toMatchObject({
+        business_id: owner,
+        event_name: 'SubmitForm',
+        payload: {
+          event_id: requestId,
+          ttclid: 'ad-click',
+          ttp: 'pixel-cookie',
+        },
+      });
+      expect(jobs.rows[0].payload.external_id).toMatch(/^[a-f0-9]{64}$/);
+      expect(jobs.rows[0].payload).not.toHaveProperty('value');
+      expect(jobs.rows[0].payload).not.toHaveProperty('currency');
+      expect(JSON.stringify(jobs.rows[0].payload)).not.toContain('7501234567');
+      await expect(
+        analytics.ingest(
+          {
+            eventId: randomUUID(),
+            pageId: form.id,
+            eventName: 'form_submit',
+            visitorId: 'marketing-visitor',
+            sessionId: 'marketing-session',
+            occurredAt: new Date().toISOString(),
+          },
+          context,
+        ),
+      ).rejects.toThrow('form submission endpoint');
+      const startId = randomUUID();
+      await analytics.ingest(
+        {
+          eventId: startId,
+          pageId: form.id,
+          eventName: 'form_view',
+          visitorId: 'marketing-visitor',
+          sessionId: 'marketing-session',
+          occurredAt: new Date().toISOString(),
+        },
+        context,
+      );
+      expect(
+        (
+          await pool.query(
+            'SELECT id FROM marketing_event_outbox WHERE external_event_id=$1',
+            [startId],
+          )
+        ).rows,
+      ).toEqual([]);
+    }
   });
 });

@@ -17,6 +17,9 @@ describe('form response HTTP pagination', () => {
   let app: NestFastifyApplication;
   const id = 'b010aa10-cc32-4eb4-91db-2d27315e0831';
   const forms = {
+    titleAvailability: jest
+      .fn()
+      .mockResolvedValue({ slug: 'new-title', available: true }),
     deleteSubmissions: jest.fn().mockResolvedValue({ deleted: 2 }),
     submissions: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     platformOwner: jest.fn().mockResolvedValue('platform-owner'),
@@ -60,6 +63,38 @@ describe('form response HTTP pagination', () => {
   });
   afterAll(async () => app.close());
   beforeEach(() => jest.clearAllMocks());
+  it.each([
+    ['/api/forms', 'business-owner'],
+    ['/api/platform/forms', 'platform-owner'],
+  ])(
+    'checks title availability using the resolved owner in %s',
+    async (base, owner) => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `${base}/title-availability?title=New%20title&excludeId=${id}`,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(forms.titleAvailability).toHaveBeenLastCalledWith(
+        owner,
+        'New title',
+        id,
+      );
+      forms.titleAvailability.mockClear();
+      for (const query of [
+        'title=',
+        'title=' + 'x'.repeat(101),
+        'title=Hello&excludeId=bad',
+        'title=Hello&owner=foreign',
+      ]) {
+        const invalid = await app.inject({
+          method: 'GET',
+          url: `${base}/title-availability?${query}`,
+        });
+        expect(invalid.statusCode).toBe(400);
+        expect(forms.titleAvailability).not.toHaveBeenCalled();
+      }
+    },
+  );
   it.each(['/api/forms', '/api/platform/forms'])(
     'validates and forwards search, dates and bounded sizes for %s',
     async (base) => {

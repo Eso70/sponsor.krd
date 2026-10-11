@@ -92,14 +92,15 @@ describe("frontend form rules", () => {
       }),
     ).toBe("questions");
   });
-  it("derives names from the current introduction headline instead of stale saved names", () => {
+  it("keeps the title independent of the optional introduction headline", () => {
     const form = {
       ...createForm("en"),
       name: "Old title",
       headline: "  New headline  ",
     };
-    expect(formDraftName(form)).toBe("New headline");
-    expect(formDraftName({ ...form, headline: " " })).toBe("Untitled form");
+    expect(formDraftName(form)).toBe("Old title");
+    expect(formDraftName({ ...form, headline: " " })).toBe("Old title");
+    expect(formDraftName({ ...form, name: " " })).toBe("");
   });
   it("allows incomplete drafts but requires a name", () => {
     const form = createForm("ckb");

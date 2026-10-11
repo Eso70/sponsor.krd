@@ -45,8 +45,8 @@ export function FormConditionalPreview({
             <CustomSelect
               ariaInvalid={showErrors && missing}
               ariaDescribedBy={showErrors && missing ? errorId : undefined}
-              label={`${column}${question.required ? " *" : ""}`}
-              ariaLabel={`${column}${question.required ? " *" : ""}`}
+              label={column}
+              ariaLabel={column}
               labelClassName="!text-xs !normal-case !tracking-normal !text-[var(--preview-text)]"
               triggerClassName="modal-standard-input !h-9 !rounded-lg !text-xs"
               inheritAppearance

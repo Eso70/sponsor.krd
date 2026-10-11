@@ -12,15 +12,19 @@ import { FormContentEditor } from "./FormContentEditor";
 import { FormFinalPageEditor } from "./FormFinalPageEditor";
 import { FormPreview } from "./FormPreview";
 import { FormPreviewControls } from "./FormPreviewControls";
+import { FormTitleEditor } from "./FormTitleEditor";
+import type { useFormTitleAvailability } from "../use-form-title-availability";
 
 export function FormBuilder({
   form,
   onChange,
   copy,
+  titleAvailability,
 }: {
   form: FormDraft;
   onChange: (patch: Partial<FormDraft>) => void;
   copy: FormsCopy;
+  titleAvailability?: ReturnType<typeof useFormTitleAvailability>;
 }) {
   const validation = useFormValidation();
   const [selectedTab, setTab] = useState<"content" | "final">("content");
@@ -46,6 +50,19 @@ export function FormBuilder({
         dir={locale === "en" ? "ltr" : "rtl"}
         className="min-h-0 min-w-0 space-y-3 lg:overflow-y-auto lg:overscroll-contain lg:pe-1"
       >
+        <FormTitleEditor
+          title={form.name}
+          onChange={(name) => onChange({ name })}
+          availability={
+            titleAvailability ?? {
+              status: "idle",
+              slug: undefined,
+              retry: () => undefined,
+            }
+          }
+          copy={copy}
+          previousSlug={form.slug}
+        />
         <div role="tablist" aria-label={copy.editor}>
           <SegmentedTabs
             value={tab}

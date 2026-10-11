@@ -1,4 +1,21 @@
+import { imageCropCopy } from "@/components/shared/image-crop-copy";
+
 const en = {
+  imageCrop: imageCropCopy("en"),
+  titlePlaceholder: "Enter a form title",
+  checkingTitle: "Checking availability…",
+  titleAvailable: "Available",
+  titleTaken: "This title's URL is already in use. Choose another title.",
+  titleCheckError: "Unable to check availability. Retry",
+  titleUrlChanges:
+    "Saving this title changes the public link. Update any links you have shared.",
+  exportData: "Export",
+  exportRange: "Export date range",
+  exportFrom: "Start date",
+  exportTo: "End date",
+  exportRangeHint: "Includes both dates (UTC) and matches your current search.",
+  exportRangeError:
+    "Choose both dates. The end date must be on or after the start date.",
   ratePeriod: "Last 14 days · tracked sessions",
   answerSummaries: "Answer summaries",
   summaryHint: "Counts and percentages of answered multiple-choice questions.",
@@ -46,8 +63,6 @@ const en = {
   open: "Open public form",
   responses: "View responses",
   loadError: "Unable to load or save forms. Please try again.",
-  headlineError:
-    "Enter the introduction headline. This becomes your form name.",
   requiredTextError: "Enter text for this field.",
   invalidUrlError: "Enter a valid URL starting with https:// or http://.",
   duplicateOptionError: "Use a different answer for each option.",
@@ -99,7 +114,7 @@ const en = {
   emptyDescription:
     "Create your first form to build questions and preview the experience.",
   noResults: "No matching forms",
-  name: "Form name",
+  name: "Form title",
   image: "Image",
   created: "Created",
   copyLink: "Copy link",
@@ -199,7 +214,7 @@ const en = {
   consentText: "I agree to the privacy policy",
   policy: "Privacy policy",
   previewEmpty: "Add questions to preview your form.",
-  nameError: "Enter a form name.",
+  nameError: "Enter a form title.",
   urlError: "Use a valid http/https URL and add a label for the final button.",
   questionsError:
     "Active forms need labeled questions and at least two distinct, non-empty choices.",
@@ -214,6 +229,22 @@ const en = {
 };
 export type FormsCopy = typeof en;
 const ckb: FormsCopy = {
+  imageCrop: imageCropCopy("ckb"),
+  titlePlaceholder: "ناونیشانی فۆڕم بنووسە",
+  checkingTitle: "پشکنینی بەردەستبوون…",
+  titleAvailable: "بەردەستە",
+  titleTaken: "بەستەری ئەم ناونیشانە بەکارهاتووە. ناونیشانێکی تر هەڵبژێرە.",
+  titleCheckError: "پشکنین سەرکەوتوو نەبوو. دووبارە هەوڵ بدە",
+  titleUrlChanges:
+    "پاشەکەوتکردنی ئەم ناونیشانە بەستەری گشتی دەگۆڕێت. بەستەرە بڵاوکراوەکان نوێ بکەرەوە.",
+  exportData: "هەناردە",
+  exportRange: "هەناردەکردنی ماوەی دیاریکراو",
+  exportFrom: "بەرواری دەستپێک",
+  exportTo: "بەرواری کۆتایی",
+  exportRangeHint:
+    "هەردوو بەروارەکە دەگرێتەوە (UTC) و لەگەڵ گەڕانەکەت دەگونجێت.",
+  exportRangeError:
+    "هەردوو بەروارەکە هەڵبژێرە. بەرواری کۆتایی نابێت پێش دەستپێک بێت.",
   ratePeriod: "١٤ ڕۆژی ڕابردوو · دانیشتنە تۆمارکراوەکان",
   answerSummaries: "پوختەی وەڵامەکان",
   summaryHint: "ژمارە و ڕێژەی وەڵامی پرسیارە هەڵبژاردنییەکان.",
@@ -261,7 +292,6 @@ const ckb: FormsCopy = {
   open: "کردنەوەی فۆڕمی گشتی",
   responses: "بینینی وەڵامەکان",
   loadError: "بارکردن یان پاشەکەوتکردن سەرکەوتوو نەبوو. دووبارە هەوڵ بدە.",
-  headlineError: "سەردێڕی ناساندن بنووسە. ئەمە دەبێتە ناوی فۆڕمەکەت.",
   requiredTextError: "دەق بۆ ئەم خانەیە بنووسە.",
   invalidUrlError:
     "بەستەرێکی دروست بنووسە کە بە https:// یان http:// دەست پێ بکات.",
@@ -314,7 +344,7 @@ const ckb: FormsCopy = {
   empty: "هێشتا هیچ فۆڕمێک نییە",
   emptyDescription: "یەکەم فۆڕمەکەت دروست بکە و پرسیارەکان و پێشبینین ڕێک بخە.",
   noResults: "هیچ فۆڕمێکی گونجاو نییە",
-  name: "ناوی فۆڕم",
+  name: "ناونیشانی فۆڕم",
   image: "وێنە",
   created: "دروستکراوە",
   copyLink: "کۆپیکردنی بەستەر",
@@ -415,7 +445,7 @@ const ckb: FormsCopy = {
   consentText: "ڕازیم بە سیاسەتی تایبەتمەندی",
   policy: "سیاسەتی تایبەتمەندی",
   previewEmpty: "پرسیار زیاد بکە بۆ پێشبینینی فۆڕم.",
-  nameError: "ناوی فۆڕم بنووسە.",
+  nameError: "ناونیشانی فۆڕم بنووسە.",
   urlError: "بەستەرێکی دروستی http/https و دەقی دوگمەی کۆتایی دابنێ.",
   questionsError:
     "فۆڕمی ئامادە پێویستی بە پرسیاری ناودار و دوو هەڵبژاردەی جیاواز و پڕ هەیە.",
@@ -429,6 +459,21 @@ const ckb: FormsCopy = {
   copySuffix: "کۆپی",
 };
 const ar: FormsCopy = {
+  imageCrop: imageCropCopy("ar"),
+  titlePlaceholder: "أدخل عنوان النموذج",
+  checkingTitle: "جارٍ التحقق من التوفر…",
+  titleAvailable: "متاح",
+  titleTaken: "رابط هذا العنوان مستخدم بالفعل. اختر عنواناً آخر.",
+  titleCheckError: "تعذر التحقق من التوفر. أعد المحاولة",
+  titleUrlChanges:
+    "سيؤدي حفظ هذا العنوان إلى تغيير الرابط العام. حدّث الروابط التي شاركتها.",
+  exportData: "تصدير",
+  exportRange: "تصدير نطاق تاريخ",
+  exportFrom: "تاريخ البداية",
+  exportTo: "تاريخ النهاية",
+  exportRangeHint: "يشمل تاريخي البداية والنهاية (UTC) ويطابق البحث الحالي.",
+  exportRangeError:
+    "اختر التاريخين. يجب أن يكون تاريخ النهاية في يوم البداية أو بعده.",
   ratePeriod: "آخر 14 يومًا · الجلسات المتتبعة",
   answerSummaries: "ملخص الإجابات",
   summaryHint: "عدد ونسبة الإجابات على أسئلة الاختيار المتعدد.",
@@ -475,7 +520,6 @@ const ar: FormsCopy = {
   open: "فتح النموذج العام",
   responses: "عرض الردود",
   loadError: "تعذر تحميل أو حفظ النماذج. حاول مجدداً.",
-  headlineError: "أدخل عنوان المقدمة. سيصبح اسم نموذجك.",
   requiredTextError: "أدخل نصًا لهذا الحقل.",
   invalidUrlError: "أدخل رابطًا صحيحًا يبدأ بـ https:// أو http://.",
   duplicateOptionError: "استخدم إجابة مختلفة لكل خيار.",
@@ -525,7 +569,7 @@ const ar: FormsCopy = {
   empty: "لا توجد نماذج بعد",
   emptyDescription: "أنشئ نموذجك الأول لإضافة الأسئلة ومعاينة التجربة.",
   noResults: "لا توجد نماذج مطابقة",
-  name: "اسم النموذج",
+  name: "عنوان النموذج",
   image: "الصورة",
   created: "تاريخ الإنشاء",
   copyLink: "نسخ الرابط",
@@ -625,7 +669,7 @@ const ar: FormsCopy = {
   consentText: "أوافق على سياسة الخصوصية",
   policy: "سياسة الخصوصية",
   previewEmpty: "أضف أسئلة لمعاينة النموذج.",
-  nameError: "أدخل اسم النموذج.",
+  nameError: "أدخل عنوان النموذج.",
   urlError: "استخدم رابط http/https صالحًا وأضف نصًا للزر النهائي.",
   questionsError:
     "النماذج الجاهزة تحتاج أسئلة معنونة وخيارين مختلفين غير فارغين على الأقل.",

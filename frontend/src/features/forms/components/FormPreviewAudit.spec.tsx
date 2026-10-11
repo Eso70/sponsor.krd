@@ -14,6 +14,32 @@ import {
 const image = "data:image/png;base64,YQ==";
 describe("Shared form preview audit", () => {
   for (const layout of ["form", "card"] as const) {
+    it(`${layout} keeps the internal name out of the public introduction`, () => {
+      const form = {
+        ...createForm("en"),
+        layout,
+        name: "Internal campaign name",
+        headline: "",
+        description: "A public description",
+      };
+      const view = render(
+        <FormPreview form={form} placeholders={false} presentation="public" />,
+      );
+      expect(screen.queryByText(form.name)).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+      expect(screen.getByText(form.description)).toBeInTheDocument();
+      view.rerender(
+        <FormPreview
+          form={{ ...form, headline: "An independent public headline" }}
+          placeholders={false}
+          presentation="public"
+        />,
+      );
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        "An independent public headline",
+      );
+      expect(screen.queryByText(form.name)).not.toBeInTheDocument();
+    });
     it.each(["en", "ar", "ckb"] as const)(
       `${layout} shares branding, banner viewer and isolated appearance in %s`,
       async (language) => {

@@ -24,4 +24,4 @@
 export const LEGAL_TERMS_VERSION = "2026-10-10";
 
 /** Last change: response storage and first-party form analytics. */
-export const LEGAL_PRIVACY_VERSION = "2026-10-10";
+export const LEGAL_PRIVACY_VERSION = "2026-10-11";

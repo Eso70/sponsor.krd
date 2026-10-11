@@ -10,6 +10,25 @@ afterEach(() => {
 });
 
 describe("CustomSelect popover placement", () => {
+  it.each(["dark", "light"])(
+    "preserves the drawer's %s appearance across the menu portal",
+    (appearance) => {
+      const { container } = render(
+        <div className={appearance}>
+          <CustomSelect
+            label="File format"
+            value="csv"
+            options={[{ value: "csv", label: "CSV" }]}
+            onChange={vi.fn()}
+          />
+        </div>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "CSV" }));
+      const menu = screen.getByRole("listbox", { name: "File format" });
+      expect(container).not.toContainElement(menu);
+      expect(menu.parentElement).toHaveClass(appearance);
+    },
+  );
   it("opens above its trigger through a viewport-bounded portal and closes with Escape", () => {
     vi.stubGlobal("innerHeight", 800);
     vi.stubGlobal("innerWidth", 1024);

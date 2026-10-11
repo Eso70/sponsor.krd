@@ -39,6 +39,7 @@ describe('form management authorization boundaries', () => {
         ['list', read],
         ['get', read],
         ['stats', read],
+        ['titleAvailability', read],
         ['submissions', read],
         ['getAnalytics', read],
         ['create', create],

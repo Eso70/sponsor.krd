@@ -14,7 +14,11 @@ General development principles are defined in `AGENTS.md`. This document focuses
 
 Shared CustomSelect list menus use subtle neutral hover and selection backgrounds
 in light and dark mode; icon-card menus keep the dashboard accent. The portaled menu carries the
-trigger's theme variables, so Custom and Personal question Add menus and both
+trigger's theme variables and local light/dark appearance across the portal, so
+drawer dropdown menus remain readable when their theme differs from the page.
+Selected list rows use the menu's light/dark text palette (or explicit inherited
+appearance), rather than the root theme text token, to preserve text/check contrast.
+Custom and Personal question Add menus and both
 dashboard surfaces use the same tenant/platform accent. Hover does not select
 an item or add a colored outline. List rows use compact heights and reduced-motion
 aware opening transitions.
@@ -23,6 +27,8 @@ Enabled buttons, links, expandable section headers, switches, selection actions,
 and upload controls use the native pointer (hand) cursor through the shared root
 stylesheet. Form section toggles also declare `cursor-pointer` explicitly.
 Disabled and busy controls retain their native not-allowed/wait feedback;
+crop frame edges and corners explicitly override the global button cursor with
+directional resize cursors through the shared `data-crop-edge` selectors.
 reorder handles retain grab/grabbing, including while dragging across other
 controls. Text inputs keep the normal text cursor. Do not restore custom cursor
 assets or colored focus outlines. During drag only, the shared ReorderHandle

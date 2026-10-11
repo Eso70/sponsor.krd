@@ -28,9 +28,11 @@ Settings are resolved server-side and are never accepted from the browser.
 Events API tokens are AES-GCM encrypted at rest and responses expose only the
 last four characters.
 
-Browser Pixel loading and Events API outbox creation both require explicit
-marketing consent. The public cookie control is available only on the approved
-marketing route allowlist and supports withdrawal. Login, authentication,
+Marketing tracking follows the published Linktree/form allowlist and the owner’s
+active destinations and entitlement. It runs automatically on these routes, as
+disclosed in the public privacy policy; the form privacy acknowledgement is
+recorded separately and is not a marketing-cookie preference. Answers never enter
+marketing payloads. Login, authentication,
 dashboard, administration, legal, error, preview, API, and asset routes never
 mount the tracker.
 
@@ -598,4 +600,4 @@ Forms never accept a client owner identifier. Guards enforce business/platform c
 
 ## Form response exports
 
-Response export uses the authenticated, owner-scoped Forms read endpoints with validated filters and bounded batches. CSV headers and values escape quotes and neutralize spreadsheet formula prefixes, including leading whitespace and control characters. Downloads use a temporary Blob URL that is revoked; closing the reporting drawer cancels outstanding export requests. Public form routes cannot read or export submitted answers. See [Forms response reporting](forms.md).
+Response export uses the authenticated, owner-scoped Forms read endpoints with validated filters and bounded batches. Excel and CSV share the same response projection; neither includes raw IPs, visitor/session identities or TikTok ad identifiers. CSV headers and values escape quotes and neutralize spreadsheet formula prefixes, including leading whitespace and control characters. XLSX writes user-authored values as text, never formula or hyperlink objects. Downloads use a temporary Blob URL that is revoked; closing the reporting drawer cancels outstanding export requests. Public form routes cannot read or export submitted answers. Title availability is owner-scoped, verifies edited form ownership and cannot bypass transaction-level URL uniqueness. See [Forms response reporting](forms.md).

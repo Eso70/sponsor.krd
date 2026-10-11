@@ -1,4 +1,5 @@
 import { featurePlanSql } from '../billing/feature-plan-policy';
+import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -13,8 +14,8 @@ import type {
   FormSubmissionsPage,
   FormSubmissionFilters,
   FormAnalytics,
-  PublicPageAnalytics,
 } from '@linktree/types';
+import { PublicPageAnalyticsService } from '../analytics/public-page-analytics.service';
 import { FORM_COMPLETION_CTES } from './forms-analytics-query';
 import { slugifyPublicPageName } from '../common/public-page-slug';
 import { PRIVACY_VERSION } from '../common/legal-versions';
@@ -61,8 +62,11 @@ function mapped(row: FormRow): FormDraft {
     updatedAt: new Date(row.updated_at).toISOString(),
   };
 }
-export function formSlug(headline: string): string {
-  return slugifyPublicPageName(headline) || 'form';
+export function formSlug(title: string): string {
+  return (
+    slugifyPublicPageName(title) ||
+    `form-${createHash('sha256').update(title.trim().normalize('NFKC').toLowerCase()).digest('hex').slice(0, 12)}`
+  );
 }
 @Injectable()
 export class FormsService {
@@ -71,9 +75,22 @@ export class FormsService {
     private readonly workspace: PlatformContentWorkspaceService,
     private readonly storage: StorageService,
     private readonly analytics: UnifiedAnalyticsService,
+    private readonly publicAnalytics: PublicPageAnalyticsService,
   ) {}
   platformOwner() {
     return this.workspace.getWorkspaceId();
+  }
+  async titleAvailability(owner: string, title: string, excludeId?: string) {
+    const name = title.trim();
+    if (!name || name.length > 100)
+      throw new BadRequestException('Invalid form title');
+    const existing = excludeId ? await this.get(owner, excludeId) : undefined;
+    const slug = existing?.name === name ? existing.slug! : formSlug(name);
+    const result = await this.db.query(
+      'SELECT 1 FROM forms WHERE business_id=$1 AND slug=$2 AND ($3::uuid IS NULL OR id<>$3::uuid) LIMIT 1',
+      [owner, slug, excludeId ?? null],
+    );
+    return { slug, available: result.rows.length === 0 };
   }
   async list(
     owner: string,
@@ -120,24 +137,25 @@ export class FormsService {
     } catch {
       status = 'paused';
     }
-    const slug = `${formSlug(definition.headline)}`;
+    const slug = formSlug(definition.name);
     return this.db.transaction(async (client) => {
-      // Serialize slug allocation for this owner without an unsafe read/insert race.
+      // Serialize title reservations with updates; the unique index is the final boundary.
       await client.query(
         'SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
         [`forms:${owner}`],
       );
-      const existing = await client.query<{ slug: string }>(
-        "SELECT slug FROM forms WHERE business_id=$1 AND (slug=$2 OR slug LIKE $2||'-%')",
+      const existing = await client.query(
+        'SELECT 1 FROM forms WHERE business_id=$1 AND slug=$2',
         [owner, slug],
       );
-      const used = new Set(existing.rows.map((r) => r.slug));
-      let allocated = slug;
-      let suffix = 2;
-      while (used.has(allocated)) allocated = `${slug}-${suffix++}`;
+      if (existing.rows.length)
+        throw new ConflictException({
+          code: 'FORM_TITLE_TAKEN',
+          message: 'This form title is already in use. Choose another title.',
+        });
       const result = await client.query<FormRow>(
         'INSERT INTO forms(business_id,slug,name,status,definition) VALUES($1,$2,$3,$5,$4::jsonb) RETURNING *',
-        [owner, allocated, definition.name, JSON.stringify(definition), status],
+        [owner, slug, definition.name, JSON.stringify(definition), status],
       );
       return mapped(result.rows[0]);
     });
@@ -149,22 +167,44 @@ export class FormsService {
       throw new BadRequestException('Form version is required');
     if (!(await this.storage.areBusinessAssetsOwned(owner, definition)))
       throw new BadRequestException('Invalid form images');
-    const result = await this.db.query<FormRow>(
-      `UPDATE forms SET name=$3,definition=$4::jsonb,revision=revision+1,updated_at=now() WHERE business_id=$1 AND id=$2 AND revision=$5 AND status=$6 RETURNING *`,
-      [
-        owner,
-        id,
-        definition.name,
-        JSON.stringify(definition),
-        definition.revision,
-        existing.status,
-      ],
-    );
-    if (!result.rows[0]) {
-      await this.get(owner, id);
-      throw new ConflictException('This form changed. Refresh before saving.');
-    }
-    return mapped(result.rows[0]);
+    const slug =
+      definition.name === existing.name
+        ? existing.slug!
+        : formSlug(definition.name);
+    return this.db.transaction(async (client) => {
+      await client.query(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
+        [`forms:${owner}`],
+      );
+      const reserved = await client.query(
+        'SELECT 1 FROM forms WHERE business_id=$1 AND slug=$2 AND id<>$3',
+        [owner, slug, id],
+      );
+      if (reserved.rows.length)
+        throw new ConflictException({
+          code: 'FORM_TITLE_TAKEN',
+          message: 'This form title is already in use. Choose another title.',
+        });
+      const result = await client.query<FormRow>(
+        `UPDATE forms SET name=$3,definition=$4::jsonb,revision=revision+1,updated_at=now(),slug=$7 WHERE business_id=$1 AND id=$2 AND revision=$5 AND status=$6 RETURNING *`,
+        [
+          owner,
+          id,
+          definition.name,
+          JSON.stringify(definition),
+          definition.revision,
+          existing.status,
+          slug,
+        ],
+      );
+      if (!result.rows[0]) {
+        await this.get(owner, id);
+        throw new ConflictException(
+          'This form changed. Refresh before saving.',
+        );
+      }
+      return mapped(result.rows[0]);
+    });
   }
   async status(owner: string, id: string, status: unknown) {
     if (typeof status !== 'string' || !['active', 'paused'].includes(status))
@@ -200,7 +240,7 @@ export class FormsService {
       ...source,
       isArchived: false,
       archivedAt: null,
-      headline: `${source.headline.slice(0, 90)} (copy)`,
+      name: `${source.name.slice(0, 90)} (copy)`,
     });
   }
   async delete(owner: string, id: string) {
@@ -261,23 +301,7 @@ export class FormsService {
     if (!result.rows[0]) throw new NotFoundException('Form not found');
     const form = mapped(result.rows[0]);
     delete form.submissionCount;
-    const actions = await this.db.query<{
-      id: string;
-      action_key: string;
-      tiktok_event: 'SubmitForm' | 'ClickButton';
-    }>(
-      "SELECT action.id,action.action_key,action.tiktok_event FROM public_page_actions action JOIN public_pages page ON page.id=action.public_page_id WHERE page.source_form_id=$1 AND action.status='active'",
-      [form.id],
-    );
-    const analytics: PublicPageAnalytics = {
-      pixelIds: [],
-      actions: Object.fromEntries(
-        actions.rows.map((a) => [
-          a.action_key,
-          { id: a.id, pixelEvent: a.tiktok_event },
-        ]),
-      ),
-    };
+    const analytics = await this.publicAnalytics.forSource('form', form.id);
     return {
       form,
       analytics,
@@ -342,6 +366,8 @@ export class FormsService {
           occurredAt: new Date().toISOString(),
           pageUrl: validated.input.tracking.pageUrl,
           referrer: validated.input.tracking.referrer,
+          ttclid: validated.input.tracking.ttclid,
+          ttp: validated.input.tracking.ttp,
           consentState: 'unknown',
         },
         context,
@@ -384,7 +410,7 @@ export class FormsService {
         OR event.utm_source ILIKE $2 OR event.utm_campaign ILIKE $2 OR event.country_code ILIKE $2 OR response.id::text ILIKE $2)`;
     const joined = `FROM form_submissions response LEFT JOIN analytics_events event ON event.id=response.analytics_event_id AND event.business_id=$6`;
     const result = await this.db.query<FormSubmission & { total: string }>(
-      `SELECT response.id,response.created_at AS "createdAt",response.revision,response.answers,response.consent,response.privacy_version AS "privacyVersion",response.duration_ms AS "durationMs",jsonb_build_object('channel',event.channel,'campaign',event.utm_campaign,'source',event.utm_source,'medium',event.utm_medium,'country',event.country_code,'device',event.device_type) attribution,count(*) OVER()::text total ${joined} WHERE ${where} ORDER BY response.created_at DESC,response.id DESC LIMIT $7 OFFSET $8`,
+      `SELECT response.id,response.created_at AS "createdAt",response.revision,response.answers,response.consent,response.privacy_version AS "privacyVersion",response.duration_ms AS "durationMs",jsonb_build_object('channel',event.channel,'campaign',event.utm_campaign,'source',event.utm_source,'medium',event.utm_medium,'country',event.country_code,'device',event.device_type,'browser',event.browser,'os',event.operating_system,'referrer',event.referrer,'content',event.utm_content,'term',event.utm_term) attribution,count(*) OVER()::text total ${joined} WHERE ${where} ORDER BY response.created_at DESC,response.id DESC LIMIT $7 OFFSET $8`,
       [...values, owner, pageSize, page * pageSize],
     );
     const total =

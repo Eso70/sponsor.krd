@@ -91,6 +91,7 @@ export interface FormAction extends FormLink {
 }
 export interface FormDraft {
   id: string;
+  /** Required internal management name and URL source, independent of the public headline. */
   name: string;
   status: "active" | "paused";
   /** Archive only controls the dashboard collection, independently of availability. */
@@ -132,6 +133,20 @@ export interface FormDraft {
   showHandCursor?: boolean;
 }
 
+export interface FormTitleAvailability {
+  slug: string;
+  available: boolean;
+}
+
+export interface FormSubmissionTracking {
+  visitorId: string;
+  sessionId: string;
+  pageUrl?: string;
+  referrer?: string;
+  ttclid?: string;
+  ttp?: string;
+}
+
 export interface FormSubmissionInput {
   privacyVersion: string;
   durationMs?: number;
@@ -151,6 +166,11 @@ export interface FormSubmission {
     medium?: string;
     country?: string;
     device?: string;
+    browser?: string;
+    os?: string;
+    referrer?: string;
+    content?: string;
+    term?: string;
   };
   id: string;
   createdAt: string;

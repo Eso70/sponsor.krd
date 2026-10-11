@@ -157,7 +157,11 @@
 .publicSurface .cardBackground {
   clip-path: inset(0);
 }
-.publicSurface .banner [data-form-media="banner"] img,
+.publicSurface .banner [data-form-media="banner"] img {
+  height: auto;
+  width: 100%;
+  object-fit: contain;
+}
 .publicSurface .banner [data-form-media="banner"] > div {
   height: clamp(13rem, 26vw, 23rem);
   width: 100%;
@@ -343,7 +347,6 @@
   overflow-y: auto;
 }
 @media (max-width: 639px) {
-  .publicSurface .banner [data-form-media="banner"] img,
   .publicSurface .banner [data-form-media="banner"] > div {
     height: 10rem;
   }

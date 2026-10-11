@@ -44,6 +44,7 @@ export function FormIntroductionEditor({
       <FormEditorInput
         validationField="headline"
         label={copy.headline}
+        hint={labels.optional}
         value={form.headline}
         placeholder={labels.headlineHint}
         onChange={(headline) => onChange({ headline })}

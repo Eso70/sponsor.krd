@@ -18,12 +18,79 @@ vi.mock("../form-media", async (original) => ({
   ...(await original<typeof import("../form-media")>()),
   readFormImage: vi.fn(),
 }));
+vi.mock("@/components/shared/ImageCropEditor", () => ({
+  ImageCropEditor: (
+    props: import("react").ComponentProps<
+      typeof import("@/components/shared/ImageCropEditor").ImageCropEditor
+    >,
+  ) => (
+    <div
+      role="region"
+      aria-label={props.copy.title}
+      data-aspect={props.aspect}
+      data-src={props.src}
+    >
+      <button onClick={props.onClose}>{props.cancelLabel}</button>
+      <button
+        onClick={() =>
+          void props.onConfirm(
+            new File(["crop"], "crop.png", { type: "image/png" }),
+          )
+        }
+      >
+        {props.copy.confirm}
+      </button>
+    </div>
+  ),
+}));
 const image = "data:image/png;base64,YQ==";
 const replacement = "data:image/png;base64,Yg==";
 const copy = formsCopy("en");
 const labels = formEditorCopy("en");
 
 describe("compact banner image picker", () => {
+  it("crops one carousel image without changing its neighbors", async () => {
+    const change = vi.fn();
+    vi.mocked(readFormImage).mockResolvedValue(replacement);
+    render(
+      <FormImagePicker
+        variant="banner"
+        labels={labels}
+        multiple
+        images={[image, replacement, image]}
+        label="Banner"
+        onChange={change}
+        copy={copy}
+        hint=""
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: `${copy.imageCrop.title}: Banner 2` }),
+    );
+    const dialog = await screen.findByRole("region", {
+      name: copy.imageCrop.title,
+    });
+    expect(dialog).toHaveAttribute("data-aspect", "free");
+    expect(dialog).toHaveAttribute("data-src", replacement);
+    expect(change).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: copy.cancel }));
+    expect(change).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: `${copy.imageCrop.title}: Banner 1` }),
+    );
+    const reopened = await screen.findByRole("region", {
+      name: copy.imageCrop.title,
+    });
+    fireEvent.click(
+      within(reopened).getByRole("button", { name: copy.imageCrop.confirm }),
+    );
+    await waitFor(() =>
+      expect(change).toHaveBeenCalledWith([replacement, replacement, image]),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
   it("shows an image-only component with a full thumbnail and Update action", async () => {
     const change = vi.fn();
     vi.mocked(readFormImage).mockResolvedValue(replacement);
@@ -45,9 +112,7 @@ describe("compact banner image picker", () => {
     expect(
       screen.queryByRole("button", { name: /Preview:/ }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Crop/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Crop/ })).toBeEnabled();
     expect(screen.getByText(labels.componentImageHint)).toBeInTheDocument();
     expect(document.querySelector("img")).toHaveClass("object-contain");
     const upload = screen.getByLabelText("Image", { selector: "input" });
@@ -258,8 +323,6 @@ describe("compact banner image picker", () => {
       screen.getByRole("button", { name: `${copy.remove} Banner image 1` }),
     );
     expect(change).toHaveBeenCalledWith([]);
-    expect(
-      screen.queryByRole("button", { name: /Crop/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Crop/ })).toBeEnabled();
   });
 });

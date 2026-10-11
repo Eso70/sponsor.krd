@@ -17,7 +17,7 @@ import { AuthorizationGuard } from '../auth/authorization.guard';
 import { RequireCapabilities } from '../auth/require-capabilities.decorator';
 import { Capability } from '../auth/capabilities';
 import { StorageService } from '../storage/storage.service';
-import { FormsListDto, FormResponsesDto } from './forms-list.dto';
+import { FormsListDto, FormResponsesDto, FormTitleDto } from './forms-list.dto';
 import { FormsService } from './forms.service';
 import { uploadFormImage } from './form-upload';
 @Controller('api/platform/forms')
@@ -46,6 +46,18 @@ export class PlatformFormsController {
     return {
       success: true,
       data: await this.forms.stats(await this.forms.platformOwner()),
+    };
+  }
+  @Get('title-availability')
+  @RequireCapabilities(Capability.PlatformFormsRead)
+  async titleAvailability(@Query() query: FormTitleDto) {
+    return {
+      success: true,
+      data: await this.forms.titleAvailability(
+        await this.forms.platformOwner(),
+        query.title,
+        query.excludeId,
+      ),
     };
   }
   @Get(':id')

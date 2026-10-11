@@ -83,7 +83,7 @@ describe('TikTok forwarding scope', () => {
     'utf8',
   );
 
-  it('forwards only public Linktree pages to TikTok', () => {
+  it('forwards only public Linktree and form pages to TikTok', () => {
     const declaration = source.match(
       /TIKTOK_FORWARDED_PAGE_TYPES[\s\S]*?new Set\(\[([^\]]*)\]\)/,
     );
@@ -94,6 +94,7 @@ describe('TikTok forwarding scope', () => {
     // event for it would have no browser counterpart to deduplicate against
     // and would inflate the counts ads optimise on.
     expect(declaration?.[1]).toContain("'linktree'");
+    expect(declaration?.[1]).toContain("'form'");
     expect(declaration?.[1]).not.toContain("'advertising'");
     expect(declaration?.[1]).not.toContain("'route'");
   });

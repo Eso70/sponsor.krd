@@ -39,10 +39,44 @@ const input = () => ({
   },
 });
 describe('form configuration and response validation', () => {
-  it('derives names from the introduction and rejects injected fields', () => {
-    expect(validateDefinition({ ...form(), name: 'spoof' }, true).name).toBe(
-      'Contact',
-    );
+  it('accepts bounded TikTok match keys and rejects excess or response properties', () => {
+    const payload = input();
+    expect(
+      validateSubmission(
+        {
+          ...payload,
+          tracking: { ...payload.tracking, ttclid: 'click', ttp: 'cookie' },
+        },
+        form(),
+      ).input.tracking.ttp,
+    ).toBe('cookie');
+    expect(() =>
+      validateSubmission(
+        { ...payload, tracking: { ...payload.tracking, ttp: 'x'.repeat(256) } },
+        form(),
+      ),
+    ).toThrow('Invalid submission');
+    expect(() =>
+      validateSubmission(
+        {
+          ...payload,
+          tracking: { ...payload.tracking, email: 'private@example.com' },
+        },
+        form(),
+      ),
+    ).toThrow('Invalid submission');
+  });
+  it('requires a separate title, allows an empty introduction and rejects injected fields', () => {
+    expect(
+      validateDefinition(
+        { ...form(), name: '  New title  ', headline: '' },
+        true,
+      ).name,
+    ).toBe('New title');
+    expect(() => validateDefinition({ ...form(), name: ' ' }, false)).toThrow();
+    expect(() =>
+      validateDefinition({ ...form(), name: undefined }, true),
+    ).toThrow();
     expect(() =>
       validateDefinition({ ...form(), business_id: randomUUID() }, true),
     ).toThrow();

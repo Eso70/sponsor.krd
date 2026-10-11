@@ -211,7 +211,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
       {
         title: "3. Sharing",
         paragraphs: [
-          "We share information as needed with Google, TikTok, and necessary infrastructure, storage, and security providers. On eligible published public Linktree pages only, TikTok Pixel and Events API may operate automatically and collect visit and action data, IP address, browser and device type, cookies, advertising identifiers, and ad attribution data. We do not sell personal information. We may disclose information in response to a valid legal request.",
+          "We share information as needed with Google, TikTok, and necessary infrastructure, storage, and security providers. On eligible published public Linktree and form pages only, TikTok Pixel and Events API may operate automatically and collect visit and action data, IP address, browser and device type, cookies, advertising identifiers, and ad attribution data. We do not sell personal information. We may disclose information in response to a valid legal request.",
         ],
       },
       {
@@ -255,7 +255,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
         title: "9. TikTok and lead advertising",
         paragraphs: [
           "Native TikTok Instant Forms operate under TikTok’s privacy policy and Lead Generation Terms, together with the advertiser’s own privacy notice. A Sponsor.krd form is not a TikTok Instant Form and does not automatically import TikTok profile data or send answers to TikTok.",
-          "TikTok marketing tracking is limited to eligible published public Linktree pages. It is not placed on the root website, legal pages, dashboards, sign-in pages, business landing pages, or the advertising page. Opening a policy link or editing a form does not enable TikTok marketing tracking.",
+          "TikTok marketing tracking is limited to eligible published public Linktree and form pages. It is not placed on the root website, legal pages, dashboards, sign-in pages, business landing pages, or the advertising page. Opening a policy link or editing a form does not enable TikTok marketing tracking.",
           "A privacy acknowledgement is not permission for unrelated marketing. If a business needs marketing consent, it must obtain a separate, freely chosen opt-in and explain how to withdraw it.",
         ],
         links: [
@@ -293,7 +293,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
       {
         title: "3. هاوبەشکردن",
         paragraphs: [
-          "زانیاری بە Google، TikTok و دابینکەرانی پێویستی ژێرخان، هەڵگرتن و ئاسایش بە قەدەر پێویست هاوبەش دەکرێت. تەنها لە پەڕە گشتییە بڵاوکراوە ڕێگەپێدراوەکانی Linktreeدا TikTok Pixel و Events API بە شێوەی خۆکار کار دەکەن و دەتوانن زانیاریی سەردان و کردار، IP، جۆری وێبگەڕ و ئامێر، کوکی و ناسێنەرەکانی ڕیکلام و زانیاریی بەستنەوەی ڕیکلام وەربگرن. زانیاری کەسی نافرۆشرێت. لە داواکاری یاسایی ڕەوادا زانیاری دەکرێت بدرێت.",
+          "زانیاری بە Google، TikTok و دابینکەرانی پێویستی ژێرخان، هەڵگرتن و ئاسایش بە قەدەر پێویست هاوبەش دەکرێت. تەنها لە پەڕە گشتییە بڵاوکراوە ڕێگەپێدراوەکانی Linktree و فۆڕمدا TikTok Pixel و Events API بە شێوەی خۆکار کار دەکەن و دەتوانن زانیاریی سەردان و کردار، IP، جۆری وێبگەڕ و ئامێر، کوکی و ناسێنەرەکانی ڕیکلام و زانیاریی بەستنەوەی ڕیکلام وەربگرن. زانیاری کەسی نافرۆشرێت. لە داواکاری یاسایی ڕەوادا زانیاری دەکرێت بدرێت.",
         ],
       },
       {
@@ -337,7 +337,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
         title: "9. TikTok و ڕیکلامی کۆکردنەوەی زانیاری",
         paragraphs: [
           "فۆڕمە ڕاستەوخۆکانی TikTok بە سیاسەتی تایبەتمەندی و مەرجەکانی کۆکردنەوەی زانیاریی TikTok، لەگەڵ ڕوونکردنەوەی ڕیکلامکەر، بەڕێوە دەچن. فۆڕمی Sponsor.krd فۆڕمی TikTok نییە؛ زانیاری پڕۆفایلی TikTok بە خۆکار وەرناگرێت و وەڵام بۆ TikTok نانێرێت.",
-          "بەدواداچوونی بانگەشەی TikTok تەنها بۆ پەڕە گشتییە بڵاوکراوە ڕێگەپێدراوەکانی Linktreeە. لە وێبسایتی ڕەگ، پەڕە یاساییەکان، داشبۆرد، چوونەژوورەوە، پەڕەی سەرەکیی بزنس و پەڕەی ڕیکلام نییە. کردنەوەی بەستەری سیاسەت یان دەستکاریی فۆڕم ئەم بەدواداچوونە چالاک ناکات.",
+          "بەدواداچوونی بانگەشەی TikTok تەنها بۆ پەڕە گشتییە بڵاوکراوە ڕێگەپێدراوەکانی Linktree و فۆڕمە. لە وێبسایتی ڕەگ، پەڕە یاساییەکان، داشبۆرد، چوونەژوورەوە، پەڕەی سەرەکیی بزنس و پەڕەی ڕیکلام نییە. کردنەوەی بەستەری سیاسەت یان دەستکاریی فۆڕم ئەم بەدواداچوونە چالاک ناکات.",
           "پەسەندکردنی تایبەتمەندی مۆڵەتی بانگەشەی ناپەیوەندیدار نییە. ئەگەر بزنس ڕەزامەندی بانگەشەی پێویستە، دەبێت بە جیا و بە هەڵبژاردنی ئازاد وەری بگرێت و ڕێگای کشانەوەی ڕوون بکاتەوە.",
         ],
         links: [
@@ -375,7 +375,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
       {
         title: "3. المشاركة",
         paragraphs: [
-          "نشارك المعلومات بالقدر اللازم مع Google وTikTok ومزودي البنية التحتية والتخزين والأمان الضروريين. في صفحات Linktree العامة المنشورة والمؤهلة فقط، قد يعمل TikTok Pixel وEvents API تلقائيًا ويجمعان بيانات الزيارات والإجراءات وعنوان IP ونوع المتصفح والجهاز وملفات تعريف الارتباط ومعرّفات الإعلانات وبيانات ربط الإعلانات. لا نبيع المعلومات الشخصية. وقد نكشف المعلومات استجابةً لطلب قانوني مشروع.",
+          "نشارك المعلومات بالقدر اللازم مع Google وTikTok ومزودي البنية التحتية والتخزين والأمان الضروريين. في صفحات Linktree والنماذج العامة المنشورة والمؤهلة فقط، قد يعمل TikTok Pixel وEvents API تلقائيًا ويجمعان بيانات الزيارات والإجراءات وعنوان IP ونوع المتصفح والجهاز وملفات تعريف الارتباط ومعرّفات الإعلانات وبيانات ربط الإعلانات. لا نبيع المعلومات الشخصية. وقد نكشف المعلومات استجابةً لطلب قانوني مشروع.",
         ],
       },
       {
@@ -419,7 +419,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
         title: "9. TikTok وإعلانات جمع بيانات العملاء",
         paragraphs: [
           "تخضع نماذج TikTok الفورية الأصلية لسياسة خصوصية TikTok وشروط جمع بيانات العملاء، إلى جانب إشعار خصوصية المعلن. نماذج Sponsor.krd ليست نماذج فورية من TikTok ولا تستورد بيانات الملف الشخصي تلقائيًا ولا ترسل الإجابات إلى TikTok.",
-          "يقتصر تتبع TikTok التسويقي على صفحات Linktree العامة المنشورة والمؤهلة. لا يوضع على الموقع الرئيسي أو الصفحات القانونية أو لوحات التحكم أو تسجيل الدخول أو صفحات الأنشطة الرئيسية أو صفحة الإعلانات. فتح رابط السياسة أو تحرير نموذج لا يفعّل هذا التتبع.",
+          "يقتصر تتبع TikTok التسويقي على صفحات Linktree والنماذج العامة المنشورة والمؤهلة. لا يوضع على الموقع الرئيسي أو الصفحات القانونية أو لوحات التحكم أو تسجيل الدخول أو صفحات الأنشطة الرئيسية أو صفحة الإعلانات. فتح رابط السياسة أو تحرير نموذج لا يفعّل هذا التتبع.",
           "إقرار الخصوصية ليس إذنًا لتسويق غير مرتبط. إذا احتاج النشاط إلى موافقة تسويقية، فعليه الحصول على اختيار منفصل وحر وشرح طريقة سحب الموافقة.",
         ],
         links: [

@@ -95,9 +95,11 @@ export function FormPreviewHeader({
               className={`${styles.introductionHeading} flex flex-col items-center space-y-2 text-center`}
             >
               {logo && !banner && avatar}
-              <Heading className="break-words text-base font-bold">
-                {form.headline || copy.title}
-              </Heading>
+              {(form.headline || placeholders) && (
+                <Heading className="break-words text-base font-bold">
+                  {form.headline || copy.title}
+                </Heading>
+              )}
               {(form.description || placeholders) && (
                 <p className="whitespace-pre-wrap break-words text-xs leading-5 opacity-75">
                   {form.description || labels.descriptionHint}

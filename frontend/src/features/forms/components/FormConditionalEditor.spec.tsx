@@ -68,9 +68,9 @@ describe("CSV conditional editor and preview", () => {
       );
       if (layout === "card")
         fireEvent.click(screen.getByRole("button", { name: "Start" }));
-      const state = screen.getByRole("combobox", { name: "State *" });
-      const city = screen.getByRole("combobox", { name: "City *" });
-      const dealer = screen.getByRole("combobox", { name: "Dealer *" });
+      const state = screen.getByRole("combobox", { name: "State" });
+      const city = screen.getByRole("combobox", { name: "City" });
+      const dealer = screen.getByRole("combobox", { name: "Dealer" });
       const choose = (trigger: HTMLElement, answer: string) => {
         fireEvent.click(trigger);
         fireEvent.click(screen.getByRole("option", { name: answer }));

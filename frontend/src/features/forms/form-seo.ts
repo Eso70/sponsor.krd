@@ -1,6 +1,7 @@
 import { BUSINESS_FAVICON_PLACEHOLDER } from "@/lib/brand/brand-assets";
 import type { Metadata } from "next";
 import type { FormDraft } from "./types";
+import { formsCopy } from "./forms-copy";
 import {
   automaticPageSeo,
   isPageIndexable,
@@ -21,6 +22,7 @@ export function buildFormMetadata(
     template_config: {},
   };
   const seo = automaticPageSeo(page);
+  const title = seo.title || formsCopy(form.language).title;
   const canonical = new URL(`/form/${encodeURIComponent(form.slug!)}`, origin)
     .href;
   const banner =
@@ -33,7 +35,7 @@ export function buildFormMetadata(
   );
   return {
     metadataBase: new URL(origin),
-    title: { absolute: form.name.trim() || seo.title },
+    title: { absolute: title },
     icons: {
       icon:
         publicAssetUrl(form.logo, origin) ||
@@ -46,7 +48,7 @@ export function buildFormMetadata(
     },
     description: meaningfulPageDescription(form.description)
       ? seo.description
-      : seo.title,
+      : title,
     alternates: { canonical },
     robots: {
       index: form.status === "active" && isPageIndexable(page),
@@ -55,14 +57,14 @@ export function buildFormMetadata(
     openGraph: {
       type: "website",
       url: canonical,
-      title: seo.title,
+      title,
       description: seo.description,
       locale: { en: "en_US", ar: "ar_IQ", ckb: "ckb_IQ" }[form.language],
-      ...(image ? { images: [{ url: image, alt: form.headline }] } : {}),
+      ...(image ? { images: [{ url: image, alt: title }] } : {}),
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
-      title: seo.title,
+      title,
       description: seo.description,
       ...(image ? { images: [image] } : {}),
     },

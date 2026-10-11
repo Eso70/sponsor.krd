@@ -17,7 +17,7 @@ Response deletion confirmations use the shared confirmation dialog above the ana
 Turn the shared Form/Card editor into an owner-scoped publishing and response service. Reuse the Linktree host resolver, dashboard components, authorization, storage and analytics pipeline. Keep dashboard previews temporary; collect responses only on published public pages.
 
 1. Validate complete definitions on the server and introduce durable forms and response tables.
-2. Bind business operations to the authenticated business, and platform operations to the internal workspace. Allocate stable headline-derived public slugs transactionally.
+2. Bind business operations to the authenticated business, and platform operations to the internal workspace. Reserve title-derived public slugs transactionally.
 3. Persist editor media through the existing owner-scoped upload service. Connect shared grid/table views to paginated summaries and fetch full definitions only for editing/preview.
 4. Render both layouts at `/form/<slug>` using the existing preview components, with real submission validation and explicit privacy acknowledgement.
 5. Record accepted submissions and first-party conversions in one database transaction. Expose owner-only response history and real summary statistics.
@@ -25,15 +25,68 @@ Turn the shared Form/Card editor into an owner-scoped publishing and response se
 
 ## Ownership and URLs
 
+Analytics Export retains CSV full exports and offers an export-only date
+range panel in both dashboards. Shared date inputs select inclusive start/end
+calendar days in UTC; missing/reversed ranges show an inline error. Range exports
+respect the current search, paginate through the existing owner-scoped response
+API with one stable snapshot, and include the selected dates in the filename.
+The range never changes the response list or analytics filters.
+
+Required questions render labels without asterisks in both form/card previews
+and public pages. Required flags, native input constraints, conditional validation
+and server-side submission requirements remain unchanged.
+
+Uploaded form banners fill the available width and use their natural image
+proportions for height, including carousel slides. The shared media renderer
+applies this behavior in both dashboard previews and public forms at every
+viewport size; only empty banner placeholders retain a fixed height.
+
+All form editor image pickers share the optional, lazy-loaded `ImageCropEditor`.
+Cropping replaces the content inside the existing drawer instead of opening a
+second dialog; the hidden builder remains mounted to preserve unsaved edits,
+expanded sections and image selection. Cancel/Confirm return to that editor and
+restore focus to the Crop action. Main form save actions are unavailable during
+cropping, and the drawer cannot close while a confirmed crop is being processed.
+Crop Confirm/Cancel actions occupy the drawer's fixed footer and
+use the same compact, right-aligned sizing as wizard actions. The control
+strip shares the crop canvas's dimmed checkerboard, and crop views omit the
+form-editing subtitle and the extra visible instruction paragraph. Reset and zoom
+buttons sit below the image on a checkerboard visible in light and dark themes;
+there is no zoom slider. Pinch zoom remains available on touch devices.
+Reset and zoom share white surfaces with subtle gray hover states in light mode
+and slate surfaces in dark mode; zoom uses the shared icon button's surface tone.
+The workspace groups the checkerboard canvas and attached preview panel in one
+rounded surface. The panel shows output dimensions and a clickable preview that
+opens the current crop at output resolution in the shared `FullscreenImageViewer`.
+Opening/closing the viewer never confirms or changes the crop. Composition
+guides are always visible in the editor and never appear in the exported image. The image
+area grows on desktop, while mobile stacks the preview below it.
+Every crop starts in Free proportions with the full source image selected.
+Logo output remains up to 720 px and other images up to 1440 px on the longest
+edge, independently of the selected proportions. The shared ratio dropdown offers
+Free proportions, Original, 1:1, 4:3, 16:9 and 9:16. Eight pointer/touch/keyboard
+handles resize the crop rectangle; the entire edges show directional resize
+cursors, with diagonal cursors at corners. Free allows independent width and height,
+while presets lock their proportions. Moving/resizing the frame retains the image
+position. Users can pinch/adjust zoom, reset, preview and optionally
+fill blank areas with a Gaussian-blurred copy. Cancel preserves the source. Confirm
+replaces only the selected image, retaining carousel order and image descriptions.
+Native canvas exports PNG (WebP fallback or smaller PNG if needed) through the existing raster
+validation and owner-scoped save/upload flow; no remote sources or new backend
+upload paths are introduced. Errors stay inline and interrupted edits cannot replace
+a different image. Both Business and Platform use this same implementation.
+Blur uses a cached, small Gaussian raster to remain consistent without relying on
+the [limited-availability canvas filter API](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter).
+
 Business forms belong to the session's business, never a body/query owner identifier. Platform forms belong to `PlatformContentWorkspaceService`. Business forms are served on that business's subdomain or verified custom hostname; platform forms are served on the configured root origin. The route is `/form/<slug>`.
 
-`headline` in Introduction is the authoritative dashboard name. Slugs use the existing ASCII style: lowercase, ASCII normalization, words separated by hyphens, up to 60 characters. Non-Latin-only titles fall back to `form`. Concurrent duplicates receive `-2`, `-3`, etc., under an owner-specific advisory lock. Renaming a headline keeps existing public links stable. Slugs are unique per owner. Public forms use live, uncached availability checks and content-based indexing eligibility (useful headline and description required). The shared proxy probes a lightweight availability endpoint before streaming so unavailable forms return HTTP 404 and transient failures return 503.
+The separate required form title (`name`, maximum 100 characters) owns only the internal dashboard name and public URL. Introduction `headline` is optional, independently authored and never renames a form. Both public layouts omit the introduction heading when it is empty; the internal name is never a public heading or browser/share title fallback. Browser/share metadata uses the public headline, with a generic localized form title when absent. Slugs use the existing lowercase ASCII style with hyphens, up to 60 characters; titles without a usable ASCII slug receive a deterministic title-derived `form-<hash>` URL. Existing titles/URLs remain unchanged until the title is edited. Saving an edited title updates its URL, with an inline warning to update shared links. Business and Platform editors share a debounced, abortable title availability check and display the resulting `/form/<slug>` inline. Authenticated `GET /title-availability?title=...&excludeId=...` endpoints resolve the owner on the server, verify ownership of edited IDs and reserve archived and paused URLs too. Saves repeat the check before uploading media. Create/update use the same owner advisory lock and existing unique index; collisions return `FORM_TITLE_TAKEN` and focus the title field rather than silently adding a suffix. Different owners can reuse a title. Public forms use live, uncached availability checks and content-based indexing eligibility (public headline and useful description required). The shared proxy probes a lightweight availability endpoint before streaming so unavailable forms return HTTP 404 and transient failures return 503.
 
 ## Persistence and lifecycle
 
 `forms` stores owner, slug, name, layout/configuration JSON, Active/Paused status, independent archive flag/time, revision, cumulative submission count and timestamps. The server owns these metadata fields even when the editor sends a full draft.
 
-- Complete new definitions are Active (`active`); incomplete definitions are saved as Paused (`paused`). These are the only form statuses. A headline and at least one question are required to save.
+- Complete new definitions are Active (`active`); incomplete definitions are saved as Paused (`paused`). These are the only form statuses. A form title and at least one question are required to save; the introduction headline is optional.
 - Activate validates the entire public definition. Paused forms cannot be read publicly or accept responses.
 - Archive is dashboard organization only: `isArchived` moves a form between the Active and Archive tabs without changing its Active/Paused status, public availability, revision, images or responses. Restore preserves that status. Active archived forms still accept responses; Pause is the control that stops them. Archive-tab forms can be edited, paused or activated using the same controls.
 - Editing a published form must leave it valid. Updates compare revision and status before writing; conflicts return 409 rather than overwriting another editor.
@@ -79,7 +132,7 @@ Public rendering reuses `FormPreview`, field controls, conditional selectors, ph
 
 ## Tracking and privacy
 
-Forms are first-party only. They do not change the TikTok allowlist, emit a Pixel, enqueue Events API delivery, import TikTok profiles or forward response values to marketing systems.
+Published forms use the approved shared TikTok Pixel/Events API pipeline for page views, accepted submissions and registered final actions. Owner entitlement and active destination groups apply equally to business and platform forms. Starts remain first-party only. Form answers are never forwarded or used for automatic advanced matching; TikTok profiles are never imported. See [tracking](tracking.md) for deduplication and delivery verification.
 
 The shared page tracker records page views, one form start per page instance and registered final-action clicks. Starts, submissions and final actions have `public_page_actions` registrations. The accepted submission records `form_submit` through `UnifiedAnalyticsService` inside the same transaction as the response and counter. No second browser conversion is queued. Shared analytics retains visitor/session HMAC identities, IP HMAC/security signals, device/browser/OS, country, referrer, UTM campaign/source/medium, attribution and bot classification under its existing retention settings. Completion duration is bounded client timing, not a trusted security measurement. Response values and phone/email contact fields are kept out of event properties.
 
@@ -95,7 +148,7 @@ Source performance shows up to ten sources ranked by completed tracked sessions,
 
 ## Response search and CSV export
 
-The shared Business/Platform drawer presents the original six-card all-time overview (views, starts, accepted responses, completion rate, visitors and interactions), with collapsible response trends and aggregate source/device/country insights. It uses one compact search field with a clear action and a responses-per-page selector. Date filters are not shown or sent by the drawer. CSV exports follow the current search. The backend retains date filtering for API compatibility.
+The shared Business/Platform drawer presents the original six-card all-time overview (views, starts, accepted responses, completion rate, visitors and interactions), with collapsible response trends and aggregate source/device/country insights. It uses one compact search field with a clear action and a responses-per-page selector. Date filters are not applied to the response table. The shared Export menu offers CSV for the current search, either all matching responses or an inclusive date range. The export-only panel reuses backend date filtering.
 
 Expanded submissions display answers in a compact responsive grid: one column on mobile, two on tablet and three on desktop. The original compact table shows submission time, an answer summary, source, completion time and an icon to expand all answers. Expanded answers retain the responsive grid with full text. Internal response IDs, raw attribution and policy/version fields are omitted from expanded answers; they remain stored and included in authenticated CSV exports. Both dashboards reuse the same detail component.
 
@@ -103,7 +156,9 @@ Response queries accept `q` (up to 100 characters), inclusive UTC `from`/`to` da
 
 The drawer exports all matching responses in cancellable batches of 100 using the same authenticated API. The first batch returns a server-generated `snapshotAt`; later export batches send it as `before`, preventing newly created submissions from shifting the offset. Export checks row counts and duplicate IDs and never downloads a failed or partial result. Close and Cancel remain available while exporting; filters and Refresh are locked to the exported selection, and closing cancels outstanding requests.
 
-CSV uses UTF-8 with a BOM and CRLF records. Columns are response ID, submission timestamp (UTC), form name, question answers, source/campaign/medium/channel/device/country, measured completion seconds, consent, privacy version and form revision. Question columns include historical responses even when questions have been removed; IDs disambiguate duplicate labels. Values are quoted and escaped, and spreadsheet formula prefixes are neutralized. Temporary download URLs are revoked. Exports contain private response data and are only available through existing owner-scoped read capabilities; no public export endpoint is introduced.
+Both formats use the same reference-style table: one submission per row, stable metadata headers first (`response_id`, `created_time_utc`, `form_id`, `form_name`, relative `form_url`, source/action, campaign/medium/channel, device/browser/OS/country/referrer, campaign content/term, completion seconds, consent/privacy version/form revision), followed by authored question labels. Current questions preserve their authored order, including unanswered questions; historical answers from removed questions remain included. Duplicate labels and collisions with metadata headers are disambiguated. Unavailable attribution stays blank; no TikTok ad/account fields or inferred tracking values are fabricated. Browser/OS/referrer/content/term come from the existing owner-scoped conversion join, requiring no new tracking or database migration.
+
+CSV uses UTF-8 with BOM, quoted/escaped cells, CRLF records and neutralized formula prefixes. Exports read all filtered pages with the server snapshot cutoff, verify complete unique receipts, allow cancellation and never download an incomplete export. Temporary download URLs are revoked. Exports contain private response data and are only available through existing owner-scoped read capabilities; no public export endpoint is introduced.
 
 ## Deployment and verification
 
@@ -119,7 +174,7 @@ The shared forms collection and its loading skeleton use three columns on wide d
 
 Form media opens the shared unframed full-screen image viewer, with close/outside-click/Escape, gallery arrows, keyboard navigation, wheel and button zoom, mouse dragging and native touch scrolling/pinch. Viewer controls use the form language and preserve keyboard focus.
 
-After a successful public submission, both layouts show shared return guidance. An HTTP(S) referrer gives a return link with query/hash removed and credential URLs rejected; missing sources give close/back guidance. An explicit `utm_source=tiktok` without a usable referrer offers Open TikTok (its website), never an unsupported app deep link or automatic redirect. Existing business final actions remain available. Return clicks use the shared first-party tracker and registered `form:return` action; apply `2026-10-11_forms_return_action.sql` with the normal migration command. Public form events are not forwarded to TikTok.
+After a successful public submission, both layouts show shared return guidance. An HTTP(S) referrer gives a return link with query/hash removed and credential URLs rejected; missing sources give close/back guidance. An explicit `utm_source=tiktok` without a usable referrer offers Open TikTok (its website), never an unsupported app deep link or automatic redirect. Existing business final actions remain available. Return clicks use the shared first-party tracker and registered `form:return` action; apply `2026-10-11_forms_return_action.sql` with the normal migration command. Published form final actions use the shared owner-scoped TikTok pipeline.
 
 The shared analytics drawer reuses the editor’s controlled dashboard language/theme controls. Header order is Refresh, Export CSV, Delete all form data, Language, Theme, Close; mobile stacks the title above controls. Data deletion requires the owner-scoped FormsDelete capability in each dashboard and an explicit permanent-deletion confirmation. It clears all responses, views, starts, events, daily page/action summaries and unused visitor/session records for the selected form, regardless of search. The form definition, publication status and other pages' tracking are preserved. A transaction locks the owned form (the same lock used by submissions and tracking ingestion), reuses the unified analytics cleanup and resets the durable response count. The delete action remains available for forms with traffic but no responses. Both drawer data and dashboard collection totals refresh after success; failures remain in the confirmation with an inline error. Visitor/session identities shared with other pages are retained while those pages still reference them.
 

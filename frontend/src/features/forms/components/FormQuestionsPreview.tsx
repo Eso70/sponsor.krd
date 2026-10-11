@@ -97,7 +97,6 @@ export function FormQuestionsPreview({
                 <legend className="mb-1 break-words text-xs font-semibold">
                   {formText(question.label, question.labelKey, language) ||
                     copy.questionLabel}
-                  {question.required && " *"}
                 </legend>
               )}
               {question.description && (

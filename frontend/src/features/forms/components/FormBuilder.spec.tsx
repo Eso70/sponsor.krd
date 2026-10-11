@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FormEditorDrawer } from "./FormEditorDrawer";
 import { FormPreview } from "./FormPreview";
@@ -6,9 +12,17 @@ import { createForm, createQuestion } from "../forms-model";
 import { formsCopy } from "../forms-copy";
 import { isFormImage, readFormImage } from "../form-media";
 import { formEditorCopy } from "../form-editor-copy";
+vi.mock("../api", () => ({
+  formsApi: {
+    titleAvailability: vi.fn(async () => ({
+      slug: "contact",
+      available: true,
+    })),
+  },
+}));
 
 function namedForm() {
-  return { ...createForm("en"), headline: "Contact" };
+  return { ...createForm("en"), name: "Contact", headline: "Contact" };
 }
 
 describe("Form layout builder", () => {
@@ -56,6 +70,7 @@ describe("Form layout builder", () => {
     fireEvent.click(row.getByRole("button", { name: "Delete Options 2" }));
     fireEvent.click(row.getByRole("button", { name: "Add option" }));
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         questions: [
@@ -68,7 +83,7 @@ describe("Form layout builder", () => {
       }),
     );
   });
-  it("edits and saves short-answer guidance and associates it with the preview input", () => {
+  it("edits and saves short-answer guidance and associates it with the preview input", async () => {
     const save = vi.fn();
     render(
       <FormEditorDrawer
@@ -94,6 +109,7 @@ describe("Form layout builder", () => {
       preview.getByRole("textbox", { name: "Your project" }),
     ).toHaveAccessibleDescription("Tell us what you need.");
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         questions: [
@@ -105,7 +121,7 @@ describe("Form layout builder", () => {
       }),
     );
   });
-  it("uses matching Add popovers and excludes national ID from personal choices", () => {
+  it("uses matching Add popovers and excludes national ID from personal choices", async () => {
     const save = vi.fn();
     render(
       <FormEditorDrawer
@@ -149,6 +165,7 @@ describe("Form layout builder", () => {
     fireEvent.click(within(menu).getByRole("option", { name: "Phone number" }));
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         questions: expect.arrayContaining([
@@ -157,7 +174,7 @@ describe("Form layout builder", () => {
       }),
     );
   });
-  it("adds and deletes collapsed custom rows while preserving personal questions without a logic switch", () => {
+  it("adds and deletes collapsed custom rows while preserving personal questions without a logic switch", async () => {
     const save = vi.fn();
     render(
       <FormEditorDrawer
@@ -183,6 +200,7 @@ describe("Form layout builder", () => {
     expect(screen.getByText("Q1")).toBeInTheDocument();
     expect(screen.getByText("Q2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         questions: expect.arrayContaining([
@@ -195,7 +213,7 @@ describe("Form layout builder", () => {
   it("keeps the introduction visible without an off switch", () => {
     render(
       <FormEditorDrawer
-        initialForm={{ ...namedForm(), headline: "Welcome" }}
+        initialForm={{ ...namedForm(), name: "Welcome", headline: "Welcome" }}
         copy={formsCopy("en")}
         onSave={vi.fn()}
         onClose={vi.fn()}
@@ -250,7 +268,7 @@ describe("Form layout builder", () => {
       screen.getByText("Thank you for your response!"),
     ).toBeInTheDocument();
   });
-  it("uses compact collapsible content sections, retains edits and saves only a local draft", () => {
+  it("uses compact collapsible content sections, retains edits and saves only a local draft", async () => {
     const save = vi.fn();
     render(
       <FormEditorDrawer
@@ -287,19 +305,24 @@ describe("Form layout builder", () => {
         .map((tab) => tab.textContent),
     ).toEqual(["Content", "Final page"]);
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "سڵاو",
+        name: "Contact form",
         headline: "سڵاو",
         status: "paused",
       }),
     );
   });
-  it("updates optional sections and final buttons while preview preferences preserve authored text", () => {
+  it("updates optional sections and final buttons while preview preferences preserve authored text", async () => {
     const save = vi.fn();
     render(
       <FormEditorDrawer
-        initialForm={{ ...namedForm(), name: "Contact", headline: "سڵاو" }}
+        initialForm={{
+          ...namedForm(),
+          name: "Contact",
+          headline: "سڵاو",
+        }}
         copy={formsCopy("en")}
         onSave={save}
         onClose={vi.fn()}
@@ -337,11 +360,13 @@ describe("Form layout builder", () => {
       preview.getByRole("link", { name: formEditorCopy("ar").website }),
     ).toHaveAttribute("href", "https://example.com");
     fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
         bannerEnabled: false,
         appearance: "dark",
         language: "en",
+        name: "Contact",
         headline: "سڵاو",
         actions: [expect.objectContaining({ url: "https://example.com" })],
       }),
@@ -388,6 +413,7 @@ describe("Form layout builder", () => {
       const labels = formEditorCopy(language);
       const form = {
         ...namedForm(),
+        name: "Written headline",
         headline: "Written headline",
         description: "Written description",
         actions: [

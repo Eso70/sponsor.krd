@@ -84,7 +84,9 @@ export function FormMediaPreview({
           ? "size-14 object-cover"
           : logo
             ? `${logoClass} object-cover`
-            : `${banner ? "h-36" : "h-28"} w-full object-cover`
+            : banner
+              ? "block h-auto w-full object-contain"
+              : "h-28 w-full object-cover"
       }
     />
   ) : null;

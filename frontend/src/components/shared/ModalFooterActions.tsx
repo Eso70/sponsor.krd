@@ -30,12 +30,16 @@ export function ModalFooterActions({
   return (
     <>
       {showCancel ? (
-        <Tooltip content={cancelLabel} side="top" className="flex-1">
+        <Tooltip
+          content={cancelLabel}
+          side="top"
+          className={compact ? "shrink-0" : "flex-1"}
+        >
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="flex h-11 w-full items-center justify-center rounded-xl border border-slate-200 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 cursor-pointer"
+            className={`flex items-center justify-center border border-slate-200 font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 cursor-pointer ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
           >
             {cancelLabel}
           </button>

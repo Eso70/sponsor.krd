@@ -2239,6 +2239,19 @@ img {
 input::file-selector-button {
   cursor: pointer !important;
 }
+/* Crop handles resize instead of clicking; override the shared button cursor. */
+:is([data-crop-edge="n"], [data-crop-edge="s"]):not(:disabled) {
+  cursor: ns-resize !important;
+}
+:is([data-crop-edge="e"], [data-crop-edge="w"]):not(:disabled) {
+  cursor: ew-resize !important;
+}
+:is([data-crop-edge="nw"], [data-crop-edge="se"]):not(:disabled) {
+  cursor: nwse-resize !important;
+}
+:is([data-crop-edge="ne"], [data-crop-edge="sw"]):not(:disabled) {
+  cursor: nesw-resize !important;
+}
 :where(:disabled, [aria-disabled="true"]),
 :disabled::file-selector-button {
   cursor: not-allowed !important;

@@ -63,7 +63,7 @@ const question = Joi.object({
 });
 const schema = Joi.object({
   id,
-  name: text(100),
+  name: Joi.string().trim().min(1).max(100).required(),
   status: Joi.string().valid('active', 'paused'),
   isArchived: Joi.boolean(),
   archivedAt: Joi.string().isoDate().allow(null),
@@ -71,7 +71,7 @@ const schema = Joi.object({
   revision: Joi.number().integer().min(1),
   submissionCount: Joi.number().integer().min(0),
   updatedAt: text(60),
-  headline: Joi.string().trim().min(1).max(100).required(),
+  headline: text(100).required(),
   layout: Joi.string().valid('form', 'card').required(),
   language: Joi.string().valid('en', 'ar', 'ckb').required(),
   appearance: Joi.string().valid('light', 'dark').required(),
@@ -165,7 +165,18 @@ export function validateDefinition(
   input: unknown,
   published: boolean,
 ): FormDraft {
-  const result = schema.validate(input, { abortEarly: true, convert: false });
+  const normalized =
+    input &&
+    typeof input === 'object' &&
+    !Array.isArray(input) &&
+    'name' in input &&
+    typeof input.name === 'string'
+      ? { ...input, name: input.name.trim() }
+      : input;
+  const result = schema.validate(normalized, {
+    abortEarly: true,
+    convert: false,
+  });
   if (result.error || JSON.stringify(input).length > 2_000_000)
     throw new BadRequestException('Invalid form configuration');
   const form = result.value as FormDraft;
@@ -238,7 +249,6 @@ export function validateDefinition(
     )
   )
     throw new BadRequestException('Invalid section order');
-  form.name = form.headline.trim();
   return form;
 }
 
@@ -262,15 +272,12 @@ const submissionSchema = Joi.object({
     sessionId: Joi.string().min(8).max(128).required(),
     pageUrl: url,
     referrer: url,
+    ttclid: Joi.string().max(255),
+    ttp: Joi.string().max(255),
   }).required(),
 });
 export type SubmissionRequest = FormSubmissionInput & {
-  tracking: {
-    visitorId: string;
-    sessionId: string;
-    pageUrl?: string;
-    referrer?: string;
-  };
+  tracking: import('@linktree/types').FormSubmissionTracking;
 };
 export function validateSubmissionPayload(input: unknown): SubmissionRequest {
   const validated = submissionSchema.validate(input, { convert: false });

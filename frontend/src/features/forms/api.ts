@@ -3,6 +3,7 @@ import { FormUploadError } from "./form-upload-error";
 import { apiRequest } from "@/lib/api/request";
 import type {
   FormDraft,
+  FormTitleAvailability,
   FormCollectionPage,
   FormMetrics,
   FormAnalytics,
@@ -78,6 +79,19 @@ async function uploadDraftImages(
   return (await visit(form)) as FormDraft;
 }
 export const formsApi = {
+  titleAvailability: (
+    scope: FormsScope,
+    title: string,
+    excludeId?: string,
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams({ title });
+    if (excludeId) query.set("excludeId", excludeId);
+    return apiRequest<FormTitleAvailability>(
+      `${endpoint(scope)}/title-availability?${query}`,
+      { signal },
+    );
+  },
   list: (
     scope: FormsScope,
     page = 0,
@@ -91,8 +105,8 @@ export const formsApi = {
     ),
   analytics: (scope: FormsScope, id: string, signal?: AbortSignal) =>
     apiRequest<FormAnalytics>(`${endpoint(scope)}/${id}/analytics`, { signal }),
-  get: (scope: FormsScope, id: string) =>
-    apiRequest<FormDraft>(`${endpoint(scope)}/${id}`),
+  get: (scope: FormsScope, id: string, signal?: AbortSignal) =>
+    apiRequest<FormDraft>(`${endpoint(scope)}/${id}`, { signal }),
   stats: (scope: FormsScope, signal?: AbortSignal) =>
     apiRequest<FormMetrics>(endpoint(scope) + "/stats", { signal }),
   async save(scope: FormsScope, form: FormDraft, isNew: boolean) {
@@ -139,7 +153,9 @@ export const formsApi = {
   },
   submit: (
     slug: string,
-    input: FormSubmissionInput & { tracking: Record<string, string> },
+    input: FormSubmissionInput & {
+      tracking: import("@linktree/types").FormSubmissionTracking;
+    },
   ) =>
     apiRequest<{ id: string }>(
       `/api/public/forms/${encodeURIComponent(slug)}/submissions`,

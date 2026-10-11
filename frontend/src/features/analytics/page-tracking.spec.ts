@@ -41,6 +41,28 @@ beforeEach(() => {
   );
 });
 
+describe("accepted public form conversions", () => {
+  it("uses the server receipt event ID without queuing a second conversion", () => {
+    const tracker = createPageTracker({
+      pageId: PAGE_ID,
+      pageName: "Contact",
+      contentType: "form",
+      analytics: {
+        pixelIds: ["OWNER_PIXEL"],
+        actions: { "form:submit": { id: ACTION_ID, pixelEvent: "SubmitForm" } },
+      },
+    });
+    tracker.trackServerConversion("form:submit", EVENT_ID);
+    expect(mocks.trackTikTokEvent).toHaveBeenCalledWith(
+      "SubmitForm",
+      expect.objectContaining({ content_id: ACTION_ID }),
+      EVENT_ID,
+      ["OWNER_PIXEL"],
+    );
+    expect(mocks.queueAnalyticsEvent).not.toHaveBeenCalled();
+  });
+});
+
 describe("navigation-critical page tracking", () => {
   it("records offer clicks as clicks, not checkout events", () => {
     const tracker = createPageTracker({

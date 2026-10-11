@@ -2,13 +2,21 @@
 import { useFormValidation } from "./FormValidationContext";
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
-import { Trash2, ImageIcon, Plus, Upload, Eye } from "lucide-react";
+import { Trash2, ImageIcon, Plus, Upload, Eye, Crop } from "lucide-react";
+import dynamic from "next/dynamic";
 import { ImagePreviewModal } from "@/components/shared/ImagePreviewModal";
 import { IconActionButton } from "@/components/shared/IconActionButton";
 import { EditorField } from "@/components/shared/EditorField";
 import { isFormImage, readFormImage } from "../form-media";
 import type { FormsCopy } from "../forms-copy";
 import type { FormEditorCopy } from "../form-editor-copy";
+import { useFormImageCrop } from "./FormImageCropContext";
+
+const ImageCropEditor = dynamic(() =>
+  import("@/components/shared/ImageCropEditor").then(
+    (module) => module.ImageCropEditor,
+  ),
+);
 
 export function FormImagePicker({
   label,
@@ -30,6 +38,7 @@ export function FormImagePicker({
   labels?: FormEditorCopy;
 }) {
   const validation = useFormValidation();
+  const requestCrop = useFormImageCrop();
   const [error, setError] = useState(false);
   const invalidImage =
     validation.attempted && images.some((image) => !isFormImage(image));
@@ -45,15 +54,49 @@ export function FormImagePicker({
   const fileInput = useRef<HTMLInputElement>(null);
   const replacement = useRef<number | null>(null);
   const [openedImage, setOpenedImage] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<{
+    index: number;
+    src: string;
+  } | null>(null);
+  const imagesRef = useRef(images);
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    imagesRef.current = images;
+  }, [onChange, images]);
   const choose = (index: number | null = null) => {
     replacement.current = index;
     fileInput.current?.click();
   };
+  const confirmCrop = async (
+    target: { index: number; src: string },
+    file: File,
+  ) => {
+    const request = generation.current;
+    const cropped = await readFormImage(file);
+    const current = imagesRef.current;
+    if (request !== generation.current || current[target.index] !== target.src)
+      throw new Error("Image changed during crop");
+    onChangeRef.current(
+      current.map((image, index) => (index === target.index ? cropped : image)),
+    );
+    setCropTarget(null);
+    setError(false);
+  };
+  const openCrop = (index: number, src: string, returnFocus?: HTMLElement) => {
+    const target = { index, src };
+    if (requestCrop)
+      requestCrop({
+        src,
+        aspect: "free",
+        maxEdge: variant === "logo" ? 720 : 1440,
+        onConfirm: (file) => confirmCrop(target, file),
+        returnFocus,
+      });
+    else setCropTarget(target);
+  };
   const thumbnails = variant !== "default" && labels;
+  const sideActions = !!thumbnails && !multiple && variant !== "option";
   useEffect(
     () => () => {
       generation.current++;
@@ -183,17 +226,41 @@ export function FormImagePicker({
                       type="button"
                       aria-label={`${copy.preview}: ${label}`}
                       onClick={() => setOpenedImage(image)}
-                      className="absolute bottom-1 start-1 flex size-5 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-slate-700"
+                      className="absolute bottom-1 end-1 flex size-5 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-slate-700"
                     >
                       <Eye className="size-3" />
+                    </button>
+                  )}
+                  {filled && !sideActions && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-label={`${copy.imageCrop.title}: ${label} ${index + 1}`}
+                      title={copy.imageCrop.title}
+                      onClick={(event) =>
+                        openCrop(index, image, event.currentTarget)
+                      }
+                      className="absolute bottom-1 start-1 flex size-6 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    >
+                      <Crop className="size-3.5" />
                     </button>
                   )}
                 </div>
               );
             })}
           </div>
-          {(variant === "logo" || (variant === "component" && !multiple)) && (
+          {sideActions && images.length > 0 && (
             <div className="space-y-1">
+              <button
+                type="button"
+                disabled={busy || !isFormImage(images[0])}
+                aria-label={`${copy.imageCrop.title}: ${label} 1`}
+                onClick={(event) => openCrop(0, images[0], event.currentTarget)}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                <Crop className="size-3.5" />
+                {copy.imageCrop.title}
+              </button>
               <button
                 type="button"
                 disabled={busy}
@@ -230,6 +297,13 @@ export function FormImagePicker({
                 />
               )}
               <IconActionButton
+                label={`${copy.imageCrop.title}: ${label} ${index + 1}`}
+                disabled={busy || !isFormImage(image)}
+                onClick={() => openCrop(index, image)}
+              >
+                <Crop className="size-3.5" />
+              </IconActionButton>
+              <IconActionButton
                 tone="danger"
                 label={`${copy.remove} ${label} ${index + 1}`}
                 disabled={busy}
@@ -249,6 +323,17 @@ export function FormImagePicker({
           title={label}
           closeLabel={copy.close}
           onClose={() => setOpenedImage(null)}
+        />
+      )}
+      {cropTarget && images[cropTarget.index] === cropTarget.src && (
+        <ImageCropEditor
+          src={cropTarget.src}
+          aspect="free"
+          maxEdge={variant === "logo" ? 720 : 1440}
+          copy={copy.imageCrop}
+          cancelLabel={copy.cancel}
+          onClose={() => setCropTarget(null)}
+          onConfirm={(file) => confirmCrop(cropTarget, file)}
         />
       )}
     </div>

@@ -352,3 +352,5 @@ application features. New code must preserve the boundaries above.
 ## Persisted forms
 
 Forms use one shared frontend management/editor/public renderer and `FormsModule` for owner-scoped business logic. PostgreSQL persists definitions and responses; existing storage manages raster assets; Redis limits public requests. Shared analytics records conversions transactionally. See [Forms](forms.md).
+
+Published public forms and Linktrees share owner-scoped marketing tracking. Public form submissions and their analytics/outbox record commit atomically, and the browser echoes the accepted request ID as `SubmitForm`. Form answers remain separate from marketing; dashboards, previews and other public surfaces remain excluded. See [tracking](tracking.md).

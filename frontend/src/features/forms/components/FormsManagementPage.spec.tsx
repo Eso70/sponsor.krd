@@ -17,6 +17,7 @@ import { formsApi } from "../api";
 vi.mock("../api", () => ({
   formsApi: {
     list: vi.fn(),
+    titleAvailability: vi.fn(),
     get: vi.fn(),
     stats: vi.fn(),
     analytics: vi.fn(),
@@ -30,6 +31,10 @@ vi.mock("../api", () => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(formsApi.titleAvailability).mockResolvedValue({
+    slug: "contact",
+    available: true,
+  });
   vi.mocked(formsApi.list).mockResolvedValue({ items: [], total: 0 });
   vi.mocked(formsApi.analytics).mockResolvedValue({
     views: 10,
@@ -331,10 +336,9 @@ describe("Forms frontend workspace", () => {
     ).not.toBeInTheDocument();
     expect(controls.getByRole("button", { name: "Create form" })).toBeEnabled();
     fireEvent.click(controls.getByRole("button", { name: "Create form" }));
-    expect(controls.getByRole("textbox", { name: "Headline" })).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    expect(
+      controls.getByRole("textbox", { name: "Form title" }),
+    ).toHaveAttribute("aria-invalid", "true");
     expect(formsApi.save).not.toHaveBeenCalled();
     fireEvent.change(controls.getByRole("textbox", { name: "Headline" }), {
       target: { value: "Contact" },
@@ -343,7 +347,7 @@ describe("Forms frontend workspace", () => {
     fireEvent.click(controls.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("radio", { name: "Card layout" })).toBeChecked();
   });
-  it("saves a headline-named form through the backend and reloads the list", async () => {
+  it("saves a title-named form with an optional introduction and reloads the list", async () => {
     const saved = {
       ...createForm("en"),
       name: "Contact",
@@ -356,8 +360,7 @@ describe("Forms frontend workspace", () => {
     render(<FormsManagementPage locale="en" />);
     await waitFor(() => expect(formsApi.list).toHaveBeenCalled());
     startForm();
-    fireEvent.click(screen.getByText("Introduction"));
-    fireEvent.change(screen.getByRole("textbox", { name: "Headline" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Form title" }), {
       target: { value: "Contact" },
     });
     vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
@@ -369,7 +372,7 @@ describe("Forms frontend workspace", () => {
     await waitFor(() =>
       expect(formsApi.save).toHaveBeenCalledWith(
         "business",
-        expect.objectContaining({ headline: "Contact", name: "Contact" }),
+        expect.objectContaining({ headline: "", name: "Contact" }),
         true,
       ),
     );
@@ -431,7 +434,7 @@ describe("Forms frontend workspace", () => {
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: "Keep this",
+          name: "Contact",
           headline: "Keep this",
           questions: initialForm.questions,
           layout: "card",

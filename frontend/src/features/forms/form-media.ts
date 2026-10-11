@@ -1,11 +1,10 @@
+import {
+  isLocalRasterImage,
+  loadLocalRasterImage,
+} from "@/lib/images/local-raster-image";
+
 const MAX_BYTES = 5 * 1024 * 1024;
-export function isFormImage(value: string): boolean {
-  return (
-    /^\/images\/upload\/[a-zA-Z0-9_./-]+$/.test(value) ||
-    (value.length <= 7_000_000 &&
-      /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value))
-  );
-}
+export const isFormImage = isLocalRasterImage;
 
 /** Validate local raster uploads; saving persists them through the owner-scoped API. */
 export async function readFormImage(file: File): Promise<string> {
@@ -27,17 +26,7 @@ export async function readFormImage(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
   if (!isFormImage(value)) throw new Error("image");
-  await new Promise<void>((resolve, reject) => {
-    const image = new window.Image();
-    image.onload = () =>
-      image.naturalWidth > 0 &&
-      image.naturalHeight > 0 &&
-      image.naturalWidth * image.naturalHeight <= 40_000_000
-        ? resolve()
-        : reject(new Error("image"));
-    image.onerror = () => reject(new Error("image"));
-    image.src = value;
-  });
+  await loadLocalRasterImage(value);
   return value;
 }
 import { validateUploadFile } from "@/lib/api/inline-request-error";
