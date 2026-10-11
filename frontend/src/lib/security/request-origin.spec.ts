@@ -3,9 +3,23 @@ import {
   isAuthenticatedMutation,
   hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
+  browserRequestProtocol,
 } from "@/lib/security/request-origin";
 
 describe("request origin protection", () => {
+  it("uses the same HTTPS scheme for checking and forwarding proxy chains", () => {
+    expect(browserRequestProtocol("http://localhost:3011/api/test", "HTTPS, http")).toBe("https");
+    expect(isSameOriginBrowserRequest("http://localhost:3011/api/test", "https://sponsor.krd", null,
+      "sponsor.krd", null, "HTTPS, http")).toBe(true);
+    expect(browserRequestProtocol("http://localhost:3011/api/test", "invalid")).toBeNull();
+  });
+  it.each(["", "https://tenant.example.com/", "https://tenant.example.com/path", "https://user@tenant.example.com",
+    "https://tenant.example.com, https://evil.example", "https://tenant.example.com#fragment"])("rejects malformed Origin %s instead of matching a parsed prefix", (source) => {
+    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", source, "https://tenant.example.com/page")).toBe(false);
+  });
+  it("continues accepting a same-origin Referer with a page path", () => {
+    expect(isSameOriginBrowserRequest("https://tenant.example.com/api/test", null, "https://tenant.example.com/page?tab=1")).toBe(true);
+  });
   it("recognizes authenticated read cookies independently of method for origin enforcement", () => {
     expect(hasAuthenticatedSessionCookie("business_session=token")).toBe(true);
     expect(hasAuthenticatedSessionCookie("not_business_session=token")).toBe(

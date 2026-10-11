@@ -68,6 +68,7 @@ describe('durable custom domain tenancy', () => {
       '2026-10-07_custom_business_domains.sql',
       '2026-10-07_custom_domain_automation.sql',
       '2026-10-07_single_custom_domain_per_business.sql',
+      '2026-10-08_platform_only_custom_domains.sql',
     ]) {
       const sql = readFileSync(join(migrations, filename), 'utf8');
       await db.query(sql);
@@ -120,6 +121,15 @@ describe('durable custom domain tenancy', () => {
     await service.verify(owner, domain.id, owner);
     return domain;
   }
+  it('retires selectable business domain permissions without deleting historical grants', async () => {
+    const result = await db.query<{ status: string }>(
+      "SELECT status FROM auth_permissions WHERE permission_key IN ('business:domains:read','business:domains:manage')",
+    );
+    expect(result.rows).toHaveLength(2);
+    expect(
+      result.rows.every((permission) => permission.status === 'inactive'),
+    ).toBe(true);
+  });
   it.each(['business', 'user', 'membership', 'session'] as const)(
     'rejects a cached session and new handoffs after %s access is revoked',
     async (revoked) => {

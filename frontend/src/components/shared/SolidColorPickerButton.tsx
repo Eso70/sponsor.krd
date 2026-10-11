@@ -21,8 +21,10 @@ export function SolidColorPickerButton({ value, onChange, label, resetLabel, cop
         {!value && <Palette className="size-4" />}
       </button>
     </Tooltip>
-    {value && <button type="button" aria-label={resetLabel} onClick={() => onChange("")}
-      className="shrink-0 cursor-pointer p-2 text-gray-400 hover:text-red-500"><RotateCcw className="size-4" /></button>}
+    {value && <Tooltip content={resetLabel} side="top">
+      <button type="button" aria-label={resetLabel} onClick={() => onChange("")}
+        className="shrink-0 cursor-pointer p-2 text-gray-400 hover:text-red-500"><RotateCcw className="size-4" /></button>
+    </Tooltip>}
     <ColorGradientModal copy={copy} isOpen={open} value={value || "#ffffff"}
       onChange={onChange} onClose={() => setOpen(false)} allowGradient={false}
       solidFallback="#ffffff" gradientFallback="#ffffff" title={label} />

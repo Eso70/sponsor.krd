@@ -68,7 +68,7 @@ describe('custom domain API boundary', () => {
   });
   it.each([
     '/api/auth/profile',
-    '/api/business/domains',
+    '/api/business/settings',
     '/api/analytics/v2/dashboard',
     '/api/auth/email/verify',
     '/api/auth/handoff',

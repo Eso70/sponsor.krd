@@ -115,6 +115,7 @@ export function getEditorPlatformName(platform: string, copy?: EditorCopy): stri
 }
 
 export const arabicEditorCopy = {
+  verificationBadge: "إظهار شارة التوثيق الزرقاء",
   editPage: "تعديل الصفحة",
   createDefaultPage: "إنشاء الصفحة الافتراضية",
   createPage: "إنشاء صفحة جديدة",

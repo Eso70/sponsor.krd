@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -56,7 +57,7 @@ export class BillingManagementController {
   @Patch('entitlements/:id')
   @RequireCapabilities(Capability.PlatformBillingEntitlementsUpdate)
   async updateEntitlement(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateEntitlementDto,
   ) {
     return {
@@ -76,14 +77,17 @@ export class BillingManagementController {
 
   @Patch('plans/:id')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
-  async updatePlan(@Param('id') id: string, @Body() dto: UpdatePlanDto) {
+  async updatePlan(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdatePlanDto,
+  ) {
     return { success: true, data: await this.service.updatePlan(id, dto) };
   }
 
   @Patch('plans/:id/profile')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
   async updatePermissionProfile(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdatePermissionProfileDto,
   ) {
     return {
@@ -94,7 +98,7 @@ export class BillingManagementController {
 
   @Delete('plans/:id')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
-  async deletePermissionProfile(@Param('id') id: string) {
+  async deletePermissionProfile(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.service.deletePermissionProfile(id),
@@ -116,18 +120,19 @@ export class BillingManagementController {
   @Patch('subscription-plans/:id')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
   async updateSubscriptionPlan(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateSubscriptionPlanDto,
+    @CurrentUser() user: SessionUser,
   ) {
     return {
       success: true,
-      data: await this.service.updateSubscriptionPlan(id, dto),
+      data: await this.service.updateSubscriptionPlan(id, dto, user.id),
     };
   }
 
   @Delete('subscription-plans/:id')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
-  async deleteSubscriptionPlan(@Param('id') id: string) {
+  async deleteSubscriptionPlan(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.service.deleteSubscriptionPlan(id),
@@ -148,7 +153,7 @@ export class BillingManagementController {
 
   @Get('plans/:id/configuration')
   @RequireCapabilities(Capability.PlatformBillingPlansRead)
-  async configuration(@Param('id') id: string) {
+  async configuration(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.service.getPlanConfiguration(id),
@@ -158,12 +163,13 @@ export class BillingManagementController {
   @Patch('plans/:id/configuration')
   @RequireCapabilities(Capability.PlatformBillingPlansUpdate)
   async updateConfiguration(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdatePlanConfigurationDto,
+    @CurrentUser() user: SessionUser,
   ) {
     return {
       success: true,
-      data: await this.service.updatePlanConfiguration(id, dto),
+      data: await this.service.updatePlanConfiguration(id, dto, user.id),
     };
   }
 }
@@ -187,7 +193,7 @@ export class BusinessAccessController {
 
   @Get(':id/effective-access')
   @RequireCapabilities(Capability.PlatformBillingSubscriptionsRead)
-  async effectiveAccess(@Param('id') id: string) {
+  async effectiveAccess(@Param('id', new ParseUUIDPipe()) id: string) {
     return {
       success: true,
       data: await this.authorization.getEffectiveAccess(id),
@@ -208,7 +214,10 @@ export class ApprovalManagementController {
 
   @Post(':id/approve')
   @RequireCapabilities(Capability.PlatformBillingApprovalsReview)
-  async approve(@Param('id') id: string, @CurrentUser() user: SessionUser) {
+  async approve(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: SessionUser,
+  ) {
     return {
       success: true,
       data: await this.approvals.review({
@@ -222,7 +231,7 @@ export class ApprovalManagementController {
   @Post(':id/reject')
   @RequireCapabilities(Capability.PlatformBillingApprovalsReview)
   async reject(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: ReviewApprovalDto,
     @CurrentUser() user: SessionUser,
   ) {

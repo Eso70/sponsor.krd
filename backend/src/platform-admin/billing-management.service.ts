@@ -29,6 +29,7 @@ import {
 import { pageMetadata } from '../common/dto/admin-list-query.dto';
 import type { BillingOverviewQueryDto } from './dto/billing-overview-query.dto';
 import { BillingRepository } from './billing.repository';
+import { subscriptionAccessSql } from '../billing/subscription-access';
 
 interface EntitlementRow {
   id: string;
@@ -112,10 +113,19 @@ export class BillingManagementService {
                   subscription_plan.permission_profile_id::text
                     AS "permissionProfileId",
                   permission_profile.name AS "permissionProfileName",
+                  (SELECT COUNT(*)::int FROM billing_plan_templates t
+                    JOIN billing_plan_configurations c ON c.id = t.plan_configuration_id
+                    WHERE c.plan_id = permission_profile.id) AS "templateCount",
+                  COALESCE((SELECT jsonb_object_agg(e.entitlement_key, pe.value)
+                    FROM billing_plan_entitlements pe
+                    JOIN billing_entitlements e ON e.id = pe.entitlement_id AND e.status = 'active'
+                    JOIN billing_plan_configurations c ON c.id = pe.plan_configuration_id
+                    WHERE c.plan_id = permission_profile.id), '{}'::jsonb) AS entitlements,
                   subscription_plan.status,
                   subscription_plan.currency,
                   subscription_plan.yearly_price_minor
                     AS "yearlyPriceMinor",
+                  subscription_plan.monthly_price_minor AS "monthlyPriceMinor",
                   subscription_plan.trial_days AS "trialDays",
                   subscription_plan.display_order AS "displayOrder",
                   subscription_plan.is_default AS "isDefault",
@@ -173,6 +183,8 @@ export class BillingManagementService {
                   subscription.starts_at AS "startsAt",
                   subscription.current_period_start AS "currentPeriodStart",
                   subscription.current_period_end AS "currentPeriodEnd",
+                  subscription.billing_cycle AS "billingCycle",
+                  subscription.cancels_at AS "cancelsAt",
                   subscription.updated_at AS "updatedAt",
                   COUNT(*) OVER()::text AS total
            FROM businesses business
@@ -209,9 +221,11 @@ export class BillingManagementService {
           attentionRequired: number;
         }>(
           `SELECT
-             COUNT(*) FILTER (WHERE status IN ('trialing','active','grace_period'))::int AS "activeSubscriptions",
-             COUNT(*) FILTER (WHERE status IN ('past_due','incomplete','expired'))::int AS "attentionRequired"
-           FROM business_subscriptions`,
+             COUNT(*) FILTER (WHERE ${subscriptionAccessSql('s')})::int AS "activeSubscriptions",
+             COUNT(*) FILTER (WHERE s.status IN ('past_due','incomplete','expired')
+               OR (s.status IN ('trialing','active','grace_period') AND
+                 (s.current_period_end <= NOW() OR s.cancels_at <= NOW())))::int AS "attentionRequired"
+           FROM business_subscriptions s`,
         ),
       ]);
     const planRows = plans.rows as Array<{ status: string }>;
@@ -620,10 +634,10 @@ export class BillingManagementService {
         const result = await client.query<{ id: string }>(
           `INSERT INTO billing_subscription_plans
               (code, name, description, permission_profile_id, status,
-               currency, yearly_price_minor, trial_days,
+               currency, yearly_price_minor, monthly_price_minor, trial_days,
                display_order, is_default, created_by)
             VALUES
-              ($1,$2,$3,$4::uuid,$5,$6,$7,$8,$9,$10,$11::uuid)
+              ($1,$2,$3,$4::uuid,$5,$6,$7,$12,$8,$9,$10,$11::uuid)
             RETURNING id::text`,
           [
             code,
@@ -637,6 +651,7 @@ export class BillingManagementService {
             dto.displayOrder || 0,
             dto.isDefault || false,
             actorId,
+            dto.monthlyPriceMinor ?? 0,
           ],
         );
         return result.rows[0];
@@ -646,7 +661,11 @@ export class BillingManagementService {
     return created;
   }
 
-  async updateSubscriptionPlan(id: string, dto: UpdateSubscriptionPlanDto) {
+  async updateSubscriptionPlan(
+    id: string,
+    dto: UpdateSubscriptionPlanDto,
+    actorId?: string,
+  ) {
     const result = await this.database
       .transaction(async (client) => {
         const current = await client.query<{
@@ -655,7 +674,7 @@ export class BillingManagementService {
           isDefault: boolean;
           permissionProfileId: string;
         }>(
-          `SELECT name, status, is_default AS "isDefault",
+          `SELECT *, is_default AS "isDefault",
                   permission_profile_id::text AS "permissionProfileId"
            FROM billing_subscription_plans
            WHERE id = $1::uuid
@@ -716,6 +735,7 @@ export class BillingManagementService {
                 currency = COALESCE($6, currency),
                 yearly_price_minor =
                   COALESCE($7, yearly_price_minor),
+                monthly_price_minor = COALESCE($11, monthly_price_minor),
                 trial_days = COALESCE($8, trial_days),
                 display_order = COALESCE($9, display_order),
                 is_default = $10
@@ -731,6 +751,7 @@ export class BillingManagementService {
             dto.trialDays ?? null,
             dto.displayOrder ?? null,
             nextIsDefault,
+            dto.monthlyPriceMinor ?? null,
           ],
         );
         if (nextProfile !== existing.permissionProfileId) {
@@ -746,6 +767,13 @@ export class BillingManagementService {
             [id, nextProfile, configurationId],
           );
         }
+        if (actorId)
+          await client.query(
+            `INSERT INTO billing_policy_audit_events
+          (event_type, actor_id, resource_type, resource_id, before_value, after_value)
+          VALUES ('subscription_plan.updated',$1::uuid,'subscription_plan',$2::uuid,$3::jsonb,$4::jsonb)`,
+            [actorId, id, JSON.stringify(existing), JSON.stringify(dto)],
+          );
         return { id };
       })
       .catch((error) => this.translateSubscriptionPlanConflict(error));
@@ -800,20 +828,53 @@ export class BillingManagementService {
     dto: UpsertBusinessSubscriptionDto,
     actorId: string,
   ) {
-    const assignment = await this.resolveSubscriptionAssignment(
-      dto.subscriptionPlanId,
-      dto.planId,
-      dto.businessId,
-    );
-    const result = await this.database.query<{ id: string }>(
-      `INSERT INTO business_subscriptions
+    const periodStart = new Date(
+      dto.currentPeriodStart || Date.now(),
+    ).getTime();
+    const periodEnd = dto.currentPeriodEnd
+      ? new Date(dto.currentPeriodEnd).getTime()
+      : null;
+    if (
+      !Number.isFinite(periodStart) ||
+      (periodEnd !== null &&
+        (!Number.isFinite(periodEnd) || periodEnd <= periodStart))
+    ) {
+      throw new BadRequestException(
+        'The subscription end must follow its start',
+      );
+    }
+    if (dto.cancelAtPeriodEnd && periodEnd === null) {
+      throw new BadRequestException(
+        'A period end is required for scheduled cancellation',
+      );
+    }
+    const result = await this.database.transaction(async (client) => {
+      const business = await client.query(
+        `SELECT id FROM businesses
+        WHERE id=$1::uuid AND account_type='business' FOR UPDATE`,
+        [dto.businessId],
+      );
+      if (!business.rowCount) throw new NotFoundException('Business not found');
+      const before = await client.query(
+        `SELECT * FROM business_subscriptions
+        WHERE business_id=$1::uuid FOR UPDATE`,
+        [dto.businessId],
+      );
+      const assignment = await this.resolveSubscriptionAssignment(
+        client,
+        dto.subscriptionPlanId,
+        dto.planId,
+        dto.businessId,
+      );
+      const updated = await client.query<{ id: string }>(
+        `INSERT INTO business_subscriptions
         (business_id, subscription_plan_id, plan_id, plan_configuration_id,
          status, current_period_start, current_period_end,
-         created_by)
+         created_by, billing_cycle, cancels_at)
        VALUES
         ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,
          COALESCE($6::timestamptz,NOW()),$7::timestamptz,
-         $8::uuid)
+         $8::uuid, $9, CASE WHEN $10 THEN $7::timestamptz ELSE NULL END)
        ON CONFLICT (business_id) DO UPDATE SET
          subscription_plan_id=EXCLUDED.subscription_plan_id,
          plan_id=EXCLUDED.plan_id,
@@ -821,19 +882,42 @@ export class BillingManagementService {
          status=EXCLUDED.status,
          current_period_start=EXCLUDED.current_period_start,
          current_period_end=EXCLUDED.current_period_end,
+         billing_cycle=EXCLUDED.billing_cycle,
+         cancels_at=EXCLUDED.cancels_at,
+         updated_at=NOW(),
          ended_at=CASE WHEN EXCLUDED.status IN ('canceled','expired') THEN NOW() ELSE NULL END
        RETURNING id::text`,
-      [
-        dto.businessId,
-        assignment.subscriptionPlanId,
-        assignment.permissionProfileId,
-        assignment.configurationId,
-        dto.status,
-        dto.currentPeriodStart || null,
-        dto.currentPeriodEnd || null,
-        actorId,
-      ],
-    );
+        [
+          dto.businessId,
+          assignment.subscriptionPlanId,
+          assignment.permissionProfileId,
+          assignment.configurationId,
+          dto.status,
+          dto.currentPeriodStart || null,
+          dto.currentPeriodEnd || null,
+          actorId,
+          dto.billingCycle ?? 'custom',
+          dto.cancelAtPeriodEnd ?? false,
+        ],
+      );
+      await client.query(
+        `INSERT INTO billing_policy_audit_events
+        (event_type, actor_id, business_id, plan_id, plan_configuration_id,
+         resource_type, resource_id, before_value, after_value)
+        VALUES ('subscription.assigned',$1::uuid,$2::uuid,$3::uuid,$4::uuid,
+          'business_subscription',$5::uuid,$6::jsonb,$7::jsonb)`,
+        [
+          actorId,
+          dto.businessId,
+          assignment.permissionProfileId,
+          assignment.configurationId,
+          updated.rows[0].id,
+          JSON.stringify(before.rows[0] ?? null),
+          JSON.stringify(dto),
+        ],
+      );
+      return updated;
+    });
     await this.invalidateBusiness(dto.businessId);
     return result.rows[0];
   }
@@ -842,8 +926,9 @@ export class BillingManagementService {
     const configuration = await this.database.query(
       `SELECT configuration.id::text,
               configuration.plan_id::text AS "planId",
-              COUNT(DISTINCT subscription.id)::int AS "subscriberCount",
-              COALESCE(jsonb_object_agg(
+              (SELECT COUNT(*)::int FROM business_subscriptions subscription
+               WHERE subscription.plan_configuration_id=configuration.id) AS "subscriberCount",
+              COALESCE((SELECT jsonb_object_agg(
                 permission.permission_id::text,
                 jsonb_build_object(
                   'accessMode', permission.access_mode,
@@ -851,23 +936,16 @@ export class BillingManagementService {
                   'resourceScope', permission.resource_scope,
                   'conditions', permission.conditions
                 )
-              ) FILTER (WHERE permission.permission_id IS NOT NULL), '{}'::jsonb) AS permissions,
-              COALESCE(jsonb_object_agg(
+              ) FROM billing_plan_permissions permission
+                WHERE permission.plan_configuration_id=configuration.id), '{}'::jsonb) AS permissions,
+              COALESCE((SELECT jsonb_object_agg(
                 entitlement.entitlement_id::text, entitlement.value
-              ) FILTER (WHERE entitlement.entitlement_id IS NOT NULL), '{}'::jsonb) AS entitlements,
-              COALESCE(array_agg(DISTINCT template.template_key)
-                FILTER (WHERE template.template_key IS NOT NULL), '{}') AS "templateKeys"
+              ) FROM billing_plan_entitlements entitlement
+                WHERE entitlement.plan_configuration_id=configuration.id), '{}'::jsonb) AS entitlements,
+              ARRAY(SELECT template.template_key FROM billing_plan_templates template
+                WHERE template.plan_configuration_id=configuration.id ORDER BY template.template_key) AS "templateKeys"
        FROM billing_plan_configurations configuration
-       LEFT JOIN business_subscriptions subscription
-         ON subscription.plan_configuration_id = configuration.id
-       LEFT JOIN billing_plan_permissions permission
-         ON permission.plan_configuration_id = configuration.id
-       LEFT JOIN billing_plan_entitlements entitlement
-         ON entitlement.plan_configuration_id = configuration.id
-       LEFT JOIN billing_plan_templates template
-         ON template.plan_configuration_id = configuration.id
-       WHERE configuration.plan_id = $1::uuid
-       GROUP BY configuration.id`,
+       WHERE configuration.plan_id = $1::uuid`,
       [planId],
     );
     if (!configuration.rows[0]) {
@@ -989,18 +1067,45 @@ export class BillingManagementService {
   async updatePlanConfiguration(
     planId: string,
     dto: UpdatePlanConfigurationDto,
+    actorId?: string,
   ) {
     const result = await this.database.transaction(async (client) => {
       const configuration = await this.getPlanConfigurationContext(
         client,
         planId,
       );
+      const before = actorId
+        ? await client.query<{ policy: unknown }>(
+            `SELECT jsonb_build_object(
+        'permissions', COALESCE((SELECT jsonb_object_agg(permission_id::text,
+          jsonb_build_object('accessMode',access_mode,'fieldModes',field_modes,'resourceScope',resource_scope,'conditions',conditions))
+          FROM billing_plan_permissions WHERE plan_configuration_id=$1::uuid),'{}'::jsonb),
+        'entitlements', COALESCE((SELECT jsonb_object_agg(entitlement_id::text,value)
+          FROM billing_plan_entitlements WHERE plan_configuration_id=$1::uuid),'{}'::jsonb),
+        'templateKeys', ARRAY(SELECT template_key FROM billing_plan_templates WHERE plan_configuration_id=$1::uuid)
+      ) AS policy`,
+            [configuration.id],
+          )
+        : null;
       await this.applyPlanConfiguration(
         client,
         configuration.id,
         configuration.planCode,
         dto,
       );
+      if (actorId)
+        await client.query(
+          `INSERT INTO billing_policy_audit_events
+        (event_type, actor_id, plan_id, plan_configuration_id, resource_type, resource_id, after_value, before_value)
+        VALUES ('plan.policy.updated',$1::uuid,$2::uuid,$3::uuid,'plan_configuration',$3::uuid,$4::jsonb,$5::jsonb)`,
+          [
+            actorId,
+            planId,
+            configuration.id,
+            JSON.stringify(dto),
+            JSON.stringify(before?.rows[0]?.policy ?? null),
+          ],
+        );
       return { id: configuration.id, planId };
     });
     await this.invalidatePlanBusinesses(planId);
@@ -1014,6 +1119,7 @@ export class BillingManagementService {
     values: Record<string, unknown>,
   ) {
     const ids = Object.keys(values);
+    this.assertCatalogIds(ids);
     const rows = ids.length
       ? await client.query<EntitlementRow>(
           `SELECT id::text, entitlement_key AS key, value_type AS "valueType"
@@ -1094,7 +1200,7 @@ export class BillingManagementService {
       'feature.remove_branding': false,
       'limit.linktrees': 5,
       'limit.tiktok_pixels':
-        hasTikTok && planCode.toLowerCase() === 'ultra'
+        hasTikTok && ['ultra', 'max'].includes(planCode.toLowerCase())
           ? 3
           : hasTikTok && planCode.toLowerCase() === 'pro'
             ? 2
@@ -1159,6 +1265,7 @@ export class BillingManagementService {
   }
 
   private async resolveSubscriptionAssignment(
+    client: PoolClient,
     subscriptionPlanId?: string,
     legacyPermissionProfileId?: string,
     businessId?: string,
@@ -1170,7 +1277,7 @@ export class BillingManagementService {
     if (!subscriptionPlanId && !legacyPermissionProfileId) {
       throw new BadRequestException('A subscription plan is required');
     }
-    const result = await this.database.query<{
+    const result = await client.query<{
       subscriptionPlanId: string;
       permissionProfileId: string;
       configurationId: string;
@@ -1183,13 +1290,13 @@ export class BillingManagementService {
        JOIN billing_plan_configurations configuration
          ON configuration.plan_id =
             subscription_plan.permission_profile_id
-       WHERE (
+       WHERE ((
           $1::uuid IS NOT NULL
           AND subscription_plan.id = $1::uuid
        ) OR (
           $1::uuid IS NULL
           AND subscription_plan.permission_profile_id = $2::uuid
-       )
+       ))
          AND (
            subscription_plan.status = 'active'
            OR EXISTS (
@@ -1203,7 +1310,7 @@ export class BillingManagementService {
        ORDER BY subscription_plan.is_default DESC,
                 subscription_plan.display_order,
                 subscription_plan.created_at
-       LIMIT 1`,
+       LIMIT 1 FOR SHARE OF subscription_plan`,
       [
         subscriptionPlanId || null,
         legacyPermissionProfileId || null,
@@ -1250,7 +1357,7 @@ export class BillingManagementService {
       }
       if (keys.some((key) => !isTemplateAllowedForPlanCode(key, planCode))) {
         throw new BadRequestException(
-          'Branch Signal is available only for the Ultra plan',
+          'The selected template is not available for this permission profile',
         );
       }
       await client.query(
@@ -1274,6 +1381,7 @@ export class BillingManagementService {
     values: Record<string, unknown>,
   ): Promise<void> {
     const ids = Object.keys(values);
+    this.assertCatalogIds(ids);
     const permissions = ids.length
       ? await client.query<PermissionRow>(
           `SELECT id::text,permission_key AS key,
@@ -1398,6 +1506,22 @@ export class BillingManagementService {
     };
   }
 
+  private assertCatalogIds(ids: string[]): void {
+    if (
+      ids.length > 200 ||
+      ids.some(
+        (id) =>
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            id,
+          ),
+      )
+    ) {
+      throw new BadRequestException(
+        'Catalog values must use valid entitlement or permission identifiers',
+      );
+    }
+  }
+
   private assertValue(entitlement: EntitlementRow, value: unknown) {
     const valid =
       entitlement.valueType === 'boolean'
@@ -1465,7 +1589,7 @@ export class BillingManagementService {
     await Promise.all([
       this.redis.del(`entitlements:business:${businessId}`),
       this.redis.del(`authorization:business-policy:${businessId}`),
-      this.redis.del(`templates:business:${businessId}`),
+      this.redis.del(`templates:v3:business:${businessId}`),
       // The published advertising payload is cached by subdomain and the
       // entitlement lives inside the query that cache short-circuits, so a
       // downgrade would otherwise keep serving a paid public page until the

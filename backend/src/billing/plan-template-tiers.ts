@@ -19,14 +19,16 @@ export function isTemplateAllowedForPlanCode(
   planCode: string,
 ): boolean {
   return (
-    !ULTRA_ONLY_TEMPLATE_KEYS.some((key) => key === templateKey) ||
-    planCode.trim().toLowerCase() === 'ultra'
+    ULTRA_TEMPLATE_KEYS.some((key) => key === templateKey) &&
+    (!ULTRA_ONLY_TEMPLATE_KEYS.some((key) => key === templateKey) ||
+      ['ultra', 'max'].includes(planCode.trim().toLowerCase()))
   );
 }
 
 export function getDefaultTemplateKeys(planCode: string): readonly string[] {
   switch (planCode.trim().toLowerCase()) {
     case 'ultra':
+    case 'max':
       return ULTRA_TEMPLATE_KEYS;
     case 'pro':
       return PRO_TEMPLATE_KEYS;

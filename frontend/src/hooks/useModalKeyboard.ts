@@ -77,10 +77,13 @@ export function useModalKeyboard({
     if (!dialog) return;
 
     const focusTarget = initialFocusRef?.current || dialog;
-    focusTarget.focus();
+    // A panel may still be translated offscreen during its entrance. Default
+    // focus scrolling can shift its overlay and hide the entire slide animation.
+    focusTarget.focus({ preventScroll: true });
 
     return () => {
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      if (previouslyFocused?.isConnected)
+        previouslyFocused.focus({ preventScroll: true });
     };
   }, [dialogRef, initialFocusRef, isOpen]);
 
@@ -127,7 +130,12 @@ export function useModalKeyboard({
         return;
       }
 
-      if (event.key === "Enter" && enterEnabled && onEnter && !isEditableTarget(event.target)) {
+      if (
+        event.key === "Enter" &&
+        enterEnabled &&
+        onEnter &&
+        !isEditableTarget(event.target)
+      ) {
         event.preventDefault();
         event.stopPropagation();
         onEnter();

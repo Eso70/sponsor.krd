@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process';
-import { readdirSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Pool } from 'pg';
 import {
@@ -70,6 +70,97 @@ describe('consolidated database schema commands (e2e)', () => {
         `DROP DATABASE IF EXISTS ${quotedDatabase(fixtureDatabase)}`,
       );
       await maintenance.end();
+    }
+  });
+
+  it('keeps fresh and upgraded Basic/Pro Linktree allowances consistent', async () => {
+    const readLimits = async () =>
+      (
+        await fixture.query<{ code: string; value: number }>(
+          `SELECT p.code, e.value FROM billing_plan_entitlements e
+       JOIN billing_entitlements entitlement ON entitlement.id=e.entitlement_id
+       JOIN billing_plan_configurations c ON c.id=e.plan_configuration_id
+       JOIN billing_plans p ON p.id=c.plan_id
+       WHERE entitlement.entitlement_key='limit.linktrees' ORDER BY p.code`,
+        )
+      ).rows;
+    const expected = await readLimits();
+    expect(expected).toEqual(
+      expect.arrayContaining([
+        { code: 'basic', value: 20 },
+        { code: 'pro', value: 100 },
+        { code: 'ultra', value: -1 },
+        { code: 'max', value: -1 },
+      ]),
+    );
+    await fixture.query(`UPDATE billing_plan_entitlements e SET value=to_jsonb(CASE p.code WHEN 'basic' THEN 5 ELSE 20 END)
+      FROM billing_plan_configurations c JOIN billing_plans p ON p.id=c.plan_id
+      WHERE e.plan_configuration_id=c.id AND p.code IN ('basic','pro')
+        AND e.entitlement_id=(SELECT id FROM billing_entitlements WHERE entitlement_key='limit.linktrees')`);
+    const sql = readFileSync(
+      join(migrationsDirectory, '2026-10-11_basic_pro_linktree_limits.sql'),
+      'utf8',
+    );
+    await fixture.query(sql);
+    await fixture.query(sql);
+    expect(await readLimits()).toEqual(expected);
+  });
+
+  it('seeds Max with a separate profile, inherited permissions and higher limits', async () => {
+    const catalog = await fixture.query<{
+      code: string;
+      monthly_price_minor: string;
+      yearly_price_minor: string;
+      pixels: number;
+    }>(`SELECT p.code, s.monthly_price_minor, s.yearly_price_minor,
+      (SELECT value FROM billing_plan_entitlements e JOIN billing_entitlements c ON c.id=e.entitlement_id
+        WHERE e.plan_configuration_id=configuration.id AND c.entitlement_key='limit.tiktok_pixels') AS pixels
+      FROM billing_subscription_plans s JOIN billing_plans p ON p.id=s.permission_profile_id
+      JOIN billing_plan_configurations configuration ON configuration.plan_id=p.id WHERE s.code='max'`);
+    expect(catalog.rows).toHaveLength(1);
+    expect(catalog.rows[0]).toMatchObject({ code: 'max', pixels: 10 });
+    expect(Number(catalog.rows[0].monthly_price_minor)).toBe(6000);
+    expect(Number(catalog.rows[0].yearly_price_minor)).toBe(60000);
+  });
+
+  it('preserves customized Max policies and prices when the forward migration is repeated', async () => {
+    const migration = readFileSync(
+      join(migrationsDirectory, '2026-10-09_subscription_catalog.sql'),
+      'utf8',
+    );
+    await fixture.query(
+      `UPDATE billing_subscription_plans SET monthly_price_minor=9900 WHERE code='max'`,
+    );
+    await fixture.query(`UPDATE billing_plan_entitlements SET value='50'::jsonb WHERE plan_configuration_id IN
+      (SELECT c.id FROM billing_plan_configurations c JOIN billing_plans p ON p.id=c.plan_id WHERE p.code='max')
+      AND entitlement_id=(SELECT id FROM billing_entitlements WHERE entitlement_key='limit.tiktok_pixels')`);
+    try {
+      await fixture.query(migration);
+      await fixture.query(migration);
+      const price = await fixture.query<{ price: string }>(
+        `SELECT monthly_price_minor AS price FROM billing_subscription_plans WHERE code='max'`,
+      );
+      expect(Number(price.rows[0].price)).toBe(9900);
+      await fixture.query(
+        `DELETE FROM billing_subscription_plans WHERE code='max'`,
+      );
+      await fixture.query(migration);
+      const restored = await fixture.query<{
+        count: number;
+        pixels: number;
+      }>(`SELECT
+        (SELECT COUNT(*)::int FROM billing_subscription_plans WHERE code='max') AS count,
+        (SELECT e.value FROM billing_plan_entitlements e JOIN billing_entitlements catalog ON catalog.id=e.entitlement_id
+          JOIN billing_plan_configurations c ON c.id=e.plan_configuration_id JOIN billing_plans p ON p.id=c.plan_id
+          WHERE p.code='max' AND catalog.entitlement_key='limit.tiktok_pixels') AS pixels`);
+      expect(restored.rows[0]).toEqual({ count: 1, pixels: 50 });
+    } finally {
+      await fixture.query(
+        `UPDATE billing_subscription_plans SET monthly_price_minor=6000 WHERE code='max'`,
+      );
+      await fixture.query(`UPDATE billing_plan_entitlements SET value='10'::jsonb WHERE plan_configuration_id IN
+        (SELECT c.id FROM billing_plan_configurations c JOIN billing_plans p ON p.id=c.plan_id WHERE p.code='max')
+        AND entitlement_id=(SELECT id FROM billing_entitlements WHERE entitlement_key='limit.tiktok_pixels')`);
     }
   });
 

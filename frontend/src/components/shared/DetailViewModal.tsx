@@ -105,8 +105,7 @@ export const DetailViewModal = memo(function DetailViewModal({
 
         {/* Content */}
         <div 
-          className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 bg-linear-to-br from-white to-slate-50/20 dark:from-[#1c222b] dark:to-slate-900/5 custom-scrollbar" 
-          style={{ scrollbarWidth: "thin" }}
+          className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 bg-linear-to-br from-white to-slate-50/20 dark:from-[#1c222b] dark:to-slate-900/5 custom-scrollbar"
         >
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.02] divide-y divide-slate-100 dark:divide-white/5">
             {fields.map((field, idx) => (

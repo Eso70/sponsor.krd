@@ -641,6 +641,11 @@ Maintenance automatically verifies pending domains, retries disconnected domains
 and uses bounded parallel checks. Each business may connect one custom hostname;
 the service and database both enforce this. Ownership and routing requirements apply equally
 to automatic and manual verification.
-Business routes use authenticated ownership plus domain capabilities; platform
-routes use administrator guards plus existing business capabilities. Custom hosts
-are public-only. See [Custom domains](custom-domains.md) for endpoints and deployment.
+Domain management exposes only platform routes, guarded by platform administrator
+authentication and existing business read/update capabilities. Legacy business
+management routes are removed and their permissions retired. Custom hosts serve
+both public pages and the tenant dashboard. See [Custom domains](custom-domains.md) for endpoints and deployment.
+
+## Persisted forms
+
+`FormsModule` exposes authenticated business/platform controllers and rate-limited public reads/submissions. Both management scopes use the same service; the platform workspace resolves ownership. See [Forms](forms.md) for endpoints and validation.

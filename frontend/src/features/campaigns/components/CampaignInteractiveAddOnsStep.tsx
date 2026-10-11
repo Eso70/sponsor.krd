@@ -1,5 +1,6 @@
 import { Layers3, Library, Plus } from "lucide-react";
 
+import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import { EditorField } from "@/components/shared/EditorField";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
@@ -92,16 +93,11 @@ export function CampaignInteractiveAddOnsStep({
             </EditorField>
           ) : (
             <EditorField label={t("Existing add-on")} required>
-              <CustomSelect
-                label={t("Existing add-on")}
-                hideLabel
+              <ModalTextInput
+                aria-label={t("Existing add-on")}
                 value={existingAddOnId}
-                onChange={onExistingAddOnIdChange}
-                options={[
-                  { value: "addon-product-card", label: t("Main product card") },
-                  { value: "addon-seasonal-offer", label: t("Seasonal offer") },
-                ]}
-                triggerClassName={modalInputClass()}
+                onChange={(event) => onExistingAddOnIdChange(event.target.value.trim())}
+                required
               />
             </EditorField>
           )}

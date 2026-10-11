@@ -25,12 +25,14 @@ describe('plan template tiers', () => {
     expect(getDefaultTemplateKeys('basic')).toBe(BASIC_TEMPLATE_KEYS);
     expect(getDefaultTemplateKeys('pro')).toBe(PRO_TEMPLATE_KEYS);
     expect(getDefaultTemplateKeys('ultra')).toBe(ULTRA_TEMPLATE_KEYS);
+    expect(getDefaultTemplateKeys('max')).toBe(ULTRA_TEMPLATE_KEYS);
     expect(getDefaultTemplateKeys('custom')).toBe(BASIC_TEMPLATE_KEYS);
   });
 
   it('reserves Branch Signal for Ultra plans', () => {
     expect(isTemplateAllowedForPlanCode('branch-signal', 'ultra')).toBe(true);
     expect(isTemplateAllowedForPlanCode('branch-signal', 'ULTRA')).toBe(true);
+    expect(isTemplateAllowedForPlanCode('branch-signal', 'max')).toBe(true);
     expect(isTemplateAllowedForPlanCode('branch-signal', 'pro')).toBe(false);
     expect(isTemplateAllowedForPlanCode('branch-signal', 'basic')).toBe(false);
     expect(isTemplateAllowedForPlanCode('spectrum', 'basic')).toBe(true);

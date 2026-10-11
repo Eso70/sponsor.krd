@@ -7,7 +7,7 @@ describe('private API cache boundary', () => {
     app.addHook('onSend', preventPrivateApiCaching);
     for (const path of [
       '/api/auth/profile',
-      '/api/business/domains',
+      '/api/business/settings',
       '/api/public/business',
     ]) {
       app.get(path, async (_request, reply) => {
@@ -21,7 +21,7 @@ describe('private API cache boundary', () => {
     try {
       for (const url of [
         '/api/auth/profile',
-        '/api/business/domains',
+        '/api/business/settings',
         '/api/%61uth/profile',
         '/api/auth/failure',
         '/api/auth/missing',

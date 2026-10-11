@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET, POST } from "./route";
 const { resolveDomain } = vi.hoisted(() => ({ resolveDomain: vi.fn() }));
 vi.mock("@/lib/public/domain-routing", () => ({
@@ -7,6 +7,40 @@ vi.mock("@/lib/public/domain-routing", () => ({
 }));
 
 describe("API proxy redirects", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("checks and forwards chained HTTPS consistently", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ROOT_DOMAIN", "sponsor.krd");
+    const upstream = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const response = await POST(new NextRequest("http://localhost:3011/api/platform/signup/invitations", {
+      method: "POST", headers: { host: "sponsor.krd", origin: "https://sponsor.krd",
+        "x-forwarded-proto": "HTTPS, http", cookie: "platform_admin_session=token" },
+    }), { params: Promise.resolve({ path: ["platform", "signup", "invitations"] }) });
+    expect(response.status).toBe(200);
+    expect((upstream.mock.calls[0][1]?.headers as Headers).get("x-forwarded-proto")).toBe("https");
+  });
+  it("rejects invalid forwarded protocols before granting internal credentials", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch");
+    const response = await POST(new NextRequest("http://localhost:3011/api/platform/signup/invitations", {
+      method: "POST", headers: { host: "localhost:3011", "x-forwarded-proto": "invalid" },
+    }), { params: Promise.resolve({ path: ["platform", "signup", "invitations"] }) });
+    expect(response.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+  it("forwards the verified browser authority for local platform invitation creation", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ROOT_DOMAIN", "lvh.me:3011");
+    vi.stubEnv("INTERNAL_PROXY_SECRET", "disposable-proxy-key");
+    const upstream = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const response = await POST(new NextRequest("http://localhost:3011/api/platform/signup/invitations", {
+      method: "POST", headers: { host: "lvh.me:3011", origin: "http://lvh.me:3011",
+        cookie: "platform_admin_session=token", "x-tenant-proxy-host": "attacker.example" },
+    }), { params: Promise.resolve({ path: ["platform", "signup", "invitations"] }) });
+    expect(response.status).toBe(200);
+    const headers = upstream.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get("x-tenant-proxy-host")).toBe("lvh.me:3011");
+    expect(headers.get("x-tenant-proxy-key")).toBe("disposable-proxy-key");
+    expect(headers.get("origin")).toBe("http://lvh.me:3011");
+    expect(headers.get("x-forwarded-proto")).toBe("http");
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
     resolveDomain.mockReset();

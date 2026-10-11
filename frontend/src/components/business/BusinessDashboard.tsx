@@ -13,6 +13,7 @@ import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import {
   LayoutTemplate,
   FileText,
+  ClipboardList,
   LogOut,
   User,
   Settings,
@@ -29,8 +30,12 @@ import { toast } from "sonner";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
 import { useLinktrees } from "@/features/business/hooks/useLinktrees";
-import type { BusinessLinktreeSummary as Linktree, LinktreeListItem } from "@linktree/types";
+import type {
+  BusinessLinktreeSummary as Linktree,
+  LinktreeListItem,
+} from "@linktree/types";
 import { BusinessLinktreesPage } from "@/features/business/components/BusinessLinktreesPage";
+import { BusinessFormsPage } from "@/features/business/components/BusinessFormsPage";
 import { DuplicateLinktreeModal } from "@/components/business/DuplicateLinktreeModal";
 import { LinktreeSearchModal } from "@/components/shared/LinktreeSearchModal";
 import type { EffectiveAccessManifest } from "@linktree/types";
@@ -40,14 +45,19 @@ import { DashboardHeader } from "@/components/shared/DashboardHeader";
 import { useTranslations } from "next-intl";
 import { BusinessLanguageSelector } from "@/features/business/components/BusinessLanguageSelector";
 import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
+import { BusinessSubscriptionModal } from "@/features/billing/components/BusinessSubscriptionModal";
 import { businessMessages } from "@/features/business/i18n/messages";
-import { arabicEditorCopy, englishEditorCopy } from "@/features/link-editor/editor-copy";
+import {
+  arabicEditorCopy,
+  englishEditorCopy,
+} from "@/features/link-editor/editor-copy";
 import {
   DashboardSidebar,
   type DashboardSidebarItem,
 } from "@/components/shared/DashboardSidebar";
 import {
   isBusinessPageLocked,
+  isBusinessPageVisible,
   type BusinessDashboardPage,
 } from "@/lib/business-page-access";
 import { LockedContent } from "@/components/shared/LockedContent";
@@ -66,9 +76,7 @@ import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
 import { DEFAULT_BUSINESS_ACCENT } from "@/lib/utils/business-error-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { businessTabTitle } from "@/lib/utils/tab-title";
-import {
-  SkeletonDashboardPage,
-} from "@/components/shared/Skeleton";
+import { SkeletonDashboardPage } from "@/components/shared/Skeleton";
 import { BusinessLoadingSkeleton } from "@/features/business/components/BusinessLoadingSkeleton";
 import {
   BusinessDashboardRefreshProvider,
@@ -114,7 +122,10 @@ const BusinessLinktreeAnalyticsModal = dynamic(
     import("@/components/business/BusinessLinktreeAnalyticsModal").then(
       (mod) => ({ default: mod.BusinessLinktreeAnalyticsModal }),
     ),
-  { ssr: false, loading: () => <BusinessLoadingSkeleton kind="pageAnalytics" /> },
+  {
+    ssr: false,
+    loading: () => <BusinessLoadingSkeleton kind="pageAnalytics" />,
+  },
 );
 
 const BusinessTikTokConfigPage = dynamic(
@@ -177,6 +188,7 @@ function getBusinessPage(pathname: string): BusinessDashboardPage {
   if (!segment) return "linktrees";
   if (segment === "pages") return "linktrees";
   return segment === "tiktok-config" ||
+    segment === "forms" ||
     segment === "advertising" ||
     segment === "templates" ||
     segment === "profile" ||
@@ -273,6 +285,13 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         onClick: () => router.push("/business/pages"),
       },
       {
+        id: "forms",
+        label: t("forms"),
+        icon: <ClipboardList className="h-4 w-4" />,
+        active: activeTab === "forms",
+        onClick: () => router.push("/business/forms"),
+      },
+      {
         id: "tiktok-config",
         label: t("tiktokSettings"),
         icon: <TbBrandTiktok className="h-4 w-4" />,
@@ -334,11 +353,21 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     refreshedEffectiveAccess ?? effectiveAccess ?? null;
   const pageLocked = isBusinessPageLocked(activeTab, liveEffectiveAccess);
   const pageLockReason = actionT("upgradeRequired");
+  useEffect(() => {
+    if (
+      liveEffectiveAccess &&
+      activeTab !== "linktrees" &&
+      !isBusinessPageVisible(activeTab, liveEffectiveAccess)
+    ) {
+      router.replace("/business/pages");
+    }
+  }, [activeTab, liveEffectiveAccess, router]);
 
   // Set browser tab title and favicon dynamically for this business
   useEffect(() => {
     const sectionTitles: Record<BusinessDashboardPage, string> = {
       linktrees: t("linktrees"),
+      forms: t("forms"),
       "tiktok-config": t("tiktokSettings"),
       advertising: t("advertising"),
       templates: t("templates"),
@@ -508,6 +537,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   const toggleTheme = useCallback(() => {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -684,51 +714,54 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     });
   }, []);
 
-  const handleEdit = useCallback(async (id: string) => {
-    // Open modal immediately for better UX
-    setIsModalOpen(true);
-    setIsLoadingEditData(true);
-    setEditData(null); // Clear previous data
+  const handleEdit = useCallback(
+    async (id: string) => {
+      // Open modal immediately for better UX
+      setIsModalOpen(true);
+      setIsLoadingEditData(true);
+      setEditData(null); // Clear previous data
 
-    try {
-      // apiRequest owns envelope parsing, so a failure arrives as an
-      // ApiRequestError carrying the server's message rather than a raw body.
-      const data = await apiRequest<{
-        linktree: Linktree;
-        links: NonNullable<typeof editData>["links"];
-      }>(`/api/linktrees/${id}/edit`);
+      try {
+        // apiRequest owns envelope parsing, so a failure arrives as an
+        // ApiRequestError carrying the server's message rather than a raw body.
+        const data = await apiRequest<{
+          linktree: Linktree;
+          links: NonNullable<typeof editData>["links"];
+        }>(`/api/linktrees/${id}/edit`);
 
-      // Validate required fields
-      if (!data?.linktree?.id) {
-        throw new Error("Invalid response format: missing linktree data");
-      }
-
-      if (!Array.isArray(data.links)) {
-        throw new Error("Invalid response format: links must be an array");
-      }
-
-      setEditData({ linktree: data.linktree, links: data.links });
-    } catch (error) {
-      // If unauthorized, suggest re-login and keep the modal open otherwise.
-      if (isApiRequestError(error, 401)) {
-        const shouldReload = window.confirm(
-          actionT("sessionExpired"),
-        );
-        if (shouldReload) {
-          window.location.href = "/business/workspace-entry";
+        // Validate required fields
+        if (!data?.linktree?.id) {
+          throw new Error("Invalid response format: missing linktree data");
         }
-        return;
+
+        if (!Array.isArray(data.links)) {
+          throw new Error("Invalid response format: links must be an array");
+        }
+
+        setEditData({ linktree: data.linktree, links: data.links });
+      } catch (error) {
+        // If unauthorized, suggest re-login and keep the modal open otherwise.
+        if (isApiRequestError(error, 401)) {
+          const shouldReload = window.confirm(actionT("sessionExpired"));
+          if (shouldReload) {
+            window.location.href = "/business/workspace-entry";
+          }
+          return;
+        }
+
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to load linktree data";
+        console.error(`Failed to load linktree data: ${errorMessage}`);
+
+        setIsModalOpen(false); // Close modal on error
+      } finally {
+        setIsLoadingEditData(false);
       }
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to load linktree data";
-      console.error(`Failed to load linktree data: ${errorMessage}`);
-
-      setIsModalOpen(false); // Close modal on error
-    } finally {
-      setIsLoadingEditData(false);
-    }
-  }, [actionT]);
+    },
+    [actionT],
+  );
 
   const handleViewAnalytics = (id: string, name: string) => {
     setAnalyticsModalLinktree({ id, name });
@@ -1137,7 +1170,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               errorMessage,
               errorData ?? undefined,
             );
-            toast.error(locale === "ckb" ? errorMessage : actionT("updateFailed"));
+            toast.error(
+              locale === "ckb" ? errorMessage : actionT("updateFailed"),
+            );
             throw new Error(errorMessage);
           }
 
@@ -1538,6 +1573,15 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   return (
     <ThemeProvider websiteColor={wColor ?? null} documentTheme="business">
       <BusinessDashboardRefreshProvider value={dashboardRefresh}>
+        <BusinessSubscriptionModal
+          isOpen={subscriptionOpen}
+          onClose={() => setSubscriptionOpen(false)}
+          onSupport={() => {
+            setSubscriptionOpen(false);
+            router.push("/business/settings?tab=messages");
+          }}
+          locale={locale}
+        />
         <div
           data-business-dashboard
           className="h-screen bg-slate-50 dark:bg-[#161B22] text-slate-800 dark:text-gray-100 flex flex-col md:flex-row relative overflow-hidden"
@@ -1550,7 +1594,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             brandSubtitle={t("subtitle")}
             brandImage={SPONSOR_KRD_LOGO}
             brandImageAlt="Sponsor.krd"
-            items={sidebarItems}
+            items={sidebarItems.filter((item) =>
+              isBusinessPageVisible(item.id as BusinessDashboardPage, liveEffectiveAccess),
+            )}
             collapsed={isSidebarCollapsed}
             mobileOpen={isMobileSidebarOpen}
             onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -1562,7 +1608,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 planCode={liveEffectiveAccess?.subscription.planCode}
                 planName={liveEffectiveAccess?.subscription.planName}
                 onSupport={() => router.push("/business/settings?tab=messages")}
-                onUpgrade={() => router.push("/#pricing")}
+                onUpgrade={() => setSubscriptionOpen(true)}
               />
             }
           />
@@ -1570,7 +1616,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
             <DashboardHeader
-              title={t(activeTab === "tiktok-config" ? "tiktokSettings" : activeTab)}
+              title={t(
+                activeTab === "tiktok-config" ? "tiktokSettings" : activeTab,
+              )}
               languageControl={<BusinessLanguageSelector />}
               labels={{
                 menu: headerT("menu"),
@@ -1653,7 +1701,17 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                   panel is the content here; there is nothing to fetch.
                 */}
                   {pageLocked ? (
-                    <SkeletonDashboardPage statCount={4} body="analytics" loadingLabel={locale === "ar" ? "جارٍ تحميل بيانات لوحة التحكم" : locale === "en" ? "Loading dashboard data" : "داتای داشبۆرد بار دەکرێت"} />
+                    <SkeletonDashboardPage
+                      statCount={4}
+                      body="analytics"
+                      loadingLabel={
+                        locale === "ar"
+                          ? "جارٍ تحميل بيانات لوحة التحكم"
+                          : locale === "en"
+                            ? "Loading dashboard data"
+                            : "داتای داشبۆرد بار دەکرێت"
+                      }
+                    />
                   ) : activeTab === "linktrees" ? (
                     <BusinessLinktreesPage
                       linktrees={filteredLinktrees}
@@ -1688,10 +1746,40 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                       onToggleArchive={handleToggleArchive}
                       onToggleStatus={handleToggleStatus}
                     />
+                  ) : activeTab === "forms" ? (
+                    <BusinessFormsPage
+                      capabilities={{
+                        create:
+                          liveEffectiveAccess?.permissions[
+                            "business:forms:create"
+                          ]?.outcome === "allow",
+                        update:
+                          liveEffectiveAccess?.permissions[
+                            "business:forms:update"
+                          ]?.outcome === "allow",
+                        remove:
+                          liveEffectiveAccess?.permissions[
+                            "business:forms:delete"
+                          ]?.outcome === "allow",
+                      }}
+                      accentColor={wColor ?? null}
+                      theme={theme}
+                      mounted={mounted}
+                      onToggleTheme={toggleTheme}
+                    />
                   ) : activeTab === "tiktok-config" ? (
-                    <BusinessTikTokConfigPage pixelCopy={locale === "ckb" ? undefined : businessMessages[locale].TikTokPixel} />
+                    <BusinessTikTokConfigPage
+                      pixelCopy={
+                        locale === "ckb"
+                          ? undefined
+                          : businessMessages[locale].TikTokPixel
+                      }
+                    />
                   ) : activeTab === "templates" ? (
-                    <TemplatesPage accessMode="entitlement" copy={businessMessages[locale].TemplatesPage} />
+                    <TemplatesPage
+                      accessMode="entitlement"
+                      copy={businessMessages[locale].TemplatesPage}
+                    />
                   ) : activeTab === "advertising" ? (
                     <AdvertisingServicePage
                       name={name || currentUsername || t("businessFallback")}
@@ -1761,16 +1849,24 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             cancelLabel={t("cancel")}
             closeLabel={t("close")}
             isDeleting={isClearingAnalytics}
-            message={
-              <p>{t("clearAnalyticsQuestion")}</p>
-            }
+            message={<p>{t("clearAnalyticsQuestion")}</p>}
           />
 
           {/* Create/Edit Modal */}
           {isModalOpen && (
             <LinktreeEditorModal
-              copy={locale === "ar" ? arabicEditorCopy : locale === "en" ? englishEditorCopy : undefined}
-              colorCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsColorPicker}
+              copy={
+                locale === "ar"
+                  ? arabicEditorCopy
+                  : locale === "en"
+                    ? englishEditorCopy
+                    : undefined
+              }
+              colorCopy={
+                locale === "ckb"
+                  ? undefined
+                  : businessMessages[locale].SettingsColorPicker
+              }
               isOpen={isModalOpen}
               onClose={handleModalClose}
               onSubmit={handleSubmit}
@@ -1788,7 +1884,11 @@ export const BusinessDashboard = memo(function BusinessDashboard({
               onClose={() => setAnalyticsModalLinktree(null)}
               linktreeId={analyticsModalLinktree.id}
               linktreeName={analyticsModalLinktree.name}
-              copy={locale === "ckb" ? undefined : businessMessages[locale].PageAnalytics}
+              copy={
+                locale === "ckb"
+                  ? undefined
+                  : businessMessages[locale].PageAnalytics
+              }
               canClearAnalytics={
                 liveEffectiveAccess?.permissions[
                   "business:analytics:clear-linktree"
@@ -1829,12 +1929,31 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         </div>
         {onboardingRequired ? (
           <BusinessGettingStarted
+            languageControl={<BusinessLanguageSelector compact />}
             initialStep={onboardingStep}
-            copy={locale === "ckb" ? undefined : businessMessages[locale].Onboarding}
-            brandCopy={locale === "ckb" ? undefined : businessMessages[locale].OnboardingBrand}
-            tikTokCopy={locale === "ckb" ? undefined : businessMessages[locale].OnboardingTikTok}
-            identityCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsPage}
-            colorCopy={locale === "ckb" ? undefined : businessMessages[locale].SettingsColorPicker}
+            copy={
+              locale === "ckb" ? undefined : businessMessages[locale].Onboarding
+            }
+            brandCopy={
+              locale === "ckb"
+                ? undefined
+                : businessMessages[locale].OnboardingBrand
+            }
+            tikTokCopy={
+              locale === "ckb"
+                ? undefined
+                : businessMessages[locale].OnboardingTikTok
+            }
+            identityCopy={
+              locale === "ckb"
+                ? undefined
+                : businessMessages[locale].SettingsPage
+            }
+            colorCopy={
+              locale === "ckb"
+                ? undefined
+                : businessMessages[locale].SettingsColorPicker
+            }
           />
         ) : null}
       </BusinessDashboardRefreshProvider>

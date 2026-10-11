@@ -65,15 +65,20 @@ describe("BusinessWorkspaceEntryPage", () => {
     );
     render(<BusinessWorkspaceEntryPage />);
 
-    fireEvent.change(screen.getByRole("textbox", { name: "ناونیشانی ئیمەیڵ" }), {
-      target: { value: "owner@example.com" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "ناونیشانی ئیمەیڵ" }),
+      {
+        target: { value: "owner@example.com" },
+      },
+    );
     fireEvent.click(
       screen.getByRole("button", { name: "بە ئیمەیڵ بەردەوام بە" }),
     );
 
     await waitFor(() =>
-      expect(screen.getByRole("textbox", { name: "کۆدی چوونەژوورەوە" })).toBeVisible(),
+      expect(
+        screen.getByRole("textbox", { name: "کۆدی چوونەژوورەوە" }),
+      ).toBeVisible(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/email/request",
@@ -119,11 +124,19 @@ describe("BusinessWorkspaceEntryPage", () => {
 
   it("switches pre-sign-in controls to Arabic without changing the Google route", () => {
     const { container } = render(<BusinessWorkspaceEntryPage />);
-    fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }),
+    );
 
-    expect(screen.getByRole("heading", { name: "تسجيل دخول النشاط التجاري" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "المتابعة باستخدام Google" })).toHaveAttribute("href", "/api/auth/google/start?remember=1");
-    expect(screen.getByRole("textbox", { name: "عنوان البريد الإلكتروني" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "تسجيل دخول النشاط التجاري" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "المتابعة باستخدام Google" }),
+    ).toHaveAttribute("href", "/api/auth/google/start?remember=1");
+    expect(
+      screen.getByRole("textbox", { name: "عنوان البريد الإلكتروني" }),
+    ).toBeInTheDocument();
     expect(document.cookie).toContain("business_dashboard_locale=ar");
     expect(container.querySelector("main")).toHaveAttribute("lang", "ar");
   });
@@ -132,7 +145,11 @@ describe("BusinessWorkspaceEntryPage", () => {
     document.cookie = "business_dashboard_locale=ar; Path=/";
     render(<BusinessWorkspaceEntryPage />);
 
-    expect(await screen.findByRole("heading", { name: "تسجيل دخول النشاط التجاري" })).toBeInTheDocument();
-    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
+    expect(
+      await screen.findByRole("heading", { name: "تسجيل دخول النشاط التجاري" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    ).toHaveTextContent("AR");
   });
 });

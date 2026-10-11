@@ -1,7 +1,5 @@
 "use client";
-import { ManagementModal } from "@/components/shared/ManagementModal";
 import { BusinessDomainsPanel } from "@/features/domains/components/BusinessDomainsPanel";
-import { domainCopy } from "@/features/domains/copy";
 import { usePlatformLocale } from "../i18n/PlatformLocaleProvider";
 export function PlatformBusinessDomainsModal({
   business,
@@ -12,18 +10,12 @@ export function PlatformBusinessDomainsModal({
 }) {
   const { locale } = usePlatformLocale();
   return (
-    <ManagementModal
-      isOpen
-      wide
-      title={`${domainCopy[locale].title}: ${business.name}`}
-      closeLabel={domainCopy[locale].close}
+    <BusinessDomainsPanel
+      key={business.id}
+      businessId={business.id}
+      businessName={business.name}
       onClose={onClose}
-    >
-      <BusinessDomainsPanel
-        key={business.id}
-        scope={{ surface: "platform", businessId: business.id }}
-        locale={locale}
-      />
-    </ManagementModal>
+      locale={locale}
+    />
   );
 }

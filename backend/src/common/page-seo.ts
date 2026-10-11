@@ -4,6 +4,9 @@ export const NON_DESCRIPTIVE_PAGE_TEXT = [
   'للتواصل معنا، اضغط على أحد الروابط أدناه',
   'للتواصل، اضغط على أحد الروابط أدناه',
   'To contact us, tap one of the links below',
+  'Explain the main benefits or important details',
+  'سوودەکان یان وردەکارییە گرنگەکان بنووسە',
+  'اشرح المزايا أو التفاصيل المهمة',
 ] as const;
 
 function descriptiveText(value?: string | null): boolean {
@@ -32,14 +35,29 @@ export function isIndexableLinktree(page: {
   );
 }
 
-/** SQL counterpart of the default policy; alias is an internal query constant. */
-export function indexableLinktreeSql(alias = 'lt'): string {
+/** Expressions come only from internal query constants, never request values. */
+function indexableContentSql(name: string, descriptions: string[]): string {
   const prompts = NON_DESCRIPTIVE_PAGE_TEXT.map(
     (text) => `'${text.toLowerCase().replace(/'/g, "''")}'`,
   ).join(', ');
-  const descriptive = (field: 'subtitle' | 'description') => {
-    const normalized = `lower(trim(regexp_replace(COALESCE(${alias}.${field}, ''), '[[:space:][:cntrl:]]+', ' ', 'g')))`;
+  const descriptive = descriptions.map((expression) => {
+    const normalized = `lower(trim(regexp_replace(COALESCE(${expression}, ''), '[[:space:][:cntrl:]]+', ' ', 'g')))`;
     return `(length(${normalized}) > 0 AND ${normalized} NOT IN (${prompts}))`;
-  };
-  return `(length(trim(${alias}.name)) > 0 AND (${descriptive('subtitle')} OR ${descriptive('description')}))`;
+  });
+  return `(length(trim(${name})) > 0 AND (${descriptive.join(' OR ')}))`;
+}
+
+/** SQL counterpart of the default policy; alias is an internal query constant. */
+export function indexableLinktreeSql(alias = 'lt'): string {
+  return indexableContentSql(`${alias}.name`, [
+    `${alias}.subtitle`,
+    `${alias}.description`,
+  ]);
+}
+
+/** Uses the same description normalization as Linktree indexing. */
+export function indexableFormSql(alias = 'f'): string {
+  return indexableContentSql(`${alias}.definition->>'headline'`, [
+    `${alias}.definition->>'description'`,
+  ]);
 }

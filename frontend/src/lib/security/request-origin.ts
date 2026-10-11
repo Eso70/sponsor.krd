@@ -45,32 +45,50 @@ export function isSameOriginBrowserRequest(
   forwardedHostHeader?: string | null,
   forwardedProtoHeader?: string | null,
 ): boolean {
-  const source = originHeader || refererHeader;
-  if (!source) return true;
+  const source = originHeader ?? refererHeader;
+  if (source === null) return true;
   if (source === "null") return false;
 
   try {
+    const sourceUrl = new URL(source);
+    if (sourceUrl.username || sourceUrl.password || sourceUrl.hash ||
+      !["http:", "https:"].includes(sourceUrl.protocol) ||
+      (originHeader !== null && sourceUrl.origin !== originHeader)) return false;
     const internalUrl = new URL(requestUrl);
     const publicHost =
-      firstForwardedValue(hostHeader) ||
-      firstForwardedValue(forwardedHostHeader);
-    const publicProtocol =
-      firstForwardedValue(forwardedProtoHeader) ||
-      internalUrl.protocol.slice(0, -1);
+      hostHeader || forwardedHostHeader;
+    const publicProtocol = browserRequestProtocol(requestUrl, forwardedProtoHeader);
+    if (!publicProtocol) return false;
 
     if (
       publicHost &&
       (publicProtocol === "http" || publicProtocol === "https")
     ) {
       return (
-        new URL(source).origin ===
+        /^[a-z0-9.-]+(?::\d{1,5})?$/i.test(publicHost) &&
+        sourceUrl.origin ===
         new URL(`${publicProtocol}://${publicHost}`).origin
       );
     }
 
-    return new URL(source).origin === internalUrl.origin;
+    return sourceUrl.origin === internalUrl.origin;
   } catch {
     return false;
+  }
+}
+
+/** The origin check and the upstream request must use the same scheme. */
+export function browserRequestProtocol(
+  requestUrl: string,
+  forwardedProtoHeader?: string | null,
+): "http" | "https" | null {
+  try {
+    const protocol = forwardedProtoHeader === null || forwardedProtoHeader === undefined
+      ? new URL(requestUrl).protocol.slice(0, -1)
+      : firstForwardedValue(forwardedProtoHeader);
+    return protocol === "http" || protocol === "https" ? protocol : null;
+  } catch {
+    return null;
   }
 }
 

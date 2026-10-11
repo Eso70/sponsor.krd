@@ -16,10 +16,6 @@ const { load, add, action } = vi.hoisted(() => ({
   add: vi.fn(),
   action: vi.fn(),
 }));
-const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
-vi.mock("../domain-navigation", () => ({
-  openSelectedBusinessWorkspace: navigate,
-}));
 vi.mock("../api", async (original) => ({
   ...(await original<typeof import("../api")>()),
   loadDomains: load,
@@ -93,8 +89,8 @@ describe("shared custom-domain management", () => {
       domains: [{ ...domain, status: "active" }],
     });
   });
-  it.each(["business", "platform"] as const)(
-    "moves only the owner dashboard after primary activation on %s",
+  it.each(["panel", "platform"] as const)(
+    "updates primary selection through the %s integration",
     async (surface) => {
       load.mockResolvedValue({
         ...data,
@@ -106,14 +102,21 @@ describe("shared custom-domain management", () => {
       };
       action.mockResolvedValue(result);
       render(
-        <BusinessDomainsPanel
-          scope={
-            surface === "business"
-              ? { surface: "business" }
-              : { surface: "platform", businessId: "wafaye-id" }
-          }
-          locale="en"
-        />,
+        surface === "panel" ? (
+          <BusinessDomainsPanel
+            businessId="wafaye-id"
+            businessName="Wafaye"
+            onClose={vi.fn()}
+            locale="en"
+          />
+        ) : (
+          <PlatformLocaleProvider initialLocale="en">
+            <PlatformBusinessDomainsModal
+              business={{ id: "wafaye-id", name: "Wafaye" }}
+              onClose={vi.fn()}
+            />
+          </PlatformLocaleProvider>
+        ),
       );
       await screen.findAllByText("wafaye.com");
       fireEvent.click(
@@ -123,16 +126,19 @@ describe("shared custom-domain management", () => {
       await waitFor(() =>
         expect(screen.getAllByText(/Primary/).length).toBeGreaterThan(0),
       );
-      if (surface === "business") expect(navigate).toHaveBeenCalledWith(result);
-      else expect(navigate).not.toHaveBeenCalled();
     },
   );
-  it.each(["business", "platform"] as const)(
+  it.each(["panel", "platform"] as const)(
     "loads the same panel through the %s integration",
     async (surface) => {
-      if (surface === "business")
+      if (surface === "panel")
         render(
-          <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />,
+          <BusinessDomainsPanel
+            businessId="wafaye-id"
+            businessName="Wafaye"
+            onClose={vi.fn()}
+            locale="en"
+          />,
         );
       else
         render(
@@ -145,9 +151,7 @@ describe("shared custom-domain management", () => {
         );
       await screen.findAllByText("wafaye.com");
       expect(load.mock.calls[0][0]).toBe(
-        surface === "business"
-          ? "/api/business/domains"
-          : "/api/platform/businesses/wafaye-id/domains",
+        "/api/platform/businesses/wafaye-id/domains",
       );
       expect(screen.getByRole("button", { name: "Add domain" })).toBeDisabled();
       expect(
@@ -174,26 +178,36 @@ describe("shared custom-domain management", () => {
   it("adds through a shared modal and shows exact ownership records", async () => {
     load.mockResolvedValue({ ...data, domains: [] });
     render(
-      <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />,
+      <BusinessDomainsPanel
+        businessId="wafaye-id"
+        businessName="Wafaye"
+        onClose={vi.fn()}
+        locale="en"
+      />,
     );
     await screen.findByText("No custom domains connected");
     fireEvent.click(screen.getByRole("button", { name: "Add domain" }));
-    const modal = within(screen.getByRole("dialog"));
+    const modal = within(screen.getByRole("dialog", { name: "Add domain" }));
     fireEvent.change(modal.getByRole("textbox", { name: "Domain" }), {
       target: { value: "WAFAYE.com" },
     });
     fireEvent.click(modal.getByRole("button", { name: "Add domain" }));
     await waitFor(() =>
-      expect(add).toHaveBeenCalledWith("/api/business/domains", "wafaye.com"),
+      expect(add).toHaveBeenCalledWith(
+        "/api/platform/businesses/wafaye-id/domains",
+        "wafaye.com",
+      ),
     );
     expect(
       await screen.findByDisplayValue("_sponsor-verification.wafaye.com"),
     ).toBeInTheDocument();
   });
-  it("hides mutation controls for a read-only business member", async () => {
+  it("hides mutation controls for a read-only management panel", async () => {
     render(
       <BusinessDomainsPanel
-        scope={{ surface: "business" }}
+        businessId="wafaye-id"
+        businessName="Wafaye"
+        onClose={vi.fn()}
         locale="en"
         canManage={false}
       />,
@@ -209,7 +223,12 @@ describe("shared custom-domain management", () => {
   it("shows the administrator setup requirement when disabled", async () => {
     load.mockResolvedValue({ ...data, enabled: false });
     render(
-      <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />,
+      <BusinessDomainsPanel
+        businessId="wafaye-id"
+        businessName="Wafaye"
+        onClose={vi.fn()}
+        locale="en"
+      />,
     );
     await screen.findAllByText("wafaye.com");
     expect(screen.getByRole("button", { name: "Add domain" })).toBeDisabled();
@@ -217,7 +236,7 @@ describe("shared custom-domain management", () => {
       screen.getByText(/enabled by the platform administrator/),
     ).toBeInTheDocument();
   });
-  it.each(["business", "platform"] as const)(
+  it.each(["panel", "platform"] as const)(
     "automatically refreshes the domain in the %s integration and stops when verified",
     async (surface) => {
       vi.useFakeTimers();
@@ -225,8 +244,13 @@ describe("shared custom-domain management", () => {
       let unmount: () => void = () => {};
       await act(async () => {
         const rendered = render(
-          surface === "business" ? (
-            <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />
+          surface === "panel" ? (
+            <BusinessDomainsPanel
+              businessId="wafaye-id"
+              businessName="Wafaye"
+              onClose={vi.fn()}
+              locale="en"
+            />
           ) : (
             <PlatformLocaleProvider initialLocale="en">
               <PlatformBusinessDomainsModal
@@ -250,9 +274,7 @@ describe("shared custom-domain management", () => {
       });
       expect(load).toHaveBeenCalledTimes(2);
       expect(load.mock.calls[1][0]).toBe(
-        surface === "business"
-          ? "/api/business/domains"
-          : "/api/platform/businesses/wafaye-id/domains",
+        "/api/platform/businesses/wafaye-id/domains",
       );
       expect(
         screen.queryByText(/DNS is checked automatically/),
@@ -275,7 +297,12 @@ describe("shared custom-domain management", () => {
     let unmount: () => void = () => {};
     await act(async () => {
       unmount = render(
-        <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />,
+        <BusinessDomainsPanel
+          businessId="wafaye-id"
+          businessName="Wafaye"
+          onClose={vi.fn()}
+          locale="en"
+        />,
       ).unmount;
     });
     await act(async () => {
@@ -301,11 +328,16 @@ describe("shared custom-domain management", () => {
       }),
     );
     render(
-      <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />,
+      <BusinessDomainsPanel
+        businessId="wafaye-id"
+        businessName="Wafaye"
+        onClose={vi.fn()}
+        locale="en"
+      />,
     );
     await screen.findByText("No custom domains connected");
     fireEvent.click(screen.getByRole("button", { name: "Add domain" }));
-    const modal = within(screen.getByRole("dialog"));
+    const modal = within(screen.getByRole("dialog", { name: "Add domain" }));
     fireEvent.change(modal.getByRole("textbox", { name: "Domain" }), {
       target: { value: "second.com" },
     });
@@ -314,7 +346,7 @@ describe("shared custom-domain management", () => {
       "Remove it before connecting a different domain",
     );
   });
-  it.each(["business", "platform"] as const)(
+  it.each(["panel", "platform"] as const)(
     "keeps the delete confirmation above %s management and restores the empty domain state",
     async (surface) => {
       const close = vi.fn();
@@ -324,8 +356,13 @@ describe("shared custom-domain management", () => {
       });
       action.mockResolvedValue({ ...data, domains: [] });
       render(
-        surface === "business" ? (
-          <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />
+        surface === "panel" ? (
+          <BusinessDomainsPanel
+            businessId="wafaye-id"
+            businessName="Wafaye"
+            onClose={vi.fn()}
+            locale="en"
+          />
         ) : (
           <PlatformLocaleProvider initialLocale="en">
             <PlatformBusinessDomainsModal
@@ -363,9 +400,7 @@ describe("shared custom-domain management", () => {
       );
       await screen.findByText("No custom domains connected");
       expect(action).toHaveBeenCalledWith(
-        surface === "business"
-          ? "/api/business/domains"
-          : "/api/platform/businesses/wafaye-id/domains",
+        "/api/platform/businesses/wafaye-id/domains",
         "domain-id",
         "remove",
       );
@@ -379,7 +414,7 @@ describe("shared custom-domain management", () => {
         ).toBeInTheDocument();
     },
   );
-  it.each(["business", "platform"] as const)(
+  it.each(["panel", "platform"] as const)(
     "shows the current server DNS failure instead of an old ownership failure on %s",
     async (surface) => {
       load.mockResolvedValue({
@@ -393,8 +428,13 @@ describe("shared custom-domain management", () => {
         }),
       );
       render(
-        surface === "business" ? (
-          <BusinessDomainsPanel scope={{ surface: "business" }} locale="en" />
+        surface === "panel" ? (
+          <BusinessDomainsPanel
+            businessId="wafaye-id"
+            businessName="Wafaye"
+            onClose={vi.fn()}
+            locale="en"
+          />
         ) : (
           <PlatformLocaleProvider initialLocale="en">
             <PlatformBusinessDomainsModal

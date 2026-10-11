@@ -27,6 +27,19 @@ export function getAppBaseUrl(): string {
   return getLocalBaseUrl();
 }
 
+/** Never derive platform legal links from a tenant-controlled browser host. */
+export function getPlatformLegalUrl(
+  kind: "privacy" | "terms",
+  language: "ckb" | "ar" | "en",
+): string {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    `${getAppProtocol()}//${process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3011"}`;
+  const url = new URL(`/legal/${kind}`, base);
+  url.searchParams.set("lang", language);
+  return url.href;
+}
+
 export function getRootDomain(): string {
   if (typeof window === "undefined") {
     return process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost";

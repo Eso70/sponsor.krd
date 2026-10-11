@@ -31,7 +31,7 @@ describe("platform administrator language", () => {
       </PlatformLocaleProvider>,
     );
     const toggle = screen.getByRole("button", { name: "گۆڕین بۆ عەرەبی" });
-    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("ku.png"));
+    expect(toggle).toHaveTextContent("KU");
     fireEvent.click(toggle);
     expect(screen.getByText("إدارة الأعمال")).toBeInTheDocument();
     await waitFor(() =>
@@ -40,7 +40,9 @@ describe("platform administrator language", () => {
         { method: "PATCH", json: { locale: "ar" } },
       ),
     );
-    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
+    expect(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    ).toHaveTextContent("AR");
   });
 
   it("switches from Arabic to English and saves the administrator preference", async () => {
@@ -51,12 +53,19 @@ describe("platform administrator language", () => {
         <Content />
       </PlatformLocaleProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    );
     expect(screen.getByText("Business management")).toBeInTheDocument();
-    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
-      "/api/platform/auth/preferred-locale", { method: "PATCH", json: { locale: "en" } },
-    ));
-    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/api/platform/auth/preferred-locale",
+        { method: "PATCH", json: { locale: "en" } },
+      ),
+    );
+    expect(
+      screen.getByRole("button", { name: "Switch to Kurdish" }),
+    ).toHaveTextContent("EN");
   });
 
   it("restores Kurdish if saving fails", async () => {

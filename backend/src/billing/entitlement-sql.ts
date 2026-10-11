@@ -23,6 +23,9 @@
  * fragment builder that skips the check is one refactor away from splicing a
  * column name that came from a request.
  */
+import { featurePlanSql } from './feature-plan-policy';
+import { subscriptionAccessSql } from './subscription-access';
+
 function assertSqlAlias(alias: string): void {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) {
     throw new Error(`Unsafe SQL alias: ${alias}`);
@@ -62,8 +65,9 @@ export function entitledSql(
         ON plan_value.plan_configuration_id = subscription.plan_configuration_id
        AND plan_value.entitlement_id = entitlement.id
      WHERE subscription.business_id = ${businessAlias}.id
-       AND subscription.status IN ('trialing','active','grace_period')
+       AND ${subscriptionAccessSql('subscription')}
        AND plan_value.value = 'true'::jsonb
+       ${entitlementKey === 'feature.advertising_page' ? `AND ${featurePlanSql('advertising', businessAlias)}` : ''}
   )`;
 }
 
@@ -109,10 +113,10 @@ export function allowedTemplateKeySql(
           ON plan_template.plan_configuration_id = subscription.plan_configuration_id
          AND plan_template.template_key = ${templateColumn}
        WHERE subscription.business_id = ${businessAlias}.id
-         AND subscription.status IN ('trialing','active','grace_period')
+         AND ${subscriptionAccessSql('subscription')}
          AND (
            ${templateColumn} <> 'branch-signal'
-           OR LOWER(plan.code) = 'ultra'
+           OR LOWER(plan.code) IN ('ultra','max')
          )
     ) THEN ${templateColumn}
     ELSE '${FALLBACK_TEMPLATE_KEY}'

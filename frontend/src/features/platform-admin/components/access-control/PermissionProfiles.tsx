@@ -513,10 +513,6 @@ function ProfileEditorModal({
 
           <div
             className="flex-1 overflow-y-auto bg-linear-to-br from-white to-slate-50/20 p-4 sm:p-5 md:p-6 custom-scrollbar brand-custom-scrollbar"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(156,163,175,0.5) transparent",
-            }}
           >
             <div className="space-y-6 min-h-[50vh]">
               <div className="mx-auto w-full max-w-xl">

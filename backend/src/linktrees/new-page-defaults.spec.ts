@@ -1,4 +1,5 @@
 import { LinktreesService } from './linktrees.service';
+import { NotFoundException } from '@nestjs/common';
 import {
   DEFAULT_LINKTREE_BACKGROUND_COLOR,
   DEFAULT_LINKTREE_TEMPLATE_KEY,
@@ -115,6 +116,64 @@ describe('new-page defaults isolation', () => {
       ),
     ).toBe(false);
   });
+
+  it.each(['business', 'platform'] as const)(
+    'refuses badge changes to a page outside the %s owner',
+    async (scope) => {
+      const { service, query } = setup();
+      const lookup = jest
+        .spyOn(service, 'getLinktreeById')
+        .mockRejectedValue(new NotFoundException());
+      await expect(
+        service.updateLinktree(
+          row.id,
+          {
+            template_config: { verification_badge: true },
+          },
+          'different-owner',
+          scope,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(lookup).toHaveBeenCalledWith(row.id, 'different-owner');
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['business', 'platform'] as const)(
+    'saves the optional verification badge through %s with strict boolean normalization',
+    async (scope) => {
+      for (const value of [true, false, undefined, 'true', 1]) {
+        const { service, query } = setup();
+        jest
+          .spyOn(service, 'getLinktreeById')
+          .mockResolvedValue(
+            row as Awaited<ReturnType<LinktreesService['getLinktreeById']>>,
+          );
+        await service.updateLinktree(
+          row.id,
+          {
+            template_config: {
+              templateKey: 'spectrum',
+              verification_badge: value,
+            },
+          },
+          'business-1',
+          scope,
+        );
+        const update = query.mock.calls.find(([sql]) =>
+          sql.includes('UPDATE linktrees'),
+        );
+        const config = update?.[1]?.find(
+          (item) => typeof item === 'string' && item.includes('"templateKey"'),
+        );
+        expect(JSON.parse(config as string)).toHaveProperty(
+          'verification_badge',
+          value === true,
+        );
+        expect(update?.[1]).toContain('business-1');
+      }
+    },
+  );
 
   it.each(['business', 'platform'] as const)(
     'removes retired SEO overrides when saving through %s',

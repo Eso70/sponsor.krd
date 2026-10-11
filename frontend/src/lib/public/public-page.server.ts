@@ -31,7 +31,7 @@ export const publicRequestContext = cache(async () => {
   return context;
 });
 
-async function publicFetch(path: string) {
+export async function publicFetch(path: string) {
   const context = await publicRequestContext();
   const requestHeaders = await headers();
   return fetch(

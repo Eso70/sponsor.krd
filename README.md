@@ -29,6 +29,10 @@ The repository is a pnpm workspace containing:
 
 The billing system manages subscriptions, plans, permissions, entitlements, and quotas. It does **not** process payments or integrate with payment providers.
 
+The shared catalog now supports monthly and yearly prices plus Max above Ultra.
+See [Plans and subscriptions](docs/subscriptions.md) for access rules, administrator
+workflows, deployment and the outstanding payment-provider setup.
+
 ---
 
 # Quick Start
@@ -143,3 +147,7 @@ Before implementing new functionality:
 | `pnpm verify`     | Run the full verification workflow                 |
 
 See `docs/backend.md`, `docs/frontend.md`, `docs/testing.md`, and `docs/deployment.md` for complete command references and operational guidance.
+
+## Persisted forms
+
+Forms now support tenant-owned publishing at `/form/<slug>`, both layouts, pause/archive/restore, durable responses and first-party analytics. See [Forms documentation](docs/forms.md).

@@ -14,18 +14,24 @@ export function EditorField({
   hint,
   required = false,
   error,
+  errorId,
   className,
   children,
+  interactive = false,
 }: {
   label: string;
   hint?: string;
   required?: boolean;
   error?: string;
+  errorId?: string;
   className?: string;
   children: ReactNode;
+  /** Interactive field adornments must not be nested in a native label. */
+  interactive?: boolean;
 }) {
+  const Wrapper = interactive ? "div" : "label";
   return (
-    <label className={cn("block", className)}>
+    <Wrapper className={cn("block", className)}>
       <span className="mb-1.5 flex items-center justify-between gap-3 text-[11px] font-black text-slate-600 dark:text-slate-300">
         <span>
           {label}
@@ -35,10 +41,14 @@ export function EditorField({
       </span>
       {children}
       {error ? (
-        <span className="mt-1.5 block text-xs font-medium text-red-500" role="alert">
+        <span
+          className="mt-1.5 block text-xs font-medium text-red-500"
+          role="alert"
+          id={errorId}
+        >
           {error}
         </span>
       ) : null}
-    </label>
+    </Wrapper>
   );
 }

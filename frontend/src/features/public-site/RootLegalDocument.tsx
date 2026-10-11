@@ -15,6 +15,6 @@ export function RootLegalDocument({ kind, version }: { kind: "terms" | "privacy"
     sections={copy.sections}
     locale={locale}
     navbarCopy={rootPublicCopy[locale].navbar}
-    languageControl={<RootPublicLanguageToggle />}
+    languageControl={<RootPublicLanguageToggle compact />}
   />;
 }

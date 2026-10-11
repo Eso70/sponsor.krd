@@ -53,6 +53,38 @@ describe('tenant sitemap and cached publication boundaries', () => {
       );
     },
   );
+  it('includes owned active forms using the same pagination and content policy', async () => {
+    const { service, query } = setup();
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          slug: 'consultation',
+          pageType: 'form',
+          updatedAt: '2026-10-11',
+          total: '1',
+        },
+      ],
+    });
+    expect(await service.getSitemapPages('', 0)).toMatchObject({
+      pages: [{ slug: 'consultation', pageType: 'form' }],
+    });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('f.business_id = $1::uuid'),
+      ['platform-owner', 0],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("f.status = 'active'"),
+      expect.any(Array),
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("f.definition->>'description'"),
+      expect.any(Array),
+    );
+    expect(query).not.toHaveBeenCalledWith(
+      expect.stringContaining('form_submissions'),
+      expect.any(Array),
+    );
+  });
   it('rejects an unknown or disabled tenant before reading pages', async () => {
     const { service, query } = setup();
     query.mockResolvedValue({ rows: [] });

@@ -307,6 +307,7 @@ CREATE TABLE public.business_subscriptions (
     subscription_plan_id uuid NOT NULL,
     CONSTRAINT business_subscriptions_billing_cycle_check CHECK (((billing_cycle)::text = ANY (ARRAY[('free'::character varying)::text, ('monthly'::character varying)::text, ('yearly'::character varying)::text, ('custom'::character varying)::text]))),
     CONSTRAINT business_subscriptions_metadata_check CHECK ((jsonb_typeof(metadata) = 'object'::text)),
+    CONSTRAINT business_subscription_period_check CHECK (current_period_end IS NULL OR current_period_end > current_period_start),
     CONSTRAINT business_subscriptions_status_check CHECK (((status)::text = ANY (ARRAY[('trialing'::character varying)::text, ('active'::character varying)::text, ('past_due'::character varying)::text, ('grace_period'::character varying)::text, ('paused'::character varying)::text, ('canceled'::character varying)::text, ('expired'::character varying)::text, ('incomplete'::character varying)::text])))
 );
 

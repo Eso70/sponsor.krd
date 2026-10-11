@@ -409,4 +409,10 @@ real one, created through the platform administrator.
 verification leases and primary selection. A partial unique index enforces one
 primary per business. The additive `2026-10-07_custom_business_domains.sql` migration
 also registers domain permissions and initializes plan access from existing
-settings access. Fresh baselines include part 92. See [Custom domains](custom-domains.md).
+settings access. Fresh baselines include part 92. The platform-only domain migration retires legacy business domain permissions
+as inactive while retaining historical grants and approvals.
+See [Custom domains](custom-domains.md).
+
+## Persisted forms
+
+`forms` and `form_submissions` persist owner-scoped form definitions and response history. Form status is `active` or `paused`; separate `is_archived`/`archived_at` columns organize the dashboard without changing public availability. The `2026-10-10_forms_visibility.sql` migration safely converts legacy states and updates the shared analytics publication trigger. Form public-page/action identities join the shared analytics schema. Apply `2026-10-10_forms*.sql` with `pnpm db:migrate`; fresh baseline parts 65/70/75 include the same schema. See [Forms](forms.md).

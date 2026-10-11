@@ -17,12 +17,20 @@ import {
   deriveTextSecondaryColor,
   deriveHighlightColor,
 } from "@/lib/utils/theme-colors";
-import { getBackgroundGradient, DEFAULT_BACKGROUND_COLOR } from "@/lib/config/background-gradients";
-import { backgroundImageCss, readBackgroundImage } from "@/lib/templates/background-image";
+import {
+  getBackgroundGradient,
+  DEFAULT_BACKGROUND_COLOR,
+} from "@/lib/config/background-gradients";
+import {
+  backgroundImageCss,
+  readBackgroundImage,
+} from "@/lib/templates/background-image";
 import { readBackgroundPattern } from "@/lib/templates/background-pattern";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
-import { applyCursorColor, resetCursorColor } from "@/lib/utils/cursor-theme";
-import { WhatsAppQuestionModal, type WhatsAppQuestion } from "@/components/public/WhatsAppQuestionModal";
+import {
+  WhatsAppQuestionModal,
+  type WhatsAppQuestion,
+} from "@/components/public/WhatsAppQuestionModal";
 import { PublicLinktreeLocaleProvider } from "@/features/business/i18n/public-linktree";
 import type { BusinessLocale } from "@/features/business/i18n/messages";
 import {
@@ -112,7 +120,11 @@ export const LinktreePage = memo(function LinktreePage({
   const linktree = useMemo(() => {
     return {
       ...rawLinktree,
-      image: rawLinktree.image || rawLinktree.business_default_avatar || rawLinktree.business_logo || "/images/DefaultAvatar.png",
+      image:
+        rawLinktree.image ||
+        rawLinktree.business_default_avatar ||
+        rawLinktree.business_logo ||
+        "/images/DefaultAvatar.png",
       background_color: rawLinktree.background_color,
     };
   }, [rawLinktree]);
@@ -149,9 +161,16 @@ export const LinktreePage = memo(function LinktreePage({
         pageName: rawLinktree.name,
         contentType: "linktree",
         analytics,
-        description: rawLinktree.description || rawLinktree.subtitle || undefined,
+        description:
+          rawLinktree.description || rawLinktree.subtitle || undefined,
       }),
-    [analytics, rawLinktree.id, rawLinktree.name, rawLinktree.description, rawLinktree.subtitle],
+    [
+      analytics,
+      rawLinktree.id,
+      rawLinktree.name,
+      rawLinktree.description,
+      rawLinktree.subtitle,
+    ],
   );
 
   // WhatsApp modal state
@@ -164,32 +183,32 @@ export const LinktreePage = memo(function LinktreePage({
     linkId: string;
     platform: string;
   } | null>(null);
-  
+
   // Fix viewport height on iOS - must be client-side
   // This ensures proper height calculation on iPhone Safari
   // Performance: Debounced resize handler
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
+
     let timeoutId: NodeJS.Timeout;
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
-    
+
     // Set on load
     setVH();
-    
+
     // Debounced resize handler for better performance
     const handleResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(setVH, 150); // Debounce 150ms
     };
-    
+
     // Update on resize and orientation change
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("orientationchange", setVH, { passive: true });
-    
+
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener("resize", handleResize);
@@ -263,10 +282,23 @@ export const LinktreePage = memo(function LinktreePage({
       backgroundImage,
       backgroundPattern,
       accent: deriveAccentColor(baseTheme.from, baseTheme.via, baseTheme.to),
-      border: deriveBorderColor(baseTheme.from, baseTheme.via, baseTheme.to, 0.3),
+      border: deriveBorderColor(
+        baseTheme.from,
+        baseTheme.via,
+        baseTheme.to,
+        0.3,
+      ),
       text: deriveTextColor(baseTheme.from, baseTheme.via, baseTheme.to),
-      textSecondary: deriveTextSecondaryColor(baseTheme.from, baseTheme.via, baseTheme.to),
-      highlight: deriveHighlightColor(baseTheme.from, baseTheme.via, baseTheme.to),
+      textSecondary: deriveTextSecondaryColor(
+        baseTheme.from,
+        baseTheme.via,
+        baseTheme.to,
+      ),
+      highlight: deriveHighlightColor(
+        baseTheme.from,
+        baseTheme.via,
+        baseTheme.to,
+      ),
     };
   }, [baseTheme, backgroundImage, backgroundPattern]);
 
@@ -302,94 +334,117 @@ export const LinktreePage = memo(function LinktreePage({
   // Optimized: Combined DOM updates and reduced re-renders
   useEffect(() => {
     // Only run on client to prevent hydration mismatch
-    if (typeof window === 'undefined') return;
-    let cancelled = false;
-    void applyCursorColor(
-      businessWebsiteColor.primary,
-      document.documentElement,
-      () => !cancelled,
-    ).catch(() => undefined);
-    
+    if (typeof window === "undefined") return;
+
     // Batch DOM updates using requestAnimationFrame for better performance
     const rafId = requestAnimationFrame(() => {
       // Find the main background container using data attribute
-      const bodyContainer = document.querySelector('body > div[data-theme-background]') as HTMLElement;
-      
+      const bodyContainer = document.querySelector(
+        "body > div[data-theme-background]",
+      ) as HTMLElement;
+
       if (bodyContainer) {
         // Apply the background (gradient or solid)
         bodyContainer.style.background = backgroundStyle;
         // Safari/iOS: Use 'scroll' instead of 'fixed' for better performance
-        bodyContainer.style.backgroundAttachment = 'scroll';
+        bodyContainer.style.backgroundAttachment = "scroll";
       }
-      
+
       // Update CSS variables in one batch
       const root = document.documentElement;
-      root.style.setProperty('--theme-bg-from', theme.from);
-      root.style.setProperty('--theme-bg-via', theme.isSolid ? theme.from : theme.via);
-      root.style.setProperty('--theme-bg-to', theme.isSolid ? theme.from : theme.to);
-      root.style.setProperty('--business-website-color', businessWebsiteColor.primary);
-      root.style.setProperty('--business-website-css', businessWebsiteColor.css);
+      root.style.setProperty("--theme-bg-from", theme.from);
+      root.style.setProperty(
+        "--theme-bg-via",
+        theme.isSolid ? theme.from : theme.via,
+      );
+      root.style.setProperty(
+        "--theme-bg-to",
+        theme.isSolid ? theme.from : theme.to,
+      );
+      root.style.setProperty(
+        "--business-website-color",
+        businessWebsiteColor.primary,
+      );
+      root.style.setProperty(
+        "--business-website-css",
+        businessWebsiteColor.css,
+      );
 
       // Dispatch theme change event (debounced to prevent excessive events)
       window.dispatchEvent(
-        new CustomEvent('theme-background-change', {
+        new CustomEvent("theme-background-change", {
           detail: {
             from: theme.from,
             via: theme.isSolid ? theme.from : theme.via,
             to: theme.isSolid ? theme.from : theme.to,
           },
-        })
+        }),
       );
     });
-    
+
     // Cleanup: restore default on unmount
     return () => {
-      cancelled = true;
       cancelAnimationFrame(rafId);
-      if (typeof window === 'undefined') return;
-      const container = document.querySelector('body > div[data-theme-background]') as HTMLElement;
+      if (typeof window === "undefined") return;
+      const container = document.querySelector(
+        "body > div[data-theme-background]",
+      ) as HTMLElement;
       if (container) {
-        container.style.background = '';
-        container.style.backgroundAttachment = 'scroll';
+        container.style.background = "";
+        container.style.backgroundAttachment = "scroll";
       }
-      document.documentElement.style.removeProperty('--business-website-color');
-      document.documentElement.style.removeProperty('--business-website-css');
-      resetCursorColor();
+      document.documentElement.style.removeProperty("--business-website-color");
+      document.documentElement.style.removeProperty("--business-website-css");
     };
-  }, [backgroundStyle, theme.from, theme.via, theme.to, theme.isSolid, businessWebsiteColor.primary, businessWebsiteColor.css]);
+  }, [
+    backgroundStyle,
+    theme.from,
+    theme.via,
+    theme.to,
+    theme.isSolid,
+    businessWebsiteColor.primary,
+    businessWebsiteColor.css,
+  ]);
 
   // Extract WhatsApp modal config from template_config - completely dynamic
   const whatsappModalConfig = useMemo(() => {
-    if (!linktree.template_config || typeof linktree.template_config !== 'object') {
+    if (
+      !linktree.template_config ||
+      typeof linktree.template_config !== "object"
+    ) {
       return null;
     }
-    
+
     const config = linktree.template_config as Record<string, unknown>;
     const modalConfig = config.whatsapp_modal;
-    
-    if (!modalConfig || typeof modalConfig !== 'object' || Array.isArray(modalConfig)) {
+
+    if (
+      !modalConfig ||
+      typeof modalConfig !== "object" ||
+      Array.isArray(modalConfig)
+    ) {
       return null;
     }
-    
+
     const modal = modalConfig as Record<string, unknown>;
-    
+
     // Check if modal is enabled - default to false when not set
-    const enabled = typeof modal.enabled === 'boolean' ? modal.enabled : false;
+    const enabled = typeof modal.enabled === "boolean" ? modal.enabled : false;
     if (!enabled) {
       return null;
     }
-    
+
     // Extract questions array - completely dynamic, any IDs allowed
     let questions: WhatsAppQuestion[] | undefined;
     if (Array.isArray(modal.questions)) {
       questions = modal.questions
         .filter((q): q is WhatsAppQuestion => {
-          if (!q || typeof q !== 'object') return false;
+          if (!q || typeof q !== "object") return false;
           const obj = q as unknown as Record<string, unknown>;
           return (
-            typeof obj.id === 'string' &&
-            typeof obj.text === 'string' &&
-            typeof obj.message === 'string'
+            typeof obj.id === "string" &&
+            typeof obj.text === "string" &&
+            typeof obj.message === "string"
           );
         })
         .map((q) => {
@@ -401,10 +456,10 @@ export const LinktreePage = memo(function LinktreePage({
           };
         });
     }
-    
+
     return {
-      title: typeof modal.title === 'string' ? modal.title : undefined,
-      subtitle: typeof modal.subtitle === 'string' ? modal.subtitle : undefined,
+      title: typeof modal.title === "string" ? modal.title : undefined,
+      subtitle: typeof modal.subtitle === "string" ? modal.subtitle : undefined,
       questions: questions && questions.length > 0 ? questions : undefined,
     };
   }, [linktree.template_config]);
@@ -461,77 +516,92 @@ export const LinktreePage = memo(function LinktreePage({
     [links, tracker],
   );
 
-  const handleLinkClick = useCallback((linkId: string, url: string, platform: string, defaultMessage?: string | null) => {
-    if (platform === "whatsapp" && whatsappModalConfig?.questions?.length) {
-      // The click is not an intent to message yet — the visitor still has to
-      // pick a question — so the conversion is held until they do. Opening the
-      // chooser is still real engagement, and recording it is what makes an
-      // abandoned modal visible: without it, a visitor who opened the
-      // questions and closed them is indistinguishable from one who never
-      // tapped WhatsApp at all. Engagement only, so it never reaches TikTok.
-      tracker.trackEngagement("action_open", {
-        actionKey: `${linkActionKey(linkId)}:questions`,
-        label: "WhatsApp questions",
-      });
-      pendingWhatsAppRef.current = { url, linkId, platform };
-      setPendingWhatsAppUrl(url);
-      setIsWhatsAppModalOpen(true);
-      return;
-    }
+  const handleLinkClick = useCallback(
+    (
+      linkId: string,
+      url: string,
+      platform: string,
+      defaultMessage?: string | null,
+    ) => {
+      if (platform === "whatsapp" && whatsappModalConfig?.questions?.length) {
+        // The click is not an intent to message yet — the visitor still has to
+        // pick a question — so the conversion is held until they do. Opening the
+        // chooser is still real engagement, and recording it is what makes an
+        // abandoned modal visible: without it, a visitor who opened the
+        // questions and closed them is indistinguishable from one who never
+        // tapped WhatsApp at all. Engagement only, so it never reaches TikTok.
+        tracker.trackEngagement("action_open", {
+          actionKey: `${linkActionKey(linkId)}:questions`,
+          label: "WhatsApp questions",
+        });
+        pendingWhatsAppRef.current = { url, linkId, platform };
+        setPendingWhatsAppUrl(url);
+        setIsWhatsAppModalOpen(true);
+        return;
+      }
 
-    const finalUrl = appendMessageToUrl(url, platform, defaultMessage);
-    const tracked = reportLinkClick(linkId, platform, finalUrl);
-    openUrl(tracked?.navigationUrl || finalUrl);
-  }, [whatsappModalConfig, openUrl, reportLinkClick, tracker]);
+      const finalUrl = appendMessageToUrl(url, platform, defaultMessage);
+      const tracked = reportLinkClick(linkId, platform, finalUrl);
+      openUrl(tracked?.navigationUrl || finalUrl);
+    },
+    [whatsappModalConfig, openUrl, reportLinkClick, tracker],
+  );
 
   // Handle WhatsApp question selection
-  const handleWhatsAppQuestionSelect = useCallback((message: string) => {
-    const pending = pendingWhatsAppRef.current;
-    if (!pending) return;
+  const handleWhatsAppQuestionSelect = useCallback(
+    (message: string) => {
+      const pending = pendingWhatsAppRef.current;
+      if (!pending) return;
 
-    const finalUrl = appendMessageToUrl(pending.url, "whatsapp", message);
-    // Report before navigating, exactly as the direct path does. `trackAction`
-    // flushes immediately, and a click that leaves the page must not race the
-    // send that records it.
-    const tracked = reportLinkClick(pending.linkId, pending.platform, finalUrl);
-    openUrl(tracked?.navigationUrl || finalUrl);
+      const finalUrl = appendMessageToUrl(pending.url, "whatsapp", message);
+      // Report before navigating, exactly as the direct path does. `trackAction`
+      // flushes immediately, and a click that leaves the page must not race the
+      // send that records it.
+      const tracked = reportLinkClick(
+        pending.linkId,
+        pending.platform,
+        finalUrl,
+      );
+      openUrl(tracked?.navigationUrl || finalUrl);
 
-    // Reset state
-    pendingWhatsAppRef.current = null;
-    setPendingWhatsAppUrl("");
-  }, [openUrl, reportLinkClick]);
+      // Reset state
+      pendingWhatsAppRef.current = null;
+      setPendingWhatsAppUrl("");
+    },
+    [openUrl, reportLinkClick],
+  );
 
   return (
     <PublicLinktreeLocaleProvider locale={locale}>
-    <div className="relative" lang={locale}>
-      {enableMarketingTracking ? (
-        <TikTokPixel pixelIds={analytics.pixelIds} pageKey={pixelPageKey} />
-      ) : null}
-      <div className="relative z-10">
-        {/* Dynamic template renders based on template_config from database */}
-        <DynamicTemplate
-          linktree={linktree}
-          links={links}
-          theme={theme}
-          onLinkClick={handleLinkClick}
-        />
-        
-        {/* WhatsApp Question Modal */}
-        <WhatsAppQuestionModal
-          isOpen={isWhatsAppModalOpen}
-          onClose={() => {
-            setIsWhatsAppModalOpen(false);
-            setPendingWhatsAppUrl("");
-            pendingWhatsAppRef.current = null;
-          }}
-          onSelectQuestion={handleWhatsAppQuestionSelect}
-          whatsappUrl={pendingWhatsAppUrl}
-          title={whatsappModalConfig?.title}
-          subtitle={whatsappModalConfig?.subtitle}
-          questions={whatsappModalConfig?.questions}
-        />
+      <div className="relative" lang={locale}>
+        {enableMarketingTracking ? (
+          <TikTokPixel pixelIds={analytics.pixelIds} pageKey={pixelPageKey} />
+        ) : null}
+        <div className="relative z-10">
+          {/* Dynamic template renders based on template_config from database */}
+          <DynamicTemplate
+            linktree={linktree}
+            links={links}
+            theme={theme}
+            onLinkClick={handleLinkClick}
+          />
+
+          {/* WhatsApp Question Modal */}
+          <WhatsAppQuestionModal
+            isOpen={isWhatsAppModalOpen}
+            onClose={() => {
+              setIsWhatsAppModalOpen(false);
+              setPendingWhatsAppUrl("");
+              pendingWhatsAppRef.current = null;
+            }}
+            onSelectQuestion={handleWhatsAppQuestionSelect}
+            whatsappUrl={pendingWhatsAppUrl}
+            title={whatsappModalConfig?.title}
+            subtitle={whatsappModalConfig?.subtitle}
+            questions={whatsappModalConfig?.questions}
+          />
+        </div>
       </div>
-    </div>
     </PublicLinktreeLocaleProvider>
   );
 });

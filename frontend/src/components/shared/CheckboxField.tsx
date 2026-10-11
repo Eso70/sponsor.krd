@@ -10,6 +10,10 @@ interface CheckboxFieldProps {
   disabled?: boolean;
   compact?: boolean;
   bare?: boolean;
+  form?: string;
+  required?: boolean;
+  /** Use the owning surface's palette instead of ancestor light/dark utilities. */
+  colorMode?: "default" | "inherit";
 }
 
 export function CheckboxField({
@@ -20,6 +24,9 @@ export function CheckboxField({
   disabled = false,
   compact = false,
   bare = false,
+  form,
+  required = false,
+  colorMode = "default",
 }: CheckboxFieldProps) {
   return (
     <label
@@ -27,19 +34,28 @@ export function CheckboxField({
     >
       <input
         type="checkbox"
+        form={form}
+        required={required}
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="sr-only"
+        className="peer sr-only"
       />
       <span
         aria-hidden="true"
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${checked ? "theme-fill border-transparent text-[var(--theme-ink)]" : "border-slate-300 bg-white text-transparent dark:border-white/20 dark:bg-[#161B22]"}`}
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 ${checked ? "theme-fill border-transparent text-[var(--theme-ink)]" : colorMode === "inherit" ? "bg-transparent text-transparent" : "border-slate-300 bg-white text-transparent dark:border-white/20 dark:bg-[#161B22]"}`}
+        style={
+          colorMode === "inherit" && !checked
+            ? { borderColor: "var(--checkbox-border, currentColor)" }
+            : undefined
+        }
       >
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       </span>
       <span className="min-w-0">
-        <span className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+        <span
+          className={`block text-xs font-bold ${colorMode === "inherit" ? "text-inherit" : "text-slate-700 dark:text-slate-200"}`}
+        >
           {label}
         </span>
         {description && (

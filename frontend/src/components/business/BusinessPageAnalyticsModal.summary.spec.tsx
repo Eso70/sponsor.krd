@@ -13,13 +13,25 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
   });
 
   it("uses Arabic Business copy without changing the shared Platform default", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ data: {
-        total_views: 20, unique_views: 12, total_clicks: 8,
-        unique_clicks: 3, conversions: 0, conversion_value: 0,
-      } }),
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                total_views: 20,
+                unique_views: 12,
+                total_clicks: 8,
+                unique_clicks: 3,
+                conversions: 0,
+                conversion_value: 0,
+              },
+            }),
+        }),
+      ),
+    );
 
     render(
       <BusinessPageAnalyticsModal
@@ -32,9 +44,13 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
       />,
     );
 
-    expect(screen.getByRole("dialog", { name: "إحصاءات Example" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "إحصاءات Example" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "تحديث" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("الزوار الفريدون")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("الزوار الفريدون")).toBeInTheDocument(),
+    );
   });
 
   it("reuses loading, refresh, and clear controls for a platform summary", async () => {

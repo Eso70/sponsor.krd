@@ -1,3 +1,4 @@
+import { planAllowsPermission } from '../billing/feature-plan-policy';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type {
   AccessMode,
@@ -8,6 +9,7 @@ import type {
 } from '@linktree/types';
 import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
+import { subscriptionWindowOpen } from '../billing/subscription-access';
 import {
   isPermissionKey,
   PERMISSION_BY_KEY,
@@ -34,6 +36,8 @@ interface SubscriptionRow {
   plan_name: string;
   plan_configuration_id: string;
   current_period_end: Date | string | null;
+  current_period_start?: Date | string | null;
+  cancels_at?: Date | string | null;
 }
 
 interface PermissionPolicyRow {
@@ -168,10 +172,29 @@ export class AuthorizationService implements OnModuleInit {
     businessId: string,
   ): Promise<EffectiveAccessManifest> {
     const policy = await this.getBusinessPolicy(businessId);
+    const subscriptionActive =
+      policy.subscription.business_status === 'active' &&
+      ACTIVE_SUBSCRIPTION_STATUSES.has(
+        policy.subscription.subscription_status,
+      ) &&
+      subscriptionWindowOpen(
+        policy.subscription.current_period_end,
+        policy.subscription.current_period_start,
+        policy.subscription.cancels_at,
+      );
     const permissions: Record<string, EffectivePermission> = {};
     for (const definition of PERMISSION_CATALOG) {
       if (!definition.key.startsWith('business:')) continue;
-      const rule = policy.permissions[definition.key];
+      const requiredEntitlement =
+        'requiredEntitlement' in definition
+          ? definition.requiredEntitlement
+          : undefined;
+      const included =
+        subscriptionActive &&
+        planAllowsPermission(definition.key, policy.subscription.plan_code) &&
+        (!requiredEntitlement ||
+          policy.entitlements[requiredEntitlement] === true);
+      const rule = included ? policy.permissions[definition.key] : undefined;
       permissions[definition.key] = rule
         ? {
             key: definition.key,
@@ -211,7 +234,17 @@ export class AuthorizationService implements OnModuleInit {
     return {
       subscription: {
         id: policy.subscription.subscription_id,
-        status: policy.subscription.subscription_status,
+        status:
+          ['trialing', 'active', 'grace_period'].includes(
+            policy.subscription.subscription_status,
+          ) &&
+          !subscriptionWindowOpen(
+            policy.subscription.current_period_end,
+            null,
+            policy.subscription.cancels_at,
+          )
+            ? 'expired'
+            : policy.subscription.subscription_status,
         planId: policy.subscription.plan_id,
         planCode: policy.subscription.plan_code,
         planName: policy.subscription.plan_name,
@@ -226,9 +259,9 @@ export class AuthorizationService implements OnModuleInit {
         settings: this.visible(permissions['business:pages:settings-access']),
       },
       permissions,
-      entitlements: policy.entitlements,
+      entitlements: subscriptionActive ? policy.entitlements : {},
       usage,
-      templateKeys: policy.templateKeys,
+      templateKeys: subscriptionActive ? policy.templateKeys : [],
       pendingApprovals: policy.pendingApprovals,
     };
   }
@@ -246,6 +279,7 @@ export class AuthorizationService implements OnModuleInit {
     await Promise.all([
       this.redis.del(`authorization:business-policy:${businessId}`),
       this.redis.del(`entitlements:business:${businessId}`),
+      this.redis.del(`templates:v3:business:${businessId}`),
     ]);
   }
 
@@ -275,8 +309,12 @@ export class AuthorizationService implements OnModuleInit {
       !ACTIVE_SUBSCRIPTION_STATUSES.has(
         policy.subscription.subscription_status,
       ) ||
-      (policy.subscription.current_period_end &&
-        new Date(policy.subscription.current_period_end) <= request.context.now)
+      !subscriptionWindowOpen(
+        policy.subscription.current_period_end,
+        policy.subscription.current_period_start,
+        policy.subscription.cancels_at,
+        request.context.now.getTime(),
+      )
     ) {
       return this.deny('SUBSCRIPTION_INACTIVE', 'plan');
     }
@@ -284,6 +322,11 @@ export class AuthorizationService implements OnModuleInit {
       return this.deny('PLATFORM_DENY', 'plan');
     }
 
+    if (
+      !planAllowsPermission(request.permission, policy.subscription.plan_code)
+    ) {
+      return this.deny('FEATURE_NOT_INCLUDED', 'plan');
+    }
     const rule = policy.permissions[request.permission];
     if (!rule || rule.accessMode === 'deny') {
       return this.deny('NO_PERMISSION', rule?.source || 'plan');
@@ -384,7 +427,7 @@ export class AuthorizationService implements OnModuleInit {
               subscription_plan.code AS plan_code,
               subscription_plan.name AS plan_name,
               configuration.id::text AS plan_configuration_id,
-              s.current_period_end
+              s.current_period_end, s.current_period_start, s.cancels_at
        FROM businesses b
        JOIN business_subscriptions s ON s.business_id = b.id
        JOIN billing_subscription_plans subscription_plan
@@ -617,7 +660,7 @@ export class AuthorizationService implements OnModuleInit {
   }
 
   private visible(permission: EffectivePermission | undefined): boolean {
-    return !!permission;
+    return !!permission && permission.outcome !== 'deny';
   }
 
   private iso(value: Date | string | null | undefined): string | null {

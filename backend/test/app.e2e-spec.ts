@@ -11,10 +11,19 @@ import { AppModule } from '../src/app.module';
 import { RequestBoundaryPipe } from '../src/common/request-boundary.pipe';
 import {
   isAuthenticatedMutation,
+  hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
 } from '../src/common/request-origin';
 import { RedisService } from '../src/redis/redis.service';
 import { SessionService } from '../src/auth/session.service';
+import { AuthorizationService } from '../src/auth/authorization.service';
+import {
+  restoreTrustedProxyHost,
+  INTERNAL_PROXY_HOST_HEADER,
+  INTERNAL_PROXY_KEY_HEADER,
+} from '../src/common/internal-proxy-trust';
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 
 const cookiePlugin = ((fastifyCookie as unknown as { default?: unknown })
   .default ?? fastifyCookie) as FastifyPluginCallback<FastifyCookieOptions>;
@@ -58,6 +67,7 @@ function data(response: { json(): unknown }): JsonRecord {
 }
 
 describe('critical architecture matrix (e2e)', () => {
+  const redisPrefix = `e2e:architecture:${randomUUID()}:`;
   let app: NestFastifyApplication;
   let fixturePool: Pool;
   let businessACookie: string;
@@ -117,7 +127,20 @@ describe('critical architecture matrix (e2e)', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(RedisService)
+      .useFactory({
+        inject: [ConfigService],
+        factory: (config: ConfigService) =>
+          new RedisService(
+            new ConfigService({
+              REDIS_HOST: config.get<string>('REDIS_HOST'),
+              REDIS_PORT: config.get<number>('REDIS_PORT'),
+              REDIS_KEY_PREFIX: redisPrefix,
+            }),
+          ),
+      })
+      .compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
     );
@@ -125,9 +148,14 @@ describe('critical architecture matrix (e2e)', () => {
       secret: process.env.SESSION_SECRET,
     });
     const fastify = app.getHttpAdapter().getInstance();
+    fastify.addHook('onRequest', async (request, reply) => {
+      if (!restoreTrustedProxyHost(request)) return reply.code(400).send();
+    });
     fastify.addHook('preValidation', async (request, reply) => {
       if (
-        isAuthenticatedMutation(request.method, request.cookies) &&
+        (isAuthenticatedMutation(request.method, request.cookies) ||
+          (!!request.headers.origin &&
+            hasAuthenticatedSessionCookie(request.cookies))) &&
         !isSameOriginBrowserRequest(
           request.headers.origin,
           request.headers.referer,
@@ -150,11 +178,13 @@ describe('critical architecture matrix (e2e)', () => {
     );
     await app.init();
     await fastify.ready();
-    await app.get(RedisService).getClient().flushdb();
   });
 
   afterAll(async () => {
-    if (app) await app.close();
+    if (app) {
+      await app.get(RedisService).deleteByPattern('*');
+      await app.close();
+    }
     if (fixturePool) {
       await fixturePool.query(
         'DELETE FROM businesses WHERE id = ANY($1::uuid[])',
@@ -247,6 +277,114 @@ describe('critical architecture matrix (e2e)', () => {
 
     expect(wrongOrigin.statusCode).toBe(403);
     expect(wrongTenant.statusCode).toBe(401);
+  });
+
+  it('restores trusted browser authority without weakening read origins or tenant ownership', async () => {
+    const headers = {
+      host: '127.0.0.1:4000',
+      cookie: businessACookie,
+      origin: 'http://h8-tenant-a.localhost:3011',
+      'x-forwarded-proto': 'http',
+      [INTERNAL_PROXY_HOST_HEADER]: 'h8-tenant-a.localhost:3011',
+      [INTERNAL_PROXY_KEY_HEADER]:
+        process.env.INTERNAL_PROXY_SECRET || process.env.SESSION_SECRET || '',
+    };
+    const accepted = await app.inject({
+      method: 'GET',
+      url: '/api/linktrees',
+      headers,
+    });
+    expect(accepted.statusCode).toBe(200);
+    const crossOrigin = await app.inject({
+      method: 'GET',
+      url: '/api/linktrees',
+      headers: { ...headers, origin: 'http://h8-tenant-b.localhost:3011' },
+    });
+    expect(crossOrigin.statusCode).toBe(403);
+    const crossTenant = await app.inject({
+      method: 'GET',
+      url: '/api/linktrees',
+      headers: {
+        ...headers,
+        origin: 'http://h8-tenant-b.localhost:3011',
+        [INTERNAL_PROXY_HOST_HEADER]: 'h8-tenant-b.localhost:3011',
+      },
+    });
+    expect(crossTenant.statusCode).toBe(401);
+    const malformed = await app.inject({
+      method: 'GET',
+      url: '/api/linktrees',
+      headers: { ...headers, [INTERNAL_PROXY_HOST_HEADER]: 'localhost/path' },
+    });
+    expect(malformed.statusCode).toBe(400);
+  });
+
+  it('removes business domain management APIs and rejects business cookies on platform management', async () => {
+    for (const [method, url] of [
+      ['GET', '/api/business/domains'],
+      ['POST', '/api/business/domains'],
+      ['POST', `/api/business/domains/${BUSINESS_A_ID}/verify`],
+      ['POST', `/api/business/domains/${BUSINESS_A_ID}/primary`],
+      ['DELETE', `/api/business/domains/${BUSINESS_A_ID}`],
+    ] as const) {
+      const response = await app.inject({
+        method,
+        url,
+        headers: {
+          cookie: businessACookie,
+          host: 'h8-tenant-a.localhost',
+          origin: 'http://h8-tenant-a.localhost',
+        },
+      });
+      expect(response.statusCode).toBe(404);
+    }
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/platform/businesses/${BUSINESS_A_ID}/domains`,
+      headers: { cookie: businessACookie, host: 'localhost' },
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('keeps subscription recovery available after expiry without crossing tenant boundaries', async () => {
+    const authorization = app.get(AuthorizationService);
+    await fixturePool.query(
+      `UPDATE business_subscriptions SET current_period_start=NOW()-INTERVAL '2 days',
+      current_period_end=NOW()-INTERVAL '1 day' WHERE business_id=$1`,
+      [BUSINESS_A_ID],
+    );
+    await authorization.invalidateBusinessPolicy(BUSINESS_A_ID);
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/billing/subscription',
+        headers: { cookie: businessACookie, host: 'h8-tenant-a.localhost' },
+      });
+      expect(response.statusCode).toBe(200);
+      const access = data(response).access as JsonRecord;
+      expect((access.subscription as JsonRecord).status).toBe('expired');
+      expect(access.entitlements).toEqual({});
+      expect(access.templateKeys).toEqual([]);
+      const crossed = await app.inject({
+        method: 'GET',
+        url: '/api/billing/subscription',
+        headers: { cookie: businessACookie, host: 'h8-tenant-b.localhost' },
+      });
+      expect(crossed.statusCode).toBe(401);
+      const anonymous = await app.inject({
+        method: 'GET',
+        url: '/api/billing/subscription',
+        headers: { host: 'h8-tenant-a.localhost' },
+      });
+      expect(anonymous.statusCode).toBe(401);
+    } finally {
+      await fixturePool.query(
+        `UPDATE business_subscriptions SET current_period_start=NOW(),
+        current_period_end=NOW()+INTERVAL '30 days' WHERE business_id=$1`,
+        [BUSINESS_A_ID],
+      );
+      await authorization.invalidateBusinessPolicy(BUSINESS_A_ID);
+    }
   });
 
   it('creates tenant-owned Linktrees and denies cross-tenant reads', async () => {

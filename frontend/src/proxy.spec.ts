@@ -79,6 +79,40 @@ describe("business route protection", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-robots-tag")).toContain("noindex");
   });
+  it.each(["/form/INVALID", "/form/" + "a".repeat(81), "/form/good/unknown"])(
+    "rejects malformed form path %s before streaming",
+    async (path) => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+      expect((await proxy(request(path))).status).toBe(404);
+    },
+  );
+  it.each([404, 403, 410])(
+    "conceals unavailable public forms (%s) before streaming",
+    async (status) => {
+      const fetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response(null))
+        .mockResolvedValueOnce(new Response(null, { status }));
+      const result = await proxy(request("/form/contact"));
+      expect(result.status).toBe(404);
+      expect(fetch).toHaveBeenLastCalledWith(
+        expect.stringContaining("/api/public/forms/contact/status"),
+        expect.objectContaining({ cache: "no-store" }),
+      );
+      expect(result.headers.get("x-robots-tag")).toContain("noindex");
+    },
+  );
+  it("allows a published form and returns 503 for transient availability failures", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null))
+      .mockResolvedValueOnce(Response.json({ data: { slug: "contact" } }));
+    expect((await proxy(request("/form/contact"))).status).toBe(200);
+    fetch
+      .mockResolvedValueOnce(new Response(null))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+    expect((await proxy(request("/form/contact"))).status).toBe(503);
+  });
   it("preserves the image suffix when redirecting a trailing-slash alias", async () => {
     vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(null))

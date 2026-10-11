@@ -4,7 +4,7 @@ const en = {
     "Connect your own domain to this business website. Your pages and platform updates stay in sync.",
   add: "Add domain",
   hostname: "Domain",
-  placeholder: "wafaye.com",
+  placeholder: "Enter domain name",
   hint: "Each business can connect one custom domain. Enter a domain you own, without https:// or a path.",
   limit:
     "This business already has a custom domain. Remove it before connecting a different domain.",
@@ -43,15 +43,9 @@ const en = {
   routing:
     "This domain does not point only to the platform server. Check its A and AAAA records and verify again.",
   dnsHelp:
-    "Add these records with your DNS provider. Keep the TXT record for ongoing ownership checks. Leave email records unchanged. HTTPS is provisioned automatically after verification.",
+    "Add this TXT record with your DNS provider to verify domain ownership.",
   txtName: "TXT record name",
   txtValue: "TXT record value",
-  cnameName: "CNAME record name",
-  cnameValue: "CNAME target",
-  address: "A / AAAA record values",
-  apex: "For a root domain, use the A/AAAA values below. A root CNAME is also supported when your provider offers flattening. Use DNS-only routing; a CDN proxy will prevent the routing check.",
-  primaryHelp:
-    "The primary address serves your website and business dashboard. Make this domain primary after HTTPS is ready. Your previous address will stop working. Sign in again on the new address.",
   deleteTitle: "Remove domain?",
   deleteMessage:
     "This domain will disconnect. Your public website will automatically return to its default Sponsor.krd address. Your dashboard will also use that address; sign in there again.",
@@ -75,6 +69,7 @@ export const domainCopy = {
       "اربط نطاقك الخاص بموقع النشاط التجاري. تبقى الصفحات وتحديثات المنصة متزامنة.",
     add: "إضافة نطاق",
     hostname: "النطاق",
+    placeholder: "أدخل اسم النطاق",
     hint: "يمكن لكل نشاط تجاري ربط نطاق مخصص واحد. أدخل نطاقًا تملكه دون https:// أو مسار.",
     status: "الحالة",
     actions: "الإجراءات",
@@ -100,16 +95,9 @@ export const domainCopy = {
     refresh: "تحديث",
     ownership: "سجل TXT للملكية مفقود أو غير مطابق. راجع السجلات وأعد التحقق.",
     routing: "النطاق لا يشير إلى خادم المنصة فقط. راجع سجلات A وAAAA.",
-    dnsHelp:
-      "أضف هذه السجلات عند مزود DNS. احتفظ بسجل TXT للتحقق المستمر من الملكية. اترك سجلات البريد دون تغيير. يتم إعداد HTTPS تلقائيًا بعد التحقق.",
+    dnsHelp: "أضف سجل TXT هذا لدى مزود DNS للتحقق من ملكية النطاق.",
     txtName: "اسم سجل TXT",
     txtValue: "قيمة سجل TXT",
-    cnameName: "اسم سجل CNAME",
-    cnameValue: "وجهة CNAME",
-    address: "قيم سجلات A / AAAA",
-    apex: "للنطاق الرئيسي استخدم قيم A/AAAA أدناه، أو CNAME إذا كان المزود يدعم التسطيح. استخدم DNS فقط دون وكيل CDN.",
-    primaryHelp:
-      "العنوان الرئيسي يعرض الموقع ولوحة التحكم. عيّن النطاق كرئيسي بعد جاهزية HTTPS. يتوقف العنوان السابق، ويلزم تسجيل الدخول على العنوان الجديد.",
     deleteTitle: "إزالة النطاق؟",
     deleteMessage:
       "سيتم فصل هذا النطاق. يعود الموقع ولوحة التحكم إلى عنوان Sponsor.krd الافتراضي؛ سجّل الدخول هناك مجددًا.",
@@ -135,6 +123,7 @@ export const domainCopy = {
       "دۆمەینی خۆت بە ماڵپەڕی بزنسەکەتەوە ببەستە. پەڕەکان و نوێکارییەکانی پلاتفۆرم هەمیشە هاوکاتن.",
     add: "زیادکردنی دۆمەین",
     hostname: "دۆمەین",
+    placeholder: "ناوی دۆمەین بنووسە",
     hint: "هەر بزنسێک دەتوانێت یەک دۆمەینی تایبەت ببەستێت. دۆمەینێک بنووسە کە هی خۆتە، بەبێ https:// یان ڕێڕەو.",
     status: "دۆخ",
     actions: "کردارەکان",
@@ -164,15 +153,9 @@ export const domainCopy = {
     routing:
       "دۆمەینەکە تەنها بۆ سێرڤەری پلاتفۆرم نیشان نادات. تۆمارەکانی A و AAAA بپشکنە.",
     dnsHelp:
-      "ئەم تۆمارانە لە دابینکەری DNS زیاد بکە. TXT بۆ پشکنینی بەردەوامی خاوەندارێتی بهێڵەوە. تۆمارەکانی ئیمەیڵ مەگۆڕە. HTTPS دوای پشتڕاستکردنەوە خۆکارانە ڕێکدەخرێت.",
+      "ئەم تۆمارەی TXT لە دابینکەری DNS زیاد بکە بۆ پشتڕاستکردنەوەی خاوەندارێتی دۆمەین.",
     txtName: "ناوی تۆماری TXT",
     txtValue: "بەهای تۆماری TXT",
-    cnameName: "ناوی تۆماری CNAME",
-    cnameValue: "ئامانجی CNAME",
-    address: "بەهاکانی A / AAAA",
-    apex: "بۆ دۆمەینی سەرەکی A/AAAA بەکاربهێنە، یان CNAME ئەگەر دابینکەرەکەت flattening پشتگیری دەکات. DNS-only بەکاربهێنە بەبێ پرۆکسی CDN.",
-    primaryHelp:
-      "ناونیشانی سەرەکی ماڵپەڕ و داشبۆرد پیشان دەدات. دوای ئامادەبوونی HTTPS دۆمەینەکە بکە بە سەرەکی. ناونیشانی پێشوو ناچالاک دەبێت؛ لە ناونیشانی نوێ دووبارە بچۆ ژوورەوە.",
     deleteTitle: "دۆمەین لاببرێت؟",
     deleteMessage:
       "ئەم دۆمەینە دەبڕێت. ماڵپەڕ و داشبۆرد دەگەڕێنەوە بۆ ناونیشانی بنەڕەتی Sponsor.krd؛ لەوێ دووبارە بچۆ ژوورەوە.",

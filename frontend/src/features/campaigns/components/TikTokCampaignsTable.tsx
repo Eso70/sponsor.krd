@@ -10,7 +10,7 @@ import {
   type ManagementTableColumn,
 } from "@/components/shared/ManagementTable";
 import { Tooltip } from "@/components/shared/Tooltip";
-import { OBJECTIVE_LABELS } from "../mock-data";
+import { OBJECTIVE_LABELS } from "../campaign-objectives";
 import { formatCostPerConversion } from "../campaign-metrics";
 import type { TikTokCampaign } from "../types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";

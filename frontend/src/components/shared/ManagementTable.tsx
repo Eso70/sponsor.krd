@@ -79,6 +79,7 @@ export interface ManagementTableEmptyState {
   icon: LucideIcon;
   title: string;
   description?: string;
+  compact?: boolean;
 }
 
 export interface ManagementTableProps<T> {
@@ -172,14 +173,22 @@ export function ManagementTable<T>({
   paginationCopy,
   className = "",
 }: ManagementTableProps<T>) {
-  const { visibleData, footer } = useManagementPagination(data, pagination, paginationCopy);
+  const { visibleData, footer } = useManagementPagination(
+    data,
+    pagination,
+    paginationCopy,
+  );
 
   const columnCount = columns.length;
 
   if (isLoading) {
     return (
       <div className={`w-full ${className}`} dir="ltr">
-        <SkeletonTable rows={skeletonRows} columns={columnCount} loadingLabel={loadingLabel} />
+        <SkeletonTable
+          rows={skeletonRows}
+          columns={columnCount}
+          loadingLabel={loadingLabel}
+        />
       </div>
     );
   }
@@ -191,15 +200,21 @@ export function ManagementTable<T>({
           icon={empty.icon}
           title={empty.title}
           description={empty.description || ""}
+          compact={empty.compact}
         />
       </div>
     );
   }
 
   return (
-    <div className={`w-full ${compact ? "[&_tbody_td]:px-3 [&_tbody_td]:py-2" : ""} ${className}`} dir="ltr">
+    <div
+      className={`w-full ${compact ? "[&_tbody_td]:px-3 [&_tbody_td]:py-2" : ""} ${className}`}
+      dir="ltr"
+    >
       {/* Mobile cards */}
-      <div className={`md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10 ${compact ? "[&>div>div]:p-3 [&>div>div]:gap-2" : ""}`}>
+      <div
+        className={`md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10 ${compact ? "[&>div>div]:p-3 [&>div>div]:gap-2" : ""}`}
+      >
         {visibleData.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-600 dark:text-gray-400">
             {noDataLabel}

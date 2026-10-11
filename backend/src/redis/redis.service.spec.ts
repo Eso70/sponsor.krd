@@ -1,6 +1,46 @@
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from './redis.service';
 
+describe('RedisService scoped cache cleanup', () => {
+  it('never deletes keys outside its prefix even if SCAN returns them', async () => {
+    const service = new RedisService(new ConfigService());
+    const client = {
+      options: { keyPrefix: 'e2e:unique-run:' },
+      scan: jest.fn().mockResolvedValue(['0', ['production:key']]),
+      del: jest.fn(),
+    };
+    Object.assign(service, { redis: client, isRedisAvailable: true });
+    await expect(service.deleteByPattern('*')).resolves.toBe(0);
+    expect(client.del).not.toHaveBeenCalled();
+  });
+  it.each(['', 'e2e:unique-run:'])(
+    'deletes only matching keys with prefix %s',
+    async (prefix) => {
+      const service = new RedisService(new ConfigService());
+      const client = {
+        options: { keyPrefix: prefix },
+        scan: jest
+          .fn()
+          .mockResolvedValue([
+            '0',
+            [`${prefix}cache:one`, `${prefix}cache:two`],
+          ]),
+        del: jest.fn().mockResolvedValue(2),
+      };
+      Object.assign(service, { redis: client, isRedisAvailable: true });
+      await expect(service.deleteByPattern('cache:*')).resolves.toBe(2);
+      expect(client.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        `${prefix}cache:*`,
+        'COUNT',
+        250,
+      );
+      expect(client.del).toHaveBeenCalledWith('cache:one', 'cache:two');
+    },
+  );
+});
+
 describe('RedisService one-time values', () => {
   it('atomically reads and deletes values without requiring GETDEL', async () => {
     const service = new RedisService(new ConfigService());

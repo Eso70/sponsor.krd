@@ -186,10 +186,6 @@ export const BackgroundPatternModal = memo(
           {/* Content */}
           <div
             className="flex items-center justify-center overflow-y-auto bg-linear-to-br from-white to-slate-50/20 p-3 sm:p-4"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(156,163,175,0.5) transparent",
-            }}
           >
             <div className="w-full">
               <div

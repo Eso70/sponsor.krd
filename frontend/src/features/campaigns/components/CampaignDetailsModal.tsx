@@ -2,7 +2,7 @@
 
 import { CalendarDays, MapPin, Target, Video } from "lucide-react";
 import { ManagementModal } from "@/components/shared/ManagementModal";
-import { OBJECTIVE_LABELS } from "../mock-data";
+import { OBJECTIVE_LABELS } from "../campaign-objectives";
 import type { TikTokCampaign } from "../types";
 import { buildTikTokApiPayload } from "../tiktok-payload-builder";
 import { CampaignPerformanceOverview } from "./CampaignPerformanceOverview";

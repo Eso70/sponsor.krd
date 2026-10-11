@@ -13,7 +13,7 @@ function source(relative: string): string {
 
 describe('public plan catalog cache', () => {
   it('names one key that the read and every writer share', () => {
-    expect(PUBLIC_PLANS_CACHE_KEY).toBe('cache:public:plans');
+    expect(PUBLIC_PLANS_CACHE_KEY).toBe('cache:public:plans:v2');
     expect(PUBLIC_PLANS_CACHE_TTL_SECONDS).toBeGreaterThan(0);
 
     const read = source('public/public.service.ts');

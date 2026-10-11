@@ -5,6 +5,7 @@
  * not trusted by the backend.
  */
 export const INTERNAL_PROXY_KEY_HEADER = "x-tenant-proxy-key";
+export const INTERNAL_PROXY_HOST_HEADER = "x-tenant-proxy-host";
 
 /**
  * The value to send with `INTERNAL_PROXY_KEY_HEADER`, or `undefined` when

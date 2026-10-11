@@ -115,8 +115,6 @@ export function DeviceViewport({
       base.textContent = `
         html, body { height: 100%; margin: 0; padding: 0; background: transparent; }
         body { overflow-x: hidden; overflow-y: ${scrollable ? "auto" : "hidden"}; }
-        body::-webkit-scrollbar { width: 5px; }
-        body::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--theme-css, var(--theme-primary, #25F4EE)); }
         /* Short pages fill the screen, tall ones grow and scroll: either way
            the page is drawn whole, never cropped to the frame. */
         .phone-mockup-canvas { min-height: 100%; width: 100%; }

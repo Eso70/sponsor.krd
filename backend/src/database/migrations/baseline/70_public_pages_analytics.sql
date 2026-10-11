@@ -16,7 +16,8 @@ CREATE TABLE public.public_pages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
   page_type varchar(20) NOT NULL CONSTRAINT public_pages_page_type_check
-    CHECK (page_type IN ('linktree','advertising','route')),
+    CHECK (page_type IN ('linktree','advertising','route','form')),
+  source_form_id uuid UNIQUE REFERENCES public.forms(id) ON DELETE CASCADE,
   source_linktree_id uuid UNIQUE REFERENCES public.linktrees(id) ON DELETE CASCADE,
   -- The advertising page is a per-business singleton at a fixed route, but it
   -- takes a public_pages identity like the others so its conversions reach the
@@ -37,13 +38,16 @@ CREATE TABLE public.public_pages (
   -- Specialized pages have exactly one matching source. Fixed routes have no source.
   CONSTRAINT public_pages_source_check CHECK (
     (page_type = 'linktree' AND source_linktree_id IS NOT NULL
-      AND source_advertising_page_id IS NULL)
+      AND source_advertising_page_id IS NULL AND source_form_id IS NULL)
     OR
     (page_type = 'advertising' AND source_advertising_page_id IS NOT NULL
-      AND source_linktree_id IS NULL)
+      AND source_linktree_id IS NULL AND source_form_id IS NULL)
+    OR
+    (page_type = 'form' AND source_form_id IS NOT NULL
+      AND source_linktree_id IS NULL AND source_advertising_page_id IS NULL)
     OR
     (page_type = 'route' AND source_linktree_id IS NULL
-      AND source_advertising_page_id IS NULL)
+      AND source_advertising_page_id IS NULL AND source_form_id IS NULL)
   ),
   UNIQUE (business_id, page_type, slug)
 );

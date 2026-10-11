@@ -51,6 +51,53 @@ describe('AuthorizationService business policy engine', () => {
       .mockResolvedValue(0 as never);
   });
 
+  it.each(['basic', 'pro', 'ultra', 'max'])(
+    'enforces feature ceilings for %s despite inherited grants',
+    async (plan) => {
+      const keys = [
+        'business:forms:read',
+        'business:pages:advertising-access',
+        'business:advertising:read',
+        'business:advertising:update',
+        'business:advertising:publish',
+      ];
+      const base = policy();
+      jest
+        .spyOn(service as never, 'getBusinessPolicy' as never)
+        .mockResolvedValue(
+          policy({
+            subscription: { ...base.subscription, plan_code: plan },
+            entitlements: { 'feature.advertising_page': true },
+            permissions: Object.fromEntries(
+              keys.map((key) => [
+                key,
+                {
+                  key,
+                  accessMode: 'direct',
+                  fieldModes: {},
+                  resourceScope: { type: 'all' },
+                  conditions: {},
+                  source: 'plan',
+                },
+              ]),
+            ),
+          }) as never,
+        );
+      const manifest = await service.getEffectiveAccess(businessId);
+      for (const key of keys) {
+        const allowed = key.includes(':forms:')
+          ? plan === 'max'
+          : plan === 'ultra' || plan === 'max';
+        expect((await service.authorize(request(key))).outcome).toBe(
+          allowed ? 'allow' : 'deny',
+        );
+        expect(manifest.permissions[key].outcome).toBe(
+          allowed ? 'allow' : 'deny',
+        );
+      }
+    },
+  );
+
   it('denies a new catalog permission until a plan rule exists', async () => {
     jest
       .spyOn(service as never, 'getBusinessPolicy' as never)
@@ -337,5 +384,25 @@ describe('AuthorizationService business policy engine', () => {
       expect.stringMatching(/FROM linktrees[\s\S]+status <> 'deleted'/),
       [businessId],
     );
+  });
+
+  it('removes paid grants from the manifest when the cached period expires', async () => {
+    const expired = policy();
+    jest
+      .spyOn(service as never, 'getBusinessPolicy' as never)
+      .mockResolvedValue({
+        ...expired,
+        subscription: {
+          ...expired.subscription,
+          current_period_end: '2000-01-01',
+        },
+        entitlements: { 'feature.tiktok': true },
+        templateKeys: ['aurora'],
+      } as never);
+    const manifest = await service.getEffectiveAccess(businessId);
+    expect(manifest.subscription.status).toBe('expired');
+    expect(manifest.entitlements).toEqual({});
+    expect(manifest.templateKeys).toEqual([]);
+    expect(manifest.navigation.dashboard).toBe(false);
   });
 });

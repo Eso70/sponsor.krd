@@ -1,4 +1,5 @@
-import { indexableLinktreeSql } from '../common/page-seo';
+import { featurePlanSql } from '../billing/feature-plan-policy';
+import { indexableFormSql, indexableLinktreeSql } from '../common/page-seo';
 import {
   Injectable,
   NotFoundException,
@@ -111,11 +112,13 @@ type WhatsappQuestionRow = {
 type PlanEntitlement = { key: string; value: unknown };
 
 type PlanRow = {
+  id: string;
   code: string;
   name: string;
   description: string | null;
   currency: string;
   yearlyPriceMinor: number | null;
+  monthlyPriceMinor: number | null;
   trialDays: number | null;
   isDefault: boolean;
   templateCount: number;
@@ -141,11 +144,13 @@ type PublicBusinessRow = {
 };
 
 type PlanSummary = {
+  id: string;
   code: string;
   name: string;
   description: string | null;
   currency: string;
   yearlyPriceMinor: number | null;
+  monthlyPriceMinor: number | null;
   trialDays: number | null;
   isDefault: boolean;
   templateCount: number;
@@ -209,12 +214,14 @@ export class PublicService {
       slug: string;
       updatedAt: string;
       total: string;
+      pageType?: 'linktree' | 'form';
     }>(
-      `SELECT COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS slug,
+      `SELECT slug, "updatedAt", "pageType", count(*) OVER ()::text AS total FROM (
+       SELECT lt.id, 'linktree' AS "pageType", COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS slug,
               GREATEST(lt.updated_at, (
                 SELECT branding.updated_at FROM business_branding branding
                 WHERE branding.business_id = lt.business_id
-              )) AS "updatedAt", count(*) OVER ()::text AS total
+              )) AS "updatedAt"
          FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
         WHERE lt.business_id = $1::uuid AND a.status = 'active'
           AND lt.status = 'active' AND NOT COALESCE(lt.is_archived, false)
@@ -224,13 +231,23 @@ export class PublicService {
               AND r.business_id = a.id AND r.page_type = 'linktree'
               AND r.slug = COALESCE(NULLIF(lt.seo_name, ''), lt.uid)
           ))
-        ORDER BY lt.id LIMIT 1000 OFFSET $2`,
+        UNION ALL
+       SELECT f.id, 'form' AS "pageType", f.slug, f.updated_at AS "updatedAt"
+         FROM forms f JOIN businesses a ON a.id = f.business_id
+        WHERE f.business_id = $1::uuid AND a.status = 'active'
+          AND f.status = 'active' AND ${indexableFormSql()}
+          AND (a.account_type = 'platform' OR ${featurePlanSql('forms', 'a')})
+       ) eligible ORDER BY "pageType", id LIMIT 1000 OFFSET $2`,
       [owner, page * 1000],
     );
     if (page > 0 && !result.rows.length)
       throw new NotFoundException('Not Found');
     return {
-      pages: result.rows.map(({ slug, updatedAt }) => ({ slug, updatedAt })),
+      pages: result.rows.map(({ slug, updatedAt, pageType }) => ({
+        slug,
+        updatedAt,
+        ...(pageType ? { pageType } : {}),
+      })),
       totalPages: Math.max(
         1,
         Math.ceil(Number(result.rows[0]?.total || 0) / 1000),
@@ -328,6 +345,7 @@ export class PublicService {
     config.type = config.type || 'simple';
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
+    config.verification_badge = config.verification_badge === true;
     delete config.seo;
     config.whatsapp_modal = config.whatsapp_modal || {};
 
@@ -707,8 +725,9 @@ export class PublicService {
 
     const result = await this.databaseService.query<PlanRow>(
       `SELECT
-         sp.code, sp.name, sp.description, sp.currency,
+         sp.id::text, sp.code, sp.name, sp.description, sp.currency,
          sp.yearly_price_minor AS "yearlyPriceMinor",
+         sp.monthly_price_minor AS "monthlyPriceMinor",
          sp.trial_days AS "trialDays",
          sp.is_default AS "isDefault",
          COALESCE(
@@ -722,7 +741,8 @@ export class PublicService {
           WHERE t.plan_configuration_id = config.id) AS "templateCount"
        FROM billing_subscription_plans sp
        JOIN billing_plan_configurations config ON config.plan_id = sp.permission_profile_id
-       WHERE sp.status = 'active'
+       JOIN billing_plans profile ON profile.id = sp.permission_profile_id
+       WHERE sp.status = 'active' AND profile.status = 'active'
        ORDER BY sp.display_order`,
     );
 
@@ -732,11 +752,13 @@ export class PublicService {
         entitlements[e.key] = e.value;
       }
       return {
+        id: row.id,
         code: row.code,
         name: row.name,
         description: row.description,
         currency: row.currency,
         yearlyPriceMinor: row.yearlyPriceMinor,
+        monthlyPriceMinor: row.monthlyPriceMinor,
         trialDays: row.trialDays,
         isDefault: row.isDefault,
         templateCount: row.templateCount,

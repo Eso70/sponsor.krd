@@ -7,6 +7,7 @@ import { resolveBusinessHost } from "@/lib/public/domain-routing";
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import {
   INTERNAL_PROXY_KEY_HEADER,
+  INTERNAL_PROXY_HOST_HEADER,
   internalProxyKey,
 } from "@/lib/security/internal-proxy-key";
 
@@ -113,10 +114,11 @@ async function publicPageAvailability(
   subdomain: string,
   identifier: string,
   clientIp: string,
+  kind: "linktree" | "form" = "linktree",
 ): Promise<{ status: number; slug?: string }> {
   try {
     const response = await fetch(
-      `${backendUrl}/api/public/linktree-status/${encodeURIComponent(identifier)}`,
+      `${backendUrl}/api/public/${kind === "form" ? `forms/${encodeURIComponent(identifier)}/status` : `linktree-status/${encodeURIComponent(identifier)}`}`,
       {
         headers: {
           "x-subdomain": subdomain,
@@ -148,6 +150,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("x-subdomain");
   requestHeaders.delete(INTERNAL_PROXY_KEY_HEADER);
+  requestHeaders.delete(INTERNAL_PROXY_HOST_HEADER);
   requestHeaders.set("x-public-path", pathname);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", csp);
@@ -269,11 +272,16 @@ export async function proxy(request: NextRequest) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
   }
 
-  const publicPageMatch = pathname.match(
+  const linktreeMatch = pathname.match(
     /^\/linktree\/([a-z0-9-]{1,50})(?:\/share-image)?\/?$/,
   );
+  const formMatch = pathname.match(/^\/form\/([a-z0-9][a-z0-9-]{0,79})\/?$/);
+  const publicPageMatch = linktreeMatch || formMatch;
   if (
-    (pathname === "/linktree" || pathname.startsWith("/linktree/")) &&
+    (pathname === "/linktree" ||
+      pathname.startsWith("/linktree/") ||
+      pathname === "/form" ||
+      pathname.startsWith("/form/")) &&
     !publicPageMatch
   ) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
@@ -286,6 +294,7 @@ export async function proxy(request: NextRequest) {
       request.headers.get("x-forwarded-for") ||
         request.headers.get("x-real-ip") ||
         "",
+      formMatch ? "form" : "linktree",
     );
     const { status, slug } = availability;
     if (status === 404)
@@ -307,7 +316,12 @@ export async function proxy(request: NextRequest) {
       response.headers.set("Cache-Control", "no-store");
       return withCsp(response, csp);
     }
-    if (slug && /^[a-z0-9-]{1,50}$/.test(slug) && slug !== publicPageMatch[1]) {
+    if (
+      linktreeMatch &&
+      slug &&
+      /^[a-z0-9-]{1,50}$/.test(slug) &&
+      slug !== publicPageMatch[1]
+    ) {
       const context = resolvePublicOrigin(
         host,
         ROOT_DOMAIN,

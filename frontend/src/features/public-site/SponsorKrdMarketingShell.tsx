@@ -47,7 +47,7 @@ export function SponsorKrdMarketingShell({
       primaryActionInk="#111827"
       navbarCopy={rootPublicCopy[locale].navbar}
       language={locale}
-      languageControl={<RootPublicLanguageToggle />}
+      languageControl={<RootPublicLanguageToggle compact />}
       footer={<SponsorKrdMarketingFooter accentColor={accent.primary} />}
     >
       {children}

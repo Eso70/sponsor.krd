@@ -29,6 +29,7 @@ import type { WhatsAppQuestion } from "@/components/public/WhatsAppQuestionModal
 import { BackgroundColorPicker } from "../BackgroundColorPicker";
 import { AvatarImageUpload } from "@/components/shared/AvatarImageUpload";
 import { EditorField } from "@/components/shared/EditorField";
+import { VerificationBadgeToggle } from "./VerificationBadgeToggle";
 import { SolidColorPickerButton } from "@/components/shared/SolidColorPickerButton";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { arabicColorNames, arabicPatternCopy, arabicTemplatePickerCopy, englishColorNames, englishPatternCopy, englishTemplatePickerCopy, type EditorCopy } from "../editor-copy";
@@ -39,6 +40,8 @@ interface BasicInfoStepProps {
   profileImagePreview: string | null;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   name: string;
+  verificationBadge?: boolean;
+  onVerificationBadgeChange?: (value: boolean) => void;
   subtitle: string;
   subtitleColor?: string;
   description: string;
@@ -127,6 +130,8 @@ export const BasicInfoStep = memo(function BasicInfoStep({
   profileImagePreview,
   fileInputRef,
   name,
+  verificationBadge = false,
+  onVerificationBadgeChange,
   subtitle,
   subtitleColor,
   description,
@@ -241,19 +246,26 @@ export const BasicInfoStep = memo(function BasicInfoStep({
         {/* Name and Subtitle / Username / ExpireDate */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <EditorField label={onUploadClick ? copy?.businessName ?? "ناوی بزنس" : copy?.name ?? "ناو"} required>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              onBlur={onNameBlur}
-              required
-              maxLength={LINKTREE_NAME_MAX_LENGTH}
-              aria-invalid={!!(errors.name && touched.name)}
-              className={modalInputClass(!!(errors.name && touched.name))}
-              placeholder={onUploadClick ? copy?.businessNamePlaceholder ?? "ناوی بزنس بنووسە" : copy?.pageNamePlaceholder ?? "ناوی لینک"}
-              dir="auto"
-            />
+            <div className="flex min-w-0 items-center gap-2">
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                onBlur={onNameBlur}
+                required
+                maxLength={LINKTREE_NAME_MAX_LENGTH}
+                aria-invalid={!!(errors.name && touched.name)}
+                className={modalInputClass(!!(errors.name && touched.name), "min-w-0 flex-1")}
+                placeholder={onUploadClick ? copy?.businessNamePlaceholder ?? "ناوی بزنس بنووسە" : copy?.pageNamePlaceholder ?? "ناوی لینک"}
+                dir="auto"
+              />
+              {onVerificationBadgeChange && !onUploadClick && (
+                <VerificationBadgeToggle enabled={verificationBadge}
+                  onChange={onVerificationBadgeChange}
+                  label={copy?.verificationBadge ?? "پیشاندانی نیشانەی شینی پشتڕاستکردنەوە"} />
+              )}
+            </div>
             {errors.name && touched.name ? (
               <p className="text-xs text-red-500 mt-1 font-kurdish">
                 {errors.name}

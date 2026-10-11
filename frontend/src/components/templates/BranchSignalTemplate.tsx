@@ -240,6 +240,7 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
           <SignalBackdrop accent={accent} isPreview={isPreview} />
           <TemplateHeader
             name={linktree.name}
+            verificationBadge={linktree.template_config?.verification_badge === true}
             subtitle={linktree.subtitle}
             description={linktree.description}
             image={linktree.image}

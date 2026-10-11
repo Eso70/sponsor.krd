@@ -1,20 +1,45 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PlatformCampaignsPage,
   summarizeCampaigns,
 } from "./PlatformCampaignsPage";
-import { INITIAL_MOCK_CAMPAIGNS } from "../mock-data";
+import type { TikTokCampaign } from "../types";
 import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+
+function storeCampaign() {
+  const campaign: TikTokCampaign = {
+      id: "saved-campaign", name: "Saved campaign", objective: "REACH", status: "active",
+      video: { title: "saved.mp4", duration: "00:18", format: "9:16", resolution: "1080 × 1920", tone: "cyan" },
+      dailyBudget: 25, totalSpent: 165.4, impressions: 48920, clicks: 3410, ctr: 6.97, cpc: 0.048, conversions: 245,
+      destinationPage: { id: "destination", title: "Website", slug: "home", type: "website" },
+      targetAudience: { location: "Iraq", gender: "ALL", ageGroups: ["18-24"], languages: ["English"] },
+      callToAction: "Learn more", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z",
+    };
+  window.localStorage.setItem("platform_tiktok_campaigns", JSON.stringify([campaign]));
+}
+
+beforeEach(() => {
+  const entries = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => entries.get(key) ?? null,
+    setItem: (key: string, value: string) => entries.set(key, value),
+    removeItem: (key: string) => entries.delete(key),
+    clear: () => entries.clear(),
+  });
+});
+afterEach(() => vi.unstubAllGlobals());
 
 function renderCampaigns(locale: "ckb" | "ar" = "ckb") {
   return render(<PlatformLocaleProvider initialLocale={locale}><PlatformCampaignsPage /></PlatformLocaleProvider>);
 }
 
 describe("PlatformCampaignsPage", () => {
-  it("localizes the campaign catalogue and table for Arabic administrators", () => {
+  it("localizes the campaign catalogue and table for Arabic administrators", async () => {
+    storeCampaign();
     renderCampaigns("ar");
+    await screen.findByText("saved.mp4");
 
     expect(screen.getByText("إجمالي الحملات")).toBeInTheDocument();
     expect(screen.getByText("إدارة الحملات")).toBeInTheDocument();
@@ -47,11 +72,13 @@ describe("PlatformCampaignsPage", () => {
     expect(screen.getAllByText("تێچووی هەر گۆڕانێک").length).toBeGreaterThan(0);
     expect(screen.getByText("بەڕێوەبردنی کەمپەینەکان")).toBeInTheDocument();
     expect(screen.queryByText("4 / 4")).not.toBeInTheDocument();
-    expect(screen.getByText("spring-launch-v3.mp4")).toBeInTheDocument();
+    expect(screen.queryByText("spring-launch-v3.mp4")).not.toBeInTheDocument();
   });
 
-  it("switches between the campaign grid and shared management table", () => {
+  it("switches between the campaign grid and shared management table", async () => {
+    storeCampaign();
     renderCampaigns();
+    await screen.findByText("saved.mp4");
 
     fireEvent.click(screen.getByRole("button", { name: "بینینی خشتە" }));
 
@@ -106,9 +133,10 @@ describe("PlatformCampaignsPage", () => {
     expect(
       within(createDialog).getByText("پەیوەندی داتا"),
     ).toBeInTheDocument();
-    expect(
-      within(createDialog).getByRole("button", { name: "Ismail CS" }),
-    ).toBeInTheDocument();
+    const dataConnection = within(createDialog).getByRole("textbox", { name: "پەیوەندی داتا" });
+    expect(dataConnection).toHaveValue("");
+    expect(within(createDialog).getByRole("button", { name: "بەردەوام بە" })).toBeDisabled();
+    fireEvent.change(dataConnection, { target: { value: "pixel-123" } });
     expect(
       within(createDialog).getByText("ڕووداوی باشترکردن"),
     ).toBeInTheDocument();
@@ -149,13 +177,21 @@ describe("PlatformCampaignsPage", () => {
     ).toBeEnabled();
   });
 
-  it("opens the redesigned campaign analytics details", () => {
+  it("opens the redesigned campaign analytics details", async () => {
+    storeCampaign();
+    const saved = JSON.parse(window.localStorage.getItem("platform_tiktok_campaigns")!);
+    window.localStorage.setItem("platform_tiktok_campaigns", JSON.stringify([
+      ...saved, { ...saved[0], id: "camp-001", name: "Legacy sample" },
+    ]));
     renderCampaigns();
+    await screen.findAllByRole("button", { name: "وردەکاری" });
 
     fireEvent.click(screen.getAllByRole("button", { name: "وردەکاری" })[0]);
 
+    expect(screen.queryByText("Legacy sample")).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("platform_tiktok_campaigns")!)).toHaveLength(1);
     const detailsDialog = screen.getByRole("dialog", {
-      name: "کەمپەینی بەهار ٢٠٢٦ - ڕیکلامی تایبەت",
+      name: "Saved campaign",
     });
     expect(detailsDialog).toBeInTheDocument();
     expect(
@@ -168,13 +204,13 @@ describe("PlatformCampaignsPage", () => {
   });
 
   it("derives every total from the campaign collection", () => {
-    expect(summarizeCampaigns(INITIAL_MOCK_CAMPAIGNS)).toEqual({
-      campaigns: 4,
-      activeCampaigns: 2,
-      impressions: 142470,
-      clicks: 9150,
-      totalSpent: 539.6,
-      conversions: 725,
+    expect(summarizeCampaigns([])).toEqual({
+      campaigns: 0,
+      activeCampaigns: 0,
+      impressions: 0,
+      clicks: 0,
+      totalSpent: 0,
+      conversions: 0,
     });
   });
 });

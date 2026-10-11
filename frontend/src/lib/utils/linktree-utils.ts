@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared utilities for linktree components
  * Prevents code duplication across components
  */
@@ -33,76 +33,3 @@ export function getAbsoluteUrl(uid: string, pathPrefix = "/linktree"): string {
 
 export { getRootDomain };
 
-/**
- * Optimized memo comparison for template props
- * Only checks essential fields that affect rendering
- */
-export function areTemplatePropsEqual(
-  prevProps: {
-    linktree: {
-      id: string;
-      name: string;
-      subtitle?: string | null;
-      image?: string | null;
-      footer_text?: string | null;
-      footer_phone?: string | null;
-    };
-    links: Array<{ id: string; url: string; display_name?: string | null }>;
-    theme: {
-      from: string;
-      via: string;
-      to: string;
-      backgroundImage?: string | null;
-    };
-  },
-  nextProps: {
-    linktree: {
-      id: string;
-      name: string;
-      subtitle?: string | null;
-      image?: string | null;
-      footer_text?: string | null;
-      footer_phone?: string | null;
-    };
-    links: Array<{ id: string; url: string; display_name?: string | null }>;
-    theme: {
-      from: string;
-      via: string;
-      to: string;
-      backgroundImage?: string | null;
-    };
-  },
-): boolean {
-  // Quick reference checks first
-  if (prevProps.linktree.id !== nextProps.linktree.id) return false;
-  if (prevProps.linktree.name !== nextProps.linktree.name) return false;
-  if (prevProps.linktree.subtitle !== nextProps.linktree.subtitle) return false;
-  if (prevProps.linktree.image !== nextProps.linktree.image) return false;
-  if (prevProps.linktree.footer_text !== nextProps.linktree.footer_text)
-    return false;
-  if (prevProps.linktree.footer_phone !== nextProps.linktree.footer_phone)
-    return false;
-
-  // Theme checks
-  if (prevProps.theme.from !== nextProps.theme.from) return false;
-  if (prevProps.theme.via !== nextProps.theme.via) return false;
-  if (prevProps.theme.to !== nextProps.theme.to) return false;
-  if (prevProps.theme.backgroundImage !== nextProps.theme.backgroundImage)
-    return false;
-
-  // Links array check - only check length and IDs for performance
-  if (prevProps.links.length !== nextProps.links.length) return false;
-
-  // Only check IDs and URLs (most critical for rendering)
-  for (let i = 0; i < prevProps.links.length; i++) {
-    const prevLink = prevProps.links[i];
-    const nextLink = nextProps.links[i];
-    if (!nextLink) return false;
-    if (prevLink.id !== nextLink.id) return false;
-    if (prevLink.url !== nextLink.url) return false;
-    // Only check display_name if it changed (optional optimization)
-    if (prevLink.display_name !== nextLink.display_name) return false;
-  }
-
-  return true;
-}

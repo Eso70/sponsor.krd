@@ -35,11 +35,13 @@ describe("business language preference", () => {
     const toggle = screen.getByRole("button", {
       name: "گۆڕینی زمان بۆ عەرەبی",
     });
-    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("ku.png"));
+    expect(toggle).toHaveTextContent("KU");
     fireEvent.click(toggle);
 
     expect(screen.getByText("الإعدادات")).toBeInTheDocument();
-    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
+    expect(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    ).toHaveTextContent("AR");
     expect(container.firstElementChild).toHaveAttribute("lang", "ar");
     expect(container.firstElementChild).toHaveAttribute("dir", "ltr");
     await waitFor(() =>
@@ -81,11 +83,13 @@ describe("business language preference", () => {
     const toggle = screen.getByRole("button", {
       name: "التبديل إلى الإنجليزية",
     });
-    expect((toggle).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
+    expect(toggle).toHaveTextContent("AR");
     fireEvent.click(toggle);
 
     expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
+    expect(
+      screen.getByRole("button", { name: "Switch to Kurdish" }),
+    ).toHaveTextContent("EN");
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
         method: "PATCH",
@@ -94,7 +98,9 @@ describe("business language preference", () => {
     );
     apiRequest.mockResolvedValue({ locale: "ckb" });
     fireEvent.click(screen.getByRole("button", { name: "Switch to Kurdish" }));
-    await waitFor(() => expect(screen.getByText("ڕێکخستنەکان")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("ڕێکخستنەکان")).toBeInTheDocument(),
+    );
   });
 
   it("starts in the saved Arabic language and hides the control for borrowed sessions", () => {
@@ -110,7 +116,9 @@ describe("business language preference", () => {
     expect(
       screen.queryByRole("button", { name: "التبديل إلى الإنجليزية" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("اللغة الافتراضية للوحة التحكم")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("اللغة الافتراضية للوحة التحكم"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the setup and settings dropdowns synchronized with the header preference", async () => {
@@ -134,7 +142,9 @@ describe("business language preference", () => {
     expect(screen.getAllByRole("button", { name: /العربية/ })).toHaveLength(2);
 
     apiRequest.mockResolvedValue({ locale: "en" });
-    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    );
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith("/api/auth/preferred-locale", {
         method: "PATCH",

@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'crypto';
+import type { IncomingHttpHeaders } from 'http';
 
 /**
  * Verifies that a subdomain claimed by an inbound `x-subdomain` header
@@ -39,3 +40,33 @@ export function isTrustedInternalProxy(receivedKey: unknown): boolean {
 
 /** Header name the internal proxy trust check reads. */
 export const INTERNAL_PROXY_KEY_HEADER = 'x-tenant-proxy-key';
+
+/** Fetch runtimes may replace Host with the upstream authority. */
+export const INTERNAL_PROXY_HOST_HEADER = 'x-tenant-proxy-host';
+
+/** False means authenticated host metadata is malformed and must be rejected. */
+export function restoreTrustedProxyHost(request: {
+  headers: IncomingHttpHeaders;
+}): boolean {
+  // Legacy internal calls need no override; never trust unsigned metadata.
+  if (request.headers[INTERNAL_PROXY_HOST_HEADER] === undefined) return true;
+  if (!isTrustedInternalProxy(request.headers[INTERNAL_PROXY_KEY_HEADER]))
+    return true;
+  const authority = request.headers[INTERNAL_PROXY_HOST_HEADER];
+  if (
+    typeof authority !== 'string' ||
+    authority.length > 260 ||
+    !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.?(?::\d{1,5})?$/i.test(
+      authority,
+    )
+  )
+    return false;
+  try {
+    // Reject invalid ports and URL syntax; preserve explicit browser ports.
+    new URL(`http://${authority}`);
+    request.headers.host = authority.toLowerCase();
+    return true;
+  } catch {
+    return false;
+  }
+}

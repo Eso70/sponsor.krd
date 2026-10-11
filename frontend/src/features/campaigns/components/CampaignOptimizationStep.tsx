@@ -7,6 +7,8 @@ import type {
   CampaignObjective,
   CampaignOptimizationGoal,
 } from "../types";
+import { EditorField } from "@/components/shared/EditorField";
+import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import { CampaignStepIntro } from "./CampaignStepIntro";
 import { useCampaignText } from "../use-campaign-text";
 
@@ -18,11 +20,6 @@ const OPTIMIZATION_OPTIONS: CustomSelectOption<CampaignOptimizationGoal>[] = [
   { value: "REACH", label: "Reach" },
   { value: "VIDEO_VIEW_IN_6S", label: "Focused 6s video views" },
   { value: "VALUE", label: "Value / ROAS" },
-];
-
-const DATA_CONNECTION_OPTIONS: CustomSelectOption<string>[] = [
-  { value: "ismail-cs", label: "Ismail CS" },
-  { value: "sponsor-krd-main", label: "Sponsor.krd Main" },
 ];
 
 const OPTIMIZATION_EVENT_OPTIONS: CustomSelectOption<string>[] = [
@@ -93,15 +90,14 @@ export function CampaignOptimizationStep({
 
           <div className="space-y-4 rounded-xl bg-slate-50/80 p-4 dark:bg-white/[0.035]">
             <div>
-              <CustomSelect
-                label={t("Data connection")}
-                value={dataConnectionId}
-                options={DATA_CONNECTION_OPTIONS}
-                onChange={onDataConnectionIdChange}
-                required
-                showRequirement
-                triggerClassName="h-11"
-              />
+              <EditorField label={t("Data connection")} required>
+                <ModalTextInput
+                  aria-label={t("Data connection")}
+                  value={dataConnectionId}
+                  onChange={(event) => onDataConnectionIdChange(event.target.value.trim())}
+                  required
+                />
+              </EditorField>
               <p className="mt-1.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
                 {t("Select where you want to track events from your ads. Data connections are managed in Events Manager.")}
               </p>

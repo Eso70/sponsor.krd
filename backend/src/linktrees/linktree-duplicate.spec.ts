@@ -248,5 +248,42 @@ describe('LinktreesService duplication algorithms', () => {
       );
       expect(result.id).toBe('lt-new');
     });
+
+    it('rejects when another request consumes capacity before the locked copy', async () => {
+      mockEntitlements.getInteger.mockResolvedValue(2);
+      mockDb.query
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'lt-orig',
+              name: 'Original',
+              seo_name: 'original',
+              template_config: {},
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+        .mockResolvedValue({ rows: [] });
+      service.generateDuplicateSlug = jest
+        .fn()
+        .mockResolvedValue('original-copy');
+      const query = jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({ rows: [{ total: 2, copies: 0 }] });
+      mockDb.transaction.mockImplementation(
+        async (callback: (client: { query: jest.Mock }) => Promise<unknown>) =>
+          callback({ query }),
+      );
+      await expect(
+        service.duplicateLinktree('lt-orig', 'biz-1'),
+      ).rejects.toThrow('subscription has been reached');
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('pg_advisory_xact_lock'),
+        ['biz-1'],
+      );
+      expect(query).toHaveBeenCalledTimes(2);
+    });
   });
 });

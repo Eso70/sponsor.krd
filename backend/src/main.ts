@@ -24,6 +24,7 @@ import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiResponseInterceptor } from './common/api-response.interceptor';
 import { apiErrorEnvelope } from './common/api-response';
 import { isRootDomainHost } from './common/root-domain';
+import { restoreTrustedProxyHost } from './common/internal-proxy-trust';
 
 /**
  * Both plugins ship a CommonJS and an ESM shape, so the resolved value is
@@ -53,6 +54,20 @@ async function bootstrap() {
   const fastify = app.getHttpAdapter().getInstance();
 
   fastify.addHook('onRequest', (request, reply, done) => {
+    if (!restoreTrustedProxyHost(request)) {
+      reply.code(400).send(
+        apiErrorEnvelope(
+          request.url.split('?')[0],
+          400,
+          {
+            code: 'INVALID_REQUEST_HOST',
+            message: 'Invalid request host',
+          },
+          String(request.id),
+        ),
+      );
+      return;
+    }
     (
       request as typeof request & { operationalStartedAt: number }
     ).operationalStartedAt = Date.now();

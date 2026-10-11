@@ -1,0 +1,67 @@
+.sample {
+  background: var(--picker-color) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+  box-shadow: none !important;
+}
+
+.palette {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 24px;
+  min-width: 0;
+  width: 24px;
+  height: auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid rgb(148 163 184 / 35%);
+  background: var(--picker-color) !important;
+  box-shadow: none !important;
+  transition: filter 0.15s ease;
+}
+
+.swatch svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.swatch:hover {
+  filter: brightness(0.92);
+}
+.swatch[aria-pressed="true"] {
+  border-color: currentColor;
+}
+
+.popup {
+  container-type: inline-size;
+}
+.popup .body {
+  padding: 12px;
+}
+.popup .preview {
+  height: 40px;
+}
+.popup .directions {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 4px;
+}
+.popup .directions button {
+  height: 32px;
+  border-radius: 8px;
+}
+
+@container (max-width: 340px) {
+  .popup .directions {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

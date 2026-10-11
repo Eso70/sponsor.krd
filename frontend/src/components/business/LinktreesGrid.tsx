@@ -7,7 +7,10 @@ import {
   useMemo,
   type ComponentType,
 } from "react";
-import Image from "next/image";
+import { PageListImage } from "@/components/shared/PageListImage";
+import { PageListUrl } from "@/components/shared/PageListUrl";
+import { PageListTraffic } from "@/components/shared/PageListTraffic";
+
 import {
   Archive,
   ArchiveRestore,
@@ -15,15 +18,12 @@ import {
   CirclePlay,
   Trash2,
   Eye,
-  Copy,
   CopyPlus,
   DollarSign,
   Ellipsis,
-  Check,
   Edit,
   ExternalLink,
   Link as LinkIcon,
-  MousePointerClick,
 } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/utils/clipboard";
@@ -42,10 +42,14 @@ import { Tooltip } from "@/components/shared/Tooltip";
 import type { ManagementTablePagination } from "@/components/shared/ManagementTable";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
+import { GridCardActionButton } from "@/components/shared/GridCardActionButton";
 import { CampaignProfitModal } from "@/features/campaigns/components/CampaignProfitModal";
 import type { CampaignProfitCopy } from "@/features/campaigns/components/CampaignProfitModal";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
-import { KURDISH_LINKTREE_LIST_COPY, type LinktreeListCopy } from "@/features/link-editor/components/linktree-list-copy";
+import {
+  KURDISH_LINKTREE_LIST_COPY,
+  type LinktreeListCopy,
+} from "@/features/link-editor/components/linktree-list-copy";
 
 interface LinktreesGridProps {
   publicPathPrefix?: string;
@@ -150,9 +154,7 @@ const LinktreeCard = memo(function LinktreeCard({
     ? "min-w-0 flex-1 gap-1.5 px-2"
     : "min-w-0 flex-1";
   const expandedActionLayout =
-    expandedActionCount <= 6
-      ? "w-8 shrink-0 sm:w-9"
-      : "min-w-0 flex-1";
+    expandedActionCount <= 6 ? "w-8 shrink-0 sm:w-9" : "min-w-0 flex-1";
 
   return (
     <ManagementCard intrinsicHeight={320}>
@@ -171,23 +173,12 @@ const LinktreeCard = memo(function LinktreeCard({
       {/* Header Section */}
       <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
         <div className="relative shrink-0">
-          <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm">
-            <Image
-              src={
-                item.image ||
-                item.business_default_avatar ||
-                item.business_logo ||
-                "/images/DefaultAvatar.png"
-              }
-              alt={item.name}
-              fill
-              className="object-cover"
-              loading="lazy"
-              sizes="(max-width: 640px) 64px, 80px"
-              quality={75}
-              unoptimized
-            />
-          </div>
+          <PageListImage
+            src={
+              item.image || item.business_default_avatar || item.business_logo
+            }
+            name={item.name}
+          />
           {isCampaignActive && (
             <span
               className="absolute bottom-0 right-0 h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
@@ -217,47 +208,14 @@ const LinktreeCard = memo(function LinktreeCard({
         {item.description?.trim() || "—"}
       </p>
 
-      {/* URL Section */}
-      <div className="mb-2 sm:mb-3 p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gray-50 border border-gray-200">
-        <div className="flex items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5">
-          <LinkIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-400 shrink-0" />
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            URL
-          </span>
-        </div>
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              e.preventDefault();
-              handleView();
-            }}
-            className="flex-1 text-xs text-gray-700 hover:text-gray-900 font-mono truncate underline decoration-gray-300 hover:decoration-gray-500 transition-colors"
-          >
-            {url}
-          </a>
-          <Tooltip
-            content={
-              copiedUid === publicIdentifier ? labels.copied : labels.copyLink
-            }
-            side="top"
-          >
-            <button
-              onClick={(e) => onCopy(publicIdentifier, e)}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-              aria-label={labels.copyLink}
-            >
-              {copiedUid === publicIdentifier ? (
-                <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              )}
-            </button>
-          </Tooltip>
-        </div>
-      </div>
+      <PageListUrl
+        url={url}
+        boxed
+        labels={labels}
+        copied={copiedUid === publicIdentifier}
+        onCopy={(event) => onCopy(publicIdentifier, event)}
+        onOpen={handleView}
+      />
 
       {/* Details Section */}
       {showPageMeta && (
@@ -275,59 +233,32 @@ const LinktreeCard = memo(function LinktreeCard({
 
       {/* Traffic Section */}
       {showPageMeta && item.analytics && (
-        <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
-          <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 px-2 py-1.5 transition-colors">
-            <Eye className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
-              {item.analytics.unique_views.toLocaleString()}
-            </span>
-            <span className="truncate text-[10px] text-gray-500 dark:text-gray-400">
-              {trafficLabels.views}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 px-2 py-1.5 transition-colors">
-            <MousePointerClick className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
-              {item.analytics.unique_clicks.toLocaleString()}
-            </span>
-            <span className="truncate text-[10px] text-gray-500 dark:text-gray-400">
-              {trafficLabels.interactions}
-            </span>
-          </div>
-        </div>
+        <PageListTraffic
+          views={item.analytics.unique_views}
+          interactions={item.analytics.unique_clicks}
+          labels={trafficLabels}
+        />
       )}
 
       {/* Actions Section */}
       <div className="mt-auto flex flex-nowrap items-center gap-1 sm:gap-1.5 pt-2 sm:pt-2.5 border-t border-gray-200 dark:border-white/10">
         {onViewAnalytics && (
-          <Tooltip content={viewActionLabel} side="top">
-            <button
-              onClick={() => onViewAnalytics(item.id, item.name)}
-              className={`flex h-8 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 transition-all duration-200 hover:bg-sky-500/20 hover:text-sky-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-sky-300 ${primaryActionLayout}`}
-              aria-label={viewActionLabel}
-            >
-              <Eye className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
-              {showPrimaryActionLabels ? (
-                <span className="truncate text-xs font-medium">
-                  {viewActionLabel}
-                </span>
-              ) : null}
-            </button>
-          </Tooltip>
+          <GridCardActionButton
+            label={viewActionLabel}
+            icon={Eye}
+            tone="sky"
+            showLabel={showPrimaryActionLabels}
+            onClick={() => onViewAnalytics(item.id, item.name)}
+          />
         )}
         {onEdit && (
-          <Tooltip content={labels.edit} side="top">
-            <button
-              onClick={() => onEdit(item.id)}
-              className={`flex h-8 items-center justify-center rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-yellow-700 transition-all duration-200 hover:bg-yellow-500/20 hover:text-yellow-800 active:scale-95 sm:h-9 sm:rounded-xl dark:text-yellow-300 ${primaryActionLayout}`}
-              aria-label={labels.edit}
-            >
-              <Edit className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-              {showPrimaryActionLabels ? (
-                <span className="truncate text-xs font-medium">{labels.edit}</span>
-              ) : null}
-            </button>
-          </Tooltip>
+          <GridCardActionButton
+            label={labels.edit}
+            icon={Edit}
+            tone="amber"
+            showLabel={showPrimaryActionLabels}
+            onClick={() => onEdit(item.id)}
+          />
         )}
 
         {onDuplicate ? (
@@ -361,9 +292,7 @@ const LinktreeCard = memo(function LinktreeCard({
 
             {onToggleArchive && !item.is_default ? (
               <Tooltip
-                content={
-                  item.is_archived ? labels.restore : labels.archive
-                }
+                content={item.is_archived ? labels.restore : labels.archive}
                 side="top"
               >
                 <button
@@ -374,7 +303,13 @@ const LinktreeCard = memo(function LinktreeCard({
                       : "border-purple-500/30 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 hover:text-purple-800 dark:text-purple-300"
                   }`}
                   aria-label={
-                    metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "Restore from archive" : "Archive")
+                    metaCopy
+                      ? item.is_archived
+                        ? labels.restore
+                        : labels.archive
+                      : item.is_archived
+                        ? "Restore from archive"
+                        : "Archive"
                   }
                 >
                   {item.is_archived ? (
@@ -408,7 +343,13 @@ const LinktreeCard = memo(function LinktreeCard({
                       : "border-rose-500/30 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 hover:text-rose-800 dark:text-rose-300"
                   }`}
                   aria-label={
-                    metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "Activate page" : "Deactivate page")
+                    metaCopy
+                      ? item.status === "inactive"
+                        ? labels.activate
+                        : labels.deactivate
+                      : item.status === "inactive"
+                        ? "Activate page"
+                        : "Deactivate page"
                   }
                 >
                   {item.status === "inactive" ? (
@@ -419,7 +360,6 @@ const LinktreeCard = memo(function LinktreeCard({
                 </button>
               </Tooltip>
             ) : null}
-
           </>
         ) : null}
 
@@ -526,7 +466,13 @@ export const LinktreesGrid = memo(function LinktreesGrid({
   // Cards outlined where the real ones will land, so the grid does not jump
   // when they arrive.
   if (isLoading)
-    return <SkeletonLinktreeGrid count={6} showPageMeta={displaysPageMeta} loadingLabel={labels.loadingCards} />;
+    return (
+      <SkeletonLinktreeGrid
+        count={6}
+        showPageMeta={displaysPageMeta}
+        loadingLabel={labels.loadingCards}
+      />
+    );
 
   if (data.length === 0) {
     return (

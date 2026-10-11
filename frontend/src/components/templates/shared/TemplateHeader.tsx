@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { Fragment, memo, type CSSProperties, type ReactNode } from "react";
 import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
-import { publicLinktreeCopy } from "@/features/business/i18n/public-linktree-copy";
 
 const DEFAULT_AVATAR = "/images/DefaultAvatar.png";
 
@@ -41,6 +41,7 @@ function Wrap({
 export interface TemplateHeaderProps {
   /** Business/linktree display name. Always rendered. */
   name: string;
+  verificationBadge?: boolean;
   subtitle?: string | null;
   description?: string | null;
   /** Shown when `description` is empty. Defaults to the standard Kurdish CTA copy. */
@@ -107,6 +108,7 @@ export interface TemplateHeaderProps {
  */
 export const TemplateHeader = memo(function TemplateHeader({
   name,
+  verificationBadge = false,
   subtitle,
   description,
   fallbackDescription,
@@ -144,9 +146,7 @@ export const TemplateHeader = memo(function TemplateHeader({
   const imageSrc = image || DEFAULT_AVATAR;
   const trimmedSubtitle = subtitle?.trim() || "";
   const descriptionText = description?.trim();
-  const resolvedDescription = !descriptionText || descriptionText === publicLinktreeCopy.ckb.description
-    ? fallbackDescription || copy.description
-    : descriptionText;
+  const resolvedDescription = descriptionText || fallbackDescription || copy.description;
   const resolvedSubtitleColor = subtitleColor || textSecondaryColor;
 
   const Wrapper = as;
@@ -184,7 +184,12 @@ export const TemplateHeader = memo(function TemplateHeader({
   const textNode = (
     <Wrap className={textWrapperClassName} style={textWrapperStyle}>
       <h1 className={nameClassName} style={{ color: textColor, ...nameStyle }}>
-        {name}
+        {verificationBadge ? (
+          <span className="inline-flex max-w-full items-center gap-[0.2em] align-middle">
+            <span className="min-w-0">{name}</span>
+            <VerificationBadge label={copy.verificationBadge} />
+          </span>
+        ) : name}
       </h1>
 
       {trimmedSubtitle ? (

@@ -30,15 +30,15 @@ describe("BusinessSidebarFooter", () => {
       <NextIntlClientProvider locale="ckb" messages={businessMessages.ckb}>
         <BusinessSidebarFooter
           collapsed
-          planCode="ultra"
-          planName="Ultra"
+          planCode="max"
+          planName="Max"
           onSupport={vi.fn()}
           onUpgrade={vi.fn()}
         />
       </NextIntlClientProvider>,
     );
 
-    expect(screen.getByText("Ultra")).toBeInTheDocument();
+    expect(screen.getByText("Max")).toBeInTheDocument();
     expect(
       screen.queryByText("پلانەکەت بەرز بکەرەوە"),
     ).not.toBeInTheDocument();

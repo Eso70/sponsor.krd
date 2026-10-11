@@ -2,6 +2,10 @@
 
 import { memo, useCallback, useState, type ComponentType } from "react";
 import Image from "next/image";
+import { PageListImage } from "@/components/shared/PageListImage";
+import { PageListUrl } from "@/components/shared/PageListUrl";
+import { PageListTraffic } from "@/components/shared/PageListTraffic";
+
 import {
   Archive,
   ArchiveRestore,
@@ -34,7 +38,10 @@ import {
 } from "@/components/business/LinktreeMeta";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
 import { Tooltip } from "@/components/shared/Tooltip";
-import { KURDISH_LINKTREE_LIST_COPY, type LinktreeListCopy } from "@/features/link-editor/components/linktree-list-copy";
+import {
+  KURDISH_LINKTREE_LIST_COPY,
+  type LinktreeListCopy,
+} from "@/features/link-editor/components/linktree-list-copy";
 
 interface LinktreesTableProps {
   publicPathPrefix?: string;
@@ -155,11 +162,6 @@ const TableRow = memo(function TableRow({
   metaCopy?: Partial<LinktreeListCopy>;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
-  const getLinktreeUrl = useCallback(
-    (uid: string) => `${publicPathPrefix}/${encodeURIComponent(uid)}`,
-    [publicPathPrefix],
-  );
-
   const handleView = useCallback(
     (uid: string) => {
       const url = getAbsoluteUrl(uid, publicPathPrefix);
@@ -184,23 +186,13 @@ const TableRow = memo(function TableRow({
     >
       <td className="px-2 sm:px-3 py-3">
         <div className="relative w-8 h-8 sm:w-10 sm:h-10 mx-auto">
-          <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-200">
-            <Image
-              src={
-                item.image ||
-                item.business_default_avatar ||
-                item.business_logo ||
-                "/images/DefaultAvatar.png"
-              }
-              alt={item.name}
-              fill
-              className="object-cover"
-              loading="lazy"
-              sizes="(max-width: 640px) 32px, 40px"
-              quality={75}
-              unoptimized
-            />
-          </div>
+          <PageListImage
+            src={
+              item.image || item.business_default_avatar || item.business_logo
+            }
+            name={item.name}
+            variant="table"
+          />
           {isCampaignActive && (
             <span
               className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
@@ -237,54 +229,23 @@ const TableRow = memo(function TableRow({
         </td>
       )}
       <td className="px-2 sm:px-3 py-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <a
-            href={getLinktreeUrl(publicIdentifier)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-slate-600 hover:text-slate-700 font-mono underline decoration-slate-400 hover:decoration-slate-600 transition-colors duration-200 break-all"
-            onClick={(e) => {
-              e.preventDefault();
-              handleView(publicIdentifier);
-            }}
-          >
-            {publicPathPrefix}/{publicIdentifier}
-          </a>
-          <Tooltip content={copiedUid === publicIdentifier ? labels.copied : labels.copyLink} side="top">
-            <button
-              onClick={(e) => onCopy(publicIdentifier, e)}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-              aria-label={labels.copyLink}
-            >
-              {copiedUid === publicIdentifier ? (
-                <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-            </button>
-          </Tooltip>
-        </div>
+        <PageListUrl
+          url={getAbsoluteUrl(publicIdentifier, publicPathPrefix)}
+          displayUrl={`${publicPathPrefix}/${publicIdentifier}`}
+          labels={labels}
+          copied={copiedUid === publicIdentifier}
+          onCopy={(event) => onCopy(publicIdentifier, event)}
+          onOpen={() => handleView(publicIdentifier)}
+        />
       </td>
       {showTraffic && (
         <td className="px-2 sm:px-3 py-3 hidden sm:table-cell">
-          <div className="flex items-center gap-3">
-            <Tooltip content={trafficLabels.views} side="top">
-              <span className="inline-flex items-center gap-1 cursor-default">
-                <Eye className="h-3 w-3 shrink-0 text-gray-400" />
-                <span className="text-xs font-bold text-gray-700">
-                  {(item.analytics?.unique_views ?? 0).toLocaleString()}
-                </span>
-              </span>
-            </Tooltip>
-            <Tooltip content={trafficLabels.interactions} side="top">
-              <span className="inline-flex items-center gap-1 cursor-default">
-                <MousePointerClick className="h-3 w-3 shrink-0 text-gray-400" />
-                <span className="text-xs font-bold text-gray-700">
-                  {(item.analytics?.unique_clicks ?? 0).toLocaleString()}
-                </span>
-              </span>
-            </Tooltip>
-          </div>
+          <PageListTraffic
+            views={item.analytics?.unique_views ?? 0}
+            interactions={item.analytics?.unique_clicks ?? 0}
+            labels={trafficLabels}
+            compact
+          />
         </td>
       )}
       <td className="px-2 sm:px-3 py-3 hidden xl:table-cell">
@@ -344,7 +305,15 @@ const TableRow = memo(function TableRow({
                     ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
                     : "text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
                 }`}
-                aria-label={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "Restore from archive" : "Archive")}
+                aria-label={
+                  metaCopy
+                    ? item.is_archived
+                      ? labels.restore
+                      : labels.archive
+                    : item.is_archived
+                      ? "Restore from archive"
+                      : "Archive"
+                }
               >
                 {item.is_archived ? (
                   <ArchiveRestore className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -357,9 +326,7 @@ const TableRow = memo(function TableRow({
           {onToggleStatus && !item.is_default && (
             <Tooltip
               content={
-                item.status === "inactive"
-                  ? labels.activate
-                  : labels.deactivate
+                item.status === "inactive" ? labels.activate : labels.deactivate
               }
               side="top"
             >
@@ -376,7 +343,13 @@ const TableRow = memo(function TableRow({
                     : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
                 }`}
                 aria-label={
-                  metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "Activate page" : "Deactivate page")
+                  metaCopy
+                    ? item.status === "inactive"
+                      ? labels.activate
+                      : labels.deactivate
+                    : item.status === "inactive"
+                      ? "Activate page"
+                      : "Deactivate page"
                 }
               >
                 {item.status === "inactive" ? (
@@ -548,7 +521,18 @@ const MobileCard = memo(function MobileCard({
               </Tooltip>
             )}
             {onToggleArchive && !item.is_default && (
-              <Tooltip content={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : labels.archive)} side="top">
+              <Tooltip
+                content={
+                  metaCopy
+                    ? item.is_archived
+                      ? labels.restore
+                      : labels.archive
+                    : item.is_archived
+                      ? "هێنانەدەرەوە لە ئەرشیف"
+                      : labels.archive
+                }
+                side="top"
+              >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -559,7 +543,15 @@ const MobileCard = memo(function MobileCard({
                       ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
                       : "hover:bg-purple-50 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
                   }`}
-                  aria-label={metaCopy ? (item.is_archived ? labels.restore : labels.archive) : (item.is_archived ? "هێنانەدەرەوە لە ئەرشیف" : labels.archive)}
+                  aria-label={
+                    metaCopy
+                      ? item.is_archived
+                        ? labels.restore
+                        : labels.archive
+                      : item.is_archived
+                        ? "هێنانەدەرەوە لە ئەرشیف"
+                        : labels.archive
+                  }
                 >
                   {item.is_archived ? (
                     <ArchiveRestore className="h-4 w-4" />
@@ -592,7 +584,13 @@ const MobileCard = memo(function MobileCard({
                       : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
                   }`}
                   aria-label={
-                    metaCopy ? (item.status === "inactive" ? labels.activate : labels.deactivate) : (item.status === "inactive" ? "چالاککردن" : "ناچالاککردن")
+                    metaCopy
+                      ? item.status === "inactive"
+                        ? labels.activate
+                        : labels.deactivate
+                      : item.status === "inactive"
+                        ? "چالاککردن"
+                        : "ناچالاککردن"
                   }
                 >
                   {item.status === "inactive" ? (
@@ -621,7 +619,12 @@ const MobileCard = memo(function MobileCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
-          <Tooltip content={copiedUid === publicIdentifier ? labels.copied : labels.copyLink} side="top">
+          <Tooltip
+            content={
+              copiedUid === publicIdentifier ? labels.copied : labels.copyLink
+            }
+            side="top"
+          >
             <button
               onClick={(e) => onCopy(publicIdentifier, e)}
               className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
@@ -693,7 +696,12 @@ export const LinktreesTable = memo(function LinktreesTable({
   // The optional slug and traffic columns are table-level decisions so every
   // body row remains aligned with the header, even when one row has no totals.
   const showTraffic = displaysPageMeta && data.some((item) => item.analytics);
-  const columns = buildColumns(displaysPageMeta, showTraffic, trafficLabels, labels);
+  const columns = buildColumns(
+    displaysPageMeta,
+    showTraffic,
+    trafficLabels,
+    labels,
+  );
 
   const formatDateString = useCallback((dateString: string) => {
     return formatDate(dateString);

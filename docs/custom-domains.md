@@ -10,22 +10,32 @@ updates apply to the business automatically.
 
 ## Management
 
-Business Settings > Custom domains and the globe action in the platform business
-directory use one `features/domains/components/BusinessDomainsPanel`. The panel
-uses the shared compact ManagementTable, ManagementModal, ModalTextInput,
-ModalFooterActions, copy fields, and deletion confirmation. Kurdish, Arabic,
-and English copy is centralized. Each business can connect one custom hostname;
-choose the root domain or its `www` hostname. Adding a domain opens its DNS
-instructions. To replace it, remove the existing domain and add the new one.
+Custom domains are managed exclusively by platform administrators through the
+business directory's globe action. It opens the reusable
+`features/domains/components/BusinessDomainsPanel`, with shared compact tables,
+modals, inputs, DNS copy fields and deletion confirmation. Business Settings has
+no domain-management tab, and no `/api/business/domains` endpoints exist.
+Each business can connect one custom hostname; choose its root domain or `www`
+hostname. Adding a domain opens DNS instructions. To replace it, remove the
+existing domain and add the new one.
+The add dialog uses the shared modal's compact header, with a smaller title and
+subtitle, and a localized "Enter domain name" placeholder rather than an example.
+The management dialog has one shared modal header with the business name,
+description and refresh control. Its body uses a compact table and compact empty
+state. Close and Add domain actions sit in the shared footer; DNS and deletion
+dialogs continue to open above this dialog.
+The business grid's globe action uses the same responsive size, rounded border
+and tinted background as its neighboring actions, through a shared grid variant.
+The DNS dialog displays only the TXT record name and ownership value with copy
+controls, plus verification status and the Verify DNS action. Routing records and
+certificate requirements remain enforced by the backend and documented below.
 
-Business routes derive the business ID from BusinessGuard's authenticated session,
-and require `business:domains:read` or `business:domains:manage`. Platform routes
-require PlatformAdminGuard and the existing business read/update capabilities.
-Every domain mutation is scoped by both business and domain ID. The migration
-initializes plan access from each plan's existing settings-page permission;
-denied or approval-only settings access does not become direct domain access.
-The platform permission editor can subsequently grant or deny the new permissions.
-Domain mutations do not change the business's profile-editing quota or cooldown.
+Platform routes under `/api/platform/businesses/:businessId/domains` require
+PlatformAdminGuard and the existing business read/update capabilities. Business
+cookies cannot authorize these endpoints. Every mutation is scoped by both
+business and domain ID. The `2026-10-08_platform_only_custom_domains.sql`
+migration retires legacy business domain permissions without deleting historical
+grants or approval records. Domain changes do not affect profile-editing quotas.
 
 ## Security and lifecycle
 
@@ -43,7 +53,7 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
   platform. PostgreSQL enforces unique hostname ownership and one domain per
   business, including concurrent assignments. Unverified claims expire after seven
   days; adding an expired hostname releases the old claim and generates a new
-  token. Verified claims are removed explicitly by their owner or administrator.
+  token. Verified claims are removed explicitly by a platform administrator.
 - Automatic verification checks new pending domains without a dashboard action,
   retrying failed checks after five minutes until the seven-day claim expires.
   Disconnected domains retry after fifteen minutes and reconnect only after
@@ -60,7 +70,7 @@ Domain mutations do not change the business's profile-editing quota or cooldown.
   stops domain resolution; active mappings are not persistently cached.
 - DNS checks commit only if the database row version still matches the snapshot
   taken before the lookup. A later check, removal or maintenance claim invalidates
-  older results. Renewing an expired lease clears primary selection; the owner must
+  older results. Renewing an expired lease clears primary selection; the administrator must
   select it again after HTTPS readiness. Verification and primary activation reject
   inactive businesses. Manual DNS and HTTPS checks each allow ten attempts per
   business per minute and return 429 when exceeded.

@@ -1,9 +1,12 @@
 import { PublicSiteNavbar } from "@/components/public/PublicSiteNavbar";
-import { CustomScrollbar } from "@/components/home/CustomScrollbar";
 import { HomeFooter } from "@/components/home/HomeFooter";
 import type { ReactNode } from "react";
 
-type Section = { title: string; paragraphs: string[] };
+type Section = {
+  title: string;
+  paragraphs: string[];
+  links?: { label: string; href: string }[];
+};
 
 /**
  * Shell for the published legal documents.
@@ -38,16 +41,13 @@ export function LegalDocumentPage({
   sections: Section[];
   locale?: string;
   versionLabel?: string;
-  navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  navbarCopy?: Partial<
+    Record<"navigation" | "theme" | "menu" | "logo", string>
+  >;
   languageControl?: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#111827] dark:bg-[#0f172a] dark:text-white">
-      {/* These are the only SponsorKrd pages long enough to scroll that did not
-          carry the floating brand thumb; the landing page, the error pages, and
-          the tenant public pages already mount it, and the authentication
-          surfaces are `h-screen overflow-hidden` with no page scroll at all. */}
-      <CustomScrollbar />
       {/* The navbar's section links are same-page anchors on the landing page.
           These documents have no such sections, so they resolve against `/`. */}
       <PublicSiteNavbar
@@ -67,13 +67,17 @@ export function LegalDocumentPage({
           </p>
           <h1
             className="mt-3 text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl"
-            dir="rtl"
+            dir={locale === "en" ? "ltr" : "rtl"}
             lang={locale}
           >
             {title}
           </h1>
         </header>
-        <div className="mt-10 space-y-10" dir="rtl" lang={locale}>
+        <div
+          className="mt-10 space-y-10"
+          dir={locale === "en" ? "ltr" : "rtl"}
+          lang={locale}
+        >
           {sections.map((section, sectionIndex) => (
             <section key={sectionIndex}>
               <h2 className="flex items-center gap-3 text-lg font-bold text-gray-900 dark:text-slate-100">
@@ -90,6 +94,16 @@ export function LegalDocumentPage({
                 >
                   {paragraph}
                 </p>
+              ))}
+              {section.links?.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="mt-3 block text-sm underline underline-offset-4"
+                  dir="ltr"
+                >
+                  {link.label}
+                </a>
               ))}
             </section>
           ))}

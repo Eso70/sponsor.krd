@@ -4,19 +4,12 @@ import { AuthModule } from '../auth/auth.module';
 import { DomainsService } from './domains.service';
 import { DomainDnsService } from './domain-dns.service';
 import { DomainTlsService } from './domain-tls.service';
-import {
-  BusinessDomainsController,
-  PlatformBusinessDomainsController,
-} from './domains.controller';
+import { PlatformBusinessDomainsController } from './domains.controller';
 import { DomainRoutingController } from './domain-routing.controller';
 import { CustomDomainGuard } from './custom-domain.guard';
 @Module({
   imports: [AuthModule],
-  controllers: [
-    BusinessDomainsController,
-    PlatformBusinessDomainsController,
-    DomainRoutingController,
-  ],
+  controllers: [PlatformBusinessDomainsController, DomainRoutingController],
   providers: [
     DomainsService,
     DomainDnsService,

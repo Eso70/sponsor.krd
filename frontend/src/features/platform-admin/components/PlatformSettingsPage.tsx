@@ -2,7 +2,13 @@
 
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { PlatformBrandingFields } from "./PlatformBrandingFields";
 import { BlockedSubdomainsSettings } from "./BlockedSubdomainsSettings";
 import { SettingsField as Field } from "@/components/shared/SettingsField";
@@ -46,7 +52,6 @@ import {
   validateUploadFile,
 } from "@/lib/api/inline-request-error";
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
-import { applyCursorTheme } from "@/lib/utils/cursor-theme";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
 import { BusinessTikTokPixelConfigPage } from "@/features/analytics/components/BusinessTikTokPixelConfigPage";
@@ -66,7 +71,13 @@ import { arabicTikTokPixelCopy } from "@/features/analytics/tiktok-pixel-arabic-
 import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
 
 type Tab =
-  "general" | "security" | "retention" | "media" | "tiktok" | "tiktok-ads" | "subdomains";
+  | "general"
+  | "security"
+  | "retention"
+  | "media"
+  | "tiktok"
+  | "tiktok-ads"
+  | "subdomains";
 
 type PlatformSettings = {
   id: string;
@@ -152,9 +163,13 @@ export function PlatformSettingsPage() {
   const t = useSettingsText();
   const { locale } = usePlatformLocale();
   const tRef = useRef(t);
-  useEffect(() => { tRef.current = t; }, [t]);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const localeRef = useRef(locale);
-  useEffect(() => { localeRef.current = locale; }, [locale]);
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
   const [tab, setTab] = useState<Tab>(() =>
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("tab") === "tiktok-ads"
@@ -210,13 +225,23 @@ export function PlatformSettingsPage() {
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(platformRequestError(payload.message, tRef.current("Unable to load settings"), localeRef.current));
+          throw new Error(
+            platformRequestError(
+              payload.message,
+              tRef.current("Unable to load settings"),
+              localeRef.current,
+            ),
+          );
         }
         if (!cancelled) applySettings(payload.data as PlatformSettings);
       } catch (error) {
         if (!cancelled) {
           toast.error(
-            platformRequestError(error instanceof Error ? error.message : null, tRef.current("Unable to load settings"), localeRef.current),
+            platformRequestError(
+              error instanceof Error ? error.message : null,
+              tRef.current("Unable to load settings"),
+              localeRef.current,
+            ),
           );
         }
       } finally {
@@ -231,16 +256,9 @@ export function PlatformSettingsPage() {
 
   useEffect(() => {
     const root = document.documentElement;
-    let cancelled = false;
     Object.entries(createSponsorKrdThemeVariables(accentColor)).forEach(
       ([property, value]) => root.style.setProperty(property, value),
     );
-    void applyCursorTheme(accentColor, root, () => !cancelled).catch(
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
   }, [accentColor]);
 
   const request = useCallback(async (url: string, options: RequestInit) => {
@@ -258,7 +276,13 @@ export function PlatformSettingsPage() {
       const message = Array.isArray(payload.message)
         ? payload.message.join(", ")
         : payload.message || tRef.current("Unable to save settings");
-      throw new Error(platformRequestError(message, tRef.current("Unable to save settings"), localeRef.current));
+      throw new Error(
+        platformRequestError(
+          message,
+          tRef.current("Unable to save settings"),
+          localeRef.current,
+        ),
+      );
     }
     return payload;
   }, []);
@@ -272,7 +296,11 @@ export function PlatformSettingsPage() {
       setSessions(payload.data?.sessions || []);
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, tRef.current("Unable to load sessions"), localeRef.current),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          tRef.current("Unable to load sessions"),
+          localeRef.current,
+        ),
       );
     } finally {
       setIsSecurityLoading(false);
@@ -288,7 +316,11 @@ export function PlatformSettingsPage() {
       setRetention(payload.data as RetentionStatus);
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, tRef.current("نەتوانرا ڕێکخستنەکانی داتا بهێنرێن"), localeRef.current),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          tRef.current("نەتوانرا ڕێکخستنەکانی داتا بهێنرێن"),
+          localeRef.current,
+        ),
       );
     } finally {
       setIsRetentionLoading(false);
@@ -304,7 +336,11 @@ export function PlatformSettingsPage() {
       setMedia(payload.data as MediaStatus);
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, tRef.current("نەتوانرا ڕێکخستنەکانی میدیا بهێنرێن"), localeRef.current),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          tRef.current("نەتوانرا ڕێکخستنەکانی میدیا بهێنرێن"),
+          localeRef.current,
+        ),
       );
     } finally {
       setIsMediaLoading(false);
@@ -350,7 +386,11 @@ export function PlatformSettingsPage() {
       await loadRetention();
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("پاشەکەوتکردن سەرکەوتوو نەبوو"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("پاشەکەوتکردن سەرکەوتوو نەبوو"),
+          locale,
+        ),
       );
     } finally {
       setIsRetentionSaving(false);
@@ -371,11 +411,17 @@ export function PlatformSettingsPage() {
         (sum: number, value) => sum + Number(value),
         0,
       );
-      toast.success(`${counts.toLocaleString("en-US")} ${t("تۆماری کۆن پاککرایەوە")}`);
+      toast.success(
+        `${counts.toLocaleString("en-US")} ${t("تۆماری کۆن پاککرایەوە")}`,
+      );
       await loadRetention();
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("پاککردنەوە سەرکەوتوو نەبوو"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("پاککردنەوە سەرکەوتوو نەبوو"),
+          locale,
+        ),
       );
       throw error;
     } finally {
@@ -421,7 +467,11 @@ export function PlatformSettingsPage() {
       await loadMedia();
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("پاشەکەوتکردن سەرکەوتوو نەبوو"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("پاشەکەوتکردن سەرکەوتوو نەبوو"),
+          locale,
+        ),
       );
     } finally {
       setIsMediaSaving(false);
@@ -441,7 +491,11 @@ export function PlatformSettingsPage() {
       await loadMedia();
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("پاککردنەوە سەرکەوتوو نەبوو"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("پاککردنەوە سەرکەوتوو نەبوو"),
+          locale,
+        ),
       );
       throw error;
     } finally {
@@ -530,7 +584,11 @@ export function PlatformSettingsPage() {
       toast.success(t("General settings saved"));
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("Unable to save settings"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("Unable to save settings"),
+          locale,
+        ),
       );
     } finally {
       setIsGeneralSaving(false);
@@ -549,7 +607,11 @@ export function PlatformSettingsPage() {
       toast.success(t("Session signed out"));
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("Unable to sign out session"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("Unable to sign out session"),
+          locale,
+        ),
       );
     } finally {
       setRevokingSession(null);
@@ -564,7 +626,11 @@ export function PlatformSettingsPage() {
       toast.success(t("All other sessions signed out"));
     } catch (error) {
       toast.error(
-        platformRequestError(error instanceof Error ? error.message : null, t("Unable to sign out sessions"), locale),
+        platformRequestError(
+          error instanceof Error ? error.message : null,
+          t("Unable to sign out sessions"),
+          locale,
+        ),
       );
     } finally {
       setRevokingSession(null);
@@ -591,31 +657,37 @@ export function PlatformSettingsPage() {
     },
     security: {
       title: t("چوونەژوورەوە و دانیشتنەکان"),
-      description:
-        t("پاسوۆرد، دانیشتنە چالاکەکان و مێژووی چوونەژوورەوە بەڕێوەببە."),
+      description: t(
+        "پاسوۆرد، دانیشتنە چالاکەکان و مێژووی چوونەژوورەوە بەڕێوەببە.",
+      ),
       icon: Lock,
     },
     retention: {
       title: t("داتا و ماوەی هەڵگرتن"),
-      description:
-        t("ماوەی هەڵگرتنی تۆمارە کارگێڕییەکان دیاری بکە و پاککردنەوەی پارێزراو بەڕێوەببە."),
+      description: t(
+        "ماوەی هەڵگرتنی تۆمارە کارگێڕییەکان دیاری بکە و پاککردنەوەی پارێزراو بەڕێوەببە.",
+      ),
       icon: Database,
     },
     media: {
       title: t("میدیا و بارکردن"),
-      description:
-        t("قەبارە، جۆر، کوالێتی و پاککردنەوەی وێنە بارکراوەکان بەڕێوەببە."),
+      description: t(
+        "قەبارە، جۆر، کوالێتی و پاککردنەوەی وێنە بارکراوەکان بەڕێوەببە.",
+      ),
       icon: ImageIcon,
     },
     tiktok: {
       title: t(DASHBOARD_PAGE_LABELS.tiktokSettings),
-      description:
-        t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
+      description: t(
+        "Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە.",
+      ),
       icon: Radio,
     },
     "tiktok-ads": {
       title: t("هەژماری ڕیکلامی تیکتۆک"),
-      description: t("بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی پلاتفۆرم لە تیکتۆک."),
+      description: t(
+        "بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی پلاتفۆرم لە تیکتۆک.",
+      ),
       icon: TbBrandTiktok,
     },
   };
@@ -660,7 +732,14 @@ export function PlatformSettingsPage() {
       </StatCardGrid>
 
       <SegmentedTabs
-        tabs={[...tabs.map((item) => ({ ...item, label: t(item.label) })), { id: "subdomains" as const, label: subdomainCopy[locale].title, icon: Globe }]}
+        tabs={[
+          ...tabs.map((item) => ({ ...item, label: t(item.label) })),
+          {
+            id: "subdomains" as const,
+            label: subdomainCopy[locale].title,
+            icon: Globe,
+          },
+        ]}
         value={tab}
         onChange={changeTab}
         accent="var(--sponsor-krd-accent)"
@@ -671,13 +750,23 @@ export function PlatformSettingsPage() {
         <ThemeProvider websiteColor={accentColor}>
           <BusinessTikTokPixelConfigPage
             owner="platform"
-            copy={locale === "ar" ? {
-              ...arabicTikTokPixelCopy,
-              description: t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
-            } : locale === "en" ? {
-              ...englishBusinessMessages.TikTokPixel,
-              description: t("Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە."),
-            } : undefined}
+            copy={
+              locale === "ar"
+                ? {
+                    ...arabicTikTokPixelCopy,
+                    description: t(
+                      "Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە.",
+                    ),
+                  }
+                : locale === "en"
+                  ? {
+                      ...englishBusinessMessages.TikTokPixel,
+                      description: t(
+                        "Pixel و Events API بۆ پەڕە گشتییەکانی خاوەندارێتی Sponsor.krd بەڕێوەببە.",
+                      ),
+                    }
+                  : undefined
+            }
           />
         </ThemeProvider>
       )}
@@ -708,7 +797,9 @@ export function PlatformSettingsPage() {
                   logo={logo}
                   uploadingAsset={uploadingAsset}
                   logoLabel={t("لۆگۆ")}
-                  onUpload={(asset, event) => void handleAssetUpload(asset, event)}
+                  onUpload={(asset, event) =>
+                    void handleAssetUpload(asset, event)
+                  }
                 />
                 {assetUploadError && (
                   <InlineRequestError
@@ -818,7 +909,9 @@ export function PlatformSettingsPage() {
                     {t("چوونەژوورەوە بە Google")}
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {t("تەنها ئیمەیڵی Googleـی ڕێگەپێدراو دەتوانێت بچێتە ژوورەوە.")}
+                    {t(
+                      "تەنها ئیمەیڵی Googleـی ڕێگەپێدراو دەتوانێت بچێتە ژوورەوە.",
+                    )}
                   </p>
                 </div>
               </div>
@@ -859,7 +952,16 @@ export function PlatformSettingsPage() {
               </div>
               <div className="space-y-3">
                 {isSecurityLoading && sessions.length === 0 ? (
-                  <SkeletonSessionList rows={3} loadingLabel={locale === "ar" ? "جارٍ تحميل الجلسات" : locale === "en" ? "Loading sessions" : "دانیشتنەکان بار دەکرێن"} />
+                  <SkeletonSessionList
+                    rows={3}
+                    loadingLabel={
+                      locale === "ar"
+                        ? "جارٍ تحميل الجلسات"
+                        : locale === "en"
+                          ? "Loading sessions"
+                          : "دانیشتنەکان بار دەکرێن"
+                    }
+                  />
                 ) : sessions.length === 0 ? (
                   <p className="py-8 text-center text-xs text-slate-400">
                     {t("No active sessions found.")}
@@ -963,7 +1065,9 @@ export function PlatformSettingsPage() {
                       label={t("پاککردنەوەی خۆکار چالاک بکە")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      {t("تەنها تۆمارە کۆن و تەواوبووەکان بە پارچەی بچووک پاک دەکرێنەوە.")}
+                      {t(
+                        "تەنها تۆمارە کۆن و تەواوبووەکان بە پارچەی بچووک پاک دەکرێنەوە.",
+                      )}
                     </p>
                   </div>
                   <CustomSelect
@@ -1003,7 +1107,9 @@ export function PlatformSettingsPage() {
                       <p>{t("هێشتا هیچ پاککردنەوەیەک ئەنجام نەدراوە.")}</p>
                     )}
                     <p className="mt-1">
-                      {t("داتای چالاکی بزنس، پەڕەکان و کۆی ئاماری ئەنالیتیکس ناخرێنە ناو پاککردنەوە.")}
+                      {t(
+                        "داتای چالاکی بزنس، پەڕەکان و کۆی ئاماری ئەنالیتیکس ناخرێنە ناو پاککردنەوە.",
+                      )}
                     </p>
                   </div>
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -1016,9 +1122,9 @@ export function PlatformSettingsPage() {
                       <Trash2 className="h-4 w-4" /> {t("پاککردنەوە ئێستا")}
                     </button>
                     <SaveButton
-                      label={
-                        t(isRetentionSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")
-                      }
+                      label={t(
+                        isRetentionSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن",
+                      )}
                       onClick={() => void saveRetention()}
                       disabled={isRetentionSaving || isCleanupRunning}
                     />
@@ -1161,7 +1267,9 @@ export function PlatformSettingsPage() {
                       label={t("پەستاندن و کەمکردنەوەی ڕەهەند بە خۆکار")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      {t("JPG، PNG و WebP بەبێ گۆڕینی جۆری فایل خێراتر دەکرێن.")}
+                      {t(
+                        "JPG، PNG و WebP بەبێ گۆڕینی جۆری فایل خێراتر دەکرێن.",
+                      )}
                     </p>
                   </div>
                   <div className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5">
@@ -1173,14 +1281,18 @@ export function PlatformSettingsPage() {
                       label={t("پاککردنەوەی خۆکاری فایلی بەکارنەهاتوو")}
                     />
                     <p className="mt-1 text-[11px] leading-5 text-slate-400">
-                      {t("تەنها فایلێک پاک دەکرێتەوە کە لە هیچ بزنس یان پەڕەیەکدا بەکارنەهاتووە.")}
+                      {t(
+                        "تەنها فایلێک پاک دەکرێتەوە کە لە هیچ بزنس یان پەڕەیەکدا بەکارنەهاتووە.",
+                      )}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[11px] leading-5 text-slate-400">
-                    {t("پشکنینی ناوەڕۆکی فایل و ڕەتکردنەوەی فایلە ساختەکان هەمیشە چالاکە.")}
+                    {t(
+                      "پشکنینی ناوەڕۆکی فایل و ڕەتکردنەوەی فایلە ساختەکان هەمیشە چالاکە.",
+                    )}
                   </p>
                   <div className="flex flex-col-reverse gap-2 sm:flex-row">
                     <button
@@ -1193,12 +1305,13 @@ export function PlatformSettingsPage() {
                       }
                       className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     >
-                      <Trash2 className="h-4 w-4" /> {t("پاککردنەوەی فایلی بەکارنەهاتوو")}
+                      <Trash2 className="h-4 w-4" />{" "}
+                      {t("پاککردنەوەی فایلی بەکارنەهاتوو")}
                     </button>
                     <SaveButton
-                      label={
-                        t(isMediaSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")
-                      }
+                      label={t(
+                        isMediaSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن",
+                      )}
                       onClick={() => void saveMedia()}
                       disabled={isMediaSaving || isMediaCleanupRunning}
                     />
@@ -1225,14 +1338,22 @@ export function PlatformSettingsPage() {
         onClose={() => setShowColorPicker(false)}
         solidFallback={SPONSOR_KRD_ACCENT_COLOR}
         gradientFallback="#0066ff"
-        copy={locale === "ar" ? arabicColorGradientCopy : locale === "en" ? englishBusinessMessages.SettingsColorPicker : undefined}
+        copy={
+          locale === "ar"
+            ? arabicColorGradientCopy
+            : locale === "en"
+              ? englishBusinessMessages.SettingsColorPicker
+              : undefined
+        }
       />
       <ConfirmDeleteModal
         isOpen={showCleanupConfirm}
         onClose={() => setShowCleanupConfirm(false)}
         onConfirm={runCleanup}
         title={t("پاککردنەوەی داتای کۆن")}
-        message={t("هەموو تۆمارە کۆنە شیاوەکان بەپێی ماوە دیاریکراوەکان بە هەمیشەیی پاک دەکرێنەوە. داتای چالاک ناگیرێتەوە.")}
+        message={t(
+          "هەموو تۆمارە کۆنە شیاوەکان بەپێی ماوە دیاریکراوەکان بە هەمیشەیی پاک دەکرێنەوە. داتای چالاک ناگیرێتەوە.",
+        )}
         confirmLabel={t("پاککردنەوە ئێستا")}
         loadingLabel={t("پاک دەکرێتەوە…")}
         cancelLabel={t("پاشگەزبوونەوە")}
@@ -1244,7 +1365,9 @@ export function PlatformSettingsPage() {
         onClose={() => setShowMediaCleanupConfirm(false)}
         onConfirm={cleanupMedia}
         title={t("پاککردنەوەی فایلی بەکارنەهاتوو")}
-        message={t("تەنها فایلە کۆنە تۆمارکراوەکان پاک دەکرێنەوە کە لە هیچ ناسنامەی بزنس، پەڕەی لینک یان داواکاری گۆڕانکارییەکدا بەکارنەهاتوون.")}
+        message={t(
+          "تەنها فایلە کۆنە تۆمارکراوەکان پاک دەکرێنەوە کە لە هیچ ناسنامەی بزنس، پەڕەی لینک یان داواکاری گۆڕانکارییەکدا بەکارنەهاتوون.",
+        )}
         confirmLabel={t("پاککردنەوە")}
         loadingLabel={t("پاک دەکرێتەوە…")}
         cancelLabel={t("پاشگەزبوونەوە")}
@@ -1412,7 +1535,10 @@ function MediaNumberField({
 
 /* ─── Shared UI ─── */
 
-function describeUserAgent(userAgent: string | null, t: (source: string) => string): string {
+function describeUserAgent(
+  userAgent: string | null,
+  t: (source: string) => string,
+): string {
   if (!userAgent) return t("Unknown device");
   const browser = userAgent.includes("Edg/")
     ? "Edge"
@@ -1437,9 +1563,17 @@ function describeUserAgent(userAgent: string | null, t: (source: string) => stri
   return `${browser} ${t("on")} ${platform}`;
 }
 
-function formatSecurityDate(value: string, locale: string, t: (source: string) => string): string {
+function formatSecurityDate(
+  value: string,
+  locale: string,
+  t: (source: string) => string,
+): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? t("Unknown time") : date.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ");
+  return Number.isNaN(date.getTime())
+    ? t("Unknown time")
+    : date.toLocaleString(
+        locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ",
+      );
 }
 
 function Toggle({

@@ -7,7 +7,6 @@ import { PublicMarketingSiteShell } from "@/components/public/PublicMarketingSit
 import { PublicHeroAccentBackdrop } from "@/components/public/PublicHeroAccentBackdrop";
 import { BusinessPublicFooter } from "@/components/business/BusinessPublicFooter";
 import { HomeFooter } from "@/components/home/HomeFooter";
-import { BUSINESS_LANDING_SECTION_HREFS } from "@/components/business/business-landing-sections";
 import { getSponsorKrdAccentInk } from "@/lib/sponsor-krd-theme";
 import { applyBusinessTabBranding } from "@/lib/utils/business-error-theme";
 import type { ErrorPageTheme } from "./error-theme";
@@ -23,7 +22,12 @@ interface ErrorContentProps {
   showRetry?: boolean;
   language?: string;
   languageControl?: ReactNode;
-  copy?: Partial<Record<"errorCode" | "retry" | "home" | "linktrees" | "advertise" | "contact", string>> & {
+  copy?: Partial<
+    Record<
+      "errorCode" | "retry" | "home" | "linktrees" | "advertise" | "contact",
+      string
+    >
+  > & {
     footerDescription?: string;
     footer?: ComponentProps<typeof BusinessPublicFooter>["copy"];
     navbar?: ComponentProps<typeof PublicMarketingSiteShell>["navbarCopy"];
@@ -176,10 +180,6 @@ export function ErrorPage(props: ErrorPageProps) {
 
   const navigationItems = isBusiness
     ? [
-        {
-          label: copy?.linktrees ?? "لینکترییەکان",
-          href: `${homeHref}${BUSINESS_LANDING_SECTION_HREFS.workspace}`,
-        },
         ...(footer?.advertisingEnabled
           ? [{ label: copy?.advertise ?? "ڕیکلام", href: "/advertising" }]
           : []),
@@ -190,7 +190,11 @@ export function ErrorPage(props: ErrorPageProps) {
   // surfaces do not advertise an account workflow.
   const primaryAction = isBusiness
     ? footer?.whatsappEnabled && whatsappHref
-      ? { label: copy?.contact ?? "پەیوەندی", href: whatsappHref, external: true }
+      ? {
+          label: copy?.contact ?? "پەیوەندی",
+          href: whatsappHref,
+          external: true,
+        }
       : null
     : null;
 
@@ -215,7 +219,9 @@ export function ErrorPage(props: ErrorPageProps) {
             accentColor={theme.accentColor}
             logo={theme.logo}
             description={
-              copy?.footerDescription || footer?.description || `${brandName}'s official public website.`
+              copy?.footerDescription ||
+              footer?.description ||
+              `${brandName}'s official public website.`
             }
             phone={footer?.phone ?? null}
             whatsappEnabled={footer?.whatsappEnabled ?? null}

@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import { Pipette, X } from "lucide-react";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import { RAINBOW_BACKGROUND_COLORS } from "@/lib/utils/color-palettes";
+import { normalizeHex } from "@/lib/utils/color-conversion";
+import { ColorChannelsEditor } from "./ColorChannelsEditor";
+import { ColorSwatch } from "./ColorSwatch";
+import styles from "./ColorGradientModal.module.css";
 import { Tooltip } from "@/components/shared/Tooltip";
 import {
   parseWebsiteColor,
@@ -15,6 +28,8 @@ type ColorMode = "hex" | "rgb" | "hsl";
 type ActiveColor = "from" | "to";
 
 export interface ColorGradientModalProps {
+  /** Anchors the same picker as a compact popup, without a backdrop. */
+  anchorRef?: RefObject<HTMLElement | null>;
   isOpen: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -24,7 +39,43 @@ export interface ColorGradientModalProps {
   title?: string;
   subtitle?: string;
   allowGradient?: boolean;
-  copy?: Partial<Record<"title" | "subtitle" | "unsupported" | "picked" | "pickFailed" | "solid" | "gradient" | "first" | "second" | "color" | "eyedropper" | "pick" | "direction" | "leftRight" | "rightLeft" | "topBottom" | "bottomTop" | "diagonal" | "diagonalReverse" | "topRight" | "topLeft" | "radial" | "quickColors" | "pickedColors" | "apply" | "close", string>>;
+  copy?: Partial<
+    Record<
+      | "title"
+      | "subtitle"
+      | "unsupported"
+      | "picked"
+      | "pickFailed"
+      | "solid"
+      | "gradient"
+      | "first"
+      | "second"
+      | "color"
+      | "eyedropper"
+      | "pick"
+      | "direction"
+      | "leftRight"
+      | "rightLeft"
+      | "topBottom"
+      | "bottomTop"
+      | "diagonal"
+      | "diagonalReverse"
+      | "topRight"
+      | "topLeft"
+      | "radial"
+      | "quickColors"
+      | "pickedColors"
+      | "apply"
+      | "close"
+      | "red"
+      | "green"
+      | "blue"
+      | "hue"
+      | "saturation"
+      | "lightness",
+      string
+    >
+  >;
 }
 
 declare global {
@@ -35,123 +86,32 @@ declare global {
   }
 }
 
+// Match the Linktree editor's first-step background palette; retain pure black.
 const QUICK_COLORS = [
-  "#ffffff",
+  ...RAINBOW_BACKGROUND_COLORS.filter((color) => color.id !== "black").map(
+    (color) => color.value,
+  ),
   "#000000",
-  "#64748b",
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#6b7280",
-  "#d97706",
 ];
 
 function isHex(value: string) {
   return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 }
 
-function normalizeHex(value: string, fallback = "#000000") {
-  const trimmed = value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toLowerCase();
-  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
-    return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`.toLowerCase();
-  }
-  return fallback;
-}
-
-function hexToRgb(hex: string) {
-  const safe = normalizeHex(hex);
-  return {
-    r: parseInt(safe.slice(1, 3), 16),
-    g: parseInt(safe.slice(3, 5), 16),
-    b: parseInt(safe.slice(5, 7), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const clamp = (value: number) => Math.min(255, Math.max(0, Math.round(value)));
-  return `#${clamp(r).toString(16).padStart(2, "0")}${clamp(g).toString(16).padStart(2, "0")}${clamp(b).toString(16).padStart(2, "0")}`;
-}
-
-function hexToHsl(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  const red = r / 255;
-  const green = g / 255;
-  const blue = b / 255;
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const delta = max - min;
-    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-    switch (max) {
-      case red:
-        h = (green - blue) / delta + (green < blue ? 6 : 0);
-        break;
-      case green:
-        h = (blue - red) / delta + 2;
-        break;
-      default:
-        h = (red - green) / delta + 4;
-    }
-    h /= 6;
-  }
-
-  return {
-    h: Math.round(h * 360),
-    s: Math.round(s * 100),
-    l: Math.round(l * 100),
-  };
-}
-
-function hslToHex(h: number, s: number, l: number) {
-  const hue = (((h % 360) + 360) % 360) / 360;
-  const sat = Math.min(100, Math.max(0, s)) / 100;
-  const lit = Math.min(100, Math.max(0, l)) / 100;
-
-  if (sat === 0) {
-    const gray = Math.round(lit * 255);
-    return rgbToHex(gray, gray, gray);
-  }
-
-  const hueToRgb = (p: number, q: number, t: number) => {
-    let value = t;
-    if (value < 0) value += 1;
-    if (value > 1) value -= 1;
-    if (value < 1 / 6) return p + (q - p) * 6 * value;
-    if (value < 1 / 2) return q;
-    if (value < 2 / 3) return p + (q - p) * (2 / 3 - value) * 6;
-    return p;
-  };
-
-  const q = lit < 0.5 ? lit * (1 + sat) : lit + sat - lit * sat;
-  const p = 2 * lit - q;
-  return rgbToHex(
-    hueToRgb(p, q, hue + 1 / 3) * 255,
-    hueToRgb(p, q, hue) * 255,
-    hueToRgb(p, q, hue - 1 / 3) * 255,
-  );
-}
-
-function parseColorValue(value: string, solidFallback: string, gradientFallback: string) {
+function parseColorValue(
+  value: string,
+  solidFallback: string,
+  gradientFallback: string,
+) {
   if (value.startsWith("gradient:")) {
     const [, direction, from, to] = value.split(":");
     return {
       mode: "gradient" as const,
-      direction: (
-        WEBSITE_GRADIENT_DIRECTIONS.includes(
-          direction as WebsiteGradientDirection,
-        )
-          ? direction
-          : "to-b"
-      ) as WebsiteGradientDirection,
+      direction: (WEBSITE_GRADIENT_DIRECTIONS.includes(
+        direction as WebsiteGradientDirection,
+      )
+        ? direction
+        : "to-b") as WebsiteGradientDirection,
       from: normalizeHex(from || solidFallback, solidFallback),
       to: normalizeHex(to || gradientFallback, gradientFallback),
     };
@@ -171,16 +131,15 @@ function getPreviewStyle(
   to: string,
   direction: WebsiteGradientDirection,
 ) {
-  if (from === to) return { backgroundColor: from };
+  if (from === to) return { background: from };
   return {
-    background: parseWebsiteColor(
-      `gradient:${direction}:${from}:${to}`,
-    ).css,
+    background: parseWebsiteColor(`gradient:${direction}:${from}:${to}`).css,
   };
 }
 
 export function ColorGradientModal({
   isOpen,
+  anchorRef,
   value,
   onChange,
   onClose,
@@ -191,18 +150,25 @@ export function ColorGradientModal({
   allowGradient = true,
   copy,
 }: ColorGradientModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const [popupStyle, setPopupStyle] = useState<CSSProperties>({});
   const modalTitle = title ?? copy?.title ?? "ڕەنگی ئارەزوومەندانەیە";
-  const modalSubtitle = subtitle ?? copy?.subtitle ?? "ڕەنگی تاک یان گرادیێنت دروست بکە";
+  const modalSubtitle =
+    subtitle ?? copy?.subtitle ?? "ڕەنگی تاک یان گرادیێنت دروست بکە";
   const [mounted, setMounted] = useState(false);
   const parsedInitial = useMemo(
     () => parseColorValue(value, solidFallback, gradientFallback),
     [value, solidFallback, gradientFallback],
   );
-  const [isGradient, setIsGradient] = useState(parsedInitial.mode === "gradient");
+  const [isGradient, setIsGradient] = useState(
+    allowGradient && parsedInitial.mode === "gradient",
+  );
   const [from, setFrom] = useState(parsedInitial.from);
   const [to, setTo] = useState(parsedInitial.to);
-  const [direction, setDirection] =
-    useState<WebsiteGradientDirection>(parsedInitial.direction);
+  const [direction, setDirection] = useState<WebsiteGradientDirection>(
+    parsedInitial.direction,
+  );
   const [activeColor, setActiveColor] = useState<ActiveColor>("from");
   const [inputMode, setInputMode] = useState<ColorMode>("hex");
   const [isPickingColor, setIsPickingColor] = useState(false);
@@ -240,9 +206,53 @@ export function ColorGradientModal({
     return () => cancelAnimationFrame(frame);
   }, [isOpen, value, solidFallback, gradientFallback, allowGradient]);
 
+  useEffect(() => {
+    if (!isOpen || !mounted || !anchorRef) return;
+    const position = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(400, window.innerWidth - 24);
+      const below = window.innerHeight - rect.bottom - 20;
+      const above = rect.top - 20;
+      const opensBelow = below >= Math.min(540, above);
+      const theme = getComputedStyle(anchor);
+      const inherited: Record<string, string> = {};
+      for (const key of ["--theme-primary", "--theme-css", "--theme-ink"]) {
+        inherited[key] = theme.getPropertyValue(key);
+      }
+      setPopupStyle({
+        ...inherited,
+        width,
+        left: Math.max(
+          12,
+          Math.min(rect.right - width, window.innerWidth - width - 12),
+        ),
+        top: opensBelow ? rect.bottom + 8 : undefined,
+        bottom: opensBelow ? undefined : window.innerHeight - rect.top + 8,
+        maxHeight: Math.min(540, Math.max(120, opensBelow ? below : above)),
+      });
+    };
+    const outside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !dialogRef.current?.contains(event.target) &&
+        !anchorRef.current?.contains(event.target)
+      )
+        onClose();
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    document.addEventListener("pointerdown", outside);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      document.removeEventListener("pointerdown", outside);
+    };
+  }, [isOpen, mounted, anchorRef, onClose]);
+
   const activeValue = activeColor === "from" ? from : to;
-  const rgb = hexToRgb(activeValue);
-  const hsl = hexToHsl(activeValue);
   const setActiveValue = (nextValue: string) => {
     const nextHex = normalizeHex(nextValue, activeValue);
     if (activeColor === "from") {
@@ -262,8 +272,13 @@ export function ColorGradientModal({
   const pickScreenColor = async () => {
     setPickerMessage(null);
 
-    if (typeof window === "undefined" || typeof window.EyeDropper !== "function") {
-      setPickerMessage(copy?.unsupported ?? "ئەم وێبگەڕە پشتگیری پێنووسی ڕەنگ ناکات.");
+    if (
+      typeof window === "undefined" ||
+      typeof window.EyeDropper !== "function"
+    ) {
+      setPickerMessage(
+        copy?.unsupported ?? "ئەم وێبگەڕە پشتگیری پێنووسی ڕەنگ ناکات.",
+      );
       return;
     }
 
@@ -273,15 +288,20 @@ export function ColorGradientModal({
       const pickedColor = normalizeHex(result.sRGBHex, activeValue);
       setHexDraft(null);
       setActiveValue(pickedColor);
-      setPickedColors((previous) => [
-        pickedColor,
-        ...previous.filter((color) => color !== pickedColor),
-      ].slice(0, 8));
+      setPickedColors((previous) =>
+        [
+          pickedColor,
+          ...previous.filter((color) => color !== pickedColor),
+        ].slice(0, 8),
+      );
       setPickerMessage(copy?.picked ?? "ڕەنگەکە وەرگیرا.");
     } catch (error) {
       const name = error instanceof DOMException ? error.name : "";
       if (name !== "AbortError") {
-        setPickerMessage(copy?.pickFailed ?? "نەتوانرا ڕەنگەکە وەربگیرێت. تکایە دووبارە هەوڵبدەوە.");
+        setPickerMessage(
+          copy?.pickFailed ??
+            "نەتوانرا ڕەنگەکە وەربگیرێت. تکایە دووبارە هەوڵبدەوە.",
+        );
       }
     } finally {
       setIsPickingColor(false);
@@ -301,20 +321,29 @@ export function ColorGradientModal({
     isOpen: isOpen && mounted,
     onEscape: onClose,
     onEnter: applyColor,
+    dialogRef,
   });
 
   if (!isOpen || !mounted) return null;
 
   return createPortal(
     <>
-      <div
-        className={`fixed inset-0 z-[200] bg-black/30 backdrop-blur-lg   duration-300 transition-opacity ${isPickingColor ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-        onClick={onClose}
-        aria-hidden
-      />
+      {!anchorRef && (
+        <div
+          className={`fixed inset-0 z-[200] bg-black/30 backdrop-blur-lg   duration-300 transition-opacity ${isPickingColor ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+          onClick={onClose}
+          aria-hidden
+        />
+      )}
 
       <div
-        className={`modal-ltr fixed z-[201] top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col w-[95vw] sm:w-[85vw] md:w-[75vw] max-w-md max-h-[92svh] sm:max-h-[85vh] overflow-hidden rounded-2xl bg-white border border-gray-100/50 shadow-2xl    duration-300 transition-opacity ${isPickingColor ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal={!anchorRef}
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        style={anchorRef ? popupStyle : undefined}
+        className={`modal-ltr fixed z-[201] flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-100/50 shadow-2xl transition-opacity duration-200 ${anchorRef ? styles.popup : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] sm:w-[85vw] md:w-[75vw] max-w-md max-h-[92svh] sm:max-h-[85vh]"} ${isPickingColor ? "opacity-0 pointer-events-none" : "opacity-100"}`}
         dir="ltr"
       >
         <div className="shrink-0 border-b border-gray-100/50">
@@ -323,12 +352,24 @@ export function ColorGradientModal({
               <div className="theme-soft rounded-xl p-1.5 sm:p-2 shadow-sm border">
                 <span
                   className="block h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full"
-                  style={{ background: "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
+                  }}
                 />
               </div>
               <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-700">{modalTitle}</h2>
-              <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{modalSubtitle}</p>
+                <h2
+                  id={titleId}
+                  className="text-base sm:text-lg font-bold text-slate-700"
+                >
+                  {modalTitle}
+                </h2>
+                {!anchorRef && (
+                  <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">
+                    {modalSubtitle}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -345,45 +386,61 @@ export function ColorGradientModal({
 
         {/* Flexes between the header and footer instead of subtracting a fixed
             130px, which overflowed once mobile browser chrome ate the viewport. */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}>
-          {allowGradient && <div className="flex rounded-xl border border-gray-200 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => {
-                setIsGradient(false);
-                setTo(from);
-                selectActiveColor("from");
-              }}
-              className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${!isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-            >
-              {copy?.solid ?? "ڕەنگی تاک"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsGradient(true);
-                if (from === to) setTo(gradientFallback);
-              }}
-              className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
-            >
-              {copy?.gradient ?? "گرادیێنت"}
-            </button>
-          </div>}
+        <div
+          className={`${styles.body} min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-2.5`}
+        >
+          {allowGradient && (
+            <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGradient(false);
+                  setTo(from);
+                  selectActiveColor("from");
+                }}
+                className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${!isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                {copy?.solid ?? "ڕەنگی تاک"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGradient(true);
+                  if (from === to) setTo(gradientFallback);
+                }}
+                className={`flex-1 py-3 sm:py-2 text-xs font-medium transition-all ${isGradient ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+              >
+                {copy?.gradient ?? "گرادیێنت"}
+              </button>
+            </div>
+          )}
 
           <div
-            className="h-16 sm:h-14 w-full rounded-xl border border-gray-200 shadow-inner"
-            style={getPreviewStyle(from, isGradient ? to : from, direction)}
+            data-color-preview
+            className={`${styles.sample} ${styles.preview} h-14 w-full rounded-xl border border-gray-200`}
+            style={
+              {
+                "--picker-color": getPreviewStyle(
+                  from,
+                  isGradient ? to : from,
+                  direction,
+                ).background,
+              } as CSSProperties
+            }
           />
 
           {isGradient && (
             <div className="flex rounded-lg bg-gray-50 border border-gray-200 p-0.5 gap-0.5">
-              {([
-                ["from", copy?.first ?? "ڕەنگی یەکەم"],
-                ["to", copy?.second ?? "ڕەنگی دووەم"],
-              ] as const).map(([id, label]) => (
+              {(
+                [
+                  ["from", copy?.first ?? "ڕەنگی یەکەم"],
+                  ["to", copy?.second ?? "ڕەنگی دووەم"],
+                ] as const
+              ).map(([id, label]) => (
                 <button
                   key={id}
                   type="button"
+                  aria-pressed={activeColor === id}
                   onClick={() => selectActiveColor(id)}
                   className={`flex-1 py-2.5 sm:py-1.5 rounded-md text-xs sm:text-[11px] font-semibold transition-all ${activeColor === id ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 >
@@ -398,6 +455,7 @@ export function ColorGradientModal({
               <button
                 key={mode}
                 type="button"
+                aria-pressed={inputMode === mode}
                 onClick={() => setInputMode(mode)}
                 className={`flex-1 py-2.5 sm:py-1.5 rounded-md text-xs sm:text-[10px] font-semibold uppercase transition-all ${inputMode === mode ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               >
@@ -408,16 +466,27 @@ export function ColorGradientModal({
 
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-600">
-              {isGradient ? (activeColor === "from" ? copy?.first ?? "ڕەنگی یەکەم" : copy?.second ?? "ڕەنگی دووەم") : copy?.color ?? "ڕەنگ"}
+              {isGradient
+                ? activeColor === "from"
+                  ? (copy?.first ?? "ڕەنگی یەکەم")
+                  : (copy?.second ?? "ڕەنگی دووەم")
+                : (copy?.color ?? "ڕەنگ")}
             </label>
             <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
               <span
-                className="h-10 w-12 shrink-0 rounded-lg border border-gray-200 shadow-inner"
-                style={{ backgroundColor: activeValue }}
+                className={`${styles.sample} h-9 w-10 shrink-0 rounded-lg border border-gray-200`}
+                style={{ "--picker-color": activeValue } as CSSProperties}
                 aria-hidden
               />
               <input
                 type="text"
+                aria-label={
+                  isGradient
+                    ? activeColor === "from"
+                      ? (copy?.first ?? "ڕەنگی یەکەم")
+                      : (copy?.second ?? "ڕەنگی دووەم")
+                    : (copy?.color ?? "ڕەنگ")
+                }
                 value={hexDraft ?? activeValue}
                 onChange={(event) => {
                   const raw = event.target.value;
@@ -430,7 +499,8 @@ export function ColorGradientModal({
                   // it verbatim saved a value the API answered with a 400.
                   // Every other source here — presets, RGB/HSL, the eyedropper,
                   // the stored value — is already six digits.
-                  if (isHex(raw)) setActiveValue(normalizeHex(raw, activeValue));
+                  if (isHex(raw))
+                    setActiveValue(normalizeHex(raw, activeValue));
                 }}
                 onBlur={() => setHexDraft(null)}
                 className="theme-input-focus flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-2 py-2 font-mono text-xs text-gray-700 focus:outline-none"
@@ -441,16 +511,18 @@ export function ColorGradientModal({
                 autoCapitalize="none"
                 autoCorrect="off"
               />
-                  <Tooltip content={copy?.eyedropper ?? "پێنووسی ڕەنگ"} side="top">
+              <Tooltip content={copy?.eyedropper ?? "پێنووسی ڕەنگ"} side="top">
                 <button
                   type="button"
                   onClick={pickScreenColor}
                   disabled={isPickingColor}
                   className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-70 cursor-pointer"
-                      aria-label={copy?.eyedropper ?? "پێنووسی ڕەنگ"}
+                  aria-label={copy?.eyedropper ?? "پێنووسی ڕەنگ"}
                 >
                   <Pipette className="h-4 w-4" />
-                      <span className="hidden sm:inline">{isPickingColor ? "..." : copy?.pick ?? "پێنووس"}</span>
+                  <span className="hidden sm:inline">
+                    {isPickingColor ? "..." : (copy?.pick ?? "پێنووس")}
+                  </span>
                 </button>
               </Tooltip>
             </div>
@@ -458,101 +530,86 @@ export function ColorGradientModal({
               <p className="text-[11px] text-gray-500">{pickerMessage}</p>
             )}
 
-            {inputMode === "rgb" && (
-              <div className="space-y-2">
-                {(["r", "g", "b"] as const).map((channel) => (
-                  <div key={channel} className="grid grid-cols-[24px_1fr_64px] sm:grid-cols-[28px_1fr_58px] items-center gap-2 sm:gap-2">
-                    <span className="text-[10px] font-semibold uppercase text-gray-500">{channel}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="255"
-                      value={rgb[channel]}
-                      onChange={(event) => {
-                        const next = { ...rgb, [channel]: Number(event.target.value) };
-                        setHexDraft(null);
-                        setActiveValue(rgbToHex(next.r, next.g, next.b));
-                      }}
-                      className="h-6 sm:h-4 w-full"
-                      style={{ accentColor: activeValue }}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max="255"
-                      value={rgb[channel]}
-                      onChange={(event) => {
-                        const next = { ...rgb, [channel]: Number(event.target.value) };
-                        setHexDraft(null);
-                        setActiveValue(rgbToHex(next.r, next.g, next.b));
-                      }}
-                      className="theme-input-focus w-full rounded-lg border border-gray-200 px-1.5 py-2 sm:py-1 text-center text-xs text-gray-700 focus:outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {inputMode === "hsl" && (
-              <div className="space-y-2">
-                {([
-                  ["h", "H", 360],
-                  ["s", "S", 100],
-                  ["l", "L", 100],
-                ] as const).map(([key, label, max]) => (
-                  <div key={key} className="grid grid-cols-[24px_1fr_64px] sm:grid-cols-[28px_1fr_58px] items-center gap-2 sm:gap-2">
-                    <span className="text-[10px] font-semibold uppercase text-gray-500">{label}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={max}
-                      value={hsl[key]}
-                      onChange={(event) => {
-                        const next = { ...hsl, [key]: Number(event.target.value) };
-                        setHexDraft(null);
-                        setActiveValue(hslToHex(next.h, next.s, next.l));
-                      }}
-                      className="h-6 sm:h-4 w-full"
-                      style={{ accentColor: activeValue }}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max={max}
-                      value={hsl[key]}
-                      onChange={(event) => {
-                        const next = { ...hsl, [key]: Number(event.target.value) };
-                        setHexDraft(null);
-                        setActiveValue(hslToHex(next.h, next.s, next.l));
-                      }}
-                      className="theme-input-focus w-full rounded-lg border border-gray-200 px-1.5 py-2 sm:py-1 text-center text-xs text-gray-700 focus:outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
+            {inputMode !== "hex" && (
+              <ColorChannelsEditor
+                key={`${activeColor}:${inputMode}`}
+                mode={inputMode}
+                value={activeValue}
+                onChange={(color) => {
+                  setHexDraft(null);
+                  setActiveValue(color);
+                }}
+                labels={{
+                  red: copy?.red ?? "سوور",
+                  green: copy?.green ?? "سەوز",
+                  blue: copy?.blue ?? "شین",
+                  hue: copy?.hue ?? "تۆنی ڕەنگ",
+                  saturation: copy?.saturation ?? "تێری ڕەنگ",
+                  lightness: copy?.lightness ?? "ڕووناکی",
+                }}
+              />
             )}
           </div>
 
           {isGradient && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">{copy?.direction ?? "ئاراستەی گرادیێنت"}</label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <label className="text-xs font-medium text-gray-600">
+                {copy?.direction ?? "ئاراستەی گرادیێنت"}
+              </label>
+              <div className={`${styles.directions} grid grid-cols-5 gap-1.5`}>
                 {[
-                  { id: "to-r", label: "→", title: copy?.leftRight ?? "چەپ بۆ ڕاست" },
-                  { id: "to-l", label: "←", title: copy?.rightLeft ?? "ڕاست بۆ چەپ" },
-                  { id: "to-b", label: "↓", title: copy?.topBottom ?? "سەرەوە بۆ خوارەوە" },
-                  { id: "to-t", label: "↑", title: copy?.bottomTop ?? "خوارەوە بۆ سەرەوە" },
-                  { id: "to-br", label: "↘", title: copy?.diagonal ?? "لاتەنیشت" },
-                  { id: "to-bl", label: "↙", title: copy?.diagonalReverse ?? "لاتەنیشت پێچەوانە" },
-                  { id: "to-tr", label: "↗", title: copy?.topRight ?? "بۆ سەرەوەی ڕاست" },
-                  { id: "to-tl", label: "↖", title: copy?.topLeft ?? "بۆ سەرەوەی چەپ" },
-                  { id: "radial", label: "◎", title: copy?.radial ?? "بازنەیی" },
+                  {
+                    id: "to-r",
+                    label: "→",
+                    title: copy?.leftRight ?? "چەپ بۆ ڕاست",
+                  },
+                  {
+                    id: "to-l",
+                    label: "←",
+                    title: copy?.rightLeft ?? "ڕاست بۆ چەپ",
+                  },
+                  {
+                    id: "to-b",
+                    label: "↓",
+                    title: copy?.topBottom ?? "سەرەوە بۆ خوارەوە",
+                  },
+                  {
+                    id: "to-t",
+                    label: "↑",
+                    title: copy?.bottomTop ?? "خوارەوە بۆ سەرەوە",
+                  },
+                  {
+                    id: "to-br",
+                    label: "↘",
+                    title: copy?.diagonal ?? "لاتەنیشت",
+                  },
+                  {
+                    id: "to-bl",
+                    label: "↙",
+                    title: copy?.diagonalReverse ?? "لاتەنیشت پێچەوانە",
+                  },
+                  {
+                    id: "to-tr",
+                    label: "↗",
+                    title: copy?.topRight ?? "بۆ سەرەوەی ڕاست",
+                  },
+                  {
+                    id: "to-tl",
+                    label: "↖",
+                    title: copy?.topLeft ?? "بۆ سەرەوەی چەپ",
+                  },
+                  {
+                    id: "radial",
+                    label: "◎",
+                    title: copy?.radial ?? "بازنەیی",
+                  },
                 ].map((item) => (
                   <Tooltip key={item.id} content={item.title} side="top">
                     <button
                       type="button"
                       aria-label={item.title}
                       title={item.title}
+                      aria-pressed={direction === item.id}
                       onClick={() =>
                         setDirection(item.id as WebsiteGradientDirection)
                       }
@@ -567,50 +624,40 @@ export function ColorGradientModal({
           )}
 
           <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">{copy?.quickColors ?? "ڕەنگی ئامادە"}</label>
-            <div className="flex flex-wrap gap-1.5">
+            <label className="text-xs font-medium text-gray-600">
+              {copy?.quickColors ?? "ڕەنگی ئامادە"}
+            </label>
+            <div className={styles.palette}>
               {QUICK_COLORS.map((color) => (
-                <button
+                <ColorSwatch
                   key={color}
-                  type="button"
-                  onClick={() => {
+                  color={color}
+                  selected={activeValue === color}
+                  onSelect={() => {
                     setHexDraft(null);
                     setActiveValue(color);
                   }}
-                  className={`relative h-9 w-9 sm:h-7 sm:w-7 rounded-lg border transition-all ${activeValue === color ? "theme-fill border-transparent scale-110 shadow-sm" : "border-gray-200 hover:scale-105"}`}
-                  aria-label={color}
-                >
-                  <span
-                    className={`absolute rounded-md ${activeValue === color ? "inset-0.5" : "inset-0"}`}
-                    style={{ backgroundColor: color }}
-                  />
-                </button>
+                />
               ))}
             </div>
           </div>
 
           {pickedColors.length > 0 && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">{copy?.pickedColors ?? "ڕەنگە وەرگیراوەکان"}</label>
-              <div className="flex flex-wrap gap-1.5">
+              <label className="text-xs font-medium text-gray-600">
+                {copy?.pickedColors ?? "ڕەنگە وەرگیراوەکان"}
+              </label>
+              <div className={styles.palette}>
                 {pickedColors.map((color) => (
-                  <Tooltip key={color} content={color} side="top">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHexDraft(null);
-                        setActiveValue(color);
-                      }}
-                      className={`relative h-9 w-9 sm:h-7 sm:w-7 rounded-lg border transition-all cursor-pointer ${activeValue === color ? "theme-fill border-transparent scale-110 shadow-sm" : "border-gray-200 hover:scale-105"}`}
-                      title={color}
-                      aria-label={color}
-                    >
-                      <span
-                        className={`absolute rounded-md ${activeValue === color ? "inset-0.5" : "inset-0"}`}
-                        style={{ backgroundColor: color }}
-                      />
-                    </button>
-                  </Tooltip>
+                  <ColorSwatch
+                    key={color}
+                    color={color}
+                    selected={activeValue === color}
+                    onSelect={() => {
+                      setHexDraft(null);
+                      setActiveValue(color);
+                    }}
+                  />
                 ))}
               </div>
             </div>

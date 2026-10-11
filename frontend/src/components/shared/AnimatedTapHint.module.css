@@ -1,0 +1,37 @@
+.hand {
+  position: absolute;
+  right: 10px;
+  bottom: -5px;
+  width: 28px;
+  height: 32px;
+  pointer-events: none;
+  transform-origin: 60% 85%;
+  animation: tap 1.8s ease-in-out infinite;
+}
+
+.icon {
+  display: block;
+  font-family:
+    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  filter: grayscale(1) drop-shadow(0 1px 1px rgb(0 0 0 / 18%));
+}
+
+@keyframes tap {
+  0%,
+  55%,
+  100% {
+    transform: translate(0, 0) rotate(-15deg);
+  }
+  28% {
+    transform: translate(-1px, -4px) rotate(-15deg) scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand {
+    animation: none;
+    transform: rotate(-15deg);
+  }
+}

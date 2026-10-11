@@ -348,6 +348,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
       `SELECT EXISTS (
          SELECT 1 FROM platform_admins admin WHERE $1 IN (admin.logo,admin.avatar,admin.favicon)
          UNION ALL SELECT 1 FROM business_branding branding WHERE $1 IN (branding.logo,branding.favicon,branding.default_avatar)
+         UNION ALL SELECT 1 FROM forms form WHERE form.definition::text LIKE '%'||$1||'%'
          UNION ALL SELECT 1 FROM linktrees tree WHERE tree.image=$1 OR tree.template_config::text LIKE '%'||$1||'%'
          UNION ALL SELECT 1 FROM business_profile_change_requests request WHERE request.status='pending' AND request.changes::text LIKE '%'||$1||'%'
          UNION ALL SELECT 1 FROM permission_approval_requests approval WHERE approval.status='pending' AND approval.requested_changes::text LIKE '%'||$1||'%'
@@ -506,6 +507,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
   private unreferencedSql(alias: string): string {
     return `NOT EXISTS (SELECT 1 FROM platform_admins admin WHERE ${alias}.public_url IN (admin.logo,admin.avatar,admin.favicon))
       AND NOT EXISTS (SELECT 1 FROM business_branding branding WHERE ${alias}.public_url IN (branding.logo,branding.favicon,branding.default_avatar))
+      AND NOT EXISTS (SELECT 1 FROM forms form WHERE form.definition::text LIKE '%'||${alias}.public_url||'%')
       AND NOT EXISTS (SELECT 1 FROM linktrees tree WHERE tree.image=${alias}.public_url OR tree.template_config::text LIKE '%'||${alias}.public_url||'%')
       AND NOT EXISTS (SELECT 1 FROM business_profile_change_requests request WHERE request.status='pending' AND request.changes::text LIKE '%'||${alias}.public_url||'%')
       AND NOT EXISTS (SELECT 1 FROM permission_approval_requests approval WHERE approval.status='pending' AND approval.requested_changes::text LIKE '%'||${alias}.public_url||'%')`;

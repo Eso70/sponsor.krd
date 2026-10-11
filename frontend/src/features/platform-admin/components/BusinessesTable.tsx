@@ -1,5 +1,5 @@
 "use client";
-import { BusinessDomainManagementButton } from './BusinessDomainManagementButton';
+import { BusinessDomainManagementButton } from "./BusinessDomainManagementButton";
 
 import { memo, useMemo, useState } from "react";
 import Image from "next/image";
@@ -132,11 +132,11 @@ const TableRow = memo(function TableRow({
             <Tooltip content={copy.viewAnalytics} side="top">
               <button
                 onClick={() => onViewAnalytics(item)}
-                className="p-1 sm:p-1.5 rounded hover:bg-sky-50 transition-colors duration-200 shrink-0 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded hover:bg-sky-50 dark:hover:bg-sky-500/20 transition-colors duration-200 shrink-0 cursor-pointer"
                 title={copy.viewAnalytics}
                 aria-label={`${copy.viewAnalytics}: ${item.name}`}
               >
-                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-600 hover:text-sky-700" />
+                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 hover:text-sky-700" />
               </button>
             </Tooltip>
           )}
@@ -144,11 +144,11 @@ const TableRow = memo(function TableRow({
             <Tooltip content={copy.edit} side="top">
               <button
                 onClick={() => onEdit(item)}
-                className="p-1 sm:p-1.5 rounded hover:bg-yellow-50 transition-colors duration-200 shrink-0 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded hover:bg-yellow-50 dark:hover:bg-yellow-500/20 transition-colors duration-200 shrink-0 cursor-pointer"
                 title={copy.edit}
                 aria-label={`${copy.edit}: ${item.name}`}
               >
-                <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600 hover:text-yellow-700" />
+                <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-600 dark:text-yellow-400 dark:hover:text-yellow-300 hover:text-yellow-700" />
               </button>
             </Tooltip>
           )}
@@ -156,24 +156,29 @@ const TableRow = memo(function TableRow({
             <Tooltip content={copy.openDashboard} side="top">
               <button
                 onClick={() => onOpenDashboard(item)}
-                className="p-1 sm:p-1.5 rounded hover:bg-indigo-50 transition-colors duration-200 shrink-0 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors duration-200 shrink-0 cursor-pointer"
                 title={copy.openDashboard}
                 aria-label={`${copy.openDashboard}: ${item.name}`}
               >
-                <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 hover:text-indigo-700" />
+                <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 hover:text-indigo-700" />
               </button>
             </Tooltip>
           )}
-          {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
+          {onManageDomains && (
+            <BusinessDomainManagementButton
+              name={item.name}
+              onClick={() => onManageDomains(item)}
+            />
+          )}
           {onManageSessions && (
             <Tooltip content={copy.sessions} side="top">
               <button
                 onClick={() => onManageSessions(item)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-emerald-50 transition-colors duration-200 shrink-0 cursor-pointer sm:h-9 sm:w-9"
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors duration-200 shrink-0 cursor-pointer sm:h-9 sm:w-9"
                 title={copy.sessions}
                 aria-label={`${copy.sessions}: ${item.name}`}
               >
-                <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600" />
+                <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300" />
               </button>
             </Tooltip>
           )}
@@ -181,11 +186,11 @@ const TableRow = memo(function TableRow({
             <Tooltip content={copy.delete} side="top">
               <button
                 onClick={() => onDelete(item.id, item.name)}
-                className="p-1 sm:p-1.5 rounded hover:bg-red-50 transition-colors duration-200 shrink-0 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors duration-200 shrink-0 cursor-pointer"
                 title={copy.delete}
                 aria-label={`${copy.delete}: ${item.name}`}
               >
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 hover:text-red-700" />
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:text-red-700" />
               </button>
             </Tooltip>
           )}
@@ -262,10 +267,10 @@ const MobileCard = memo(function MobileCard({
               <Tooltip content={copy.viewAnalytics} side="top">
                 <button
                   onClick={() => onViewAnalytics(item)}
-                  className="flex items-center justify-center p-2 rounded-lg hover:bg-sky-50 transition-colors cursor-pointer"
+                  className="flex items-center justify-center p-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-500/20 transition-colors cursor-pointer"
                   aria-label={`${copy.viewAnalytics}: ${item.name}`}
                 >
-                  <Eye className="h-4 w-4 text-sky-600" />
+                  <Eye className="h-4 w-4 text-sky-600 dark:text-sky-400 dark:hover:text-sky-300" />
                 </button>
               </Tooltip>
             )}
@@ -273,10 +278,10 @@ const MobileCard = memo(function MobileCard({
               <Tooltip content={copy.edit} side="top">
                 <button
                   onClick={() => onEdit(item)}
-                  className="flex items-center justify-center p-2 rounded-lg hover:bg-yellow-50 transition-colors cursor-pointer"
+                  className="flex items-center justify-center p-2 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-500/20 transition-colors cursor-pointer"
                   aria-label={`${copy.edit}: ${item.name}`}
                 >
-                  <Edit className="h-4 w-4 text-yellow-600" />
+                  <Edit className="h-4 w-4 text-yellow-600 dark:text-yellow-400 dark:hover:text-yellow-300" />
                 </button>
               </Tooltip>
             )}
@@ -284,24 +289,29 @@ const MobileCard = memo(function MobileCard({
               <Tooltip content={copy.openDashboard} side="top">
                 <button
                   onClick={() => onOpenDashboard(item)}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer"
                   title={copy.openDashboard}
                   aria-label={`${copy.openDashboard}: ${item.name}`}
                 >
-                  <LogIn className="h-4 w-4 text-indigo-600" />
+                  <LogIn className="h-4 w-4 text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300" />
                 </button>
               </Tooltip>
             )}
-            {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
-          {onManageSessions && (
+            {onManageDomains && (
+              <BusinessDomainManagementButton
+                name={item.name}
+                onClick={() => onManageDomains(item)}
+              />
+            )}
+            {onManageSessions && (
               <Tooltip content={copy.sessions} side="top">
                 <button
                   onClick={() => onManageSessions(item)}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer"
                   title={copy.sessions}
                   aria-label={`${copy.sessions}: ${item.name}`}
                 >
-                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300" />
                 </button>
               </Tooltip>
             )}
@@ -309,10 +319,10 @@ const MobileCard = memo(function MobileCard({
               <Tooltip content={copy.delete} side="top">
                 <button
                   onClick={() => onDelete(item.id, item.name)}
-                  className="flex items-center justify-center p-2 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                  className="flex items-center justify-center p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors cursor-pointer"
                   aria-label={`${copy.delete}: ${item.name}`}
                 >
-                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400 dark:hover:text-red-300" />
                 </button>
               </Tooltip>
             )}
@@ -351,15 +361,23 @@ export const BusinessesTable = memo(function BusinessesTable({
 }: BusinessesTableProps) {
   const copy = usePlatformCopy();
   const { locale } = usePlatformLocale();
-  const columns = useMemo<ManagementTableColumn[]>(() => [
-    { key: "avatar", width: "w-14" },
-    { key: "name", header: copy.name },
-    { key: "contact", header: copy.contact },
-    { key: "subdomain", header: copy.subdomain, width: "w-48", hideBelow: "lg" },
-    { key: "meta", header: copy.statusPlan, width: "w-64" },
-    { key: "dates", header: copy.dates, width: "w-28", hideBelow: "xl" },
-    { key: "actions", header: copy.actions, width: "w-28" },
-  ], [copy]);
+  const columns = useMemo<ManagementTableColumn[]>(
+    () => [
+      { key: "avatar", width: "w-14" },
+      { key: "name", header: copy.name },
+      { key: "contact", header: copy.contact },
+      {
+        key: "subdomain",
+        header: copy.subdomain,
+        width: "w-48",
+        hideBelow: "lg",
+      },
+      { key: "meta", header: copy.statusPlan, width: "w-64" },
+      { key: "dates", header: copy.dates, width: "w-28", hideBelow: "xl" },
+      { key: "actions", header: copy.actions, width: "w-28" },
+    ],
+    [copy],
+  );
   return (
     <ManagementTable
       data={data}
@@ -395,4 +413,3 @@ export const BusinessesTable = memo(function BusinessesTable({
     />
   );
 });
-

@@ -47,7 +47,7 @@ export class CreatePlanDto {
   @IsOptional() @IsString() @MaxLength(500) description?: string;
   @IsOptional() @IsIn(['active', 'inactive', 'archived']) status?: string;
   @IsString() @Matches(/^[A-Z]{3}$/) currency: string;
-  @IsInt() @Min(0) yearlyPriceMinor: number;
+  @IsInt() @Min(0) @Max(Number.MAX_SAFE_INTEGER) yearlyPriceMinor: number;
   @IsOptional() @IsInt() @Min(0) @Max(365) trialDays?: number;
   @IsOptional() @IsInt() @Min(-32768) @Max(32767) displayOrder?: number;
   @IsOptional() @IsBoolean() isDefault?: boolean;
@@ -65,7 +65,11 @@ export class UpdatePlanDto {
   @IsOptional() @IsString() @MaxLength(500) description?: string;
   @IsOptional() @IsIn(['active', 'inactive', 'archived']) status?: string;
   @IsOptional() @IsString() @Matches(/^[A-Z]{3}$/) currency?: string;
-  @IsOptional() @IsInt() @Min(0) yearlyPriceMinor?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  yearlyPriceMinor?: number;
   @IsOptional() @IsInt() @Min(0) @Max(365) trialDays?: number;
   @IsOptional() @IsInt() @Min(-32768) @Max(32767) displayOrder?: number;
   @IsOptional() @IsBoolean() isDefault?: boolean;
@@ -94,7 +98,12 @@ export class CreateSubscriptionPlanDto {
   @IsIn(['active', 'inactive', 'archived'])
   status?: 'active' | 'inactive' | 'archived';
   @IsString() @Matches(/^[A-Z]{3}$/) currency: string;
-  @IsInt() @Min(0) yearlyPriceMinor: number;
+  @IsInt() @Min(0) @Max(Number.MAX_SAFE_INTEGER) yearlyPriceMinor: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  monthlyPriceMinor?: number;
   @IsOptional() @IsInt() @Min(0) @Max(365) trialDays?: number;
   @IsOptional() @IsInt() @Min(-32768) @Max(32767) displayOrder?: number;
   @IsOptional() @IsBoolean() isDefault?: boolean;
@@ -108,7 +117,16 @@ export class UpdateSubscriptionPlanDto {
   @IsIn(['active', 'inactive', 'archived'])
   status?: 'active' | 'inactive' | 'archived';
   @IsOptional() @IsString() @Matches(/^[A-Z]{3}$/) currency?: string;
-  @IsOptional() @IsInt() @Min(0) yearlyPriceMinor?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  yearlyPriceMinor?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  monthlyPriceMinor?: number;
   @IsOptional() @IsInt() @Min(0) @Max(365) trialDays?: number;
   @IsOptional() @IsInt() @Min(-32768) @Max(32767) displayOrder?: number;
   @IsOptional() @IsBoolean() isDefault?: boolean;
@@ -131,6 +149,9 @@ export class UpsertBusinessSubscriptionDto {
   status: string;
   @IsOptional() @IsISO8601() currentPeriodStart?: string;
   @IsOptional() @IsISO8601() currentPeriodEnd?: string;
+  @IsOptional() @IsIn(['free', 'monthly', 'yearly', 'custom']) billingCycle?:
+    'free' | 'monthly' | 'yearly' | 'custom';
+  @IsOptional() @IsBoolean() cancelAtPeriodEnd?: boolean;
 }
 
 export class UpdatePlanConfigurationDto {

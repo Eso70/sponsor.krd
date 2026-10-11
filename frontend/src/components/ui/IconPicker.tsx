@@ -410,10 +410,6 @@ setUploading(true);
         <div
           ref={gridContainerRef}
           className="flex-1 overflow-y-auto p-4 transform-gpu bg-white dark:bg-[#161B22]"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(156,163,175,0.35) transparent",
-          }}
         >
           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-3">
             {renderedIcons.map((iconName) => (

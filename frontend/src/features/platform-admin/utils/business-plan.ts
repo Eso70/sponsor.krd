@@ -7,8 +7,12 @@ export function getBusinessPlanLabel(business: Business): string {
 export function getBusinessPlanBadgeClasses(plan?: string): string {
   const normalizedPlan = plan?.trim().toLowerCase() || "";
 
-  if (normalizedPlan.includes("enterprise")) {
+  if (normalizedPlan === "max" || normalizedPlan.includes("enterprise")) {
     return "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-400/25 dark:bg-purple-400/10 dark:text-purple-300";
+  }
+
+  if (normalizedPlan === "ultra") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-300";
   }
 
   if (normalizedPlan.includes("premium") || normalizedPlan.includes("pro")) {

@@ -161,7 +161,7 @@ describe("verified custom-domain routing", () => {
   });
   it.each([
     "/api/auth/profile",
-    "/api/business/domains",
+    "/api/business/settings",
     "/api/analytics/v2/dashboard",
     "/api/auth/email/request",
   ])("permits business APIs on the selected host: %s", async (path) => {

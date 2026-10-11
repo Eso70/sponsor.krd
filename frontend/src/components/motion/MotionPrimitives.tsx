@@ -16,7 +16,11 @@ export function MotionPulse({ className, ...props }: MotionDivProps) {
       className={className}
       initial={{ opacity: reduced ? 1 : 0.55 }}
       animate={{ opacity: reduced ? 1 : [0.55, 1, 0.55] }}
-      transition={{ duration: 2, ease: "easeInOut", repeat: reduced ? 0 : Infinity }}
+      transition={{
+        duration: 2,
+        ease: "easeInOut",
+        repeat: reduced ? 0 : Infinity,
+      }}
       {...props}
     />
   );
@@ -82,7 +86,11 @@ export function MotionShine({ className, ...props }: MotionDivProps) {
       className={className}
       initial={{ x: "-100%" }}
       animate={{ x: reduced ? "-100%" : ["-100%", "200%", "200%"] }}
-      transition={{ duration: 6, ease: "easeInOut", repeat: reduced ? 0 : Infinity }}
+      transition={{
+        duration: 6,
+        ease: "easeInOut",
+        repeat: reduced ? 0 : Infinity,
+      }}
       {...props}
     />
   );
@@ -102,7 +110,11 @@ export function MotionPing({
           ? { scale: 1, opacity: 0.75 }
           : { scale: [1, 2], opacity: [0.75, 0] }
       }
-      transition={{ duration: 1, ease: "easeOut", repeat: reduced ? 0 : Infinity }}
+      transition={{
+        duration: 1,
+        ease: "easeOut",
+        repeat: reduced ? 0 : Infinity,
+      }}
       {...props}
     />
   );
@@ -122,14 +134,41 @@ export const MotionReveal = forwardRef<HTMLDivElement, MotionDivProps>(
   },
 );
 
-export const MotionFade = forwardRef<HTMLDivElement, MotionDivProps>(
-  function MotionFade({ className, ...props }, ref) {
+export const MotionFade = forwardRef<
+  HTMLDivElement,
+  MotionDivProps & { duration?: number }
+>(function MotionFade({ className, duration, ...props }, ref) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: reduced ? 1 : 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={
+        duration === undefined
+          ? undefined
+          : { duration: reduced ? 0 : duration, ease: "easeOut" }
+      }
+      {...props}
+    />
+  );
+});
+
+/** Edge-mounted panels enter horizontally without the modal's zoom effect. */
+export const MotionSlide = forwardRef<HTMLDivElement, MotionDivProps>(
+  function MotionSlide({ className, ...props }, ref) {
+    const reduced = useReducedMotion();
     return (
       <motion.div
         ref={ref}
         className={className}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ x: reduced ? 0 : "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: reduced ? 0 : "100%" }}
+        transition={{ duration: reduced ? 0 : 0.9, ease: [0.4, 0, 0.2, 1] }}
+        style={{ willChange: "transform" }}
         {...props}
       />
     );

@@ -1,6 +1,6 @@
 import { EditorField } from "@/components/shared/EditorField";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
-import { OBJECTIVE_LABELS } from "../mock-data";
+import { OBJECTIVE_LABELS } from "../campaign-objectives";
 import type { CampaignObjective } from "../types";
 import { CampaignChoiceField } from "./CampaignChoiceField";
 import { CampaignChoiceGroup } from "./CampaignChoiceGroup";

@@ -43,3 +43,4 @@ COMMENT ON COLUMN public.linktrees.is_archived IS
 
 COMMENT ON COLUMN public.linktrees.archived_at IS
     'Timestamp when the Linktree was archived, or NULL while active.';
+

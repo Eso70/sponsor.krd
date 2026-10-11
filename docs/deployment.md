@@ -440,3 +440,7 @@ Before considering a deployment successful verify:
 - Analytics continue collecting data.
 - Background jobs are processing normally.
 - No unexpected errors appear in application logs.
+
+## Persisted forms
+
+Before deploying persisted forms, run `pnpm db:migrate` to apply the `2026-10-10_forms*.sql` forward migrations, then restart application services. No database reset is required. Business plan permissions inherit corresponding Linktree grants; platform administrators retain their existing access. See [Forms](forms.md).

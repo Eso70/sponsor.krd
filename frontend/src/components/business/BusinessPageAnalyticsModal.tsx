@@ -38,7 +38,6 @@ import { toast } from "sonner";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonPageAnalyticsContent } from "@/components/shared/SkeletonModalLayouts";
-import { analyticsModalScrollbarStyles } from "@/features/analytics/modalStyles";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { ANALYTICS_TERMS } from "@/components/shared/analytics-terminology";
@@ -91,52 +90,114 @@ interface BusinessPageAnalyticsModalProps {
   onAnalyticsCleared?: () => void | Promise<void>;
   platformTheme?: boolean;
   copy?: Partial<PageAnalyticsCopy>;
+  locale?: "en" | "ar" | "ckb";
 }
 
 export interface PageAnalyticsCopy {
-  loadFailed: string; cleared: string; clearFailed: string; title: string;
-  summary: string; allData: string; lastUpdated: string; clearAll: string;
-  nothingToClear: string; clearData: string; refresh: string; close: string;
-  totalViews: string; uniqueViewer: string; totalClicks: string;
-  uniqueClicker: string; clickRate: string; conversions: string;
-  conversionValue: string; conversionRate: string; fromDate: string; toDate: string;
-  buttons: string; historyHint: string; noData: string;
-  unattributedClicks: string; unattributedHint: string; historical: string;
-  unattributed: string; clicks: string; unique: string; actualConversions: string;
-  openDestination: string; uniqueHint: string; clearTitle: string;
-  confirmClear: string; clearing: string; cancel: string; clearQuestion: string;
-  today: string; todayHint: string; last24h: string; last24hHint: string;
-  last7d: string; last7dHint: string; all: string; allHint: string;
-  custom: string; customHint: string;
+  loadFailed: string;
+  cleared: string;
+  clearFailed: string;
+  title: string;
+  summary: string;
+  allData: string;
+  lastUpdated: string;
+  clearAll: string;
+  nothingToClear: string;
+  clearData: string;
+  refresh: string;
+  close: string;
+  totalViews: string;
+  uniqueViewer: string;
+  totalClicks: string;
+  uniqueClicker: string;
+  clickRate: string;
+  conversions: string;
+  conversionValue: string;
+  conversionRate: string;
+  fromDate: string;
+  toDate: string;
+  buttons: string;
+  historyHint: string;
+  noData: string;
+  unattributedClicks: string;
+  unattributedHint: string;
+  historical: string;
+  unattributed: string;
+  clicks: string;
+  unique: string;
+  actualConversions: string;
+  openDestination: string;
+  uniqueHint: string;
+  clearTitle: string;
+  confirmClear: string;
+  clearing: string;
+  cancel: string;
+  clearQuestion: string;
+  today: string;
+  todayHint: string;
+  last24h: string;
+  last24hHint: string;
+  last7d: string;
+  last7dHint: string;
+  all: string;
+  allHint: string;
+  custom: string;
+  customHint: string;
 }
 
 const KURDISH_COPY: PageAnalyticsCopy = {
-  loadFailed: "داتاکانی ئامار بارنەکران", cleared: "داتاکانی ئامار پاککرانەوە",
-  clearFailed: "پاککردنەوەی داتاکان سەرکەوتوو نەبوو", title: "ئاماری",
-  summary: "کورتەی ئاماری هەموو ماوە", allData: "هەموو داتاکان",
-  lastUpdated: "دواین نوێکردنەوە:", clearAll: "پاککردنەوەی هەموو داتاکانی ئامار",
-  nothingToClear: "هیچ داتایەک نییە بۆ پاککردنەوە", clearData: "پاککردنەوەی داتاکان",
-  refresh: "نوێکردنەوە", close: "داخستن",
-  totalViews: ANALYTICS_TERMS.totalViews, uniqueViewer: ANALYTICS_TERMS.uniqueViewer,
-  totalClicks: ANALYTICS_TERMS.totalClicks, uniqueClicker: ANALYTICS_TERMS.uniqueClicker,
-  clickRate: ANALYTICS_TERMS.clickRate, conversions: "گۆڕانەکان",
-  conversionValue: "بەهای گۆڕان", conversionRate: "ڕێژەی گۆڕان",
-  fromDate: "لە بەرواری", toDate: "بۆ بەرواری", buttons: "دوگمەکان",
-  historyHint: "کۆی سەرەوە هەموو کلیکە تۆمارکراوەکان دەگرێتەوە؛ دوگمە سڕاوە یان گۆڕاوەکان لێرە وەک مێژوویی نیشان دەدرێن.",
-  noData: "هێشتا هیچ داتایەک نییە", unattributedClicks: "کلیکە دیارینەکراوەکان",
+  loadFailed: "داتاکانی ئامار بارنەکران",
+  cleared: "داتاکانی ئامار پاککرانەوە",
+  clearFailed: "پاککردنەوەی داتاکان سەرکەوتوو نەبوو",
+  title: "ئاماری",
+  summary: "کورتەی ئاماری هەموو ماوە",
+  allData: "هەموو داتاکان",
+  lastUpdated: "دواین نوێکردنەوە:",
+  clearAll: "پاککردنەوەی هەموو داتاکانی ئامار",
+  nothingToClear: "هیچ داتایەک نییە بۆ پاککردنەوە",
+  clearData: "پاککردنەوەی داتاکان",
+  refresh: "نوێکردنەوە",
+  close: "داخستن",
+  totalViews: ANALYTICS_TERMS.totalViews,
+  uniqueViewer: ANALYTICS_TERMS.uniqueViewer,
+  totalClicks: ANALYTICS_TERMS.totalClicks,
+  uniqueClicker: ANALYTICS_TERMS.uniqueClicker,
+  clickRate: ANALYTICS_TERMS.clickRate,
+  conversions: "گۆڕانەکان",
+  conversionValue: "بەهای گۆڕان",
+  conversionRate: "ڕێژەی گۆڕان",
+  fromDate: "لە بەرواری",
+  toDate: "بۆ بەرواری",
+  buttons: "دوگمەکان",
+  historyHint:
+    "کۆی سەرەوە هەموو کلیکە تۆمارکراوەکان دەگرێتەوە؛ دوگمە سڕاوە یان گۆڕاوەکان لێرە وەک مێژوویی نیشان دەدرێن.",
+  noData: "هێشتا هیچ داتایەک نییە",
+  unattributedClicks: "کلیکە دیارینەکراوەکان",
   unattributedHint: "کردارێک کە بە دوگمەیەکی دیاریکراو نەبەستراوەتەوە",
-  historical: "مێژوویی", unattributed: "دیارینەکراو", clicks: "کلیک",
-  unique: "تاک", actualConversions: "گۆڕانی ڕاستەقینە",
+  historical: "مێژوویی",
+  unattributed: "دیارینەکراو",
+  clicks: "کلیک",
+  unique: "تاک",
+  actualConversions: "گۆڕانی ڕاستەقینە",
   openDestination: "کردنەوەی بەستەری مەبەست",
-  uniqueHint: "ژمارەی «تاک» بۆ هەر دوگمەیەک بە جیاوازی هەژمار دەکرێت؛ یەک کەس دەتوانێت زیاتر لە دوگمەیەک کلیک بکات، بۆیە ئەو ژمارانە کۆ ناکرێنەوە.",
-  clearTitle: "پاککردنەوەی داتاکانی ئامار", confirmClear: "بەڵێ، پاکی بکەوە",
-  clearing: "پاکدەکرێتەوە...", cancel: "هەڵوەشاندنەوە",
-  clearQuestion: "دڵنیایت لە پاککردنەوەی هەموو داتاکانی بینین و کلیکی ئەم پەڕەیە؟ ئەم کردارە ناگەڕێتەوە.",
-  today: "ئەمڕۆ", todayHint: "لە سەرەتای ئەمڕۆ",
-  last24h: "٢٤ ساعت", last24hHint: "٢٤ ساعتی ڕابردوو",
-  last7d: "٧ ڕۆژ", last7dHint: "٧ ڕۆژی ڕابردوو",
-  all: "هەموو", allHint: "هەموو ماوەکان",
-  custom: "تایبەت", customHint: "دیاریکردنی بەروار بە دەستی",
+  uniqueHint:
+    "ژمارەی «تاک» بۆ هەر دوگمەیەک بە جیاوازی هەژمار دەکرێت؛ یەک کەس دەتوانێت زیاتر لە دوگمەیەک کلیک بکات، بۆیە ئەو ژمارانە کۆ ناکرێنەوە.",
+  clearTitle: "پاککردنەوەی داتاکانی ئامار",
+  confirmClear: "بەڵێ، پاکی بکەوە",
+  clearing: "پاکدەکرێتەوە...",
+  cancel: "هەڵوەشاندنەوە",
+  clearQuestion:
+    "دڵنیایت لە پاککردنەوەی هەموو داتاکانی بینین و کلیکی ئەم پەڕەیە؟ ئەم کردارە ناگەڕێتەوە.",
+  today: "ئەمڕۆ",
+  todayHint: "لە سەرەتای ئەمڕۆ",
+  last24h: "٢٤ ساعت",
+  last24hHint: "٢٤ ساعتی ڕابردوو",
+  last7d: "٧ ڕۆژ",
+  last7dHint: "٧ ڕۆژی ڕابردوو",
+  all: "هەموو",
+  allHint: "هەموو ماوەکان",
+  custom: "تایبەت",
+  customHint: "دیاریکردنی بەروار بە دەستی",
 };
 
 /**
@@ -158,7 +219,13 @@ const HEADER_DANGER_BUTTON =
 /** The preset options shown in the time-range filter strip. */
 export type DateRangePreset = "today" | "24h" | "7d" | "all" | "custom";
 
-const DATE_RANGE_OPTIONS: DateRangePreset[] = ["today", "24h", "7d", "all", "custom"];
+const DATE_RANGE_OPTIONS: DateRangePreset[] = [
+  "today",
+  "24h",
+  "7d",
+  "all",
+  "custom",
+];
 
 function toLocalDateString(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -363,6 +430,7 @@ export function BusinessPageAnalyticsModal({
   canClearAnalytics = true,
   summaryOnly = false,
   dataSource = "business",
+  locale,
   onAnalyticsCleared,
   platformTheme = false,
   copy,
@@ -563,9 +631,6 @@ export function BusinessPageAnalyticsModal({
   // a fixed overlay ends up clipped to the panel that opened it.
   return createPortal(
     <>
-      <style
-        dangerouslySetInnerHTML={{ __html: analyticsModalScrollbarStyles }}
-      />
       <div
         className="modal-ltr fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/40 dark:bg-black/60 backdrop-blur-md overflow-y-auto"
         data-sponsor-krd-theme={platformTheme ? true : undefined}
@@ -596,9 +661,7 @@ export function BusinessPageAnalyticsModal({
                       {labels.title} {pageName}
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-400 dark:text-gray-500 mt-0.5 font-kurdish truncate">
-                      {summaryOnly
-                        ? labels.summary
-                        : labels.allData}
+                      {summaryOnly ? labels.summary : labels.allData}
                     </p>
                   </div>
                 </div>
@@ -607,11 +670,14 @@ export function BusinessPageAnalyticsModal({
                     <MotionPulse className="theme-fill h-1.5 w-1.5 rounded-full shadow-sm" />
                     <span className="font-kurdish">
                       {labels.lastUpdated}{" "}
-                      {new Intl.DateTimeFormat(copy ? "ar-IQ" : "ku", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      }).format(lastUpdated)}
+                      {new Intl.DateTimeFormat(
+                        locale ?? (copy ? "ar-IQ" : "ckb-IQ"),
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        },
+                      ).format(lastUpdated)}
                     </span>
                   </div>
                 )}
@@ -621,9 +687,7 @@ export function BusinessPageAnalyticsModal({
                 {canClearAnalytics && (
                   <Tooltip
                     content={
-                      hasAnyData
-                        ? labels.clearAll
-                        : labels.nothingToClear
+                      hasAnyData ? labels.clearAll : labels.nothingToClear
                     }
                     side="bottom"
                   >
@@ -763,14 +827,20 @@ export function BusinessPageAnalyticsModal({
                         <div className="flex gap-1.5 flex-wrap">
                           {DATE_RANGE_OPTIONS.map((id) => {
                             const active = preset === id;
-                            const label = id === "24h" ? labels.last24h : id === "7d" ? labels.last7d : labels[id];
-                            const hint = id === "24h" ? labels.last24hHint : id === "7d" ? labels.last7dHint : labels[`${id}Hint`];
+                            const label =
+                              id === "24h"
+                                ? labels.last24h
+                                : id === "7d"
+                                  ? labels.last7d
+                                  : labels[id];
+                            const hint =
+                              id === "24h"
+                                ? labels.last24hHint
+                                : id === "7d"
+                                  ? labels.last7dHint
+                                  : labels[`${id}Hint`];
                             return (
-                              <Tooltip
-                                key={id}
-                                content={hint}
-                                side="top"
-                              >
+                              <Tooltip key={id} content={hint} side="top">
                                 <button
                                   type="button"
                                   aria-label={hint}
@@ -1014,11 +1084,7 @@ export function BusinessPageAnalyticsModal({
           closeLabel={labels.close}
           isDeleting={isClearing}
           zIndexClassName="z-[60]"
-          message={
-            <p>
-              {labels.clearQuestion}
-            </p>
-          }
+          message={<p>{labels.clearQuestion}</p>}
         />
       )}
     </>,

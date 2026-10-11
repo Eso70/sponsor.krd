@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
-import { RootPublicLanguageToggle, RootPublicLinktreeLanguageToggle, RootPublicLocaleProvider, useRootPublicLocale } from "./RootPublicLocaleProvider";
+import {
+  RootPublicLanguageToggle,
+  RootPublicLinktreeLanguageToggle,
+  RootPublicLocaleProvider,
+  useRootPublicLocale,
+} from "./RootPublicLocaleProvider";
 import { ROOT_PUBLIC_LOCALE_COOKIE } from "./root-public-locale";
 
 function LocaleProbe() {
@@ -11,20 +16,35 @@ function LocaleProbe() {
 describe("root visitor language", () => {
   it("cycles a public Linktree from English back to Kurdish", () => {
     const onChange = vi.fn();
-    render(<RootPublicLinktreeLanguageToggle locale="en" onChange={onChange} />);
+    render(
+      <RootPublicLinktreeLanguageToggle locale="en" onChange={onChange} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Switch to Kurdish" }));
     expect(onChange).toHaveBeenCalledWith("ckb");
     expect(document.cookie).toContain(`${ROOT_PUBLIC_LOCALE_COOKIE}=ckb`);
   });
   it("switches to Arabic and saves only the root visitor cookie", () => {
-    render(<RootPublicLocaleProvider initialLocale="ckb"><RootPublicLanguageToggle /><LocaleProbe /></RootPublicLocaleProvider>);
-    fireEvent.click(screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }));
+    render(
+      <RootPublicLocaleProvider initialLocale="ckb">
+        <RootPublicLanguageToggle />
+        <LocaleProbe />
+      </RootPublicLocaleProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "گۆڕینی زمان بۆ عەرەبی" }),
+    );
     expect(screen.getByText("ar")).toBeInTheDocument();
     expect(document.cookie).toContain(`${ROOT_PUBLIC_LOCALE_COOKIE}=ar`);
-    expect((screen.getByRole("button", { name: "التبديل إلى الإنجليزية" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("saudi.png"));
-    fireEvent.click(screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }));
+    expect(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    ).toHaveTextContent("AR");
+    fireEvent.click(
+      screen.getByRole("button", { name: "التبديل إلى الإنجليزية" }),
+    );
     expect(screen.getByText("en")).toBeInTheDocument();
     expect(document.cookie).toContain(`${ROOT_PUBLIC_LOCALE_COOKIE}=en`);
-    expect((screen.getByRole("button", { name: "Switch to Kurdish" })).querySelector("img")).toHaveAttribute("src", expect.stringContaining("uk.png"));
+    expect(
+      screen.getByRole("button", { name: "Switch to Kurdish" }),
+    ).toHaveTextContent("EN");
   });
 });

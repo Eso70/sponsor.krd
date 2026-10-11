@@ -12,6 +12,7 @@ import {
   isAuthenticatedMutation,
   hasAuthenticatedSessionCookie,
   isSameOriginBrowserRequest,
+  browserRequestProtocol,
 } from "@/lib/security/request-origin";
 import { extractSubdomain } from "@/lib/subdomain-utils";
 import { resolveBusinessHost } from "@/lib/public/domain-routing";
@@ -19,6 +20,7 @@ import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { classifyUpstreamFailure } from "@/lib/api/upstream-failure";
 import {
   INTERNAL_PROXY_KEY_HEADER,
+  INTERNAL_PROXY_HOST_HEADER,
   internalProxyKey,
 } from "@/lib/security/internal-proxy-key";
 
@@ -54,6 +56,10 @@ async function proxyRequest(
   }
 
   const host = request.headers.get("host") || request.nextUrl.host;
+  const publicProtocol = browserRequestProtocol(request.url, request.headers.get("x-forwarded-proto"));
+  if (!publicProtocol) {
+    return NextResponse.json({ message: "Invalid request protocol" }, { status: 400 });
+  }
   const cookieHeader = request.headers.get("cookie");
   if (
     (isAuthenticatedMutation(request.method, cookieHeader) ||
@@ -112,13 +118,7 @@ async function proxyRequest(
   // Build headers to forward
   const headers = new Headers();
   headers.set("host", host);
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  headers.set(
-    "x-forwarded-proto",
-    forwardedProto === "https"
-      ? "https"
-      : request.nextUrl.protocol.replace(":", ""),
-  );
+  headers.set("x-forwarded-proto", publicProtocol);
   for (const name of ["origin", "referer"]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
@@ -127,6 +127,7 @@ async function proxyRequest(
   const proxyKey = internalProxyKey();
   if (proxyKey) {
     headers.set(INTERNAL_PROXY_KEY_HEADER, proxyKey);
+    headers.set(INTERNAL_PROXY_HOST_HEADER, host);
   }
   headers.set(
     "x-forwarded-for",

@@ -137,3 +137,7 @@ milestones. They remain available to Sponsor.krd analytics.
 
 Any request to add TikTok tracking to a non-Linktree surface is an architecture
 and privacy-policy change, not a component-level implementation detail.
+
+## Persisted forms
+
+Public `/form/<slug>` pages use the shared first-party tracker for views, starts and final actions. Accepted submissions call `UnifiedAnalyticsService` atomically with response storage and link the analytics event for attribution. Actions are registered through the form public-page trigger. Forms have no Pixel IDs and remain outside the TikTok allowlist; no response contact values enter event properties or marketing delivery. See [Forms](forms.md).

@@ -50,7 +50,7 @@ export const INITIAL_CREATE_CAMPAIGN_FORM: CreateCampaignFormState = {
   campaignName: "",
   objective: "REACH",
   optimizationGoal: "LEADS",
-  dataConnectionId: "ismail-cs",
+  dataConnectionId: "",
   optimizationEvent: "ClickButton",
   bidStrategy: "MAXIMIZE_DELIVERY",
   dailyBudget: 25,
@@ -69,7 +69,7 @@ export const INITIAL_CREATE_CAMPAIGN_FORM: CreateCampaignFormState = {
   interactiveAddOnEnabled: false,
   addOnMode: "CREATE",
   newAddOnType: "DISPLAY_CARD",
-  existingAddOnId: "addon-product-card",
+  existingAddOnId: "",
 };
 
 export function isValidWebsiteUrl(value: string): boolean {

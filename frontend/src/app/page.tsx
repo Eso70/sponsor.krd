@@ -12,9 +12,15 @@ import { BusinessGatewayTimeoutPage } from "@/components/error-pages/BusinessGat
 import { classifyUpstreamFailure } from "@/lib/api/upstream-failure";
 import { businessTabTitle } from "@/lib/utils/tab-title";
 import { businessPublicCopy } from "@/features/business/i18n/public-copy";
-import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
+import {
+  BUSINESS_PUBLIC_LOCALE_COOKIE,
+  publicBusinessLocale,
+} from "@/features/business/i18n/public-locale";
 import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
-import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
+import {
+  ROOT_PUBLIC_LOCALE_COOKIE,
+  parseRootPublicLocale,
+} from "@/features/public-site/root-public-locale";
 import { rootPublicCopy } from "@/features/public-site/root-public-copy";
 import {
   INTERNAL_PROXY_KEY_HEADER,
@@ -52,19 +58,34 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default async function Home() {
   if (await isRootRequest()) {
-    const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
-    return <><PlatformOrganizationStructuredData /><HomeLanding initialLocale={locale} /></>;
+    const locale = parseRootPublicLocale(
+      (await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
+    );
+    return (
+      <>
+        <PlatformOrganizationStructuredData />
+        <HomeLanding initialLocale={locale} />
+      </>
+    );
   }
 
   const headerStore = await headers();
   const host = headerStore.get("host") || "";
-  const subdomain = extractSubdomain(host, headerStore.get('x-subdomain') || undefined, ROOT_DOMAIN);
+  const subdomain = extractSubdomain(
+    host,
+    headerStore.get("x-subdomain") || undefined,
+    ROOT_DOMAIN,
+  );
   if (!subdomain) {
-    const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+    const locale = parseRootPublicLocale(
+      (await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
+    );
     return <HomeLanding initialLocale={locale} />;
   }
   const cookieStore = await cookies();
-  const initialLocale = publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+  const initialLocale = publicBusinessLocale(
+    cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
+  );
 
   let landingProps: ComponentProps<typeof BusinessLanding> | null = null;
   let badGateway = false;
@@ -76,28 +97,14 @@ export default async function Home() {
       [INTERNAL_PROXY_KEY_HEADER]: internalProxyKey() || "",
     };
     const signal = AbortSignal.timeout(30_000);
-    const [businessRes, linktreesRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/api/public/business`, {
-        headers: headers_,
-        cache: "no-store",
-        signal,
-      }),
-      fetch(`${BACKEND_URL}/api/public/linktrees`, {
-        headers: headers_,
-        cache: "no-store",
-        signal,
-      }),
-    ]);
-
-    badGateway = [businessRes, linktreesRes].some(
-      (response) => response.status === 502,
-    );
-    serviceUnavailable = [businessRes, linktreesRes].some(
-      (response) => response.status === 503,
-    );
-    gatewayTimeout = [businessRes, linktreesRes].some(
-      (response) => response.status === 504,
-    );
+    const businessRes = await fetch(`${BACKEND_URL}/api/public/business`, {
+      headers: headers_,
+      cache: "no-store",
+      signal,
+    });
+    badGateway = businessRes.status === 502;
+    serviceUnavailable = businessRes.status === 503;
+    gatewayTimeout = businessRes.status === 504;
 
     if (
       !badGateway &&
@@ -108,13 +115,7 @@ export default async function Home() {
       const businessJson = await businessRes.json();
       const business = businessJson?.data;
       if (business) {
-        let linktrees: ComponentProps<typeof BusinessLanding>["linktrees"] = [];
-        if (linktreesRes.ok) {
-          const ltJson = await linktreesRes.json();
-          linktrees = Array.isArray(ltJson?.data) ? ltJson.data : [];
-        }
-
-        landingProps = { business, linktrees, initialLocale };
+        landingProps = { business, initialLocale };
       }
     }
   } catch (error) {
@@ -123,9 +124,24 @@ export default async function Home() {
     serviceUnavailable = failure.status === 503;
   }
 
-  if (badGateway) return <BusinessBadGatewayPage pageCopy={businessErrorPageCopy(initialLocale, "badGateway")} />;
-  if (serviceUnavailable) return <BusinessServiceUnavailablePage pageCopy={businessErrorPageCopy(initialLocale, "serviceUnavailable")} />;
-  if (gatewayTimeout) return <BusinessGatewayTimeoutPage pageCopy={businessErrorPageCopy(initialLocale, "gatewayTimeout")} />;
+  if (badGateway)
+    return (
+      <BusinessBadGatewayPage
+        pageCopy={businessErrorPageCopy(initialLocale, "badGateway")}
+      />
+    );
+  if (serviceUnavailable)
+    return (
+      <BusinessServiceUnavailablePage
+        pageCopy={businessErrorPageCopy(initialLocale, "serviceUnavailable")}
+      />
+    );
+  if (gatewayTimeout)
+    return (
+      <BusinessGatewayTimeoutPage
+        pageCopy={businessErrorPageCopy(initialLocale, "gatewayTimeout")}
+      />
+    );
   if (!landingProps) return <HomeLanding />;
   return <BusinessLanding {...landingProps} />;
 }
@@ -133,11 +149,17 @@ export default async function Home() {
 export async function generateMetadata() {
   const headerStore = await headers();
   const host = (headerStore.get("host") || "").split(":")[0].toLowerCase();
-  const subdomain = extractSubdomain(host, headerStore.get('x-subdomain') || undefined, ROOT_DOMAIN);
+  const subdomain = extractSubdomain(
+    host,
+    headerStore.get("x-subdomain") || undefined,
+    ROOT_DOMAIN,
+  );
 
   if (subdomain) {
     const cookieStore = await cookies();
-    const locale = publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+    const locale = publicBusinessLocale(
+      cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
+    );
     try {
       const res = await fetch(`${BACKEND_URL}/api/public/business`, {
         headers: {
@@ -167,11 +189,18 @@ export async function generateMetadata() {
               },
             ],
             apple:
-              business.logo || business.default_avatar || BUSINESS_LOGO_PLACEHOLDER,
+              business.logo ||
+              business.default_avatar ||
+              BUSINESS_LOGO_PLACEHOLDER,
           };
           return {
-            title: businessTabTitle(business.name, businessPublicCopy[locale].footer.home),
-            description: `${businessPublicCopy[locale].publishedPages} — ${business.name}`,
+            title: businessTabTitle(
+              business.name,
+              businessPublicCopy[locale].footer.home,
+            ),
+            description:
+              business.footer_text?.trim() ||
+              businessPublicCopy[locale].hero.description,
             icons,
             themeColor: business.website_color || SPONSOR_KRD_ACCENT_COLOR,
           };
@@ -181,7 +210,9 @@ export async function generateMetadata() {
   }
 
   // Root domain only — a business subdomain returned above with its own icons.
-  const rootLocale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
+  const rootLocale = parseRootPublicLocale(
+    (await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
+  );
   const context = await publicRequestContext();
   // Declared explicitly rather than left to the implicit `/favicon.ico` pickup,
   // so SponsorKrd's own mark is stated in the same place a tenant's is.
@@ -190,7 +221,14 @@ export async function generateMetadata() {
     alternates: { canonical: `${context.origin}/` },
     openGraph: {
       url: `${context.origin}/`,
-      images: [{ url: SPONSOR_KRD_APP_ICON, width: 512, height: 512, alt: "Sponsor.krd" }],
+      images: [
+        {
+          url: SPONSOR_KRD_APP_ICON,
+          width: 512,
+          height: 512,
+          alt: "Sponsor.krd",
+        },
+      ],
     },
     twitter: { card: "summary", images: [SPONSOR_KRD_APP_ICON] },
     description: rootPublicCopy[rootLocale].metadataDescription,

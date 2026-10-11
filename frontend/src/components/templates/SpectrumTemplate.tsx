@@ -16,7 +16,6 @@ import {
   deriveTextColor,
   deriveTextSecondaryColor,
 } from "@/lib/utils/theme-colors";
-import { areTemplatePropsEqual } from "@/lib/utils/linktree-utils";
 import { platformBorder, platformTextStyle } from "@/lib/brand/platform-brands";
 import {
   STANDARD_TEMPLATE_BUTTON_SIZE_CLASS,
@@ -101,6 +100,7 @@ export const SpectrumTemplate = memo(function SpectrumTemplate({
       header={
         <TemplateHeader
           name={linktree.name}
+            verificationBadge={linktree.template_config?.verification_badge === true}
           subtitle={linktree.subtitle}
           description={linktree.description}
           image={linktree.image}
@@ -194,4 +194,4 @@ export const SpectrumTemplate = memo(function SpectrumTemplate({
       }
     />
   );
-}, areTemplatePropsEqual);
+});

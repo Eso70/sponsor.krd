@@ -141,6 +141,8 @@ describe('PlatformLinktreesService', () => {
     const input = {
       name: 'Campaign',
       slug: 'new-campaign',
+      subtitle_color: '#123456',
+      template_config: { verification_badge: true },
       links: { website: ['https://example.com'] },
     } as CreateLinktreeDto;
     (linktrees.getLinktreeById as jest.Mock).mockResolvedValue({
@@ -156,7 +158,11 @@ describe('PlatformLinktreesService', () => {
 
     expect(linktrees.updateLinktree).toHaveBeenCalledWith(
       'page-id',
-      expect.objectContaining({ seo_name: 'new-campaign' }),
+      expect.objectContaining({
+        seo_name: 'new-campaign',
+        subtitle_color: '#123456',
+        template_config: { verification_badge: true },
+      }),
       workspaceId,
       'platform',
     );

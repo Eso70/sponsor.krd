@@ -1,0 +1,21 @@
+.actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.section:hover > div > .actions,
+.section:focus-within > div > .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .actions {
+    transition: none;
+  }
+}

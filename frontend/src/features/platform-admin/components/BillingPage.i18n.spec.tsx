@@ -25,7 +25,7 @@ describe("BillingPage Arabic", () => {
     expect(screen.getByText("لم يُعثر على أنشطة تجارية")).toBeInTheDocument();
   });
 
-  it("uses Arabic labels and a localized preset in the new-plan form", async () => {
+  it("uses Arabic labels for both billing cycles in the new-plan form", async () => {
     const withProfile = {
       ...overview,
       permissionProfiles: [{ id: "profile-1", code: "basic", name: "Basic", permissionCount: 5 }],
@@ -35,7 +35,8 @@ describe("BillingPage Arabic", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "خطة جديدة" }));
     expect(screen.getByText("خطة اشتراك جديدة")).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/وصول أساسي للنشاط التجاري/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/السعر · شهري/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/السعر · سنوي/)).toBeInTheDocument();
   });
 
   it("localizes the overview and plan form in English", async () => {
@@ -46,6 +47,8 @@ describe("BillingPage Arabic", () => {
     expect(screen.getByRole("heading", { name: "Subscription plans" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New plan" }));
     expect(screen.getByText("New subscription plan")).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/Essential business access/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Price · Monthly/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Price · Yearly/)).toBeInTheDocument();
   });
 });
+

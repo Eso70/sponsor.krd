@@ -11,6 +11,8 @@ export function ModalFooterActions({
   submittingLabel = "پاشەکەوت دەکرێت...",
   cancelLabel = "پاشگەزبوونەوە",
   showCancel = true,
+  compact = false,
+  submitTone = "primary",
   onCancel,
   onSubmit,
 }: {
@@ -20,6 +22,8 @@ export function ModalFooterActions({
   submittingLabel?: string;
   cancelLabel?: string;
   showCancel?: boolean;
+  compact?: boolean;
+  submitTone?: "primary" | "secondary";
   onCancel: () => void;
   onSubmit: () => void;
 }) {
@@ -40,13 +44,13 @@ export function ModalFooterActions({
       <Tooltip
         content={isSubmitting ? submittingLabel : submitLabel}
         side="top"
-        className="flex-1"
+        className={compact ? "shrink-0" : "flex-1"}
       >
         <button
           type="button"
           onClick={onSubmit}
           disabled={submitDisabled || isSubmitting}
-          className="theme-fill flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-transparent text-sm font-bold text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+          className={`flex items-center justify-center gap-2 border font-bold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${submitTone === "secondary" ? "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" : "theme-fill border-transparent text-[var(--theme-ink)] hover:brightness-95"} ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
         >
           {isSubmitting ? (
             <>

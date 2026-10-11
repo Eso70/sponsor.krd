@@ -2115,6 +2115,8 @@ export const LinktreeEditorModal = memo(function LinktreeEditorModal({
             }
             fileInputRef={fileInputRef}
             name={name}
+            verificationBadge={templateConfig.verification_badge === true}
+            onVerificationBadgeChange={(value) => setTemplateConfig((prev) => ({ ...prev, verification_badge: value }))}
             subtitle={subtitle}
             description={description}
             slug={slug}

@@ -15,6 +15,7 @@ export function IconActionButton({
   label,
   tone = "neutral",
   disabled = false,
+  expanded,
   children,
 }: {
   onClick?: () => void;
@@ -22,6 +23,7 @@ export function IconActionButton({
   label: string;
   tone?: "neutral" | "danger";
   disabled?: boolean;
+  expanded?: boolean;
   children: ReactNode;
 }) {
   const toneClasses =
@@ -36,6 +38,7 @@ export function IconActionButton({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
+        aria-expanded={expanded}
         className={`rounded-lg p-1.5 transition disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer ${toneClasses}`}
       >
         {children}

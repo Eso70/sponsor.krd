@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isBusinessPageLocked,
+  isBusinessPageVisible,
   isBusinessSettingsTabLocked,
 } from "./business-page-access";
 
@@ -8,6 +9,7 @@ const access = (allowed: string[], planCode = "ultra") => ({
   subscription: { planCode },
   permissions: Object.fromEntries(
     [
+      "business:forms:read",
       "business:tiktok:update",
       "business:pages:advertising-access",
       "business:pages:settings-access",
@@ -24,6 +26,26 @@ const access = (allowed: string[], planCode = "ultra") => ({
 });
 
 describe("business page access presentation", () => {
+  it.each(["basic", "pro", "ultra", "max"])(
+    "hides unavailable paid pages for %s even with explicit grants",
+    (plan) => {
+      const manifest = access(
+        ["business:forms:read", "business:pages:advertising-access"],
+        plan,
+      );
+      expect(isBusinessPageVisible("forms", manifest)).toBe(plan === "max");
+      expect(isBusinessPageVisible("advertising", manifest)).toBe(
+        plan === "ultra" || plan === "max",
+      );
+    },
+  );
+
+  it("hides denied features and waits for loaded access", () => {
+    expect(isBusinessPageVisible("forms", access([], "max"))).toBe(false);
+    expect(isBusinessPageVisible("tiktok-config", access([]))).toBe(false);
+    expect(isBusinessPageVisible("forms", null)).toBe(false);
+    expect(isBusinessPageVisible("settings", access([], "basic"))).toBe(true);
+  });
   it("keeps settings available on every business plan", () => {
     expect(isBusinessPageLocked("settings", access([], "basic"))).toBe(false);
   });

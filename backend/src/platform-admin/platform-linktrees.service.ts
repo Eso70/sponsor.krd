@@ -167,6 +167,7 @@ export class PlatformLinktreesService {
         {
           name: data.name,
           subtitle: data.subtitle,
+          subtitle_color: data.subtitle_color,
           description: data.description,
           seo_name: data.seo_name || data.slug,
           image: data.image,

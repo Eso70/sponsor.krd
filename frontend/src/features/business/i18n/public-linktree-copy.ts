@@ -1,5 +1,6 @@
 export const publicLinktreeCopy = {
   ckb: {
+    verificationBadge: "نیشانەی پشتڕاستکردنەوە",
     description: "بۆ پەیوەندی کردن, کلیک لەم لینکانەی خوارەوە بکە",
     loading: "پەڕەی لینکتری بار دەکرێت",
     empty: "هێشتا هیچ لینکێک نییە",
@@ -16,6 +17,7 @@ export const publicLinktreeCopy = {
     ],
   },
   ar: {
+    verificationBadge: "شارة التوثيق",
     description: "للتواصل، اضغط على أحد الروابط أدناه",
     loading: "جارٍ تحميل صفحة الروابط",
     empty: "لا توجد روابط بعد",
@@ -32,6 +34,7 @@ export const publicLinktreeCopy = {
     ],
   },
   en: {
+    verificationBadge: "Verification badge",
     description: "To contact us, tap one of the links below",
     loading: "Loading Linktree page", empty: "No links yet",
     modalTitle: "Contact us", modalSubtitle: "Choose a question", close: "Close",

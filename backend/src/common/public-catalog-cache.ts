@@ -13,7 +13,7 @@
  * until the entry expired. Named here so the read and every writer name the
  * same thing.
  */
-export const PUBLIC_PLANS_CACHE_KEY = 'cache:public:plans';
+export const PUBLIC_PLANS_CACHE_KEY = 'cache:public:plans:v2';
 
 /** How long the public plan list may be served without re-reading it. */
 export const PUBLIC_PLANS_CACHE_TTL_SECONDS = 300;

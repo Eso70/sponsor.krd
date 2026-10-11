@@ -324,17 +324,6 @@ img[src="/images/brand/rise.svg"] {
   color: var(--accent-foreground);
 }
 
-:root {
-  --custom-cursor-default:
-    url("data:image/svg+xml,%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%20512%20512%22%3E%20%3Cpath%20fill%3D%22%2325f4ee%22%20d%3D%22M154.64%2C27.51c1.46%2C1.23%2C2.93%2C2.46%2C4.4%2C3.69%2C2.84%2C2.39%2C5.68%2C4.79%2C8.51%2C7.22%2C4.72%2C4.01%2C9.5%2C7.93%2C14.31%2C11.85%2C5.8%2C4.74%2C11.58%2C9.5%2C17.36%2C14.27%2C4.8%2C3.96%2C9.61%2C7.92%2C14.42%2C11.88%2C9.21%2C7.56%2C18.38%2C15.17%2C27.45%2C22.89%2C5.06%2C4.3%2C10.21%2C8.44%2C15.42%2C12.56%2C4.74%2C3.83%2C9.37%2C7.78%2C14%2C11.73%2C4.2%2C3.56%2C8.44%2C7.06%2C12.75%2C10.48%2C5.82%2C4.61%2C11.47%2C9.39%2C17.13%2C14.21%2C4.2%2C3.56%2C8.44%2C7.06%2C12.75%2C10.48%2C5.07%2C4.01%2C10.02%2C8.15%2C14.94%2C12.34%2C5.83%2C4.96%2C11.74%2C9.81%2C17.73%2C14.58%2C12.46%2C9.98%2C24.73%2C20.21%2C36.88%2C30.56%2C5.06%2C4.3%2C10.21%2C8.45%2C15.42%2C12.56%2C4.74%2C3.83%2C9.37%2C7.78%2C14%2C11.73%2C4.2%2C3.56%2C8.44%2C7.06%2C12.75%2C10.48%2C24.63%2C19.61%2C37.74%2C35.69%2C39.34%2C48.25%2C1.21%2C15.76-.91%2C28.58-10.74%2C41.4-8.23%2C8.87-18.51%2C17.5-31.12%2C18.36-.89%2C0-1.79%2C0-2.71.02-1.04%2C0-2.06.02-3.13.03-1.12%2C0-2.25%2C0-3.39%2C0-1.19%2C0-2.37.02-3.6.03-2.58.02-5.17.03-7.74.05-4.1.02-8.19.05-12.3.09-11.65.09-23.31.17-34.96.23-7.13.04-14.27.1-21.4.16-2.71.02-5.41.04-8.12.05-34.65.15-65.47%2C4.63-91.74%2C29.61-6.21%2C6.42-11.33%2C13.81-16.57%2C21.01-4.1%2C5.58-8.33%2C11.04-12.54%2C16.53-6.89%2C9.03-13.74%2C18.11-20.55%2C27.21-1.6%2C2.14-3.21%2C4.28-4.81%2C6.42-3.1%2C4.13-6.18%2C8.27-9.25%2C12.42-10.97%2C14.75-21.76%2C29.2-40.92%2C32.81-17.45%2C1.11-31.56-.13-45.48-11.81-11.06-10.59-16.63-23.28-17.38-38.49-.08-1.48-.16-2.98-.23-4.51-.08-1.63-.16-3.25-.23-4.93-.09-1.75-.18-3.5-.26-5.24-.24-4.79-.48-9.6-.71-14.39-.25-5.16-.51-10.31-.77-15.47-.62-12.39-1.23-24.8-1.84-37.19-.28-5.83-.58-11.65-.86-17.48-.06-1.16-.12-2.33-.18-3.52-.12-2.35-.23-4.71-.35-7.05-.29-5.95-.59-11.89-.88-17.84-.06-1.19-.12-2.37-.18-3.59-.36-7.28-.71-14.55-1.07-21.83-1.5-30.73-3.06-61.46-4.64-92.19-.72-14-1.43-28.02-2.13-42.02-.57-11.21-1.14-22.43-1.73-33.64-.4-7.67-.79-15.32-1.17-22.99-.21-4.39-.44-8.78-.68-13.17-1.86-34.44%2C2.53-58.74%2C13.15-72.91%2C27.46-30.32%2C65.85-21.6%2C93.59%2C2.11h.02Z%22%2F%3E%20%3C%2Fsvg%3E")
-      10 2,
-    url("/cursors/customCursor.svg") 10 2, default;
-  --custom-cursor-text:
-    url("data:image/svg+xml,%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%20512%20512%22%3E%20%3Cpath%20fill%3D%22%2325f4ee%22%20d%3D%22M166.49%2C6.25c.8%2C0%2C1.6%2C0%2C2.4-.01h7.98c1.91%2C0%2C3.82%2C0%2C5.73-.03%2C5.18-.01%2C10.37-.03%2C15.55-.03h9.72c11.3-.01%2C22.6-.03%2C33.9-.03%2C10.52%2C0%2C21.06-.01%2C31.59-.05%2C9.04-.03%2C18.09-.04%2C27.13-.04%2C5.41%2C0%2C10.8%2C0%2C16.2-.03%2C5.08-.01%2C10.16-.01%2C15.24%2C0%2C1.86%2C0%2C3.73%2C0%2C5.59-.01%2C2.55-.01%2C5.09%2C0%2C7.64%2C0%2C.73%2C0%2C1.47-.03%2C2.22-.03%2C6.15.08%2C11.07%2C2.09%2C15.81%2C6.02%2C4.65%2C5.65%2C7.45%2C11.27%2C7.12%2C18.79-.83%2C5.98-2.73%2C11.41-7.11%2C15.67-23.58%2C17.11-56.17%2C5.85-83.81%2C5.85v407.37h72.11c8.29%2C3.11%2C12.24%2C5.07%2C16.57%2C12.67%2C2.94%2C7.91%2C2.73%2C14.38-.58%2C22.02-3.2%2C5.48-8.04%2C9.17-14.03%2C11.11-2.68.18-5.26.27-7.94.26-.79%2C0-1.59%2C0-2.4.01h-7.98c-1.91%2C0-3.82%2C0-5.73.03-5.18.01-10.37.03-15.55.03h-9.72c-11.3.01-22.6.03-33.9.03-10.52%2C0-21.06.01-31.59.05-9.04.03-18.09.04-27.13.04-5.41%2C0-10.8%2C0-16.2.03-5.08.01-10.16.01-15.24%2C0-1.86%2C0-3.73%2C0-5.59.01-2.55.01-5.09%2C0-7.64%2C0-.73%2C0-1.47.03-2.22.03-6.15-.08-11.07-2.09-15.83-6.02-4.65-5.65-7.45-11.27-7.12-18.79.83-5.98%2C2.73-11.41%2C7.11-15.67%2C23.58-17.11%2C56.17-5.85%2C83.81-5.85V52.31h-72.11c-8.29-3.11-12.24-5.07-16.57-12.67-2.94-7.91-2.73-14.38.58-22.02%2C5.02-8.58%2C12.43-11.41%2C21.97-11.37h.01Z%22%2F%3E%20%3C%2Fsvg%3E")
-      16 16,
-    url("/cursors/customTextSelect.svg") 16 16, text;
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -396,14 +385,6 @@ html.dark ::-moz-selection {
 [role="tab"][aria-selected="true"] {
   border-color: transparent !important;
   outline: none !important;
-}
-
-/* Custom scrollbar track bg — adapts to light/dark */
-:root {
-  --track-bg: rgba(0, 0, 0, 0.05);
-}
-.dark {
-  --track-bg: rgba(255, 255, 255, 0.06);
 }
 
 /* iPhone mockup pill buttons — dark mode override for inline styles */
@@ -684,7 +665,11 @@ html.dark ::-moz-selection {
 .sa-gradient {
   background: var(
     --sponsor-krd-accent-gradient,
-    linear-gradient(to right, var(--sponsor-krd-accent), var(--sponsor-krd-accent))
+    linear-gradient(
+      to right,
+      var(--sponsor-krd-accent),
+      var(--sponsor-krd-accent)
+    )
   ) !important;
   color: var(--sponsor-krd-accent-ink) !important;
   transition-property: filter, box-shadow, opacity, transform;
@@ -736,8 +721,7 @@ html.dark ::-moz-selection {
 .theme-input-focus:focus {
   border-color: transparent !important;
   background-image:
-    linear-gradient(#fff, #fff),
-    var(--theme-css, var(--theme-primary, #64748b));
+    linear-gradient(#fff, #fff), var(--theme-css, var(--theme-primary, #64748b));
   background-origin: border-box, border-box;
   background-clip: padding-box, border-box;
   box-shadow: 0 0 0 2px
@@ -899,13 +883,20 @@ body.sponsor-krd-theme-portals {
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-500,
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-600,
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-700,
-:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-500\/80 {
+:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .text-brand-500\/80 {
   color: var(--sponsor-krd-accent-text) !important;
 }
 
-.dark :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-500,
-.dark :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-600,
-.dark :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .text-brand-700,
+.dark
+  :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .text-brand-500,
+.dark
+  :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .text-brand-600,
+.dark
+  :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .text-brand-700,
 .dark
   :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
   .text-brand-500\/80 {
@@ -934,7 +925,8 @@ body.sponsor-krd-theme-portals {
 }
 
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .border-brand-500,
-:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .border-brand-500\/70,
+:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .border-brand-500\/70,
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
   .focus\:border-brand-500:focus,
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
@@ -946,7 +938,8 @@ body.sponsor-krd-theme-portals {
   border-color: var(--sponsor-krd-accent) !important;
 }
 
-:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .ring-brand-500\/20 {
+:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .ring-brand-500\/20 {
   --tw-ring-color: color-mix(
     in srgb,
     var(--sponsor-krd-accent) 20%,
@@ -956,7 +949,8 @@ body.sponsor-krd-theme-portals {
 
 :is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
   .focus\:ring-brand-500\/30:focus,
-:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals) .ring-brand-500\/50 {
+:is([data-sponsor-krd-theme], body.sponsor-krd-theme-portals)
+  .ring-brand-500\/50 {
   --tw-ring-color: color-mix(
     in srgb,
     var(--sponsor-krd-accent) 30%,
@@ -1453,8 +1447,12 @@ img {
   }
 
   [data-theme-active] .modal-standard-input:focus {
-    --tw-ring-color: rgb(203 213 225 / 0.6) !important;
-    border-color: rgb(148 163 184) !important;
+    --tw-ring-color: color-mix(
+      in srgb,
+      var(--theme-primary) 20%,
+      transparent
+    ) !important;
+    border-color: var(--theme-primary) !important;
   }
 
   [data-theme-active] .modal-standard-input-error:focus {
@@ -1663,25 +1661,6 @@ img {
   animation-delay: 2s;
 }
 
-/* Custom Scrollbar for DateTimePicker */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
 /* Scoped Dark Mode Overrides for Business Dashboard */
 /* Scoped Dark Mode Overrides for Business Dashboard - Obsidian Charcoal Onyx Theme */
 .dark.bg-slate-950,
@@ -1775,14 +1754,6 @@ img {
   background-color: var(--color-bg-input) !important;
   color: #f3f4f6 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.dark input[type="text"]:focus,
-.dark input[type="password"]:focus,
-.dark select:focus,
-.dark textarea:focus {
-  border-color: #64748b !important;
-  box-shadow: 0 0 0 2px rgba(1, 18, 44, 0.2) !important;
 }
 
 /* Modals background, backdrop, and layout overrides for dark mode */
@@ -1906,15 +1877,6 @@ img {
 .dark .hover\:text-slate-900:hover,
 .dark .hover\:text-gray-900:hover {
   color: #f9fafb !important;
-}
-
-/* Scrollbar overrides for dark mode */
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.dark ::-webkit-scrollbar-track {
-  background-color: transparent !important;
 }
 
 /* Custom Dropdown Menus (Kurdish Theme Selector & Profile Menu) */
@@ -2253,101 +2215,49 @@ img {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Custom cursor system -----------------------------------------------------
-   Apply directly to every rendered element instead of relying on cursor
-   inheritance or a pointer media query. This keeps the cursor stable during
-   refresh, hydration, and browser pointer-capability re-evaluation. */
-html,
-body,
-body * {
-  cursor: var(--custom-cursor-default) !important;
-}
-
+/* Native browser cursors, with hand feedback for draggable controls. */
 :where(
-  p,
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  span,
-  label,
-  li,
-  td,
-  th,
-  blockquote,
-  figcaption,
-  code,
-  pre,
-  input:not([type]),
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="search"],
-  input[type="tel"],
-  input[type="url"],
-  input[type="number"],
-  textarea,
-  [contenteditable="true"]
-) {
-  cursor: var(--custom-cursor-text) !important;
-}
-
-:where(
-  a,
   button,
+  a[href],
   summary,
   select,
-  option,
-  [role="button"],
-  [role="link"],
-  [role="menuitem"],
-  [role="tab"],
-  [role="switch"],
-  input[type="button"],
   input[type="submit"],
+  input[type="button"],
   input[type="reset"],
   input[type="checkbox"],
   input[type="radio"],
-  input[type="range"],
-  input[type="color"],
-  input[type="file"]
+  input[type="file"],
+  label:has(input[type="checkbox"], input[type="radio"], input[type="file"]),
+  [role="button"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  [role="switch"],
+  [role="combobox"]:not(input):not(textarea),
+  [data-clickable="true"]
 ),
-:where(a, button, summary, [role="button"], [role="link"]) *,
-[data-cursor-interactive],
-[data-cursor-interactive] * {
-  cursor: var(--custom-cursor-default) !important;
+input::file-selector-button {
+  cursor: pointer !important;
 }
-
-:where(:disabled, [aria-disabled="true"]) {
+:where(:disabled, [aria-disabled="true"]),
+:disabled::file-selector-button {
   cursor: not-allowed !important;
 }
-
 :where(.cursor-wait, [aria-busy="true"]) {
   cursor: wait !important;
 }
-
-:where(.cursor-move, [draggable="true"]) {
-  cursor: move !important;
-}
-
-:where(.cursor-grab) {
+:is(.cursor-move, .cursor-grab, [draggable="true"]) {
   cursor: grab !important;
 }
-
-:where(.cursor-grabbing) {
+:is(.cursor-move, .cursor-grab, [draggable="true"]):active,
+.cursor-grabbing {
+  cursor: grabbing !important;
+}
+html[data-reorder-dragging],
+html[data-reorder-dragging] * {
   cursor: grabbing !important;
 }
 
-/* Touch-only devices do not display a pointer and retain native semantics. */
-@media (hover: none) and (pointer: coarse) {
-  html,
-  body,
-  body * {
-    cursor: auto !important;
-  }
-}
 /* These public templates are intentionally light-only. Keep dashboard/global
    dark-mode utility overrides from recoloring them in previews or public pages. */
 .dark [data-force-light-template] {
@@ -2487,11 +2397,6 @@ body * {
   contain: strict;
 }
 
-.phone-mockup-canvas-scrollable {
-  scrollbar-color: var(--theme-primary, #25f4ee) transparent;
-  scrollbar-width: thin;
-}
-
 [data-responsive-create] > span {
   display: none;
 }
@@ -2502,245 +2407,20 @@ body * {
   }
 }
 
-/* Global Sponsor.krd scrollbar ----------------------------------------------
-   Mirrors the homepage brand thumb for every nested scroll surface: dashboard
-   mains, sidebars, tables, modals, pickers, search results, and public pages. */
+/* Hide scrollbar visuals everywhere without disabling native scrolling. */
 html,
 body,
 * {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(
-      --business-website-color,
-      var(--admin-website-color, var(--theme-primary, var(--sponsor-krd-accent)))
-    )
-    transparent !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 999px;
-}
-
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-thumb {
-  min-height: 24px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(
-    --business-website-color,
-    var(--admin-website-color, var(--theme-primary, var(--sponsor-krd-accent)))
-  ) !important;
-  background-clip: padding-box !important;
-  box-shadow: 0 0 6px
-    color-mix(
-      in srgb,
-      var(
-          --business-website-color,
-          var(
-            --admin-website-color,
-            var(--theme-primary, var(--sponsor-krd-accent))
-          )
-        )
-        35%,
-      transparent
-    );
-}
-
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover,
-*::-webkit-scrollbar-thumb:hover {
-  background: color-mix(
-    in srgb,
-    var(
-        --business-website-color,
-        var(
-          --admin-website-color,
-          var(--theme-primary, var(--sponsor-krd-accent))
-        )
-      )
-      84%,
-    #000
-  ) !important;
-}
-
-html::-webkit-scrollbar-corner,
-body::-webkit-scrollbar-corner,
-*::-webkit-scrollbar-corner {
-  background: transparent !important;
-}
-
-/* The chains above end at `--theme-primary`, which `:root` defines as the
-   neutral slate `#64748b`. On SponsorKrd's own pages no tenant colour is set,
-   so the page scrollbar resolved to that slate instead of the brand accent this block
-   says it mirrors. The document scrollbar therefore skips `--theme-primary`
-   and falls back to the brand accent.
-
-   Deliberately scoped to `html`/`body` rather than `*`: `ManagementModal` and
-   `CustomSelect` set `--theme-primary` to a tenant accent without setting
-   `--business-website-color`, so nested scroll surfaces inside a business-
-   accented modal keep resolving to that accent. Tenant pages still win here,
-   because `--business-website-color` precedes the accent in the chain. */
-html,
-body {
-  scrollbar-color: var(
-      --business-website-color,
-      var(--admin-website-color, var(--sponsor-krd-accent))
-    )
-    transparent !important;
-}
-
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb {
-  background: var(
-    --business-website-color,
-    var(--admin-website-color, var(--sponsor-krd-accent))
-  ) !important;
-  box-shadow: 0 0 6px
-    color-mix(
-      in srgb,
-      var(
-          --business-website-color,
-          var(--admin-website-color, var(--sponsor-krd-accent))
-        )
-        35%,
-      transparent
-    );
-}
-
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover {
-  background: color-mix(
-    in srgb,
-    var(
-        --business-website-color,
-        var(--admin-website-color, var(--sponsor-krd-accent))
-      )
-      84%,
-    #000
-  ) !important;
-}
-
-/* Pages that mount the floating custom page scrollbar must not also expose the
-   globally themed native document scrollbar. This follows the global rules so
-   the custom thumb remains the single visible page-scroll control. */
-html.custom-scrollbar-active,
-html.custom-scrollbar-active body {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-html.custom-scrollbar-active::-webkit-scrollbar,
-html.custom-scrollbar-active body::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
-}
-
-/* Keep activity-search modal and dropdown scrolling identical to the homepage. */
-.brand-custom-scrollbar {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--sponsor-krd-accent) transparent !important;
-}
-
-.brand-custom-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-
-.brand-custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 999px;
-}
-
-.brand-custom-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 24px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(--sponsor-krd-accent-gradient) !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  background-size: 100% 100% !important;
-  background-clip: padding-box !important;
-  box-shadow: 0 0 6px
-    color-mix(in srgb, var(--sponsor-krd-accent) 35%, transparent) !important;
-}
-
-.brand-custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--sponsor-krd-accent-gradient) !important;
-  filter: saturate(1.06) brightness(0.92);
-}
-
-/* Business-aware scrollbar used by analytics and other themed surfaces. */
-.theme-custom-scrollbar,
-.theme-custom-scrollbar * {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(
-      --business-website-color,
-      var(--theme-primary, var(--sponsor-krd-accent))
-    )
-    transparent !important;
-}
-
-.theme-custom-scrollbar::-webkit-scrollbar,
-.theme-custom-scrollbar *::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-
-.theme-custom-scrollbar::-webkit-scrollbar-track,
-.theme-custom-scrollbar *::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 999px;
-}
-
-.theme-custom-scrollbar::-webkit-scrollbar-thumb,
-.theme-custom-scrollbar *::-webkit-scrollbar-thumb {
-  min-height: 24px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(
-    --theme-css,
-    var(
-      --business-website-color,
-      var(--theme-primary, var(--sponsor-krd-accent))
-    )
-  ) !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  background-size: 100% 100% !important;
-  background-clip: padding-box !important;
-  box-shadow: 0 0 6px
-    color-mix(
-      in srgb,
-      var(
-          --business-website-color,
-          var(--theme-primary, var(--sponsor-krd-accent))
-        )
-        35%,
-      transparent
-    ) !important;
-}
-
-.theme-custom-scrollbar::-webkit-scrollbar-thumb:hover,
-.theme-custom-scrollbar *::-webkit-scrollbar-thumb:hover {
-  background: var(
-    --theme-css,
-    var(
-      --business-website-color,
-      var(--theme-primary, var(--sponsor-krd-accent))
-    )
-  ) !important;
-  filter: saturate(1.06) brightness(0.92);
 }
 
 /* Rabar is the single product typeface. Native controls and SVG labels do not
@@ -2748,4 +2428,63 @@ html.custom-scrollbar-active body::-webkit-scrollbar {
 :where(button, input, textarea, select, optgroup, option),
 svg text {
   font-family: inherit;
+}
+
+/* Interaction outlines and rings are intentionally disabled product-wide.
+   Preserve each control's normal border and validation styling. */
+@layer base {
+  :focus,
+  :focus-visible,
+  :focus-within,
+  :is(
+    button,
+    a,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="switch"]
+  ):active {
+    --tw-ring-color: transparent !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-inset-ring-shadow: 0 0 #0000 !important;
+    box-shadow: var(--tw-shadow, 0 0 #0000) !important;
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+
+  :is(input, textarea, select):focus {
+    box-shadow: none !important;
+  }
+}
+
+/* Drag feedback is temporary and uses the active business/platform theme.
+   These states are separate from ordinary focus and interaction outlines. */
+[data-reorder-id][data-reorder-held="true"] {
+  border-color: var(--theme-primary, #64748b) !important;
+  box-shadow: inset 0 0 0 1px var(--theme-primary, #64748b) !important;
+}
+[data-reorder-held="true"] > summary,
+section[data-reorder-held="true"] > div:first-child {
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 14%, transparent) !important;
+}
+[data-reorder-id][data-reorder-target="true"] {
+  border-color: var(--theme-primary, #64748b) !important;
+  border-style: dashed;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-primary, #64748b) 45%, transparent) !important;
+}
+[data-reorder-target="true"] > summary,
+section[data-reorder-target="true"] > div:first-child {
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 8%, transparent) !important;
+}
+
+
+/* Override themed input focus in the same layer, including portaled dropdown search. */
+@layer base {
+  [data-theme-active] [data-custom-select-trigger]:focus,
+  [data-theme-active] input[data-custom-select-search]:focus {
+    border-color: var(--preview-border, var(--select-border, var(--select-neutral-border, #e2e8f0))) !important;
+    background-image: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }

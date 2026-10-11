@@ -186,10 +186,6 @@ export function CompactTemplateSelectorModal({
         </div>
         <div
           className="flex items-center justify-center overflow-y-auto bg-linear-to-br from-white to-slate-50/20 p-3 sm:p-4"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(156,163,175,0.5) transparent",
-          }}
         >
           <div className="w-full">
             <div className="grid grid-cols-3 justify-items-center gap-2 sm:grid-cols-4 sm:gap-2.5 md:grid-cols-5 md:gap-3">

@@ -1,3 +1,4 @@
+import { downloadBlob } from "@/lib/utils/download";
 async function responseMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null);
   return typeof payload?.message === "string" ? payload.message : fallback;
@@ -15,14 +16,7 @@ export async function downloadBusinessBackup(
   const disposition = response.headers.get("content-disposition") || "";
   const filename =
     disposition.match(/filename="?([^";]+)"?/i)?.[1] || fallbackFilename;
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  downloadBlob(blob, filename);
 }
 
 export async function uploadBusinessBackup(url: string, file: File) {

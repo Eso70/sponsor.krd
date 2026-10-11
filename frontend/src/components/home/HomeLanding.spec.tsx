@@ -1,20 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { HomeLanding } from "./HomeLanding";
 
-const { applyCursorColor, publicSiteNavbar } = vi.hoisted(() => ({
-  applyCursorColor: vi.fn().mockResolvedValue(undefined),
+const { publicSiteNavbar } = vi.hoisted(() => ({
   publicSiteNavbar: vi.fn(() => null),
-}));
-
-vi.mock("@/lib/utils/cursor-theme", () => ({
-  applyCursorColor: (...args: unknown[]) => applyCursorColor(...args),
-  resetCursorColor: vi.fn(),
 }));
 
 vi.mock("@/components/public/PublicSiteNavbar", () => ({
   PublicSiteNavbar: () => publicSiteNavbar(),
 }));
-vi.mock("./CustomScrollbar", () => ({ CustomScrollbar: () => null }));
 describe("HomeLanding platform theme", () => {
   afterEach(() => {
     document.documentElement.style.removeProperty("--sponsor-krd-accent");
@@ -45,11 +38,6 @@ describe("HomeLanding platform theme", () => {
       expect(
         document.documentElement.style.getPropertyValue("--sponsor-krd-accent"),
       ).toBe("#123456");
-      expect(applyCursorColor).toHaveBeenCalledWith(
-        "#123456",
-        document.documentElement,
-        expect.any(Function),
-      );
     });
   });
 
@@ -61,7 +49,9 @@ describe("HomeLanding platform theme", () => {
     expect(
       screen.getByRole("heading", { name: /بەڕێوەبردنی ڕیکلام/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/هەژمارە ڕیکلامییەکانی TikTok/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/هەژمارە ڕیکلامییەکانی TikTok/),
+    ).toBeInTheDocument();
     expect(screen.getByText(/قۆناغی داهاتوودا/)).toBeInTheDocument();
     expect(publicSiteNavbar).toHaveBeenCalledOnce();
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
@@ -73,7 +63,11 @@ describe("HomeLanding platform theme", () => {
   it("renders Arabic marketing copy when the root visitor selected Arabic", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     render(<HomeLanding initialLocale="ar" />);
-    expect(screen.getByRole("heading", { name: /إدارة الإعلانات/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "شروط الاستخدام" })).toHaveAttribute("href", "/legal/terms");
+    expect(
+      screen.getByRole("heading", { name: /إدارة الإعلانات/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "شروط الاستخدام" }),
+    ).toHaveAttribute("href", "/legal/terms");
   });
 });

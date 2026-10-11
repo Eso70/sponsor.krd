@@ -4,12 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { businessMessages } from "@/features/business/i18n/messages";
-import { BusinessDomainsPanel } from '@/features/domains/components/BusinessDomainsPanel';
-import { domainCopy, type DomainLocale } from '@/features/domains/copy';
 import Image from "next/image";
 import {
   Building2,
-  Globe,
   Clock3,
   MessageSquare,
   Palette,
@@ -59,7 +56,7 @@ import {
   LOGO_MIME_TYPES,
 } from "@/lib/brand/brand-assets";
 
-type Tab = "profile" | "defaults" | "security" | "messages" | "domains";
+type Tab = "profile" | "defaults" | "security" | "messages";
 type SettingsData = {
   name: string;
   username: string;
@@ -113,7 +110,6 @@ const inputClass =
 export function BusinessSettingsPage() {
   const t = useTranslations("SettingsPage");
   const locale = useLocale();
-  const domainLocale: DomainLocale = locale === 'ar' || locale === 'en' ? locale : 'ckb';
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() =>
@@ -141,10 +137,10 @@ export function BusinessSettingsPage() {
   const [effectiveAccess, setEffectiveAccess] =
     useState<EffectiveAccessManifest | null>(null);
 
-  const loadSettings = useCallback(async (rethrow = false) => {
-    try {
-      const [settingsResponse, accessResponse] =
-        await Promise.all([
+  const loadSettings = useCallback(
+    async (rethrow = false) => {
+      try {
+        const [settingsResponse, accessResponse] = await Promise.all([
           fetch("/api/auth/settings", {
             credentials: "include",
             cache: "no-store",
@@ -154,22 +150,24 @@ export function BusinessSettingsPage() {
             cache: "no-store",
           }),
         ]);
-      if (!settingsResponse.ok || !accessResponse.ok) {
-        throw new Error("Failed to load settings");
+        if (!settingsResponse.ok || !accessResponse.ok) {
+          throw new Error("Failed to load settings");
+        }
+        const [settingsResult, accessResult] = await Promise.all([
+          settingsResponse.json(),
+          accessResponse.json(),
+        ]);
+        const normalizedSettings = normalizeSettings(settingsResult.data);
+        setData(normalizedSettings);
+        setSavedSnapshot(normalizedSettings);
+        setEffectiveAccess(accessResult.data || null);
+      } catch (error) {
+        if (rethrow) throw error;
+        toast.error(t("loadFailed"));
       }
-      const [settingsResult, accessResult] = await Promise.all([
-        settingsResponse.json(),
-        accessResponse.json(),
-      ]);
-      const normalizedSettings = normalizeSettings(settingsResult.data);
-      setData(normalizedSettings);
-      setSavedSnapshot(normalizedSettings);
-      setEffectiveAccess(accessResult.data || null);
-    } catch (error) {
-      if (rethrow) throw error;
-      toast.error(t("loadFailed"));
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -249,14 +247,15 @@ export function BusinessSettingsPage() {
           }),
         );
       }
-      toast.info(
-        activeTab === "profile"
-          ? t("profileSubmitted")
-          : t("saved"),
-      );
+      toast.info(activeTab === "profile" ? t("profileSubmitted") : t("saved"));
     } catch (error) {
       toast.error(t("saveFailed"), {
-        description: locale !== "ckb" ? undefined : error instanceof Error ? error.message : undefined,
+        description:
+          locale !== "ckb"
+            ? undefined
+            : error instanceof Error
+              ? error.message
+              : undefined,
       });
     } finally {
       setSaving(false);
@@ -266,7 +265,6 @@ export function BusinessSettingsPage() {
   const tabs = useMemo(
     () => [
       { id: "profile" as const, label: t("profileTab"), icon: UserRound },
-      { id: 'domains' as const, label: domainCopy[domainLocale].title, icon: Globe },
       {
         id: "defaults" as const,
         label: t("defaultsTab"),
@@ -283,7 +281,7 @@ export function BusinessSettingsPage() {
         icon: MessageSquare,
       },
     ],
-    [t, domainLocale],
+    [t],
   );
   const activeTab = tabs.some((item) => item.id === tab) ? tab : "profile";
   const tabLocked = isBusinessSettingsTabLocked(activeTab, effectiveAccess);
@@ -383,7 +381,10 @@ export function BusinessSettingsPage() {
 
   if (loading)
     return (
-      <SkeletonSettingsPage tabCount={tabs.length} loadingLabel={t("loadingSettings")} />
+      <SkeletonSettingsPage
+        tabCount={tabs.length}
+        loadingLabel={t("loadingSettings")}
+      />
     );
 
   return (
@@ -429,7 +430,6 @@ export function BusinessSettingsPage() {
           description={t("upgradeRequired")}
         >
           <DashboardSurface>
-            {activeTab === 'domains' && <BusinessDomainsPanel scope={{ surface: 'business' }} locale={domainLocale} canManage={effectiveAccess?.permissions?.['business:domains:manage']?.outcome === 'allow'} />}
             {activeTab === "profile" && (
               <PageHeaderSection
                 icon={Building2}
@@ -437,7 +437,14 @@ export function BusinessSettingsPage() {
                 description={t("profileDescription")}
                 action={
                   <TabSaveButton
-                    copy={{ savingTooltip: t("savingTooltip"), saveTooltip: t("saveTooltip"), unchangedTooltip: t("unchangedTooltip"), saving: t("saving"), save: t("save"), saved: t("savedButton") }}
+                    copy={{
+                      savingTooltip: t("savingTooltip"),
+                      saveTooltip: t("saveTooltip"),
+                      unchangedTooltip: t("unchangedTooltip"),
+                      saving: t("saving"),
+                      save: t("save"),
+                      saved: t("savedButton"),
+                    }}
                     dirty={dirty}
                     saving={saving}
                     disabled={tabLocked}
@@ -451,8 +458,14 @@ export function BusinessSettingsPage() {
                     <Clock3 className="h-4 w-4" />
                     <span>
                       {t("brandCooldownBefore")}{" "}
-                      {cooldown.until.toLocaleDateString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ")} (
-                      {t("daysRemaining", { count: cooldown.daysLeft })})
+                      {cooldown.until.toLocaleDateString(
+                        locale === "ar"
+                          ? "ar-IQ"
+                          : locale === "en"
+                            ? "en-IQ"
+                            : "ckb-IQ",
+                      )}{" "}
+                      ({t("daysRemaining", { count: cooldown.daysLeft })})
                     </span>
                   </div>
                 )}
@@ -465,7 +478,10 @@ export function BusinessSettingsPage() {
                   {brandAssetError && (
                     <InlineRequestError
                       className="mx-auto mt-3 max-w-xl"
-                      error={localizeInlineRequestError(brandAssetError, locale === "ar" ? "ar" : locale === "en" ? "en" : "ckb")}
+                      error={localizeInlineRequestError(
+                        brandAssetError,
+                        locale === "ar" ? "ar" : locale === "en" ? "en" : "ckb",
+                      )}
                     />
                   )}
                   <div className="mt-3 flex justify-center">
@@ -479,7 +495,8 @@ export function BusinessSettingsPage() {
                         <span
                           className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm"
                           style={{
-                            background: parseWebsiteColor(data.website_color).css,
+                            background: parseWebsiteColor(data.website_color)
+                              .css,
                           }}
                         >
                           <Palette className="h-3.5 w-3.5" />
@@ -493,7 +510,15 @@ export function BusinessSettingsPage() {
                   <BusinessOwnerIdentityFields
                     ownerName={data.ownerName}
                     ownerEmail={data.email}
-                    copy={{ accountName: t("accountName"), fromVerified: t("fromVerified"), email: t("email"), verified: t("verified"), unverified: t("unverified"), unavailable: t("unavailable"), verifiedEmail: t("verifiedEmail") }}
+                    copy={{
+                      accountName: t("accountName"),
+                      fromVerified: t("fromVerified"),
+                      email: t("email"),
+                      verified: t("verified"),
+                      unverified: t("unverified"),
+                      unavailable: t("unavailable"),
+                      verifiedEmail: t("verifiedEmail"),
+                    }}
                   />
                 </div>
                 <Field label={t("businessName")}>
@@ -546,7 +571,14 @@ export function BusinessSettingsPage() {
                   description={t("defaultsDescription")}
                   action={
                     <TabSaveButton
-                      copy={{ savingTooltip: t("savingTooltip"), saveTooltip: t("saveTooltip"), unchangedTooltip: t("unchangedTooltip"), saving: t("saving"), save: t("save"), saved: t("savedButton") }}
+                      copy={{
+                        savingTooltip: t("savingTooltip"),
+                        saveTooltip: t("saveTooltip"),
+                        unchangedTooltip: t("unchangedTooltip"),
+                        saving: t("saving"),
+                        save: t("save"),
+                        saved: t("savedButton"),
+                      }}
                       dirty={dirty}
                       saving={saving}
                       disabled={tabLocked}
@@ -562,7 +594,13 @@ export function BusinessSettingsPage() {
                       </div>
                       <Field label={t("defaultTemplate")}>
                         <TemplateCombobox
-                          copy={locale === "ar" ? businessMessages.ar.SettingsTemplates : locale === "en" ? businessMessages.en.SettingsTemplates : undefined}
+                          copy={
+                            locale === "ar"
+                              ? businessMessages.ar.SettingsTemplates
+                              : locale === "en"
+                                ? businessMessages.en.SettingsTemplates
+                                : undefined
+                          }
                           value={data.default_template}
                           onChange={(value) =>
                             setData({ ...data, default_template: value })
@@ -570,14 +608,18 @@ export function BusinessSettingsPage() {
                         />
                       </Field>
                       <Field label={t("backgroundColor")}>
-                        <Tooltip content={t("chooseBackgroundColor")} side="top">
+                        <Tooltip
+                          content={t("chooseBackgroundColor")}
+                          side="top"
+                        >
                           <button
                             type="button"
                             onClick={() => setShowDefaultColorPicker(true)}
                             className={`${inputClass} flex items-center justify-between gap-3 cursor-pointer`}
                           >
                             <span className="truncate text-xs text-slate-500 dark:text-slate-400">
-                              {data.default_background_color || t("backgroundColor")}
+                              {data.default_background_color ||
+                                t("backgroundColor")}
                             </span>
                             <span
                               className="h-5 w-5 shrink-0 rounded border-2 border-white shadow-sm ring-1 ring-slate-200 dark:border-[#161B22] dark:ring-white/10"
@@ -644,12 +686,25 @@ export function BusinessSettingsPage() {
                 description={t("securityDescription")}
               >
                 <div className="col-span-full rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">
-                  {t("ownerEmail")}: <strong>{data.email}</strong>. {t("newLoginClosesSession")}
+                  {t("ownerEmail")}: <strong>{data.email}</strong>.{" "}
+                  {t("newLoginClosesSession")}
                 </div>
                 <SessionManagementPanel
                   endpoint="/api/auth/sessions"
-                  copy={locale === "ar" ? businessMessages.ar.SettingsSessions : locale === "en" ? businessMessages.en.SettingsSessions : undefined}
-                  dateLocale={locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : undefined}
+                  copy={
+                    locale === "ar"
+                      ? businessMessages.ar.SettingsSessions
+                      : locale === "en"
+                        ? businessMessages.en.SettingsSessions
+                        : undefined
+                  }
+                  dateLocale={
+                    locale === "ar"
+                      ? "ar-IQ"
+                      : locale === "en"
+                        ? "en-US"
+                        : undefined
+                  }
                 />
               </PageHeaderSection>
             )}
@@ -671,7 +726,13 @@ export function BusinessSettingsPage() {
         </LockedContent>
         <ColorGradientModal
           isOpen={showColorPicker}
-          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : locale === "en" ? businessMessages.en.SettingsColorPicker : undefined}
+          copy={
+            locale === "ar"
+              ? businessMessages.ar.SettingsColorPicker
+              : locale === "en"
+                ? businessMessages.en.SettingsColorPicker
+                : undefined
+          }
           value={data.website_color}
           onChange={(value) =>
             setData((current) => ({ ...current, website_color: value }))
@@ -682,7 +743,13 @@ export function BusinessSettingsPage() {
         />
         <ColorGradientModal
           isOpen={showDefaultColorPicker}
-          copy={locale === "ar" ? businessMessages.ar.SettingsColorPicker : locale === "en" ? businessMessages.en.SettingsColorPicker : undefined}
+          copy={
+            locale === "ar"
+              ? businessMessages.ar.SettingsColorPicker
+              : locale === "en"
+                ? businessMessages.en.SettingsColorPicker
+                : undefined
+          }
           value={data.default_background_color}
           onChange={(value) =>
             setData((current) => ({
@@ -812,7 +879,11 @@ function BrandImageStack({
           className="h-2 w-2 rounded-full"
           style={{ background: "var(--theme-primary)" }}
         />
-        {t("logo")}<span>·</span>{t("avatar")}<span>·</span>{t("favicon")}
+        {t("logo")}
+        <span>·</span>
+        {t("avatar")}
+        <span>·</span>
+        {t("favicon")}
       </div>
     </div>
   );

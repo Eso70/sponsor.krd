@@ -40,17 +40,31 @@ export function isSameOriginBrowserRequest(
   forwardedProtoHeader: HeaderValue,
   requestProtocol: string,
 ): boolean {
-  const source =
-    firstHeaderValue(originHeader) ?? firstHeaderValue(refererHeader);
-  if (!source) return true;
+  const source = originHeader ?? refererHeader;
+  if (source === undefined) return true;
+  if (typeof source !== 'string') return false;
   if (source === 'null') return false;
 
-  const host = firstHeaderValue(hostHeader);
+  const host = typeof hostHeader === 'string' ? hostHeader : undefined;
   const protocol = firstHeaderValue(forwardedProtoHeader) ?? requestProtocol;
-  if (!host || (protocol !== 'http' && protocol !== 'https')) return false;
+  if (
+    !host ||
+    !/^[a-z0-9.-]+(?::\d{1,5})?$/i.test(host) ||
+    (protocol !== 'http' && protocol !== 'https')
+  )
+    return false;
 
   try {
-    return new URL(source).origin === new URL(`${protocol}://${host}`).origin;
+    const sourceUrl = new URL(source);
+    if (
+      sourceUrl.username ||
+      sourceUrl.password ||
+      sourceUrl.hash ||
+      !['http:', 'https:'].includes(sourceUrl.protocol) ||
+      (originHeader !== undefined && sourceUrl.origin !== originHeader)
+    )
+      return false;
+    return sourceUrl.origin === new URL(`${protocol}://${host}`).origin;
   } catch {
     return false;
   }

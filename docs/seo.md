@@ -142,3 +142,44 @@ production acceptance boundaries.
 - [Next sitemaps](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap)
 - [Google robots guidance](https://developers.google.com/search/docs/crawling-indexing/robots/intro)
 - [Google noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing)
+
+## Public forms
+
+Public `/form/<slug>` pages now permit indexing when the live form has an
+introduction headline and a meaningful description. Empty descriptions and the
+shared starter prompts are excluded. This is the same content normalization
+used by Linktrees, not a guarantee of search quality or indexing. Paused forms
+and inactive owners return 404 through the existing availability gate. Archive
+is a dashboard collection flag: an archived active form remains public and can
+remain indexable, matching its existing availability semantics.
+
+The existing owner-scoped sitemap now unions Linktrees and forms before counting
+and paginating. An optional `pageType` field identifies form URLs; older entries
+without it remain Linktrees. Root forms are scoped to the internal platform
+workspace; tenant forms are scoped to the resolved active business. Submissions,
+answers and tracking identifiers never enter sitemap or metadata projections.
+Canonical URLs exclude campaign parameters and derive from the configured,
+validated public origin. Metadata uses the visible introduction, saved language,
+and enabled banner/logo for Open Graph and Twitter sharing. Document language
+uses the same request-memoized form fetch as page content and metadata.
+
+Saved raster images use Next's responsive image optimization; temporary data-URL
+editor images remain unoptimized. Public introduction banners and card backdrops
+load eagerly with high fetch priority. Other media stays lazy. The fullscreen
+image viewer loads on demand in a separate client bundle. Live form content
+remains uncached across requests to preserve immediate availability/revision
+checks; static immutable assets retain their existing cache policy.
+
+Deploy frontend and backend together; no database migration is needed. The SEO
+HTTP smoke includes both form layouts, root and two tenant hosts, noindex starter
+forms, canonical URLs, document language, sharing metadata and real 404s.
+See [public form research and performance plan](public-form-seo-performance.md).
+
+New forms default to Kurdish, dark appearance and red (`#ef4444`); saved
+form appearance remains unchanged. Shared Form/Card privacy checkboxes start
+checked and can be unchecked; required consent still blocks submission when
+unchecked. Privacy help is rendered in a viewport-positioned portal so scrolling
+containers cannot clip the explanation or policy links. Browser tab titles use
+the form name; tab icons use the uploaded introduction logo, then the current
+owner's public business logo, then the shared placeholder. Shared list dropdowns
+use compact neutral selection/hover states with reduced-motion support.

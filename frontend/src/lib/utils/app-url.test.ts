@@ -41,6 +41,31 @@ afterEach(() => {
 });
 
 describe("getBusinessWorkspaceEntryUrl on the server", () => {
+  it("keeps legal documents on the configured platform root from a custom domain", async () => {
+    const { getPlatformLegalUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: "https://sponsor.krd",
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+    });
+    vi.stubGlobal("window", {
+      location: new URL("https://tenant.example/business"),
+    });
+    expect(getPlatformLegalUrl("privacy", "ar")).toBe(
+      "https://sponsor.krd/legal/privacy?lang=ar",
+    );
+    expect(getPlatformLegalUrl("terms", "ckb")).toBe(
+      "https://sponsor.krd/legal/terms?lang=ckb",
+    );
+  });
+  it("uses the configured root when the application URL is absent", async () => {
+    const { getPlatformLegalUrl } = await loadAppUrl({
+      NEXT_PUBLIC_APP_URL: undefined,
+      NEXT_PUBLIC_ROOT_DOMAIN: "sponsor.krd",
+      NODE_ENV: "production",
+    });
+    expect(getPlatformLegalUrl("privacy", "en")).toBe(
+      "https://sponsor.krd/legal/privacy?lang=en",
+    );
+  });
   it("uses http for local development", async () => {
     const { getBusinessWorkspaceEntryUrl } = await loadAppUrl({
       NEXT_PUBLIC_APP_URL: "http://lvh.me:3011",

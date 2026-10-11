@@ -666,7 +666,6 @@ setUploadError(null);
 
           <div
             className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 bg-linear-to-br from-white to-slate-50/20"
-            style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}
           >
             {uploadError && (
               <InlineRequestError className="mb-4" error={localizeInlineRequestError(uploadError, locale)} />

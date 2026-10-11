@@ -1,0 +1,200 @@
+.trigger,
+.menuShell {
+  --select-neutral-border: #e2e8f0;
+}
+:global(.dark) .trigger,
+:global(.dark) .menuShell {
+  --select-neutral-border: rgb(255 255 255 / 10%);
+}
+
+.menuShell {
+  border-color: var(--select-border, #e2e8f0) !important;
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-inset-ring-shadow: 0 0 #0000 !important;
+}
+:global(.dark) .menuShell {
+  border-color: var(--select-border, rgb(255 255 255 / 10%)) !important;
+}
+
+/* Neutral list states keep dense forms readable in either appearance. */
+.option {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.option:not(.gridOption)[aria-selected="false"]:not(:disabled):hover,
+.option:not(.gridOption):not(:disabled):focus-visible {
+  background-color: color-mix(
+    in srgb,
+    var(--select-text, var(--theme-text-primary, #64748b)) 7%,
+    transparent
+  ) !important;
+  outline: none;
+}
+.selectedOption {
+  color: var(--select-text, var(--theme-text-primary, #334155)) !important;
+  background: color-mix(
+    in srgb,
+    var(--select-text, var(--theme-text-primary, #64748b)) 10%,
+    transparent
+  ) !important;
+}
+.menuShell:not(.gridShell) {
+  animation: list-open 140ms ease-out;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 14%);
+}
+@keyframes list-open {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menuShell:not(.gridShell) {
+    animation: none;
+  }
+  .option {
+    transition: none;
+  }
+}
+
+.gridMenu {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: inherit;
+}
+
+.gridOption {
+  display: flex;
+  min-width: 0;
+  min-height: 100px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+:global(.dark) .gridOption {
+  background-color: rgb(255 255 255 / 3%);
+  border-color: rgb(255 255 255 / 10%);
+}
+
+@media (max-width: 479px) {
+  .gridMenu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.gridShell {
+  --picker-start-offset: -6px;
+  transform-origin: top left;
+  animation: picker-open 200ms ease-out both;
+}
+.gridShell[data-placement="top"] {
+  --picker-start-offset: 6px;
+  transform-origin: bottom left;
+}
+.gridShell::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: -5px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+}
+.gridShell[data-placement="top"]::before {
+  top: auto;
+  bottom: -5px;
+  transform: rotate(225deg);
+}
+:global(.dark) .gridShell::before {
+  background: #1c222b;
+  border-color: rgb(255 255 255 / 10%);
+}
+@keyframes picker-open {
+  from {
+    opacity: 0;
+    transform: translateY(var(--picker-start-offset)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gridShell {
+    animation: none;
+  }
+}
+
+.searchRow {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 4px;
+  background: #fff;
+}
+:global(.dark) .searchRow {
+  background: #1c222b;
+}
+.searchInput {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #e2e8f0;
+  border-color: #e2e8f0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: transparent;
+  color: inherit;
+}
+:global(.dark) .searchInput {
+  border-color: rgb(255 255 255 / 10%) !important;
+}
+.isolatedMenu,
+.isolatedMenu .searchRow {
+  background: var(--select-surface) !important;
+  color: var(--select-text) !important;
+  border-color: var(--select-border) !important;
+  color-scheme: var(--select-color-scheme);
+}
+.isolatedMenu .option[aria-selected="false"] {
+  color: var(--select-text) !important;
+}
+.isolatedMenu .searchInput {
+  background: var(--select-surface) !important;
+  color: var(--select-text) !important;
+  border-color: var(--select-border) !important;
+}
+
+@layer components {
+  .isolatedMenu .option,
+  .isolatedMenu .searchInput {
+    font-size: var(--select-font-size, 13px) !important;
+    min-height: var(--select-option-height, 36px) !important;
+  }
+}

@@ -1,5 +1,6 @@
 /** English labels for the business Linktree editor; stored page content stays unchanged. */
 export const englishEditorCopy = {
+  verificationBadge: "Show blue verification badge",
   language: "en", editPage: "Edit page", createDefaultPage: "Create default page",
   createPage: "Create new page", basicDescription: "Basic information",
   selectDescription: "Choose platforms", linksDescription: "Add links",

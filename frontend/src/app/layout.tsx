@@ -20,16 +20,18 @@ import "./globals.css";
 import { PublicRouteTracking } from "@/components/analytics/PublicRouteTracking";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { fetchPublicLinktree } from "@/lib/public/public-page.server";
+import { fetchPublicForm } from "@/features/forms/public-form.server";
 import { automaticPageSeo } from "@/lib/public/page-seo";
-import { ROOT_PUBLIC_LOCALE_COOKIE, parseRootPublicLocale } from "@/features/public-site/root-public-locale";
-import { BUSINESS_PUBLIC_LOCALE_COOKIE, publicBusinessLocale } from "@/features/business/i18n/public-locale";
+import {
+  ROOT_PUBLIC_LOCALE_COOKIE,
+  parseRootPublicLocale,
+} from "@/features/public-site/root-public-locale";
+import {
+  BUSINESS_PUBLIC_LOCALE_COOKIE,
+  publicBusinessLocale,
+} from "@/features/business/i18n/public-locale";
 
-/* Applied in the initial HTML while the full stylesheet initializes. */
-const criticalCursor =
-  'url("/cursors/customCursor.svg") 10 2, default';
-
-const sponsorKrdThemeStyle =
-  createSponsorKrdThemeVariables() as CSSProperties;
+const sponsorKrdThemeStyle = createSponsorKrdThemeVariables() as CSSProperties;
 
 const baseMetadata: Metadata = {
   metadataBase: new URL(getAppBaseUrl()),
@@ -75,16 +77,30 @@ export default async function RootLayout({
   const initialTheme = cookieStore.get(APP_THEME_COOKIE)?.value;
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-public-path") || "";
-  const scope = resolveLinktreeHost(requestHeaders.get("host") || "", process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost");
+  const scope = resolveLinktreeHost(
+    requestHeaders.get("host") || "",
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
+  );
   let language = "en";
   const linktree = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})\/?$/);
   if (linktree) {
     const result = await fetchPublicLinktree(linktree[1]);
-    language = result && typeof result !== "string" ? automaticPageSeo(result.linktree).locale : "ckb";
+    language =
+      result && typeof result !== "string"
+        ? automaticPageSeo(result.linktree).locale
+        : "ckb";
+  } else if (/^\/form\/[a-z0-9][a-z0-9-]{0,79}\/?$/.test(pathname)) {
+    const payload = await fetchPublicForm(pathname.split("/")[2]);
+    language = payload.form.language;
   } else if (pathname === "/" || pathname.startsWith("/legal/")) {
-    language = scope.isPlatformRoot || pathname.startsWith("/legal/")
-      ? parseRootPublicLocale(cookieStore.get(ROOT_PUBLIC_LOCALE_COOKIE)?.value)
-      : publicBusinessLocale(cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+    language =
+      scope.isPlatformRoot || pathname.startsWith("/legal/")
+        ? parseRootPublicLocale(
+            cookieStore.get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
+          )
+        : publicBusinessLocale(
+            cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
+          );
   }
 
   return (
@@ -107,30 +123,10 @@ export default async function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         {/* Browser compatibility meta tags */}
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <link
-          rel="preload"
-          href="/cursors/customCursor.svg"
-          as="image"
-          type="image/svg+xml"
-          fetchPriority="high"
-        />
-        <link
-          rel="preload"
-          href="/cursors/customTextSelect.svg"
-          as="image"
-          type="image/svg+xml"
-          fetchPriority="high"
-        />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <AppMotionProvider>
           <GlobalInputLimits />
-          <style
-            id="critical-custom-cursor"
-            dangerouslySetInnerHTML={{
-              __html: `:where(html,body,body *){cursor:${criticalCursor}}`,
-            }}
-          />
           <div
             data-theme-background
             className="relative min-h-screen min-h-[100dvh] w-full overflow-x-clip text-slate-900 dark:text-white"

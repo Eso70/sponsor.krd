@@ -202,7 +202,6 @@ export function TemplateCombobox({ value, onChange, copy }: TemplateComboboxProp
             <div
               ref={listRef}
               className="overflow-y-auto p-1"
-              style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}
             >
               {filteredOptions.length === 0 ? (
                 <div className="p-6 text-center text-sm text-slate-400">{copy?.empty ?? "No templates found"}</div>

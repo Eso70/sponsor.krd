@@ -21,7 +21,9 @@ describe('platform content baseline', () => {
   it('adds platform TikTok permissions and fixed route identities', () => {
     expect(sql).toContain('platform:settings:tiktok-read');
     expect(sql).toContain('platform:settings:tiktok-update');
-    expect(sql).toContain("page_type IN ('linktree','advertising','route')");
+    expect(sql).toContain(
+      "page_type IN ('linktree','advertising','route','form')",
+    );
     expect(sql).toContain("'advertising-video-code'");
     expect(sql).toContain("'join-application'");
     expect(sql).not.toMatch(/CREATE\s+TABLE\s+.*platform.*tiktok/i);

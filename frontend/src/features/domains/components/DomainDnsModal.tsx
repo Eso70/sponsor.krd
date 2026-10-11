@@ -75,26 +75,6 @@ export function DomainDnsModal({
           copyName={copy.txtValue}
           copyText={copyText}
         />
-        <CopyValueField
-          label={copy.cnameName}
-          value={domain.hostname}
-          copyName={copy.cnameName}
-          copyText={copyText}
-        />
-        <CopyValueField
-          label={copy.cnameValue}
-          value={config.target}
-          copyName={copy.cnameValue}
-          copyText={copyText}
-        />
-        <p className="text-xs leading-5 text-slate-500">{copy.apex}</p>
-        <CopyValueField
-          label={copy.address}
-          value={[...config.ipv4, ...config.ipv6].join(", ")}
-          copyName={copy.address}
-          copyText={copyText}
-        />
-        <p className="text-xs leading-5 text-slate-500">{copy.primaryHelp}</p>
       </div>
     </ManagementModal>
   );

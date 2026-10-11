@@ -46,6 +46,7 @@ export function AddDomainModal({
   return (
     <ManagementModal
       isOpen
+      compactHeader
       title={copy.add}
       description={copy.hint}
       onClose={onClose}

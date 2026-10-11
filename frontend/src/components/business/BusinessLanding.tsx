@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { BusinessHero } from "@/components/business/BusinessHero";
-import { BusinessPublicLinktreesSection } from "@/components/business/BusinessPublicLinktreesSection";
-import type { PublicBusinessLinktree } from "@/components/business/BusinessPublicLinktreeCard";
 import { BusinessPublicSiteShell } from "@/components/business/BusinessPublicSiteShell";
 import {
   BUSINESS_LANDING_SECTION_HREFS,
@@ -37,11 +35,9 @@ function whatsappHref(value?: string | null): string | null {
 
 export function BusinessLanding({
   business,
-  linktrees,
   initialLocale = "ckb",
 }: {
   business: BusinessData;
-  linktrees: PublicBusinessLinktree[];
   initialLocale?: BusinessLocale;
 }) {
   const [locale, setLocale] = useState(initialLocale);
@@ -63,12 +59,11 @@ export function BusinessLanding({
       accentColor={accentColor}
       homeHref={BUSINESS_LANDING_SECTION_HREFS.home}
       language={locale}
-      languageControl={<PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />}
+      languageControl={
+        <PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />
+      }
       navbarCopy={copy.navbar}
       navigationItems={[
-        ...(linktrees.length > 0
-          ? [{ label: copy.nav.pages, href: BUSINESS_LANDING_SECTION_HREFS.workspace }]
-          : []),
         ...(business.advertising_enabled
           ? [{ label: copy.nav.advertising, href: "/advertising" }]
           : []),
@@ -86,16 +81,9 @@ export function BusinessLanding({
         whatsappEnabled: business.whatsapp_enabled,
         advertisingEnabled: Boolean(business.advertising_enabled),
         brandingRemoved: Boolean(business.branding_removed),
-        linktrees: linktrees.map((item) => ({
-          name: item.name,
-          href: `/linktree/${item.seo_name || item.uid}`,
-        })),
       }}
     >
       <BusinessHero accentColor={accentColor} locale={locale} />
-      {linktrees.length > 0 && (
-        <BusinessPublicLinktreesSection linktrees={linktrees} locale={locale} />
-      )}
     </BusinessPublicSiteShell>
   );
 }

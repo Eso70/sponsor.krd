@@ -33,7 +33,6 @@ import { Tooltip } from "@/components/shared/Tooltip";
 import { AnalyticsSummaryCards } from "@/features/analytics/components/AnalyticsSummaryCards";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { platformAnalyticsCopy } from "@/features/platform-admin/i18n/analytics-copy";
-import { analyticsModalScrollbarStyles } from "@/features/analytics/modalStyles";
 import type { BusinessLinktreeAnalyticsSummary } from "@linktree/types";
 import {
   downloadBusinessBackup,
@@ -294,9 +293,6 @@ export const BusinessAnalyticsModal = memo(function BusinessAnalyticsModal({
 
   return (
     <>
-      <style
-        dangerouslySetInnerHTML={{ __html: analyticsModalScrollbarStyles }}
-      />
       <div
         className="modal-ltr fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/40 dark:bg-black/60 backdrop-blur-md overflow-y-auto"
         onMouseDown={handleBackdropMouseDown}

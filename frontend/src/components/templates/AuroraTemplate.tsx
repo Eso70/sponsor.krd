@@ -16,7 +16,6 @@ import {
   deriveTextColor,
   deriveTextSecondaryColor,
 } from "@/lib/utils/theme-colors";
-import { areTemplatePropsEqual } from "@/lib/utils/linktree-utils";
 import {
   platformForeground,
   platformTextStyle,
@@ -103,6 +102,7 @@ export const AuroraTemplate = memo(function AuroraTemplate({
       header={
         <TemplateHeader
           name={linktree.name}
+            verificationBadge={linktree.template_config?.verification_badge === true}
           subtitle={linktree.subtitle}
           description={linktree.description}
           image={linktree.image}
@@ -212,4 +212,4 @@ export const AuroraTemplate = memo(function AuroraTemplate({
       }
     />
   );
-}, areTemplatePropsEqual);
+});

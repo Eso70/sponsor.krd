@@ -1,17 +1,9 @@
 "use client";
-import { BusinessDomainManagementButton } from './BusinessDomainManagementButton';
+import { BusinessCardActions } from "./BusinessCardActions";
 
 import { memo, useState } from "react";
 import Image from "next/image";
-import {
-  Edit,
-  Trash2,
-  Eye,
-  Globe,
-  ShieldCheck,
-  LogIn,
-  Users,
-} from "lucide-react";
+import { Globe, Users } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { ManagementTablePagination } from "@/components/shared/ManagementTable";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
@@ -22,7 +14,6 @@ import {
   BusinessMetaBadges,
   BusinessMetaField,
 } from "@/features/platform-admin/components/BusinessMetaBadges";
-import { Tooltip } from "@/components/shared/Tooltip";
 import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 interface BusinessesGridProps {
@@ -58,7 +49,7 @@ const BusinessCard = memo(function BusinessCard({
   const avatarUrl = item.logo || item.default_avatar;
 
   return (
-    <ManagementCard>
+    <ManagementCard className="min-w-0">
       {/* Header Section */}
       <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
         <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-gray-200 shrink-0 shadow-sm">
@@ -91,10 +82,10 @@ const BusinessCard = memo(function BusinessCard({
       <div className="mb-2 sm:mb-3 p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gray-50 border border-gray-200">
         <div className="flex items-center gap-1 sm:gap-1.5">
           <Globe className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide shrink-0">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide min-w-0 truncate">
             {copy.subdomain}
           </span>
-          <span className="text-xs text-gray-700 font-mono truncate">
+          <span className="text-xs text-gray-700 font-mono min-w-0 flex-1 truncate">
             {item.subdomain
               ? `${item.subdomain}.${getRootDomain()}`
               : copy.notSet}
@@ -104,7 +95,10 @@ const BusinessCard = memo(function BusinessCard({
 
       {/* Details Section */}
       <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
-        <BusinessMetaField label={copy.email} value={item.email?.trim() || "—"} />
+        <BusinessMetaField
+          label={copy.email}
+          value={item.email?.trim() || "—"}
+        />
         <BusinessMetaField
           label={copy.mobile}
           value={item.phone?.trim() || "—"}
@@ -120,77 +114,15 @@ const BusinessCard = memo(function BusinessCard({
         />
       </div>
 
-      {/* Actions Section */}
-      <div className="mt-auto flex items-center gap-1.5 sm:gap-2 pt-2 sm:pt-3 border-t border-gray-200">
-        {onViewAnalytics && (
-          <Tooltip content={copy.viewAnalytics} side="top" className="flex-1">
-            <button
-              type="button"
-              onClick={() => onViewAnalytics(item)}
-              className="w-full flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 hover:text-sky-800 transition-all duration-200 text-xs font-medium cursor-pointer"
-              title={copy.viewAnalytics}
-              aria-label={`${copy.viewAnalytics}: ${item.name}`}
-            >
-              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden lg:inline text-xs">{copy.analytics}</span>
-            </button>
-          </Tooltip>
-        )}
-        {onEdit && (
-          <Tooltip content={copy.edit} side="top" className="flex-1">
-            <button
-              type="button"
-              onClick={() => onEdit(item)}
-              className="w-full flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-700 hover:text-yellow-800 transition-all duration-200 text-xs font-medium cursor-pointer"
-              title={copy.edit}
-              aria-label={`${copy.edit}: ${item.name}`}
-            >
-              <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden lg:inline text-xs">{copy.edit}</span>
-            </button>
-          </Tooltip>
-        )}
-        {onManageDomains && <BusinessDomainManagementButton name={item.name} onClick={() => onManageDomains(item)} />}
-          {onManageSessions && (
-          <Tooltip content={copy.sessions} side="top">
-            <button
-              type="button"
-              onClick={() => onManageSessions(item)}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 hover:text-emerald-800 transition-all duration-200 cursor-pointer dark:text-emerald-300"
-              title={copy.sessions}
-              aria-label={`${copy.sessions}: ${item.name}`}
-            >
-              <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-          </Tooltip>
-        )}
-        {onOpenDashboard && item.subdomain && item.status === "active" && (
-          <Tooltip content={copy.openDashboard} side="top">
-            <button
-              type="button"
-              onClick={() => onOpenDashboard(item)}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 hover:text-indigo-800 transition-all duration-200 cursor-pointer"
-              title={copy.openDashboard}
-              aria-label={`${copy.openDashboard}: ${item.name}`}
-            >
-              <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-          </Tooltip>
-        )}
-        {onDelete && (
-          <Tooltip content={copy.delete} side="top">
-            <button
-              type="button"
-              onClick={() => onDelete(item.id, item.name)}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-700 hover:text-red-800 transition-all duration-200 cursor-pointer"
-              title={copy.delete}
-              aria-label={`${copy.delete}: ${item.name}`}
-            >
-              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-          </Tooltip>
-        )}
-      </div>
+      <BusinessCardActions
+        item={item}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onViewAnalytics={onViewAnalytics}
+        onManageDomains={onManageDomains}
+        onManageSessions={onManageSessions}
+        onOpenDashboard={onOpenDashboard}
+      />
     </ManagementCard>
   );
 });
@@ -237,4 +169,3 @@ export const BusinessesGrid = memo(function BusinessesGrid({
     />
   );
 });
-

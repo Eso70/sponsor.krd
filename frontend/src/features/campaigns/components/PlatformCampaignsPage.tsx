@@ -21,7 +21,7 @@ import { SearchModal } from "@/components/shared/SearchModal";
 import { StatCard } from "@/components/shared/StatCard";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { Tooltip } from "@/components/shared/Tooltip";
-import { INITIAL_MOCK_CAMPAIGNS, OBJECTIVE_LABELS } from "../mock-data";
+import { OBJECTIVE_LABELS } from "../campaign-objectives";
 import { formatCostPerConversion } from "../campaign-metrics";
 import type { CampaignStatus, TikTokCampaign } from "../types";
 import { CampaignDetailsModal } from "./CampaignDetailsModal";
@@ -67,9 +67,7 @@ export function PlatformCampaignsPage() {
   const t = useCampaignText();
   const localStorageKey = "platform_tiktok_campaigns";
 
-  const [campaigns, setCampaigns] = useState<TikTokCampaign[]>(
-    INITIAL_MOCK_CAMPAIGNS,
-  );
+  const [campaigns, setCampaigns] = useState<TikTokCampaign[]>([]);
   const [view, setView] = useState<CampaignView>("grid");
   const [statusFilter, setStatusFilter] = useState<CampaignFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,11 +84,15 @@ export function PlatformCampaignsPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        const stored = localStorage.getItem(localStorageKey);
+        const stored = window.localStorage.getItem(localStorageKey);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCampaigns(parsed);
+          if (Array.isArray(parsed)) {
+            const savedCampaigns = parsed.filter((campaign) => !/^camp-00[1-4]$/.test(campaign?.id));
+            setCampaigns(savedCampaigns);
+            if (savedCampaigns.length !== parsed.length) {
+              window.localStorage.setItem(localStorageKey, JSON.stringify(savedCampaigns));
+            }
           }
         }
       } catch {
@@ -106,7 +108,7 @@ export function PlatformCampaignsPage() {
     setCampaigns((current) => {
       const next = typeof updater === "function" ? updater(current) : updater;
       try {
-        localStorage.setItem(localStorageKey, JSON.stringify(next));
+        window.localStorage.setItem(localStorageKey, JSON.stringify(next));
       } catch {
         // ignore
       }

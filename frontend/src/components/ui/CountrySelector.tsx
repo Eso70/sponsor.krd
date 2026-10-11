@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { CustomSelect } from "@/components/shared/CustomSelect";
+import { CountrySelectorOption as CountryButton } from "./CountrySelectorOption";
 import { COUNTRY_DIAL_CODES } from "@/lib/constants/country-codes";
 import { createPortal } from "react-dom";
 import { ChevronDown, Search, X, Globe } from "lucide-react";
@@ -10,48 +12,20 @@ import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 interface Country {
   code: string;
   name: string;
+  regions: readonly string[];
 }
 
-// 1. Memoized Country Button Component to prevent unnecessary re-renders
-// Uses transform-gpu and content-visibility for maximum scrolling performance
-const CountryButton = React.memo(({
-  country,
-  isSelected,
-  onClick
-}: {
-  country: Country;
-  isSelected: boolean;
-  onClick: (code: string) => void;
-}) => {
-  return (
-    <button
-      type="button"
-      onClick={() => onClick(country.code)}
-      className={`w-full px-4 py-3 text-left text-sm transition-all duration-300 rounded-xl transform-gpu ${
-        isSelected
-          ? "theme-fill border-l-4 border-transparent font-semibold text-[var(--theme-ink)] shadow-md"
-          : "text-slate-600 dark:text-gray-300 hover:bg-linear-to-r hover:from-slate-50 hover:to-gray-50 hover:text-slate-700 dark:hover:from-[#161B22] dark:hover:to-[#161B22] dark:hover:text-gray-150"
-      }`}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "46px" }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-medium text-base">+{country.code}</span>
-        <span className="text-slate-500 text-sm truncate flex-1 text-left">
-          {country.name}
-        </span>
-      </div>
-    </button>
-  );
-});
-
-CountryButton.displayName = "CountryButton";
-
 interface CountrySelectorProps {
+  compact?: boolean;
+  language?: string;
+  ariaLabel?: string;
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  copy?: Partial<Record<"title" | "count" | "close" | "search" | "empty" | "loading", string>>;
+  copy?: Partial<
+    Record<"title" | "count" | "close" | "search" | "empty" | "loading", string>
+  >;
 }
 
 // Comprehensive list of countries with phone codes - Iraq first
@@ -64,6 +38,9 @@ export function CountrySelector({
   onChange,
   className = "",
   copy,
+  compact = false,
+  language = "en",
+  ariaLabel,
 }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,7 +63,7 @@ export function CountrySelector({
   // Find selected country - default to Iraq (964)
   const selectedCountry = useMemo(() => {
     const code = value || "964";
-    return ALL_COUNTRIES.find((c) => c.code === code) || ALL_COUNTRIES[0];
+    return ALL_COUNTRIES.find((c) => c.code === code) || COUNTRY_DIAL_CODES[0];
   }, [value]);
 
   // Filter countries based on search query
@@ -99,7 +76,7 @@ export function CountrySelector({
       (country) =>
         country.name.toLowerCase().includes(query) ||
         country.code.includes(query) ||
-        `+${country.code}`.includes(query)
+        `+${country.code}`.includes(query),
     );
   }, [searchQuery]);
 
@@ -122,21 +99,28 @@ export function CountrySelector({
   useEffect(() => {
     const container = listContainerRef.current;
     const sentinel = sentinelRef.current;
-    
-    if (!container || !sentinel || !isOpen || filteredCountries.length <= visibleCount) {
+
+    if (
+      !container ||
+      !sentinel ||
+      !isOpen ||
+      filteredCountries.length <= visibleCount
+    ) {
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + 40, filteredCountries.length));
+          setVisibleCount((prev) =>
+            Math.min(prev + 40, filteredCountries.length),
+          );
         }
       },
       {
         root: container,
         rootMargin: "150px", // Trigger preloading 150px before sentinel hits viewport
-      }
+      },
     );
 
     observer.observe(sentinel);
@@ -185,11 +169,69 @@ export function CountrySelector({
     }
   }, [isOpen, mounted]);
 
+  const regionNames = useMemo(
+    () => new Intl.DisplayNames([language], { type: "region" }),
+    [language],
+  );
+  const countryName = (country: Country) =>
+    country.regions
+      .map((region) => regionNames.of(region) || region)
+      .join(" / ");
+
+  if (compact) {
+    const searchCopy =
+      language === "ar"
+        ? { search: "ابحث عن بلد أو رمز الاتصال...", empty: "لم يُعثر على بلد" }
+        : language === "ckb"
+          ? { search: "ناوی وڵات یان کۆد...", empty: "هیچ وڵاتێک نەدۆزرایەوە" }
+          : {
+              search: "Search country or calling code...",
+              empty: "No country found",
+            };
+    return (
+      <div className="shrink-0">
+        <CustomSelect
+          label={ariaLabel || copy?.title || "Country code"}
+          ariaLabel={ariaLabel || copy?.title || "Country code"}
+          hideLabel
+          fullWidth={false}
+          value={selectedCountry.code}
+          triggerLabel={`+${selectedCountry.code}`}
+          onChange={onChange}
+          searchable
+          searchPlaceholder={copy?.search || searchCopy.search}
+          emptyLabel={copy?.empty || searchCopy.empty}
+          inheritAppearance
+          minMenuWidth={260}
+          maxMenuHeight={280}
+          triggerClassName={`modal-standard-input !h-9 !w-auto !justify-start !gap-1 !rounded-lg !px-2 !text-xs [&_svg]:!size-3 ${className}`}
+          options={ALL_COUNTRIES.map((country) => ({
+            value: country.code,
+            label: `${countryName(country)} (+${country.code})`,
+            searchTerms: [
+              countryName(country),
+              country.name,
+              ...country.regions,
+              country.code,
+              `+${country.code}`,
+            ],
+          }))}
+        />
+      </div>
+    );
+  }
+
   if (!mounted) {
     return (
       <button
         type="button"
-        className={`flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-linear-to-br from-white to-slate-50/50 dark:from-[#161B22] dark:to-[#161B22] px-3 py-2 text-sm text-slate-700 dark:text-gray-200 transition-all duration-300 hover:border-[var(--theme-primary,#64748b)] hover:shadow-md focus:border-[var(--theme-primary,#64748b)] focus:outline-none focus:ring-2 min-w-25 shadow-sm ${className}`} style={{ '--tw-ring-color': 'color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)' } as React.CSSProperties}
+        className={`flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-linear-to-br from-white to-slate-50/50 dark:from-[#161B22] dark:to-[#161B22] px-3 py-2 text-sm text-slate-700 dark:text-gray-200 transition-all duration-300 hover:border-[var(--theme-primary,#64748b)] hover:shadow-md focus:border-[var(--theme-primary,#64748b)] focus:outline-none focus:ring-2 min-w-25 shadow-sm ${className}`}
+        style={
+          {
+            "--tw-ring-color":
+              "color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)",
+          } as React.CSSProperties
+        }
       >
         <span className="font-medium">+{value || "964"}</span>
         <ChevronDown className="h-4 w-4 text-slate-400 dark:text-gray-500" />
@@ -205,9 +247,9 @@ export function CountrySelector({
         onClick={handleClose}
         aria-hidden
       />
-      
+
       {/* Modal container - centered like template selector */}
-      <div 
+      <div
         className="modal-ltr fixed z-[201] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] sm:w-125 max-w-125 max-h-150 overflow-hidden rounded-2xl bg-white/95 backdrop-blur-sm border border-gray-100/50 shadow-2xl    duration-300"
         dir="ltr"
         onClick={(e) => e.stopPropagation()}
@@ -217,18 +259,24 @@ export function CountrySelector({
           <div className="flex items-center justify-between p-4 sm:p-5">
             <div className="flex items-center gap-3">
               <div className="theme-soft rounded-xl border p-2 shadow-sm">
-                <Globe className="h-4 w-4" style={{ color: 'var(--theme-primary, #64748b)' }} />
+                <Globe
+                  className="h-4 w-4"
+                  style={{ color: "var(--theme-primary, #64748b)" }}
+                />
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-bold text-slate-700">
                   {copy?.title ?? "وڵات هەڵبژێرە"}
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-primary, #64748b)' }}>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--theme-primary, #64748b)" }}
+                >
                   {ALL_COUNTRIES.length} {copy?.count ?? "وڵات"}
                 </p>
               </div>
             </div>
-            
+
             <button
               type="button"
               onClick={handleClose}
@@ -251,9 +299,19 @@ export function CountrySelector({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={copy?.search ?? "ناوی وڵات یان کۆد..."}
               className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all duration-300 shadow-sm hover:shadow-md"
-              style={{ '--tw-ring-color': 'color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)' } as React.CSSProperties}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-primary, #64748b)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = ''; }}
+              style={
+                {
+                  "--tw-ring-color":
+                    "color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)",
+                } as React.CSSProperties
+              }
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor =
+                  "var(--theme-primary, #64748b)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "";
+              }}
             />
             {searchQuery && (
               <button
@@ -272,12 +330,10 @@ export function CountrySelector({
         </div>
 
         {/* Countries List */}
-        <div 
+        <div
           ref={listContainerRef}
           className="custom-scrollbar theme-custom-scrollbar overflow-y-auto p-2 bg-linear-to-br from-white to-slate-50/20 transform-gpu"
-          style={{ 
-            scrollbarWidth: "thin", 
-            scrollbarColor: "var(--theme-primary, #64748b) transparent",
+          style={{
             maxHeight: "calc(600px - 180px)",
           }}
         >
@@ -300,7 +356,7 @@ export function CountrySelector({
 
           {/* Sentinel Div observed by IntersectionObserver for scroll loading */}
           {filteredCountries.length > visibleCount && (
-            <div 
+            <div
               ref={sentinelRef}
               className="text-center text-xs text-slate-400 mt-2 py-3 border-t border-slate-100/30 flex justify-center items-center gap-2"
             >
@@ -320,7 +376,13 @@ export function CountrySelector({
       <button
         type="button"
         onClick={handleToggle}
-        className={`flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-linear-to-br from-white to-slate-50/50 dark:from-[#161B22] dark:to-[#161B22] px-3 py-2 text-sm text-slate-700 dark:text-gray-200 transition-all duration-300 hover:border-[var(--theme-primary,#64748b)] hover:shadow-md focus:border-[var(--theme-primary,#64748b)] focus:outline-none focus:ring-2 min-w-25 shadow-sm ${className}`} style={{ '--tw-ring-color': 'color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)' } as React.CSSProperties}
+        className={`flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-linear-to-br from-white to-slate-50/50 dark:from-[#161B22] dark:to-[#161B22] px-3 py-2 text-sm text-slate-700 dark:text-gray-200 transition-all duration-300 hover:border-[var(--theme-primary,#64748b)] hover:shadow-md focus:border-[var(--theme-primary,#64748b)] focus:outline-none focus:ring-2 min-w-25 shadow-sm ${className}`}
+        style={
+          {
+            "--tw-ring-color":
+              "color-mix(in srgb, var(--theme-primary, #64748b) 30%, transparent)",
+          } as React.CSSProperties
+        }
       >
         <span className="font-medium">+{selectedCountry.code}</span>
         <ChevronDown
@@ -329,10 +391,8 @@ export function CountrySelector({
           }`}
         />
       </button>
-      
+
       {modalContent && createPortal(modalContent, document.body)}
     </>
   );
 }
-
-

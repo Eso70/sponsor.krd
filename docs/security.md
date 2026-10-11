@@ -1,5 +1,14 @@
 # Security
 
+## Linktree display badges
+
+The optional blue badge is a page appearance setting, not an identity,
+authentication, or authorization signal. Only the exact boolean `true` in
+`template_config.verification_badge` enables it. Changes use the existing
+authenticated page create/update capabilities and server-scoped owner lookup.
+The badge is a local static SVG with no external script, image request, or click
+action. It does not add marketing tracking or grant any permissions.
+
 ## Public SEO host boundaries
 
 Public subdomain resolution accepts only the configured root and one valid
@@ -172,8 +181,8 @@ invalidated on policy-changing writes.
 The backward-compatible `limit.linktrees` entitlement remains the maximum
 number of active Linktrees considered by Linktree creation. Its authoritative
 usage query counts active Linktrees owned by the authenticated business. The
-seeded plan limits are five public pages and
-one active TikTok Pixel group for Basic, twenty public pages and two Pixel
+seeded plan limits are twenty public pages and
+one active TikTok Pixel group for Basic, one hundred public pages and two Pixel
 groups for Pro, and unlimited public pages plus three Pixel groups for Ultra.
 
 Only the Ultra plan grants `business:profile:update`. Basic and Pro cannot
@@ -312,6 +321,21 @@ write sites and two readers. `schema-secrets.spec.ts` fails if a second table
 holding a pixel, or a plaintext `events_token` column, is reintroduced.
 
 ## CSRF / origin protection
+
+The Next.js API proxy sends the browser authority as `x-tenant-proxy-host`
+alongside the internal proxy secret. NestJS restores `Host` from this metadata
+before origin checks and tenant routing only when the secret matches and the
+authority has valid hostname/port syntax. This preserves development ports and
+custom domains even when the Node fetch runtime replaces `Host` with its
+upstream address. Unauthenticated host metadata is ignored, and browser-supplied
+metadata is stripped and replaced by Next.js. Origin matching remains exact;
+adding an origin to CORS never bypasses this check.
+Malformed authenticated host metadata returns `400` before routing instead of
+falling back to a loopback authority. Legacy internal calls without host
+metadata keep their existing behavior. Origin headers must be serialized
+HTTP(S) origins: credentials, paths, fragments and multiple origin values are
+rejected; Referer fallback may contain a page path. The frontend checks and
+forwards one normalized HTTP(S) scheme consistently for reverse-proxy chains.
 
 The backend checks each request's `Origin`/`Referer` against the effective request
 origin for cookie-authenticated mutations (not `GET`/`HEAD`/`OPTIONS`). A mismatch
@@ -556,3 +580,16 @@ a pending login handoff from reviving suspended access. Cached platform sessions
 also require an unexpired database session. Private API responses and errors
 use `Cache-Control: no-store, private`. Platform-only endpoints are denied on
 both default tenant subdomains and custom domains.
+
+Custom-domain assignment, DNS checks, primary selection and removal are exclusive
+to platform administrators. Business management endpoints are absent; historical
+business domain grants cannot restore them. Public and dashboard domain routing
+continue to use the selected live mapping.
+
+## Persisted forms
+
+Forms never accept a client owner identifier. Guards enforce business/platform capabilities; public host resolution and active-owner checks gate availability. Strict server schemas validate answers and visibility. Raster uploads are decoded, bounded and ownership-checked. Receipts are idempotent and responses are owner-only; answers do not enter analytics properties. See [Forms](forms.md).
+
+## Form response exports
+
+Response export uses the authenticated, owner-scoped Forms read endpoints with validated filters and bounded batches. CSV headers and values escape quotes and neutralize spreadsheet formula prefixes, including leading whitespace and control characters. Downloads use a temporary Blob URL that is revoked; closing the reporting drawer cancels outstanding export requests. Public form routes cannot read or export submitted answers. See [Forms response reporting](forms.md).

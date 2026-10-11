@@ -3,7 +3,7 @@ import { conversationCategoryCopy } from "@/features/communications/conversation
 /** English UI copy shared by the Business and Platform dashboard adapters. */
 export const englishBusinessMessages = {
   Dashboard: {
-    subtitle: "Business dashboard", businessFallback: "Business", linktrees: "Pages",
+    subtitle: "Business dashboard", businessFallback: "Business", linktrees: "Pages", forms: "Forms",
     tiktokSettings: "TikTok settings", templates: "Templates", advertising: "Advertising service",
     profile: "Profile", settings: "Settings", logout: "Log out", comingSoon: "Coming soon",
     deletePage: "Delete page", confirmDelete: "Delete", deleting: "Deleting...", close: "Close",
@@ -166,6 +166,7 @@ export const englishBusinessMessages = {
     },
   },
   SettingsColorPicker: {
+    red: "Red", green: "Green", blue: "Blue", hue: "Hue", saturation: "Saturation", lightness: "Lightness",
     title: "Choose a color", subtitle: "Choose a solid color or gradient",
     unsupported: "This browser doesn't support the eyedropper tool.",
     picked: "Color picked.", pickFailed: "Couldn't pick a color. Try again.",

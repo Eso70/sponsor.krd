@@ -1,7 +1,9 @@
 import type { ColorGradientModalProps } from "./ColorGradientModal";
 
 /** Shared Arabic labels for the color/gradient editor. */
-export const arabicColorGradientCopy: NonNullable<ColorGradientModalProps["copy"]> = {
+export const arabicColorGradientCopy: NonNullable<
+  ColorGradientModalProps["copy"]
+> = {
   title: "اختيار اللون",
   subtitle: "اختر لونًا واحدًا أو تدرجًا لونيًا",
   unsupported: "هذا المتصفح لا يدعم أداة التقاط اللون.",
@@ -28,4 +30,10 @@ export const arabicColorGradientCopy: NonNullable<ColorGradientModalProps["copy"
   pickedColors: "الألوان الملتقطة",
   apply: "تطبيق",
   close: "إغلاق",
+  red: "الأحمر",
+  green: "الأخضر",
+  blue: "الأزرق",
+  hue: "درجة اللون",
+  saturation: "التشبع",
+  lightness: "الإضاءة",
 };

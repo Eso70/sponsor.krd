@@ -53,7 +53,6 @@ import {
   SPONSOR_KRD_ACCENT_GRADIENT,
   SPONSOR_KRD_ACCENT_VALUE,
 } from "@/lib/sponsor-krd-theme";
-import { applyCursorTheme } from "@/lib/utils/cursor-theme";
 import { persistAppTheme } from "@/lib/app-theme";
 import { PlatformAdminErrorPage } from "@/features/platform-admin/components/PlatformAdminErrorPage";
 import {
@@ -62,6 +61,8 @@ import {
 } from "@/components/shared/DashboardSidebar";
 import { DashboardHeader } from "@/components/shared/DashboardHeader";
 import { apiRequest } from "@/lib/api/request";
+import { PlatformFormsPage } from "./PlatformFormsPage";
+import { formsCopy } from "@/features/forms/forms-copy";
 import { PlatformLinktreesPage } from "@/features/platform-admin/components/PlatformLinktreesPage";
 import {
   getPlatformPage,
@@ -174,12 +175,11 @@ export function PlatformAdminDashboard() {
           ? settings.accent_color
           : SPONSOR_KRD_ACCENT_VALUE,
       );
-      Object.entries(
-        createSponsorKrdThemeVariables(accent.raw),
-      ).forEach(([property, value]) => {
-        document.documentElement.style.setProperty(property, value);
-      });
-      void applyCursorTheme(accent.raw).catch(() => undefined);
+      Object.entries(createSponsorKrdThemeVariables(accent.raw)).forEach(
+        ([property, value]) => {
+          document.documentElement.style.setProperty(property, value);
+        },
+      );
       setPlatformBranding({
         name: typeof settings.name === "string" ? settings.name : "Sponsor.krd",
         logo: typeof settings.logo === "string" ? settings.logo : null,
@@ -231,13 +231,18 @@ export function PlatformAdminDashboard() {
 
   const loadAdministratorProfile = useCallback(async () => {
     const payload = await apiRequest<{
-      user: { name?: string; email?: string; preferred_locale?: "ckb" | "ar" | "en" };
+      user: {
+        name?: string;
+        email?: string;
+        preferred_locale?: "ckb" | "ar" | "en";
+      };
     }>("/api/platform/auth/profile");
     setAdministrator({
       name: payload.user.name?.trim() || "Platform Admin",
       email: payload.user.email?.trim() || "",
     });
-    if (payload.user.preferred_locale) syncLocale(payload.user.preferred_locale);
+    if (payload.user.preferred_locale)
+      syncLocale(payload.user.preferred_locale);
   }, [syncLocale]);
 
   useEffect(() => {
@@ -298,6 +303,13 @@ export function PlatformAdminDashboard() {
         onClick: () => router.push(consoleBasePath),
       },
       {
+        id: "forms",
+        label: formsCopy(locale).title,
+        icon: <Link2 className="h-4 w-4" />,
+        active: activePage === "forms",
+        onClick: () => router.push(`${consoleBasePath}/forms`),
+      },
+      {
         id: "linktrees",
         label: copy.linktrees,
         icon: <Link2 className="h-4 w-4" />,
@@ -353,11 +365,20 @@ export function PlatformAdminDashboard() {
         onClick: () => router.push(`${consoleBasePath}/settings`),
       },
     ],
-    [activePage, canPage, consoleBasePath, permissionsLoaded, router, copy],
+    [
+      activePage,
+      canPage,
+      consoleBasePath,
+      permissionsLoaded,
+      router,
+      copy,
+      locale,
+    ],
   );
 
   const pageTitle: Record<PlatformPage, string> = {
     businesses: copy.businessesManagement,
+    forms: formsCopy(locale).title,
     linktrees: copy.linktrees,
     templates: copy.templates,
     campaigns: copy.campaigns,
@@ -389,26 +410,33 @@ export function PlatformAdminDashboard() {
    * request returns. Waiting for the response before calling `window.open`
    * would be treated as an unrequested popup and blocked.
    */
-  const handleOpenDashboard = useCallback((business: Business) => {
-    const tenantTab = window.open("about:blank", "_blank");
-    if (tenantTab) {
-      tenantTab.opener = null;
-    }
-    startBusinessImpersonation(business.id)
-      .then(({ redirectUrl }) => {
-        if (tenantTab) {
-          tenantTab.location.href = redirectUrl;
-          return;
-        }
-        window.location.href = redirectUrl;
-      })
-      .catch((error: unknown) => {
-        tenantTab?.close();
-        toast.error(
-          platformRequestError(error instanceof Error ? error.message : null, copy.openFailure, locale),
-        );
-      });
-  }, [copy, locale]);
+  const handleOpenDashboard = useCallback(
+    (business: Business) => {
+      const tenantTab = window.open("about:blank", "_blank");
+      if (tenantTab) {
+        tenantTab.opener = null;
+      }
+      startBusinessImpersonation(business.id)
+        .then(({ redirectUrl }) => {
+          if (tenantTab) {
+            tenantTab.location.href = redirectUrl;
+            return;
+          }
+          window.location.href = redirectUrl;
+        })
+        .catch((error: unknown) => {
+          tenantTab?.close();
+          toast.error(
+            platformRequestError(
+              error instanceof Error ? error.message : null,
+              copy.openFailure,
+              locale,
+            ),
+          );
+        });
+    },
+    [copy, locale],
+  );
 
   const confirmDelete = async () => {
     if (!deletingBusiness) return;
@@ -423,14 +451,22 @@ export function PlatformAdminDashboard() {
         toast.success(copy.deleteSuccess);
       } else {
         const errData = await res.json();
-        const message = platformRequestError(errData.message, copy.deleteFailure, locale);
+        const message = platformRequestError(
+          errData.message,
+          copy.deleteFailure,
+          locale,
+        );
         setOperationError(message);
         toast.error(copy.deleteFailure, {
           description: message,
         });
       }
     } catch (err) {
-      const message = platformRequestError(err instanceof Error ? err.message : null, copy.deleteFailure, locale);
+      const message = platformRequestError(
+        err instanceof Error ? err.message : null,
+        copy.deleteFailure,
+        locale,
+      );
       setOperationError(message);
       toast.error(copy.deleteFailure, { description: message });
     } finally {
@@ -441,7 +477,9 @@ export function PlatformAdminDashboard() {
   if (loading) {
     return (
       <SkeletonDashboardShell navigationItems={12} platformAdminTheme>
-        <SkeletonBusinessDirectoryPage loadingLabel={platformLoadingCopy[locale].businessDirectory} />
+        <SkeletonBusinessDirectoryPage
+          loadingLabel={platformLoadingCopy[locale].businessDirectory}
+        />
       </SkeletonDashboardShell>
     );
   }
@@ -481,7 +519,11 @@ export function PlatformAdminDashboard() {
 
   if (permissionsLoaded && !activePageAllowed) {
     return (
-      <PlatformAdminErrorPage kind="forbidden" branding={platformBranding} locale={locale} />
+      <PlatformAdminErrorPage
+        kind="forbidden"
+        branding={platformBranding}
+        locale={locale}
+      />
     );
   }
 
@@ -496,10 +538,7 @@ export function PlatformAdminDashboard() {
       <DashboardSidebar
         brandName={platformBranding.name}
         brandSubtitle={copy.generalControl}
-        brandImage={
-          platformBranding.logo ||
-          SPONSOR_KRD_LOGO
-        }
+        brandImage={platformBranding.logo || SPONSOR_KRD_LOGO}
         items={sidebarItems}
         collapsed={isSidebarCollapsed}
         mobileOpen={isMobileSidebarOpen}
@@ -553,7 +592,19 @@ export function PlatformAdminDashboard() {
           onToggleTheme={toggleTheme}
           onRefresh={handleGlobalRefresh}
           languageControl={<PlatformLanguageSelector />}
-          labels={{ menu: copy.menu, menuLabel: copy.menu, refresh: copy.refreshData, refreshLabel: copy.refreshData, home: copy.home, homeLabel: copy.home, theme: copy.theme, darkTheme: copy.darkTheme, lightTheme: copy.lightTheme, themeLabel: copy.theme, accountMenu: copy.accountMenu }}
+          labels={{
+            menu: copy.menu,
+            menuLabel: copy.menu,
+            refresh: copy.refreshData,
+            refreshLabel: copy.refreshData,
+            home: copy.home,
+            homeLabel: copy.home,
+            theme: copy.theme,
+            darkTheme: copy.darkTheme,
+            lightTheme: copy.lightTheme,
+            themeLabel: copy.theme,
+            accountMenu: copy.accountMenu,
+          }}
           notifications={<ApprovalNotifications ref={notificationsRef} />}
           profile={{
             name: administrator.name,
@@ -623,7 +674,11 @@ export function PlatformAdminDashboard() {
                       const payload = await response.json().catch(() => ({}));
                       if (!response.ok) {
                         throw new Error(
-                          platformRequestError(payload.message, copy.loadFailure, locale),
+                          platformRequestError(
+                            payload.message,
+                            copy.loadFailure,
+                            locale,
+                          ),
                         );
                       }
                       setEditingBusiness(payload.data as Business);
@@ -631,7 +686,11 @@ export function PlatformAdminDashboard() {
                     })
                     .catch((error: unknown) =>
                       toast.error(
-                        platformRequestError(error instanceof Error ? error.message : null, copy.loadFailure, locale),
+                        platformRequestError(
+                          error instanceof Error ? error.message : null,
+                          copy.loadFailure,
+                          locale,
+                        ),
                       ),
                     );
                 }}
@@ -642,6 +701,8 @@ export function PlatformAdminDashboard() {
               />
             ) : activePage === "linktrees" ? (
               <PlatformLinktreesPage />
+            ) : activePage === "forms" ? (
+              <PlatformFormsPage theme={theme} mounted={mounted} onToggleTheme={toggleTheme} />
             ) : activePage === "templates" ? (
               <PlatformTemplatesPage />
             ) : activePage === "campaigns" ? (

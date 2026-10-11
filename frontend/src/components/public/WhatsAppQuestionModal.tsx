@@ -5,7 +5,6 @@ import { X, MessageCircle } from "lucide-react";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
-import { publicLinktreeCopy } from "@/features/business/i18n/public-linktree-copy";
 
 // Export the question interface for use in other components
 export interface WhatsAppQuestion {
@@ -65,16 +64,7 @@ export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({
     [onClose]
   );
 
-  const displayQuestions = (questions && questions.length > 0 ? questions : copy.questions).map((question) => {
-    const original = publicLinktreeCopy.ckb.questions.find((item) => item.id === question.id);
-    const localized = copy.questions.find((item) => item.id === question.id);
-    if (!original || !localized) return question;
-    return {
-      ...question,
-      text: question.text === original.text ? localized.text : question.text,
-      message: question.message === original.message ? localized.message : question.message,
-    };
-  });
+  const displayQuestions = questions ?? copy.questions;
 
   useModalKeyboard({
     isOpen,
@@ -111,10 +101,10 @@ export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({
                   id="whatsapp-modal-title"
                   className="text-base sm:text-lg md:text-xl font-bold text-slate-800 font-kurdish"
                 >
-                  {title && title !== publicLinktreeCopy.ckb.modalTitle ? title : copy.modalTitle}
+                  {title || copy.modalTitle}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-kurdish">
-                  {subtitle && subtitle !== publicLinktreeCopy.ckb.modalSubtitle ? subtitle : copy.modalSubtitle}
+                  {subtitle || copy.modalSubtitle}
                 </p>
               </div>
             </div>

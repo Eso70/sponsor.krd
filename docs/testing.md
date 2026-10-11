@@ -1,5 +1,10 @@
 # Testing and verification
 
+The architecture HTTP suite gives its real Redis client a unique key prefix
+per run and removes only that prefix at teardown. It must never call FLUSHDB
+or FLUSHALL against a shared Redis server. Scoped pattern cleanup accounts for
+ioredis automatically prefixing commands and SCAN returning physical keys.
+
 For SEO changes, `pnpm --filter frontend test:seo` starts an isolated Next
 preview with a disposable fixture API, without database writes. It tests raw
 HTML, two tenants with identical slugs, robots/sitemaps, share images, real
@@ -247,3 +252,13 @@ cache denial and login issuance after suspension. Cached platform session
 revocation is covered separately. Actual Fastify requests verify private cache
 headers on successes, encoded paths and errors; proxy regressions verify uncached
 errors and platform-only route rejection on both kinds of tenant hostname.
+
+Platform-only domain management regressions check that every former business
+management endpoint returns 404, business cookies cannot access the platform
+endpoints, and legacy permissions become inactive under repeated migration runs.
+Panel and platform-modal tests retain add, DNS verification, primary selection,
+refresh cancellation and nested deletion coverage.
+
+## Persisted forms
+
+Forms tests cover guards, validation, normalized uploads, both management scopes and both public layouts. Run `pnpm --filter frontend exec vitest run src/features/forms --maxWorkers=4` and `pnpm --filter backend exec jest --config test/jest-e2e.json test/forms.e2e-spec.ts --runInBand`. The PostgreSQL suite creates/drops only its separate `sponsor_krd_forms_e2e_<pid>` database. See [Forms](forms.md).

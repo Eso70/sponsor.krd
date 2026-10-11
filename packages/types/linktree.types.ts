@@ -70,7 +70,10 @@ export const LINKTREE_DEFAULT_WHATSAPP_QUESTIONS = [
   message: string;
 }[];
 
-export type LinktreeTemplateConfig = Record<string, unknown>;
+export type LinktreeTemplateConfig = Record<string, unknown> & {
+  /** Opt-in display badge next to the page name. Defaults to false. */
+  verification_badge?: boolean;
+};
 
 export interface LinkMetadata extends Record<string, unknown> {
   original_input: string | null;

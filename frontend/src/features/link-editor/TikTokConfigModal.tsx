@@ -105,7 +105,7 @@ export function TikTokConfigModal({
           </div>
         </div>
 
-<div className="overflow-y-auto p-4 sm:p-5 bg-linear-to-br from-white to-slate-50/20 space-y-4" style={{ maxHeight: "calc(85vh - 130px)", scrollbarWidth: "thin", scrollbarColor: "rgba(156,163,175,0.5) transparent" }}>
+<div className="overflow-y-auto p-4 sm:p-5 bg-linear-to-br from-white to-slate-50/20 space-y-4" style={{ maxHeight: "calc(85vh - 130px)", }}>
           {visibleConfigs.map((config, index) => (
             <div key={index} className="space-y-3 border-t border-gray-200 pt-3 first:border-t-0 first:pt-0">
               <div className="flex items-center justify-between">

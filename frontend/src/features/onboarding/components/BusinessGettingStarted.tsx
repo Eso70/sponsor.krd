@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState, type ComponentProps } from "react";
+import {
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { CheckCircle2, Loader2, LockKeyhole } from "lucide-react";
 import { apiRequest } from "@/lib/api/request";
 import { enqueueImageUpload } from "@/lib/api/enqueue-image-upload";
@@ -37,9 +44,19 @@ type OnboardingData = {
   tiktokConfigs: TikTokConfig[];
 };
 
-export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCopy, colorCopy }: {
+export function BusinessGettingStarted({
+  copy,
+  brandCopy,
+  tikTokCopy,
+  identityCopy,
+  colorCopy,
+  languageControl,
+}: {
   initialStep?: number;
-  copy?: typeof businessMessages.ar.Onboarding | typeof businessMessages.en.Onboarding;
+  languageControl?: ReactNode;
+  copy?:
+    | typeof businessMessages.ar.Onboarding
+    | typeof businessMessages.en.Onboarding;
   brandCopy?: ComponentProps<typeof BrandAssetStack>["copy"];
   tikTokCopy?: ComponentProps<typeof TikTokConfigModal>["copy"];
   identityCopy?: ComponentProps<typeof BusinessOwnerIdentityFields>["copy"];
@@ -77,7 +94,8 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
       })
       .catch((cause) =>
         setError(
-          copy?.loadFailed ?? (cause instanceof Error ? cause.message : "Setup could not load"),
+          copy?.loadFailed ??
+            (cause instanceof Error ? cause.message : "Setup could not load"),
         ),
       );
   }, [copy?.loadFailed]);
@@ -109,13 +127,14 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
       name:
         data.name.trim().length >= 2
           ? undefined
-          : copy?.nameRequired ?? "Business name must be at least 2 characters.",
+          : (copy?.nameRequired ??
+            "Business name must be at least 2 characters."),
       phone: /^\+?[0-9][0-9\s-]{6,29}$/.test(data.phone.trim())
         ? undefined
-        : copy?.phoneInvalid ?? "Enter a valid phone number.",
+        : (copy?.phoneInvalid ?? "Enter a valid phone number."),
       logo: data.logo.startsWith("/images/upload/")
         ? undefined
-        : copy?.logoRequired ?? "لۆگۆی بزنس پێویستە",
+        : (copy?.logoRequired ?? "لۆگۆی بزنس پێویستە"),
     };
     setFieldErrors(next);
     return !next.name && !next.phone && !next.logo;
@@ -153,7 +172,8 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
           return url;
         } catch (cause) {
           setError(
-          copy?.uploadFailed ?? (cause instanceof Error ? cause.message : "Image upload failed"),
+            copy?.uploadFailed ??
+              (cause instanceof Error ? cause.message : "Image upload failed"),
           );
           return null;
         }
@@ -212,7 +232,8 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
       window.location.assign("/business");
     } catch (cause) {
       setError(
-        copy?.saveFailed ?? (cause instanceof Error ? cause.message : "Setup could not be saved"),
+        copy?.saveFailed ??
+          (cause instanceof Error ? cause.message : "Setup could not be saved"),
       );
       setBusy(false);
     }
@@ -227,10 +248,17 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
         onClose={() => undefined}
         title={copy?.setupTitle ?? "ڕێکخستنی سەرەتایی"}
         description={error || copy?.loading || "زانیارییەکان بار دەکرێن"}
-        headerAction={<LockKeyhole className="h-4 w-4 text-slate-400" />}
+        headerAction={
+          <div className="flex items-center gap-2">
+            {languageControl}
+            <LockKeyhole className="h-4 w-4 text-slate-400" />
+          </div>
+        }
       >
         {!error ? (
-          <SkeletonBusinessInfoForm loadingLabel={copy?.loading ?? "زانیارییەکان بار دەکرێن"} />
+          <SkeletonBusinessInfoForm
+            loadingLabel={copy?.loading ?? "زانیارییەکان بار دەکرێن"}
+          />
         ) : (
           <InlineRequestError
             error={{
@@ -255,12 +283,17 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
         busy={busy}
         onClose={() => undefined}
         title={copy?.welcome ?? "بەخێربێیت بۆ Sponsor.krd"}
-        description={copy?.description ?? "زانیارییەکانی بزنس و براندەکەت پێداچوونەوە بکە"}
+        description={
+          copy?.description ?? "زانیارییەکانی بزنس و براندەکەت پێداچوونەوە بکە"
+        }
         headerAction={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-white/5 dark:text-slate-300">
-            <LockKeyhole className="h-3.5 w-3.5" />
-            {copy?.required ?? "پێویستە"}
-          </span>
+          <div className="flex items-center gap-2">
+            {languageControl}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-white/5 dark:text-slate-300">
+              <LockKeyhole className="h-3.5 w-3.5" />
+              {copy?.required ?? "پێویستە"}
+            </span>
+          </div>
         }
         footer={
           <button
@@ -326,8 +359,10 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
           >
             {fieldErrors.logo ||
               (hasLogo
-                ? copy?.logoReady ?? "فایڤ لە لۆگۆوە دانراوە. بۆ گۆڕینی فایڤ یان ئەڤاتار، کلیکی قوفڵەکە بکە"
-                : copy?.logoHint ?? "لۆگۆ هەڵبژێرە — فایڤ خۆکارانە لە لۆگۆوە دادەنرێت")}
+                ? (copy?.logoReady ??
+                  "فایڤ لە لۆگۆوە دانراوە. بۆ گۆڕینی فایڤ یان ئەڤاتار، کلیکی قوفڵەکە بکە")
+                : (copy?.logoHint ??
+                  "لۆگۆ هەڵبژێرە — فایڤ خۆکارانە لە لۆگۆوە دادەنرێت"))}
           </p>
 
           <div className="space-y-3">
@@ -337,7 +372,11 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
               copy={identityCopy}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <EditorField label={copy?.businessName ?? "ناوی بزنس"} required error={fieldErrors.name}>
+              <EditorField
+                label={copy?.businessName ?? "ناوی بزنس"}
+                required
+                error={fieldErrors.name}
+              >
                 <input
                   className={modalInputClass(Boolean(fieldErrors.name))}
                   value={data.name}
@@ -385,7 +424,7 @@ export function BusinessGettingStarted({ copy, brandCopy, tikTokCopy, identityCo
                   <span>
                     {data.tiktokConfigs.length
                       ? `${data.tiktokConfigs.length} ${copy?.tiktokGroups ?? "گرووپی تیکتۆک"}`
-                      : copy?.addPixel ?? "زیادکردنی Pixel و Events API"}
+                      : (copy?.addPixel ?? "زیادکردنی Pixel و Events API")}
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold dark:bg-white/10">
                     {data.tiktokConfigs.length}

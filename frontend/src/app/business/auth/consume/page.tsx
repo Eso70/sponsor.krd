@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { BusinessPreAuthLanguageToggle } from "@/features/business/components/BusinessPreAuthLanguageToggle";
 import { AuthenticationCard } from "@/components/shared/AuthenticationCard";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -13,7 +14,7 @@ export default function ConsumeBusinessAuthPage() {
   const search = useSearchParams();
   const code = search.get("code");
   const started = useRef(false);
-  const { locale } = usePreAuthBusinessLocale();
+  const { locale, changeLocale } = usePreAuthBusinessLocale();
   const copy = businessPreAuthCopy[locale];
 
   useEffect(() => {
@@ -53,8 +54,18 @@ export default function ConsumeBusinessAuthPage() {
       previewTitle={copy.preview}
       businessTenant
       language={locale}
+      headerAction={
+        <BusinessPreAuthLanguageToggle
+          locale={locale}
+          onChange={changeLocale}
+        />
+      }
       backLabel={copy.back}
-      themeCopy={{ label: copy.theme, light: copy.lightTheme, dark: copy.darkTheme }}
+      themeCopy={{
+        label: copy.theme,
+        light: copy.lightTheme,
+        dark: copy.darkTheme,
+      }}
     >
       <AuthenticationCard
         title={copy.consumeTitle}

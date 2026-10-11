@@ -21,7 +21,7 @@ export function BusinessSidebarFooter({
 }: BusinessSidebarFooterProps) {
   const t = useTranslations("Sidebar");
   const displayPlanName = planName?.trim() || t("planFallback");
-  const canUpgrade = Boolean(planCode && planCode.toLowerCase() !== "ultra");
+  const canUpgrade = Boolean(planCode && planCode.trim().toLowerCase() !== "max");
 
   return (
     <div
@@ -32,8 +32,11 @@ export function BusinessSidebarFooter({
         className={`rounded-2xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.035] ${collapsed ? "md:flex md:flex-col md:items-center md:gap-2 md:border-transparent md:bg-transparent md:p-0 md:dark:bg-transparent" : "p-3"}`}
       >
         <Tooltip content={t("currentPlan") + ": " + displayPlanName} side="right" disabled={!collapsed}>
-          <div
-            className={`flex items-center ${collapsed ? "md:justify-center" : "gap-3"}`}
+          <button
+            type="button"
+            onClick={onUpgrade}
+            aria-label={t("currentPlan") + ": " + displayPlanName}
+            className={`flex w-full cursor-pointer items-center rounded-xl text-start transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-white/5 ${collapsed ? "md:justify-center" : "gap-3"}`}
           >
             <span
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
@@ -55,7 +58,7 @@ export function BusinessSidebarFooter({
                 {displayPlanName}
               </p>
             </div>
-          </div>
+          </button>
         </Tooltip>
 
         {canUpgrade && (

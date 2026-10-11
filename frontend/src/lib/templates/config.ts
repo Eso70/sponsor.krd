@@ -100,6 +100,7 @@ export function normalizeTemplateConfig(
   })();
 
   config.templateKey = resolvedKey;
+  config.verification_badge = config.verification_badge === true;
 
   if (typeof config.type !== "string") {
     config.type = "simple";

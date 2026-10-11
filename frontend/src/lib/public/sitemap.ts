@@ -11,7 +11,7 @@ export function sitemapXml(origin: string, pages: PublicSitemapPage[], includeHo
   const entries = pages.map(page => {
     const date = new Date(page.updatedAt);
     const lastmod = Number.isNaN(date.getTime()) ? "" : `<lastmod>${date.toISOString()}</lastmod>`;
-    return `<url><loc>${escapeXml(`${origin}/linktree/${encodeURIComponent(page.slug)}`)}</loc>${lastmod}</url>`;
+    return `<url><loc>${escapeXml(`${origin}/${page.pageType === "form" ? "form" : "linktree"}/${encodeURIComponent(page.slug)}`)}</loc>${lastmod}</url>`;
   }).join("");
   return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${home}${entries}</urlset>`;
 }

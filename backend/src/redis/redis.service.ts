@@ -26,11 +26,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const host = this.configService.get<string>('REDIS_HOST', '127.0.0.1');
     const port = this.configService.get<number>('REDIS_PORT', 6379);
+    const keyPrefix = this.configService.get<string>('REDIS_KEY_PREFIX', '');
 
     try {
       this.redis = new Redis({
         host,
         port,
+        keyPrefix,
         maxRetriesPerRequest: 1,
         reconnectOnError: () => true,
       });
@@ -121,18 +123,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.isAvailable()) return 0;
     let cursor = '0';
     let deleted = 0;
+    const keyPrefix = this.redis.options.keyPrefix || '';
     try {
       do {
         const [nextCursor, keys] = await this.redis.scan(
           cursor,
           'MATCH',
-          pattern,
+          `${keyPrefix}${pattern}`,
           'COUNT',
           250,
         );
         cursor = nextCursor;
         if (keys.length > 0) {
-          deleted += await this.redis.del(...keys);
+          // SCAN returns physical keys; DEL adds keyPrefix automatically.
+          const logicalKeys = keys
+            .filter((key) => key.startsWith(keyPrefix))
+            .map((key) => key.slice(keyPrefix.length));
+          if (logicalKeys.length > 0)
+            deleted += await this.redis.del(...logicalKeys);
         }
       } while (cursor !== '0');
       return deleted;

@@ -52,11 +52,48 @@ const fixture = createServer((req, res) => {
           : 404,
     );
   }
+  if (url.pathname.includes("/api/public/forms/")) {
+    const id = url.pathname.split("/")[4];
+    if (!["contact", "starter", "card"].includes(id)) return respond({}, 404);
+    if (url.pathname.endsWith("/status")) return respond({ slug: id });
+    return respond({
+      form: {
+        id: "form-id",
+        slug: id,
+        name: `${names[tenant]} contact`,
+        headline: `${names[tenant]} contact`,
+        description:
+          id === "starter" ? "" : "Book a consultation with our business team.",
+        status: "active",
+        layout: id === "card" ? "card" : "form",
+        language: tenant === "beta" ? "ckb" : "en",
+        appearance: "light",
+        color: "#16a34a",
+        banner: "/images/upload/test.png",
+        logo: "",
+        bannerEnabled: true,
+        logoEnabled: false,
+        questions: [],
+        blocks: [],
+        actions: [],
+        actionsEnabled: false,
+        finalHeadline: "Thanks",
+        finalDescription: "",
+        buttonText: "",
+        buttonUrl: "",
+      },
+      analytics: { pixelIds: [], actions: {} },
+      privacyVersion: "2026-10-10",
+    });
+  }
   if (url.pathname === "/api/public/sitemap") {
     if (!/^(0|[1-9]\d{0,4})$/.test(url.searchParams.get("chunk") || ""))
       return respond({}, 400);
     return respond({
-      pages: [{ slug: "same-slug", updatedAt: "2026-10-02" }],
+      pages: [
+        { slug: "same-slug", updatedAt: "2026-10-02" },
+        { slug: "contact", pageType: "form", updatedAt: "2026-10-11" },
+      ],
       totalPages: 1,
     });
   }
@@ -270,6 +307,41 @@ try {
     const www = await get("www.localhost", "/linktree/same-slug");
     assert.equal(www.status, 308);
     assert.equal((await get("localhost", "/robots.txt")).status, 200);
+    for (const [host, language] of [
+      ["alpha.localhost", "en"],
+      ["beta.localhost", "ckb"],
+      ["localhost", "en"],
+    ]) {
+      for (const slug of ["contact", "card", "starter"]) {
+        const response = await get(host, `/form/${slug}?utm_source=tiktok`);
+        assert.equal(response.status, 200);
+        const html = response.body.toString();
+        assert.match(html, new RegExp(`<html[^>]+lang="${language}"`));
+        assert.match(
+          html,
+          new RegExp(
+            `rel="canonical"[^>]+href="http://${host}:${frontendPort}/form/${slug}"`,
+          ),
+        );
+        assert.match(html, /property="og:type" content="website"/);
+        assert.match(
+          html,
+          slug === "starter"
+            ? /content="noindex, follow"/
+            : /content="index, follow"/,
+        );
+        assert.match(html, /loading="eager"/);
+        assert.doesNotMatch(
+          html,
+          /name="twitter:card" content="summary_large_image"[^>]*data:/,
+        );
+      }
+      assert.equal((await get(host, "/form/missing")).status, 404);
+      assert.match(
+        (await get(host, "/sitemap.xml")).body.toString(),
+        /\/form\/contact<\/loc>/,
+      );
+    }
     const platformPage = await get("localhost", "/linktree/same-slug");
     assert.equal(platformPage.status, 200);
     assert.match(

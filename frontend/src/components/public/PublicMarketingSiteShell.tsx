@@ -2,14 +2,12 @@
 
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { BusinessGridBackdrop } from "@/components/business/BusinessGridBackdrop";
-import { CustomScrollbar } from "@/components/home/CustomScrollbar";
 import { PublicSiteNavbar } from "@/components/public/PublicSiteNavbar";
 import {
   getSponsorKrdAccentInk,
   SPONSOR_KRD_ACCENT_COLOR,
   SPONSOR_KRD_ACCENT_GRADIENT,
 } from "@/lib/sponsor-krd-theme";
-import { applyCursorColor, resetCursorColor } from "@/lib/utils/cursor-theme";
 
 export interface PublicMarketingAction {
   label: string;
@@ -34,7 +32,9 @@ interface PublicMarketingSiteShellProps {
   emphasizeFirstNavItem?: boolean;
   appearance?: "business" | "sponsor-krd";
   embedded?: boolean;
-  navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
+  navbarCopy?: Partial<
+    Record<"navigation" | "theme" | "menu" | "logo", string>
+  >;
   language?: string;
   languageControl?: ReactNode;
 }
@@ -64,7 +64,6 @@ export function PublicMarketingSiteShell({
 
   useEffect(() => {
     if (embedded) return;
-    let cancelled = false;
     const root = document.documentElement;
     root.style.setProperty("--business-website-color", accentColor);
     root.style.setProperty("--sponsor-krd-accent", accentColor);
@@ -74,11 +73,7 @@ export function PublicMarketingSiteShell({
         `linear-gradient(to right, ${accentColor}, ${accentColor})`,
     );
     root.style.setProperty("--sponsor-krd-accent-ink", accentInk);
-    void applyCursorColor(accentColor, root, () => !cancelled).catch(
-      () => undefined,
-    );
     return () => {
-      cancelled = true;
       root.style.removeProperty("--business-website-color");
       root.style.setProperty("--sponsor-krd-accent", SPONSOR_KRD_ACCENT_COLOR);
       root.style.setProperty(
@@ -89,7 +84,6 @@ export function PublicMarketingSiteShell({
         "--sponsor-krd-accent-ink",
         getSponsorKrdAccentInk(SPONSOR_KRD_ACCENT_COLOR),
       );
-      resetCursorColor(root);
     };
   }, [accentBackground, accentColor, accentInk, embedded]);
 
@@ -110,7 +104,6 @@ export function PublicMarketingSiteShell({
             copy={navbarCopy}
             languageControl={languageControl}
           />
-          <CustomScrollbar />
         </>
       ) : null}
       <div className="relative isolate">
@@ -132,7 +125,13 @@ export function PublicMarketingSiteShell({
   const style = { "--business-accent": accentColor } as CSSProperties;
   const Element = embedded ? "div" : "main";
   return (
-    <Element id={id} dir="ltr" lang={language} className={className} style={style}>
+    <Element
+      id={id}
+      dir="ltr"
+      lang={language}
+      className={className}
+      style={style}
+    >
       {content}
     </Element>
   );

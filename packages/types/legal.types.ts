@@ -12,7 +12,7 @@
  *
  * The frontend reads these directly. The backend cannot — `@linktree/types`
  * is source-only and Node cannot resolve its extensionless re-exports at
- * runtime — so `business-onboarding.service.ts` mirrors the values and
+ * runtime — so `backend/src/common/legal-versions.ts` mirrors the values and
  * `legal-versions.spec.ts` asserts the copies still match, the same
  * arrangement `linktree-defaults.ts` uses.
  *
@@ -20,8 +20,8 @@
  * invalidates every draft application accepted against the previous revision.
  */
 
-/** Last change: liability and plan wording. */
-export const LEGAL_TERMS_VERSION = "2026-08-09";
+/** Last change: saved forms and advertiser responsibilities. */
+export const LEGAL_TERMS_VERSION = "2026-10-10";
 
-/** Last change: TikTok Pixel and Events API collection disclosed in §3. */
-export const LEGAL_PRIVACY_VERSION = "2026-08-19";
+/** Last change: response storage and first-party form analytics. */
+export const LEGAL_PRIVACY_VERSION = "2026-10-10";

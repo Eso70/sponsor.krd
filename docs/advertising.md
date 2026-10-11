@@ -5,6 +5,8 @@ today. It is an operational reference, not an implementation proposal.
 
 ## Product surface
 
+Business Advertising is available only on Ultra and Max, with the advertising entitlement and permission still required. Basic and Pro do not show the dashboard navigation entry. Both protected operations and public availability enforce the subscription-plan ceiling even when a permission profile contains legacy or manually assigned grants. Other business navigation entries are hidden when their effective permission is denied; Settings remains available for account and subscription management.
+
 Each entitled business has one advertising page at `/advertising` on its
 business subdomain. The business dashboard editor is available at
 `/business/advertising`. A companion public video-code guide is available at

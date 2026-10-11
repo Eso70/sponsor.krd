@@ -1,3 +1,5 @@
+import { slugifyPublicPageName as slugifyLinktreeName } from '../common/public-page-slug';
+export { slugifyLinktreeName };
 import {
   Injectable,
   Logger,
@@ -139,21 +141,6 @@ type Queryable = {
 type LinktreeWriteScope = 'business' | 'platform';
 
 /**
- * A value reduced to what `chk_lt_seo_name` accepts: `^[a-z0-9-]+$`, at least
- * two characters. Returns '' when nothing usable survives, which is what a name
- * written in a non-Latin script leaves behind.
- */
-export function slugifyLinktreeName(value: string | null | undefined): string {
-  const slug = (value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
-  return slug.length >= 2 ? slug : '';
-}
-
-/**
  * The two buttons a default page starts with, built from the business's own
  * registered phone number.
  *
@@ -247,6 +234,7 @@ export class LinktreesService {
     config.type = config.type || 'simple';
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
+    config.verification_badge = config.verification_badge === true;
     // Search and sharing are generated from content; never persist manual overrides.
     delete config.seo;
     config.whatsapp_modal = config.whatsapp_modal || {};
@@ -895,7 +883,7 @@ export class LinktreesService {
 
     if (linktreeLimit !== -1) {
       const countRes = await this.databaseService.query<{ count: string }>(
-        'SELECT COUNT(*) FROM linktrees WHERE business_id = $1',
+        "SELECT COUNT(*) FROM linktrees WHERE business_id = $1 AND status <> 'deleted'",
         [businessId],
       );
       const currentCount = parseInt(countRes.rows[0]?.count || '0', 10);
@@ -912,7 +900,7 @@ export class LinktreesService {
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
               lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_default
        FROM linktrees lt
-       WHERE lt.id = $1 AND lt.business_id = $2`,
+       WHERE lt.id = $1 AND lt.business_id = $2 AND lt.status <> 'deleted'`,
       [sourceId, businessId],
     );
 
@@ -961,6 +949,7 @@ export class LinktreesService {
     const directCopiesRes = await this.databaseService.query<{ count: string }>(
       `SELECT COUNT(*) as count FROM linktrees 
        WHERE business_id = $1 
+         AND status <> 'deleted'
          AND template_config->'_copy_lineage'->>'source_id' = $2`,
       [businessId, sourceId],
     );
@@ -1054,6 +1043,29 @@ export class LinktreesService {
 
     // 7. Execute atomic transaction
     const row = await this.databaseService.transaction(async (client) => {
+      // Share the creation lock so concurrent creates and copies cannot exceed quotas.
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+        [businessId],
+      );
+      if (!isPlatform) {
+        const capacity = await client.query<{ total: number; copies: number }>(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE template_config->'_copy_lineage'->>'source_id'=$2)::int AS copies
+           FROM linktrees WHERE business_id=$1::uuid AND status <> 'deleted'`,
+          [businessId, sourceId],
+        );
+        if (linktreeLimit !== -1 && capacity.rows[0].total >= linktreeLimit) {
+          throw new ForbiddenException(
+            'The link page limit for this subscription has been reached',
+          );
+        }
+        if (capacity.rows[0].copies >= MAX_DIRECT_COPIES) {
+          throw new BadRequestException(
+            'The direct copy limit for this page has been reached',
+          );
+        }
+      }
       const ltRes = await client.query<LinktreeRow>(
         `INSERT INTO linktrees (
           business_id, name, subtitle, subtitle_color, description, seo_name, uid, image,

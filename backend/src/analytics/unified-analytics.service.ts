@@ -26,7 +26,7 @@ export interface AnalyticsRequestContext {
 interface PublicPageRow {
   id: string;
   business_id: string;
-  page_type: 'linktree' | 'advertising' | 'route';
+  page_type: 'linktree' | 'advertising' | 'route' | 'form';
   timezone: string;
   name: string;
   slug: string;
@@ -356,6 +356,7 @@ export class UnifiedAnalyticsService {
          AND (
            id = $1::uuid
            OR source_linktree_id = $1::uuid
+           OR source_form_id = $1::uuid
          )
        LIMIT 1`,
       [sourceOrPublicPageId],
@@ -474,6 +475,7 @@ export class UnifiedAnalyticsService {
   async ingest(
     input: TrackAnalyticsEventDto,
     context: AnalyticsRequestContext,
+    transactionClient?: PoolClient,
   ): Promise<{ accepted: boolean; deduplicated: boolean; eventId: string }> {
     const occurredAt = this.normalizeOccurredAt(input.occurredAt);
     const visitorHmac = this.hmac(input.visitorId.trim());
@@ -508,8 +510,18 @@ export class UnifiedAnalyticsService {
       ),
     );
 
-    return this.database.transaction(async (client) => {
+    const writeEvent = async (client: PoolClient) => {
       const page = await this.resolvePage(client, input.pageId);
+      if (page.page_type === 'form') {
+        // Match the submission/reset lock so events and rollups cannot be
+        // partially written while a form's analytics are being cleared.
+        const form = await client.query(
+          `SELECT form.id FROM forms form JOIN public_pages page ON page.source_form_id=form.id
+           WHERE page.id=$1 AND form.business_id=$2 FOR UPDATE OF form`,
+          [page.id, page.business_id],
+        );
+        if (!form.rows.length) throw new NotFoundException('Form not found');
+      }
       const action = await this.resolveAction(client, page.id, input.actionId);
 
       const visitorResult = await client.query<{ id: string }>(
@@ -782,7 +794,10 @@ export class UnifiedAnalyticsService {
         deduplicated: false,
         eventId: input.eventId,
       };
-    });
+    };
+    return transactionClient
+      ? writeEvent(transactionClient)
+      : this.database.transaction(writeEvent);
   }
 
   private async updateRollups(
@@ -1008,14 +1023,18 @@ export class UnifiedAnalyticsService {
     }));
   }
 
-  async clear(businessId: string, pageId?: string): Promise<void> {
-    await this.database.transaction(async (client) => {
+  async clear(
+    businessId: string,
+    pageId?: string,
+    transactionClient?: PoolClient,
+  ): Promise<void> {
+    const clearData = async (client: PoolClient) => {
       let pageIds: string[] | null = null;
       if (pageId) {
         const result = await client.query<{ id: string }>(
           `SELECT id FROM public_pages
            WHERE business_id = $1
-             AND (id = $2 OR source_linktree_id = $2)`,
+             AND (id = $2 OR source_linktree_id = $2 OR source_form_id = $2)`,
           [businessId, pageId],
         );
         if (!result.rows[0])
@@ -1061,7 +1080,9 @@ export class UnifiedAnalyticsService {
            AND NOT EXISTS (SELECT 1 FROM analytics_events event WHERE event.visitor_id = visitor.id)`,
         [businessId],
       );
-    });
+    };
+    if (transactionClient) await clearData(transactionClient);
+    else await this.database.transaction(clearData);
   }
 
   private canonicalPlatformName(platform: string): string {

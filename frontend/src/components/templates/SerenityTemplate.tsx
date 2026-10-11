@@ -17,7 +17,6 @@ import {
   deriveTextColor,
   deriveTextSecondaryColor,
 } from "@/lib/utils/theme-colors";
-import { areTemplatePropsEqual } from "@/lib/utils/linktree-utils";
 import { platformAccentColor } from "@/lib/brand/platform-brands";
 import {
   STANDARD_TEMPLATE_BUTTON_SIZE_CLASS,
@@ -115,6 +114,7 @@ export const SerenityTemplate = memo(function SerenityTemplate({
           <TemplateHeader
             as="div"
             name={linktree.name}
+            verificationBadge={linktree.template_config?.verification_badge === true}
             subtitle={linktree.subtitle}
             description={linktree.description}
             image={linktree.image}
@@ -289,4 +289,4 @@ export const SerenityTemplate = memo(function SerenityTemplate({
       }
     />
   );
-}, areTemplatePropsEqual);
+});

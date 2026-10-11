@@ -215,6 +215,9 @@ NestJS modules own their HTTP controllers and application services
   security-audit writer, and the audit interceptor/decorator that record
   decorated mutations.
 - `billing`: effective entitlements, quota checks, and template access.
+  The authenticated customer subscription reader lives in a separate module
+  to keep the authentication/billing dependency direction intact. Business and
+  platform plan cards share one renderer; see [subscriptions](subscriptions.md).
 - `platform-admin`: platform business administration and platform settings.
 - `linktrees` and `links`: tenant-owned linktree behavior.
 - `campaign-revenue`: tenant-scoped Linktree revenue records shared by the
@@ -345,3 +348,7 @@ still required before calling the deployment horizontally scalable:
 
 These are intentional production infrastructure steps, not reasons to couple
 application features. New code must preserve the boundaries above.
+
+## Persisted forms
+
+Forms use one shared frontend management/editor/public renderer and `FormsModule` for owner-scoped business logic. PostgreSQL persists definitions and responses; existing storage manages raster assets; Redis limits public requests. Shared analytics records conversions transactionally. See [Forms](forms.md).

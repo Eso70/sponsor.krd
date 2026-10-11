@@ -1,5 +1,7 @@
-﻿import { Module } from '@nestjs/common';
+﻿import { FormsModule } from './forms/forms.module';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
+import { CustomerSubscriptionsModule } from './billing/customer-subscriptions.module';
 import { DomainsModule } from './domains/domains.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
@@ -20,6 +22,7 @@ import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.modul
 
 @Module({
   imports: [
+    FormsModule,
     ConfigModule,
     DatabaseModule,
     RedisModule,
@@ -32,6 +35,7 @@ import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.modul
     AdvertisingModule,
     LinksModule,
     PublicModule,
+    CustomerSubscriptionsModule,
     StorageModule,
     PlatformAdminModule,
     OnboardingModule,

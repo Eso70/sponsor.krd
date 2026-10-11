@@ -1,11 +1,12 @@
 "use client";
 
-import { House, Menu, Moon, RefreshCw, Sun } from "lucide-react";
-import type {
-  AnchorHTMLAttributes,
-  ButtonHTMLAttributes,
-  ReactNode,
-} from "react";
+import { House, Menu, RefreshCw } from "lucide-react";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
+import {
+  DashboardHeaderActionButton,
+  dashboardHeaderActionClassName,
+} from "./DashboardHeaderActionButton";
+import { DashboardAppearanceControls } from "./DashboardAppearanceControls";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import {
   AvatarMenu,
@@ -13,24 +14,7 @@ import {
 } from "@/components/shared/AvatarMenu";
 import { Tooltip } from "@/components/shared/Tooltip";
 
-const actionClassName =
-  "group relative flex items-center justify-center rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 p-2 text-slate-500 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:text-slate-700 hover:shadow disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:text-gray-300 dark:hover:from-white/10 dark:hover:to-white/10 sm:p-2.5 md:p-3";
-
-export function DashboardHeaderActionButton({
-  className = "",
-  children,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className={`${actionClassName} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+export { DashboardHeaderActionButton } from "./DashboardHeaderActionButton";
 
 function DashboardHeaderActionLink({
   className = "",
@@ -38,7 +22,7 @@ function DashboardHeaderActionLink({
   ...props
 }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
-    <a className={`${actionClassName} ${className}`} {...props}>
+    <a className={`${dashboardHeaderActionClassName} ${className}`} {...props}>
       {children}
     </a>
   );
@@ -100,7 +84,10 @@ export function DashboardHeader({
     <header className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#161B22]/80">
       <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Tooltip content={labels?.menu ?? "کردنەوە / داخستنی مینیو"} side="bottom">
+          <Tooltip
+            content={labels?.menu ?? "کردنەوە / داخستنی مینیو"}
+            side="bottom"
+          >
             <DashboardHeaderActionButton
               onClick={onToggleSidebar}
               aria-label={labels?.menuLabel ?? "Toggle sidebar"}
@@ -113,7 +100,10 @@ export function DashboardHeader({
 
         <div className="flex items-center gap-2 sm:gap-3">
           {showRefresh ? (
-            <Tooltip content={labels?.refresh ?? "نوێکردنەوەی داتا"} side="bottom">
+            <Tooltip
+              content={labels?.refresh ?? "نوێکردنەوەی داتا"}
+              side="bottom"
+            >
               <DashboardHeaderActionButton
                 onClick={() => void onRefresh()}
                 disabled={refreshing}
@@ -127,7 +117,10 @@ export function DashboardHeader({
             </Tooltip>
           ) : null}
 
-          <Tooltip content={labels?.home ?? "کردنەوەی ماڵپەڕ لە تابێکی نوێ"} side="bottom">
+          <Tooltip
+            content={labels?.home ?? "کردنەوەی ماڵپەڕ لە تابێکی نوێ"}
+            side="bottom"
+          >
             <DashboardHeaderActionLink
               href="/"
               target="_blank"
@@ -140,26 +133,13 @@ export function DashboardHeader({
 
           {notifications}
 
-          {languageControl}
-
-          <Tooltip
-            content={!mounted ? (labels?.theme ?? "دۆخی ڕەنگ") : theme === "light" ? (labels?.darkTheme ?? "دۆخی تاریک") : (labels?.lightTheme ?? "دۆخی ڕووناک")}
-            side="bottom"
-          >
-            <DashboardHeaderActionButton
-              onClick={onToggleTheme}
-              aria-label={labels?.themeLabel ?? "Toggle theme"}
-            >
-              {!mounted ? (
-                <span className="h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-              ) : theme === "light" ? (
-                <Moon className={iconClassName} aria-hidden="true" />
-              ) : (
-                <Sun className={iconClassName} aria-hidden="true" />
-              )}
-            </DashboardHeaderActionButton>
-          </Tooltip>
-
+          <DashboardAppearanceControls
+            languageControl={languageControl}
+            theme={theme}
+            mounted={mounted}
+            onToggleTheme={onToggleTheme}
+            labels={labels}
+          />
           <AvatarMenu
             name={profile.name}
             email={profile.email}
