@@ -10,5 +10,10 @@ export default async function FormLoading() {
   const locale = parseRootPublicLocale(
     (await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
   );
-  return <PublicFormSkeleton label={formsCopy(locale).loading} />;
+  return (
+    <PublicFormSkeleton
+      copy={formsCopy(locale)}
+      label={formsCopy(locale).loading}
+    />
+  );
 }

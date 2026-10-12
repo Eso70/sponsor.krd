@@ -1,4 +1,5 @@
 "use client";
+import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
 import { ModalTextInput } from "@/components/shared/ModalTextInput";
@@ -6,6 +7,7 @@ import { formText } from "../forms-localization";
 import type { FormDraft, FormLanguage, FormQuestion } from "../types";
 import type { FormsCopy } from "../forms-copy";
 import type { FormEditorCopy } from "../form-editor-copy";
+import { FormProductSelectionPreview } from "./FormProductSelectionPreview";
 import { FormConditionalPreview } from "./FormConditionalPreview";
 import { FormMediaPreview } from "./FormMediaPreview";
 import { isFormImage } from "../form-media";
@@ -117,7 +119,19 @@ export function FormQuestionsPreview({
                   copy={copy}
                 />
               )}
-              {question.type === "conditional" ? (
+              {question.type === "product" ? (
+                <FormProductSelectionPreview
+                  question={question}
+                  language={language}
+                  value={answers[question.id] ?? ""}
+                  onChange={(value) =>
+                    setAnswers((current) => ({
+                      ...current,
+                      [question.id]: value,
+                    }))
+                  }
+                />
+              ) : question.type === "conditional" ? (
                 <FormConditionalPreview
                   question={question}
                   showErrors={invalidGroup === questionGroup}
@@ -170,6 +184,8 @@ export function FormQuestionsPreview({
               ) : question.type === "phone" ? (
                 <PhoneNumberInput
                   language={language}
+                  inputClassName={FORM_QUESTION_INPUT_CLASS}
+                  selectorClassName="!h-10 !rounded-lg !px-2 !py-0 !text-base sm:!text-sm"
                   label={
                     formText(question.label, question.labelKey, language) ||
                     copy.questionLabel
@@ -204,7 +220,7 @@ export function FormQuestionsPreview({
                       ? `${id}-${question.id}-description`
                       : undefined
                   }
-                  className="!h-9 !rounded-lg !px-3 !py-2 !text-base sm:!text-xs"
+                  className={FORM_QUESTION_INPUT_CLASS}
                   aria-label={
                     formText(question.label, question.labelKey, language) ||
                     copy.questionLabel

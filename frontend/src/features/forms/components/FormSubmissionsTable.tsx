@@ -68,7 +68,11 @@ export function FormSubmissionsTable({
               onClick={() => toggle(row.id)}
             />
           </div>
-          <FormSubmissionDetails response={row} preview={expanded !== row.id} />
+          <FormSubmissionDetails
+            locale={locale}
+            response={row}
+            preview={expanded !== row.id}
+          />
         </div>
       )}
       renderRow={(row) => (
@@ -114,7 +118,7 @@ export function FormSubmissionsTable({
                 colSpan={5}
                 className="bg-slate-50/60 px-3 py-3 dark:bg-white/[0.025]"
               >
-                <FormSubmissionDetails response={row} />
+                <FormSubmissionDetails locale={locale} response={row} />
               </td>
             </tr>
           )}

@@ -1,4 +1,3 @@
-import { PageListImage } from "@/components/shared/PageListImage";
 import { PageListUrl } from "@/components/shared/PageListUrl";
 import { PageListTraffic } from "@/components/shared/PageListTraffic";
 import { formatDate, getAbsoluteUrl } from "@/lib/utils/linktree-utils";
@@ -41,7 +40,6 @@ export function FormsTable({
         next: copy.next,
       }}
       columns={[
-        { key: "image", header: copy.image, width: "w-16 sm:w-20" },
         { key: "name", header: copy.name, width: "w-32 sm:w-40" },
         {
           key: "description",
@@ -83,9 +81,6 @@ export function FormsTable({
           className={MANAGEMENT_TABLE_ROW_CLASS}
           style={{ contentVisibility: "auto", containIntrinsicSize: "80px" }}
         >
-          <td className="px-2 py-3 sm:px-3">
-            <PageListImage src={form.logo} name={form.name} variant="table" />
-          </td>
           <td className="px-2 py-3 sm:px-3">
             <span
               className="mb-1 block wrap-break-word text-xs font-semibold text-gray-900 sm:text-sm"
@@ -133,7 +128,6 @@ export function FormsTable({
       )}
       renderCard={(form) => (
         <div className={MANAGEMENT_TABLE_CARD_CLASS}>
-          <PageListImage src={form.logo} name={form.name} variant="mobile" />
           <div className="min-w-0 flex-1 space-y-2">
             <span
               className="block wrap-break-word text-base font-semibold text-gray-900"

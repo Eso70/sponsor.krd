@@ -428,3 +428,5 @@ See [Custom domains](custom-domains.md).
 ## Persisted forms
 
 `forms` and `form_submissions` persist owner-scoped form definitions and response history. Form status is `active` or `paused`; separate `is_archived`/`archived_at` columns organize the dashboard without changing public availability. The `2026-10-10_forms_visibility.sql` migration safely converts legacy states and updates the shared analytics publication trigger. Form public-page/action identities join the shared analytics schema. Apply `2026-10-10_forms*.sql` with `pnpm db:migrate`; fresh baseline parts 65/70/75 include the same schema. See [Forms](forms.md).
+
+Product questions reuse forms.definition JSONB; accepted selections reuse form_submissions.answers JSONB. Each product answer stores an immutable server-priced snapshot and searchable value summary. No new table or migration is needed. See [Forms](forms.md#product-selection).

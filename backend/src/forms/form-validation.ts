@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import Joi from 'joi';
+import { priceProductAnswer, productAnswerText } from './form-products';
 import { PRIVACY_VERSION } from '../common/legal-versions';
 import {
   WEBSITE_COLOR_PATTERN,
@@ -38,7 +39,16 @@ const entry = Joi.object({
 const question = Joi.object({
   id: id.required(),
   type: Joi.string()
-    .valid('short', 'email', 'phone', 'choice', 'conditional', 'date', 'image')
+    .valid(
+      'short',
+      'email',
+      'phone',
+      'choice',
+      'conditional',
+      'date',
+      'image',
+      'product',
+    )
     .required(),
   label: text(200).required(),
   description: text(),
@@ -48,6 +58,30 @@ const question = Joi.object({
   options: Joi.array().items(text(500)).max(20).required(),
   optionImages: Joi.array().items(image).max(20),
   image,
+  productSelection: Joi.object({
+    currency: Joi.string().valid('IQD', 'USD', 'EUR').required(),
+    items: Joi.array()
+      .items(
+        Joi.object({
+          id: id.invalid('__proto__', 'constructor', 'prototype').required(),
+          name: text(100).required(),
+          unit: text(30).required(),
+          unitPrice: Joi.number()
+            .min(0)
+            .max(10_000_000)
+            .precision(2)
+            .allow(null)
+            .required(),
+        }),
+      )
+      .max(20)
+      .unique('id')
+      .required(),
+  }).when('type', {
+    is: 'product',
+    then: Joi.required(),
+    otherwise: Joi.forbidden(),
+  }),
   conditional: Joi.object({
     columns: Joi.array().items(Joi.string().max(100)).min(1).max(10).required(),
     rows: Joi.array()
@@ -224,7 +258,12 @@ export function validateDefinition(
             q.options.some((o) => !o.trim()) ||
             new Set(q.options.map((o) => o.trim().toLowerCase())).size !==
               q.options.length)) ||
-        (q.type === 'conditional' && !q.conditional))
+        (q.type === 'conditional' && !q.conditional) ||
+        (q.type === 'product' &&
+          (!q.productSelection?.items.length ||
+            q.productSelection.items.some(
+              (item) => !item.name.trim() || item.unitPrice === null,
+            ))))
     )
       throw new BadRequestException('Complete all questions before publishing');
     if (
@@ -310,6 +349,17 @@ export function validateSubmission(
       continue;
     visible.add(q.id);
     let value = (data.answers[q.id] ?? '').trim();
+    if (q.type === 'product') {
+      const products = priceProductAnswer(q, value);
+      if (products.items.length)
+        answers.push({
+          questionId: q.id,
+          label: q.label,
+          value: productAnswerText(products),
+          products,
+        });
+      continue;
+    }
     if (q.required && !value)
       throw new BadRequestException('Complete required questions');
     if (!value) continue;

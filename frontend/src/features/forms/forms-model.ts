@@ -1,3 +1,4 @@
+import { isProductConfigured } from "./product-selection";
 import { createRuntimeId } from "@/lib/utils/random-id";
 import { formContentOrder } from "./form-content-order";
 import { formsCopy } from "./forms-copy";
@@ -19,6 +20,16 @@ export function createQuestion(type: QuestionType = "short"): FormQuestion {
     label: "",
     required: true,
     options: type === "choice" ? ["", ""] : [],
+    ...(type === "product"
+      ? {
+          productSelection: {
+            currency: "IQD" as const,
+            items: [
+              { id: createRuntimeId(), name: "", unit: "", unitPrice: null },
+            ],
+          },
+        }
+      : {}),
   };
 }
 
@@ -107,6 +118,12 @@ export function duplicateForm(form: FormDraft): FormDraft {
       ...question,
       id: questionIds.get(question.id)!,
       options: [...question.options],
+      productSelection: question.productSelection
+        ? {
+            ...question.productSelection,
+            items: question.productSelection.items.map((item) => ({ ...item })),
+          }
+        : undefined,
       conditional: question.conditional
         ? {
             columns: [...question.conditional.columns],
@@ -255,6 +272,9 @@ export function validateForm(
           (question.type === "conditional"
             ? !question.conditional
             : !question.label.trim()) ||
+          (question.type === "product" &&
+            (!question.productSelection?.items.length ||
+              !question.productSelection.items.every(isProductConfigured))) ||
           (question.type === "choice" &&
             (question.options.length < 2 ||
               question.options.some((option) => !option.trim()) ||

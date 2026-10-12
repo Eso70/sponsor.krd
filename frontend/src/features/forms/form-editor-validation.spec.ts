@@ -5,6 +5,19 @@ import { formsCopy } from "./forms-copy";
 
 const copy = formsCopy("en");
 describe("form editor validation targets", () => {
+  it("uses the editor's language for product configuration errors instead of the form's language", () => {
+    const draft = {
+      ...createForm("ckb"),
+      name: "Demo",
+      status: "active" as const,
+      questions: [createQuestion("product")],
+    };
+    expect(formEditorIssues(draft, formsCopy("en"))).toContainEqual(
+      expect.objectContaining({
+        message: `Q1: ${formsCopy("en").productSelectionError}`,
+      }),
+    );
+  });
   it("requires a form title independent of the optional headline", () => {
     expect(formEditorIssues(createForm("en"), copy)).toEqual([
       expect.objectContaining({ field: "name", section: "title" }),

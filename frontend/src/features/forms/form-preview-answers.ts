@@ -1,3 +1,8 @@
+import {
+  isProductConfigured,
+  productQuantities,
+  validProductQuantity,
+} from "./product-selection";
 import type { FormDraft, FormQuestion } from "./types";
 import {
   conditionalOptions,
@@ -55,12 +60,16 @@ export function canPreviewQuestions(questions: FormQuestion[]): boolean {
     questions.every(
       (question) =>
         !question.required ||
-        (question.type === "conditional"
-          ? !!question.conditional && isConditionalAnswers(question.conditional)
-          : question.type === "choice"
-            ? question.options.length >= 2 &&
-              question.options.every((option) => !!option.trim())
-            : true),
+        (question.type === "product"
+          ? !!question.productSelection?.items.length &&
+            question.productSelection.items.every(isProductConfigured)
+          : question.type === "conditional"
+            ? !!question.conditional &&
+              isConditionalAnswers(question.conditional)
+            : question.type === "choice"
+              ? question.options.length >= 2 &&
+                question.options.every((option) => !!option.trim())
+              : true),
     )
   );
 }
@@ -75,6 +84,18 @@ export function canSubmitQuestions(
     canPreviewQuestions(questions) &&
     questions.every((question) => {
       const value = (answers[question.id] ?? "").trim();
+      if (question.type === "product") {
+        const items = question.productSelection?.items ?? [];
+        if (!items.length || !items.every(isProductConfigured)) return false;
+        const quantities = productQuantities(value);
+        return (
+          items.every((item) =>
+            validProductQuantity(quantities[item.id] ?? ""),
+          ) &&
+          (!question.required ||
+            items.some((item) => Number(quantities[item.id] ?? 0) > 0))
+        );
+      }
       if (question.type === "conditional" && question.conditional) {
         const selection = conditionalSelection(question.conditional, value);
         return !question.required || selection.every(Boolean);

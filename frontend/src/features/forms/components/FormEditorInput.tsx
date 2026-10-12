@@ -18,8 +18,10 @@ export function FormEditorInput({
   inputAction,
   showCount = false,
   validationField,
+  inputClassName,
 }: {
   validationField?: string;
+  inputClassName?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -90,7 +92,9 @@ export function FormEditorInput({
             {...props}
             hasError={!!error}
             endAction={inputAction}
-            className="!h-10 !rounded-lg !px-3 !py-2 !text-sm"
+            className={
+              inputClassName ?? "!h-10 !rounded-lg !px-3 !py-2 !text-sm"
+            }
           />
         )}
         {showCount && (

@@ -127,7 +127,7 @@ export function FormsManagementPage({
   return (
     <>
       {loading ? (
-        <FormsStatsSkeleton label={copy.loading} />
+        <FormsStatsSkeleton copy={copy} label={copy.loading} />
       ) : (
         <FormsStats
           count={metrics.totalForms ?? forms.length}
@@ -177,7 +177,11 @@ export function FormsManagementPage({
             />
           )}
           {loading ? (
-            <FormsCollectionSkeleton label={copy.loading} viewMode={viewMode} />
+            <FormsCollectionSkeleton
+              copy={copy}
+              label={copy.loading}
+              viewMode={viewMode}
+            />
           ) : (
             <Collection
               forms={visible}

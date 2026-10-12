@@ -23,6 +23,8 @@ Turn the shared Form/Card editor into an owner-scoped publishing and response se
 5. Record accepted submissions and first-party conversions in one database transaction. Expose owner-only response history and real summary statistics.
 6. Verify lifecycle, revision conflicts, tenant isolation, uploads, retries, analytics boundaries and both dashboard configurations. Update legal disclosures and deployment documentation.
 
+Form collection grids and tables show text, status, URLs, traffic and actions without image thumbnails or an image column, including their mobile cards and loading placeholders. Both dashboards share these components; form media remains available in the editor and public renderer.
+
 ## Ownership and URLs
 
 Analytics Export retains CSV full exports and offers an export-only date
@@ -199,3 +201,23 @@ owner's public business logo, then the shared placeholder. Shared list dropdowns
 use compact neutral selection/hover states with reduced-motion support.
 
 The shared public/preview Send action stays disabled until all visible required answers are valid and required privacy acknowledgement is checked. Card Next actions validate their current questions; the final Send checks the entire visible form, including earlier cards. Hidden conditional questions do not block submission. Native form validation and server validation remain enforced; the browser `SubmitForm` conversion runs only after an accepted server receipt.
+
+## Product selection
+
+Product selection is a persisted question type shared by business/platform editors and form/card public pages. Owners configure up to 20 products, optional unit labels, prices with at most two decimal places and IQD/USD/EUR currency. Drafts can retain incomplete products; publishing requires a named product and valid unit price. The preview-only restriction has been removed.
+
+Public submissions send only a JSON map of product IDs to decimal quantity strings. The backend validates known IDs, non-negative quantities up to 100,000, at most three decimal places, and positive selections for required questions. Prices are never accepted from the visitor. The submission transaction locks the form, checks its revision, and calculates line totals in integer arithmetic using the saved definition. It stores product IDs, names, units, quantities, unit prices, currency and totals as an immutable snapshot in each JSONB answer, plus a readable searchable summary. Existing forms.definition and form_submissions.answers support this shape; no database migration or extra table is required.
+
+Response details render the stored snapshot with localized currency formatting. CSV keeps the readable answer and adds separate currency, total, product name, unit, quantity, unitPrice and lineTotal columns. Historical/removed products remain exportable and all user-authored text retains CSV formula protection. Products are estimates, not payments: amounts are not counted as revenue or forwarded to TikTok. Standard submission idempotency, tenant ownership, privacy acknowledgement, revision conflicts and tracking transactions remain enforced.
+
+Product selection UI copy, accessible labels, price/quantity errors, empty states and currency names are translated in English, Kurdish (ckb) and Arabic. Preview money uses the selected language’s number/currency formatting; authored product names and unit labels remain unchanged. The locale rendering suite covers all three languages.
+
+Product menu labels, authoring controls and save validation follow the dashboard/editor copy locale. This is independent of the form content/preview language; changing the form language must not mix languages in the editor’s Add question menu. Regression tests cover all three editor locales with a different form language.
+
+Single-line question controls share 40px heights, padding and text sizing in authoring and both previews, including products, phones and conditional dropdowns. Product prices reuse the shared NumberInput in plain decimal mode: native steppers and exponent/letter input are removed, empty values are preserved, and Arabic/Persian digits normalize to ASCII. Price validation and server-calculated totals remain intact.
+
+Unit and Unit price use the same shared EditorField label spacing so their inputs align in the product editor. The unit-price placeholder is localized in English, Kurdish and Arabic.
+
+## Form loading states
+
+Crop code and image decoding have local Suspense/canvas placeholders shaped like the crop workspace, with real localized aspect, blur, reset/zoom, preview and dimension labels. Cancellation stays available while the module loads, including the drawer footer portal. Fullscreen media imports the shared viewer directly, so opening an image does not show a module-loading placeholder or replace the form with a route skeleton. Lazy loading must never bubble to the homepage route fallback. The root loading boundary detects public form URLs, and business/platform route fallbacks recognize the forms workspace. Collection and analytics skeletons keep the correct six metric labels and matching table headers; editor placeholders retain title, Content/Final tabs and section labels. Unknown authored content is represented by placeholders rather than invented field names or zero data. Shared skeleton animation keeps theme and reduced-motion behavior.

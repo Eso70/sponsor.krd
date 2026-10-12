@@ -281,7 +281,9 @@ export function SkeletonManagementPage({
 }
 
 /** Template catalog frame: metrics, category tabs, header, and phone previews. */
-export function SkeletonTemplatePage({ loadingLabel = "Loading templates" }: { loadingLabel?: string } = {}) {
+export function SkeletonTemplatePage({
+  loadingLabel = "Loading templates",
+}: { loadingLabel?: string } = {}) {
   return (
     <div
       className="min-h-[60vh] space-y-5"
@@ -325,7 +327,9 @@ export function SkeletonTemplatePage({ loadingLabel = "Loading templates" }: { l
 }
 
 /** Public Linktree frame: identity, copy, action links, and footer. */
-export function SkeletonPublicLinktreePage({ loadingLabel = "Loading Linktree page" }: { loadingLabel?: string } = {}) {
+export function SkeletonPublicLinktreePage({
+  loadingLabel = "Loading Linktree page",
+}: { loadingLabel?: string } = {}) {
   return (
     <main
       className="flex min-h-dvh justify-center bg-slate-100 px-4 py-8 dark:bg-[#0b0d0e] sm:py-12"
@@ -646,10 +650,12 @@ export function SkeletonStatCards({
 
 /** Matches every visual presentation exposed by the shared StatCard. */
 export function SkeletonStatCard({
+  label,
   className = "",
   compact = false,
   variant = "standard",
 }: {
+  label?: string;
   className?: string;
   compact?: boolean;
   variant?: StatCardVariant;
@@ -726,7 +732,13 @@ export function SkeletonStatCard({
             className={`${compact ? "h-4 w-1/2" : "h-6 w-2/3"} mb-2`}
             rounded="rounded-md"
           />
-          <Skeleton className="h-3 w-1/2" rounded="rounded-md" />
+          {label ? (
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {label}
+            </p>
+          ) : (
+            <Skeleton className="h-3 w-1/2" rounded="rounded-md" />
+          )}
         </div>
       </div>
     </div>
@@ -844,42 +856,42 @@ export function SkeletonPublicLandingPage({
 
           {variant === "platform" && (
             <div className="mx-auto mt-20 max-w-6xl rounded-[2rem] border border-black/5 bg-white/55 p-4 shadow-2xl shadow-black/5 dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
-            <div className="flex gap-2 border-b border-black/5 pb-4 dark:border-white/10">
-              <Skeleton className="h-9 w-24" rounded="rounded-lg" />
-              <Skeleton className="h-9 w-28" rounded="rounded-lg" />
-              <Skeleton
-                className="hidden h-9 w-24 sm:block"
-                rounded="rounded-lg"
-              />
-            </div>
-            <div className="mt-5 grid h-64 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-4 sm:h-80 sm:gap-6">
-              <div className="space-y-3 rounded-2xl border border-black/5 p-4 dark:border-white/10">
-                <Skeleton className="h-5 w-2/3" rounded="rounded-md" />
-                <SkeletonText lines={4} />
-                <Skeleton className="mt-6 h-10 w-full" rounded="rounded-xl" />
+              <div className="flex gap-2 border-b border-black/5 pb-4 dark:border-white/10">
+                <Skeleton className="h-9 w-24" rounded="rounded-lg" />
+                <Skeleton className="h-9 w-28" rounded="rounded-lg" />
+                <Skeleton
+                  className="hidden h-9 w-24 sm:block"
+                  rounded="rounded-lg"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton
-                    key={index}
-                    className="h-full w-full"
-                    rounded="rounded-2xl"
-                  />
-                ))}
+              <div className="mt-5 grid h-64 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-4 sm:h-80 sm:gap-6">
+                <div className="space-y-3 rounded-2xl border border-black/5 p-4 dark:border-white/10">
+                  <Skeleton className="h-5 w-2/3" rounded="rounded-md" />
+                  <SkeletonText lines={4} />
+                  <Skeleton className="mt-6 h-10 w-full" rounded="rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Skeleton
+                      key={index}
+                      className="h-full w-full"
+                      rounded="rounded-2xl"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
             </div>
           )}
 
           {variant === "platform" && (
             <div className="mx-auto mt-16 flex max-w-4xl items-center justify-center gap-8 overflow-hidden sm:gap-14">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton
-                key={index}
-                className="h-8 w-24 shrink-0"
-                rounded="rounded-lg"
-              />
-            ))}
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton
+                  key={index}
+                  className="h-8 w-24 shrink-0"
+                  rounded="rounded-lg"
+                />
+              ))}
             </div>
           )}
         </div>

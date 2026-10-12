@@ -12,7 +12,11 @@ export function PhoneNumberInput({
   required = false,
   descriptionId,
   language = "en",
+  inputClassName,
+  selectorClassName,
 }: {
+  inputClassName?: string;
+  selectorClassName?: string;
   label: string;
   countryLabel: string;
   value: string;
@@ -36,7 +40,7 @@ export function PhoneNumberInput({
         value={countryCode}
         onChange={onCountryCodeChange}
         ariaLabel={`${countryLabel}: ${label}`}
-        className="!h-9 !rounded-lg !px-2 !py-0 !text-xs"
+        className={selectorClassName ?? "!h-9 !rounded-lg !px-2 !py-0 !text-xs"}
       />
       <ModalTextInput
         type="tel"
@@ -45,7 +49,7 @@ export function PhoneNumberInput({
         dir="ltr"
         aria-label={label}
         aria-describedby={descriptionId}
-        className="!h-9 min-w-0 flex-1 !rounded-lg !px-3 !py-2 !text-base sm:!text-xs"
+        className={`min-w-0 flex-1 ${inputClassName ?? "!h-9 !rounded-lg !px-3 !py-2 !text-base sm:!text-xs"}`}
         maxLength={1000}
         placeholder={placeholder}
         required={required}

@@ -23,7 +23,7 @@ export type FormTextKey =
   | "app"
   | "viewContent";
 export type QuestionType =
-  "short" | "email" | "phone" | "choice" | "conditional" | "date" | "image";
+  "short" | "email" | "phone" | "choice" | "conditional" | "date" | "image" | "product";
 export interface FormQuestion {
   id: string;
   type: QuestionType;
@@ -36,6 +36,11 @@ export interface FormQuestion {
   /** Optional raster image per answer, indexed alongside options. */
   optionImages?: string[];
   conditional?: { columns: string[]; rows: string[][] };
+  /** Owner-authored product prices; submission amounts are recalculated server-side. */
+  productSelection?: {
+    currency: "IQD" | "USD" | "EUR";
+    items: { id: string; name: string; unit: string; unitPrice: number | null }[];
+  };
   category?: string;
   image?: string;
   condition?: { questionId: string; equals: string };
@@ -174,9 +179,14 @@ export interface FormSubmission {
   };
   id: string;
   createdAt: string;
-  answers: { questionId: string; label: string; value: string }[];
+  answers: { questionId: string; label: string; value: string; products?: FormProductAnswer }[];
   consent: boolean;
   revision: number;
+}
+export interface FormProductAnswer {
+  currency: "IQD" | "USD" | "EUR";
+  items: { id: string; name: string; unit: string; quantity: number; unitPrice: number; lineTotal: number }[];
+  total: number;
 }
 export interface FormSubmissionsPage {
   items: FormSubmission[];

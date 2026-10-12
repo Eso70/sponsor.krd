@@ -29,6 +29,43 @@ beforeEach(() => {
   vi.mocked(formsApi.get).mockResolvedValue(form);
 });
 describe("form CSV export", () => {
+  it("exports immutable product quantities and prices in dedicated columns, including removed products", () => {
+    const answer = {
+      questionId: "products",
+      label: "Materials",
+      value: "Cement: 8 bag × 7 USD = 56 USD",
+      products: {
+        currency: "USD" as const,
+        items: [
+          {
+            id: "removed",
+            name: "=Cement",
+            unit: "bag",
+            quantity: 8,
+            unitPrice: 7,
+            lineTotal: 56,
+          },
+        ],
+        total: 56,
+      },
+    };
+    const row = { ...response, answers: [answer] };
+    const table = formResponsesTable(form, [row], copy);
+    expect(table.rows[0][table.headers.indexOf("Materials / currency")]).toBe(
+      "USD",
+    );
+    expect(table.rows[0][table.headers.indexOf("Materials / total")]).toBe(56);
+    expect(
+      table.rows[0][table.headers.indexOf("Materials / =Cement / quantity")],
+    ).toBe(8);
+    expect(
+      table.rows[0][table.headers.indexOf("Materials / =Cement / unitPrice")],
+    ).toBe(7);
+    expect(
+      table.rows[0][table.headers.indexOf("Materials / =Cement / lineTotal")],
+    ).toBe(56);
+    expect(formResponsesCsv(form, [row], copy)).toContain("'=Cement");
+  });
   it("includes multilingual text, safe spreadsheet cells, metadata and questions from old revisions", () => {
     const csv = formResponsesCsv(
       form,

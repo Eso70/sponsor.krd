@@ -1,9 +1,10 @@
 "use client";
 import { useFormValidation } from "./FormValidationContext";
-import { useEffect, useId, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { Trash2, ImageIcon, Plus, Upload, Eye, Crop } from "lucide-react";
 import dynamic from "next/dynamic";
+import { ImageCropEditorSkeleton } from "@/components/shared/ImageCropEditorSkeleton";
 import { ImagePreviewModal } from "@/components/shared/ImagePreviewModal";
 import { IconActionButton } from "@/components/shared/IconActionButton";
 import { EditorField } from "@/components/shared/EditorField";
@@ -326,15 +327,25 @@ export function FormImagePicker({
         />
       )}
       {cropTarget && images[cropTarget.index] === cropTarget.src && (
-        <ImageCropEditor
-          src={cropTarget.src}
-          aspect="free"
-          maxEdge={variant === "logo" ? 720 : 1440}
-          copy={copy.imageCrop}
-          cancelLabel={copy.cancel}
-          onClose={() => setCropTarget(null)}
-          onConfirm={(file) => confirmCrop(cropTarget, file)}
-        />
+        <Suspense
+          fallback={
+            <ImageCropEditorSkeleton
+              copy={copy.imageCrop}
+              cancelLabel={copy.cancel}
+              onCancel={() => setCropTarget(null)}
+            />
+          }
+        >
+          <ImageCropEditor
+            src={cropTarget.src}
+            aspect="free"
+            maxEdge={variant === "logo" ? 720 : 1440}
+            copy={copy.imageCrop}
+            cancelLabel={copy.cancel}
+            onClose={() => setCropTarget(null)}
+            onConfirm={(file) => confirmCrop(cropTarget, file)}
+          />
+        </Suspense>
       )}
     </div>
   );

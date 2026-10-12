@@ -2,7 +2,8 @@
 
 import { FormUploadError, formUploadIssues } from "../form-upload-error";
 import { ApiRequestError } from "@/lib/api/request";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { ImageCropEditorSkeleton } from "@/components/shared/ImageCropEditorSkeleton";
 import { ManagementDrawer } from "@/components/shared/ManagementDrawer";
 import { ModalStepActions } from "@/components/shared/ModalStepActions";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
@@ -325,6 +326,7 @@ export function FormEditorDrawer({
           {loading ? (
             <FormEditorSkeleton
               label={copy.loading}
+              copy={copy}
               previewOnly={previewOnly}
             />
           ) : previewOnly ? (
@@ -341,20 +343,31 @@ export function FormEditorDrawer({
             <FormImageCropContext.Provider value={setCropRequest}>
               {cropRequest && (
                 <div className="h-full overflow-y-auto pb-2">
-                  <ImageCropEditor
-                    src={cropRequest.src}
-                    aspect={cropRequest.aspect}
-                    maxEdge={cropRequest.maxEdge}
-                    copy={copy.imageCrop}
-                    cancelLabel={copy.cancel}
-                    onClose={cancelCrop}
-                    onBusyChange={setCropBusy}
-                    footerTarget={cropFooter}
-                    onConfirm={async (file) => {
-                      await cropRequest.onConfirm(file);
-                      cancelCrop();
-                    }}
-                  />
+                  <Suspense
+                    fallback={
+                      <ImageCropEditorSkeleton
+                        copy={copy.imageCrop}
+                        cancelLabel={copy.cancel}
+                        onCancel={cancelCrop}
+                        footerTarget={cropFooter}
+                      />
+                    }
+                  >
+                    <ImageCropEditor
+                      src={cropRequest.src}
+                      aspect={cropRequest.aspect}
+                      maxEdge={cropRequest.maxEdge}
+                      copy={copy.imageCrop}
+                      cancelLabel={copy.cancel}
+                      onClose={cancelCrop}
+                      onBusyChange={setCropBusy}
+                      footerTarget={cropFooter}
+                      onConfirm={async (file) => {
+                        await cropRequest.onConfirm(file);
+                        cancelCrop();
+                      }}
+                    />
+                  </Suspense>
                 </div>
               )}
               <div

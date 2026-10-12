@@ -1,7 +1,6 @@
 import { ClipboardList } from "lucide-react";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
-import { PageListImage } from "@/components/shared/PageListImage";
 import { PageListUrl } from "@/components/shared/PageListUrl";
 import { PageListTraffic } from "@/components/shared/PageListTraffic";
 import { LinktreeMetaField } from "@/components/business/LinktreeMeta";
@@ -59,7 +58,6 @@ export function FormsGrid({
       renderItem={(form) => (
         <ManagementCard intrinsicHeight={320}>
           <div className="mb-2 flex items-start gap-2 sm:mb-3 sm:gap-3">
-            <PageListImage src={form.logo} name={form.name} />
             <div className="min-w-0 flex-1">
               <h3
                 className="mb-0.5 truncate text-xs font-bold text-gray-900 sm:mb-1 sm:text-base"

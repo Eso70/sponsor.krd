@@ -4,17 +4,11 @@ import Image from "next/image";
 import { ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { isFormImage } from "../form-media";
 import type { FormsCopy } from "../forms-copy";
-import dynamic from "next/dynamic";
+import { FullscreenImageViewer } from "@/components/shared/FullscreenImageViewer";
 import {
   STANDARD_TEMPLATE_HEADER_AVATAR_SIZES,
   STANDARD_TEMPLATE_HEADER_CLASSES,
 } from "@/components/templates/shared/TemplateHeader";
-
-const FullscreenImageViewer = dynamic(() =>
-  import("@/components/shared/FullscreenImageViewer").then(
-    (module) => module.FullscreenImageViewer,
-  ),
-);
 
 export function FormMediaPreview({
   images,

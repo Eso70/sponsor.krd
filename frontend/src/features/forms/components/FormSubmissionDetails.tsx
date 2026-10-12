@@ -1,12 +1,15 @@
 import type { FormSubmission } from "../types";
 import { formAnswerText } from "../form-response-utils";
+import { FormProductResponse } from "./FormProductResponse";
 
 export function FormSubmissionDetails({
   response,
   preview = false,
+  locale = "en",
 }: {
   response: FormSubmission;
   preview?: boolean;
+  locale?: string;
 }) {
   const answers = preview ? response.answers.slice(0, 2) : response.answers;
   return (
@@ -25,7 +28,17 @@ export function FormSubmissionDetails({
             dir="auto"
             className={`mt-1 text-[13px] font-medium leading-5 text-slate-800 wrap-anywhere dark:text-slate-100 ${preview ? "line-clamp-2" : "whitespace-pre-wrap"}`}
           >
-            {formAnswerText(answer.value) || "—"}
+            {answer.products ? (
+              <FormProductResponse
+                answer={answer.products}
+                language={
+                  locale === "ar" ? "ar" : locale === "ckb" ? "ckb" : "en"
+                }
+                compact={preview}
+              />
+            ) : (
+              formAnswerText(answer.value) || "—"
+            )}
           </dd>
         </div>
       ))}

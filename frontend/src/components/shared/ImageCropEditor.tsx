@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { FullscreenImageViewer } from "./FullscreenImageViewer";
+import { ImageCropCanvasSkeleton } from "./ImageCropEditorSkeleton";
 import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
 import { CustomSelect } from "./CustomSelect";
 import { ImageCropHandles } from "./ImageCropHandles";
 import {
@@ -32,12 +32,6 @@ import {
 /** Inline crop workspace with draggable/resizable selection and validated raster output. */
 export type ImageCropAspect =
   "original" | "free" | "square" | "wide" | "standard" | "portrait";
-
-const FullscreenImageViewer = dynamic(() =>
-  import("./FullscreenImageViewer").then(
-    (module) => module.FullscreenImageViewer,
-  ),
-);
 
 export function ImageCropEditor({
   src,
@@ -507,10 +501,7 @@ export function ImageCropEditor({
                 />
               )}
               {!image && !error && (
-                <Loader2
-                  aria-hidden
-                  className="absolute left-1/2 top-1/2 size-6 animate-spin text-slate-400"
-                />
+                <ImageCropCanvasSkeleton label={copy.title} />
               )}
             </div>
             <ImageCropControls

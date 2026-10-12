@@ -1,6 +1,8 @@
+import { productSelectionCopy } from "./product-selection-copy";
 import { imageCropCopy } from "@/components/shared/image-crop-copy";
 
 const en = {
+  productSelectionError: productSelectionCopy("en").configurationError,
   imageCrop: imageCropCopy("en"),
   titlePlaceholder: "Enter a form title",
   checkingTitle: "Checking availability…",
@@ -229,6 +231,7 @@ const en = {
 };
 export type FormsCopy = typeof en;
 const ckb: FormsCopy = {
+  productSelectionError: productSelectionCopy("ckb").configurationError,
   imageCrop: imageCropCopy("ckb"),
   titlePlaceholder: "ناونیشانی فۆڕم بنووسە",
   checkingTitle: "پشکنینی بەردەستبوون…",
@@ -459,6 +462,7 @@ const ckb: FormsCopy = {
   copySuffix: "کۆپی",
 };
 const ar: FormsCopy = {
+  productSelectionError: productSelectionCopy("ar").configurationError,
   imageCrop: imageCropCopy("ar"),
   titlePlaceholder: "أدخل عنوان النموذج",
   checkingTitle: "جارٍ التحقق من التوفر…",

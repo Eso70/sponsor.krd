@@ -7,7 +7,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { PRIVACY_VERSION } from '../src/common/legal-versions';
-import type { FormDraft } from '@linktree/types';
+import type { FormDraft, FormSubmission } from '@linktree/types';
 import { readBaselineSql } from '../src/database/baseline';
 import { FormsService } from '../src/forms/forms.service';
 import { DatabaseService } from '../src/database/database.service';
@@ -1129,6 +1129,122 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
           )
         ).rows,
       ).toEqual([]);
+    }
+  });
+  it('persists products and historical calculated prices for both business and platform forms', async () => {
+    for (const [owner, host] of [
+      [ownerA, 'forms-a'],
+      [platformOwner, ''],
+    ]) {
+      const question = {
+        id: 'products',
+        type: 'product' as const,
+        label: 'Materials',
+        required: true,
+        options: [],
+        productSelection: {
+          currency: 'USD' as const,
+          items: [{ id: 'cement', name: 'Cement', unit: 'bag', unitPrice: 7 }],
+        },
+      };
+      const form = await forms.create(owner, {
+        ...fixture(),
+        name: `Products ${owner}`,
+        status: 'active',
+        questions: [question],
+      });
+      expect(
+        (await forms.publicForm(host, form.slug!)).form.questions[0]
+          .productSelection,
+      ).toEqual(question.productSelection);
+      const context = {
+        ip: '127.0.0.1',
+        userAgent: 'Mozilla/5.0 Chrome/130.0',
+      };
+      const body = {
+        requestId: randomUUID(),
+        privacyVersion: PRIVACY_VERSION,
+        revision: form.revision!,
+        consent: true,
+        answers: { products: '{"cement":"8"}' },
+        phoneCountryCodes: {},
+        tracking: {
+          visitorId: 'product-visitor',
+          sessionId: 'product-session',
+        },
+      };
+      const receipt = await forms.submit(host, form.slug!, body, context);
+      expect(await forms.submit(host, form.slug!, body, context)).toEqual(
+        receipt,
+      );
+      const saved = (await forms.submissions(owner, form.id, 0)).items[0];
+      expect(saved.answers[0].products).toMatchObject({
+        currency: 'USD',
+        total: 56,
+        items: [{ quantity: 8, unitPrice: 7, lineTotal: 56 }],
+      });
+      expect(
+        (
+          await pool.query<{ answers: FormSubmission['answers'] }>(
+            'SELECT answers FROM form_submissions WHERE id=$1',
+            [receipt.id],
+          )
+        ).rows[0].answers,
+      ).toEqual(saved.answers);
+      const updated = await forms.update(owner, form.id, {
+        ...form,
+        questions: [
+          {
+            ...question,
+            productSelection: {
+              ...question.productSelection,
+              items: [{ ...question.productSelection.items[0], unitPrice: 9 }],
+            },
+          },
+        ],
+      });
+      expect(
+        (await forms.submissions(owner, form.id, 0)).items[0].answers[0]
+          .products?.total,
+      ).toBe(56);
+      await expect(
+        forms.submit(
+          host,
+          form.slug!,
+          { ...body, requestId: randomUUID() },
+          context,
+        ),
+      ).rejects.toThrow('form changed');
+      await forms.submit(
+        host,
+        form.slug!,
+        { ...body, requestId: randomUUID(), revision: updated.revision! },
+        context,
+      );
+      expect(
+        (await forms.submissions(owner, form.id, 0)).items[0].answers[0]
+          .products?.total,
+      ).toBe(72);
+      await expect(
+        forms.submissions(
+          owner === ownerA ? platformOwner : ownerA,
+          form.id,
+          0,
+        ),
+      ).rejects.toThrow('Form not found');
+      await expect(
+        forms.submit(
+          host,
+          form.slug!,
+          {
+            ...body,
+            revision: updated.revision!,
+            requestId: randomUUID(),
+            answers: { products: '{"cement":"8","unitPrice":"1"}' },
+          },
+          context,
+        ),
+      ).rejects.toThrow('Invalid product quantity');
     }
   });
 });

@@ -1,4 +1,5 @@
 "use client";
+import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { useId } from "react";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import { conditionalCopy } from "../conditional-copy";
@@ -48,7 +49,7 @@ export function FormConditionalPreview({
               label={column}
               ariaLabel={column}
               labelClassName="!text-xs !normal-case !tracking-normal !text-[var(--preview-text)]"
-              triggerClassName="modal-standard-input !h-9 !rounded-lg !text-xs"
+              triggerClassName={`modal-standard-input ${FORM_QUESTION_INPUT_CLASS}`}
               inheritAppearance
               emptyLabel={labels.select}
               value={selected[index]}

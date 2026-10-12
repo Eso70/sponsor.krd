@@ -16,13 +16,15 @@ function Editor({
   language = "en",
   layout = "form",
   mixed = false,
+  draftLanguage = language,
 }: {
   language?: FormLanguage;
   layout?: FormDraft["layout"];
   mixed?: boolean;
+  draftLanguage?: FormLanguage;
 }) {
   const [form, setForm] = useState({
-    ...createForm(language),
+    ...createForm(draftLanguage),
     layout,
     questions: [
       { ...createQuestion(), label: "First" },
@@ -43,6 +45,50 @@ function Editor({
   );
 }
 describe("question authoring controls", () => {
+  it.each(["en", "ar", "ckb"] as const)(
+    "keeps product editor labels in %s when the form's content language differs",
+    (language) => {
+      const copy = formsCopy(language);
+      const productCopy = formEditorCopy(language).productSelection;
+      render(
+        <Editor
+          language={language}
+          draftLanguage={language === "ckb" ? "en" : "ckb"}
+        />,
+      );
+      fireEvent.click(
+        screen.getAllByRole("button", { name: `+ ${copy.addQuestion}` })[0],
+      );
+      fireEvent.click(screen.getByRole("option", { name: productCopy.title }));
+      expect(
+        screen.getByRole("textbox", { name: productCopy.name }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: productCopy.price }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: productCopy.price }),
+      ).toHaveAttribute("placeholder", productCopy.priceHint);
+    },
+  );
+  it.each(["form", "card"] as const)(
+    "adds the product question from the shared question menu in %s",
+    (layout) => {
+      render(<Editor layout={layout} />);
+      fireEvent.click(
+        screen.getAllByRole("button", { name: "+ Add question" })[0],
+      );
+      fireEvent.click(
+        screen.getByRole("option", { name: "Product selection" }),
+      );
+      expect(
+        screen.getByRole("textbox", { name: "Product name" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: "Unit price" }),
+      ).toBeInTheDocument();
+    },
+  );
   it.each(["form", "card"] as const)(
     "drags custom and personal questions together in %s layout",
     (layout) => {
@@ -112,7 +158,7 @@ describe("question authoring controls", () => {
     expect(
       screen.queryByRole("option", { name: "Add question" }),
     ).not.toBeInTheDocument();
-    expect(screen.getAllByRole("option")).toHaveLength(3);
+    expect(screen.getAllByRole("option")).toHaveLength(4);
     screen
       .getAllByRole("option")
       .forEach((option) =>

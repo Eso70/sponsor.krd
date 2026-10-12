@@ -1,3 +1,4 @@
+import { isProductConfigured, validProductPrice } from "./product-selection";
 import { formDraftName, isFormUrl, validateForm } from "./forms-model";
 import { isFormImage } from "./form-media";
 import { isConditionalAnswers } from "./conditional-csv";
@@ -114,6 +115,21 @@ export function formEditorIssues(
   form.questions.forEach((question, index) => {
     const target = { section: "questions" as const, questionId: question.id };
     const prefix = `Q${index + 1}: `;
+    if (
+      question.type === "product" &&
+      ((form.status === "active" &&
+        (!question.productSelection?.items.length ||
+          !question.productSelection.items.every(isProductConfigured))) ||
+        question.productSelection?.items.some(
+          (item) =>
+            item.unitPrice !== null && !validProductPrice(item.unitPrice),
+        ))
+    )
+      issues.push({
+        ...target,
+        field: `questions.${question.id}.label`,
+        message: prefix + copy.productSelectionError,
+      });
     imageIssue(
       question.image ?? "",
       `questions.${question.id}.image`,

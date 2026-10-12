@@ -5,8 +5,7 @@ import { X } from "lucide-react";
 import { ManagementDrawer } from "@/components/shared/ManagementDrawer";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { FormInsightsActions } from "./FormInsightsActions";
-import { SkeletonTable } from "@/components/shared/Skeleton";
-import { FormsStatsSkeleton } from "./FormSkeletons";
+import { FormsStatsSkeleton, FormResponsesSkeleton } from "./FormSkeletons";
 import { FormAnalyticsOverview } from "./FormAnalyticsOverview";
 import { FormResponseFilters } from "./FormResponseFilters";
 import { FormExportRange } from "./FormExportRange";
@@ -222,7 +221,7 @@ export function FormInsightsModal({
           )}
           <section aria-label={copy.analytics}>
             {statsLoading ? (
-              <FormsStatsSkeleton compact label={copy.loading} />
+              <FormsStatsSkeleton copy={copy} compact label={copy.loading} />
             ) : statsFailed ? (
               <>
                 <FormRequestError message={copy.analyticsError} />
@@ -280,7 +279,7 @@ export function FormInsightsModal({
               </div>
             )}
             {responseLoading ? (
-              <SkeletonTable columns={3} loadingLabel={copy.loading} />
+              <FormResponsesSkeleton copy={copy} />
             ) : responseFailed ? (
               <>
                 <FormRequestError message={copy.responsesError} />

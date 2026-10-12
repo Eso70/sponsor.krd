@@ -1,4 +1,5 @@
 "use client";
+import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { ChevronDown, Trash2, GitBranch, Type, List } from "lucide-react";
 import { FormValidationNotice } from "./FormValidationNotice";
 import { useFormValidation } from "./FormValidationContext";
@@ -13,6 +14,7 @@ import type { FormEditorCopy } from "../form-editor-copy";
 import { FormEditorInput } from "./FormEditorInput";
 import { FormConditionalEditor } from "./FormConditionalEditor";
 import { FormChoiceOptionsEditor } from "./FormChoiceOptionsEditor";
+import { FormProductSelectionEditor } from "./FormProductSelectionEditor";
 import { FormImagePicker } from "./FormImagePicker";
 
 export function FormQuestionEditorRow({
@@ -125,6 +127,7 @@ export function FormQuestionEditorRow({
         ) : (
           <>
             <FormEditorInput
+              inputClassName={FORM_QUESTION_INPUT_CLASS}
               validationField={`questions.${question.id}.label`}
               label={copy.questionLabel}
               inputAction={
@@ -142,7 +145,9 @@ export function FormQuestionEditorRow({
               }
               placeholder={labels.questionHint}
             />
-            {(question.type === "short" || question.type === "choice") && (
+            {(question.type === "short" ||
+              question.type === "choice" ||
+              question.type === "product") && (
               <FormEditorInput
                 label={copy.descriptionLabel}
                 hint={labels.optional}
@@ -150,6 +155,14 @@ export function FormQuestionEditorRow({
                 placeholder={labels.questionDescriptionHint}
                 onChange={(description) => update(question.id, { description })}
                 maxLength={210}
+              />
+            )}
+            {question.type === "product" && (
+              <FormProductSelectionEditor
+                question={question}
+                language={form.language}
+                copy={labels.productSelection}
+                onChange={(patch) => update(question.id, patch)}
               />
             )}
             {question.type === "image" && (

@@ -1,3 +1,4 @@
+import { productSelectionCopy } from "./product-selection-copy";
 import type { FormLanguage } from "./types";
 
 const labels = {
@@ -358,10 +359,15 @@ const labels = {
   ],
   enterAnswer: ["Enter your answer", "وەڵامەکەت بنووسە", "أدخل إجابتك"],
 } satisfies Record<string, readonly [string, string, string]>;
-export type FormEditorCopy = { [K in keyof typeof labels]: string };
+export type FormEditorCopy = { [K in keyof typeof labels]: string } & {
+  productSelection: ReturnType<typeof productSelectionCopy>;
+};
 export function formEditorCopy(language: FormLanguage): FormEditorCopy {
   const index = language === "ckb" ? 1 : language === "ar" ? 2 : 0;
-  return Object.fromEntries(
-    Object.entries(labels).map(([key, values]) => [key, values[index]]),
-  ) as FormEditorCopy;
+  return {
+    ...Object.fromEntries(
+      Object.entries(labels).map(([key, values]) => [key, values[index]]),
+    ),
+    productSelection: productSelectionCopy(language),
+  } as FormEditorCopy;
 }

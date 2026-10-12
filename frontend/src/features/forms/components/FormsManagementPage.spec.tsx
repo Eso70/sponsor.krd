@@ -134,9 +134,7 @@ describe("Forms frontend workspace", () => {
       ).toBeGreaterThan(20);
       expect(screen.queryByText("0%")).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-      expect(
-        container.querySelectorAll("[data-skeleton-table-row]"),
-      ).toHaveLength(6);
+      expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
       await act(async () => finish({ items: [], total: 0 }));
       expect(
         screen.queryByRole("status", { name: formsCopy("en").loading }),
@@ -395,7 +393,7 @@ describe("Forms frontend workspace", () => {
       "Submissions",
       "Completion rate",
     ])
-      expect(await screen.findByText(label)).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Table view" }));
     expect(screen.getByRole("button", { name: "Table view" })).toHaveAttribute(
       "aria-pressed",

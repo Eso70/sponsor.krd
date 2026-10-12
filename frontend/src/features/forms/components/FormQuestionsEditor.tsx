@@ -160,6 +160,10 @@ export function FormQuestionsEditor({
               { value: "short", label: copy.short },
               { value: "choice", label: copy.choice },
               { value: "conditional", label: labels.conditional },
+              {
+                value: "product",
+                label: labels.productSelection.title,
+              },
             ]}
             onChange={(type) => {
               if (!type) return;
