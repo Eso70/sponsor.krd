@@ -413,6 +413,7 @@
   height: 100dvh;
   min-height: 0 !important;
   overflow: hidden;
+  overflow: clip;
   overscroll-behavior: none;
   background: #fff;
 }
@@ -429,6 +430,8 @@
 }
 .publicPage {
   height: var(--form-viewport-height, 100dvh);
+  position: relative;
+  top: var(--form-viewport-top, 0px);
   min-height: 0;
   overflow: hidden;
 }

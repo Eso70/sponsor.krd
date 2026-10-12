@@ -212,7 +212,7 @@ Public submissions send only a JSON map of product IDs to decimal quantity strin
 
 Response details render the stored snapshot with localized currency formatting. CSV keeps the readable answer and adds separate currency, total, product name, unit, quantity, unitPrice and lineTotal columns. Historical/removed products remain exportable and all user-authored text retains CSV formula protection. Products are estimates, not payments: amounts are not counted as revenue or forwarded to TikTok. Standard submission idempotency, tenant ownership, privacy acknowledgement, revision conflicts and tracking transactions remain enforced.
 
-Product selection UI copy, accessible labels, price/quantity errors, empty states and currency names are translated in English, Kurdish (ckb) and Arabic. Preview money uses the selected language’s number/currency formatting; authored product names and unit labels remain unchanged. The locale rendering suite covers all three languages.
+Product selection UI copy, accessible labels, price/quantity errors, empty states and currency names are translated in English, Kurdish (ckb) and Arabic. Preview money always uses English digits and number/currency formatting; authored product names and unit labels remain unchanged. The locale rendering suite covers all three languages.
 
 Product menu labels, authoring controls and save validation follow the dashboard/editor copy locale. This is independent of the form content/preview language; changing the form language must not mix languages in the editor’s Add question menu. Regression tests cover all three editor locales with a different form language.
 
@@ -229,10 +229,15 @@ Crop code and image decoding have local Suspense/canvas placeholders shaped like
 Published form routes constrain the document and theme wrapper to the dynamic
 viewport, with scrolling restricted to the content region and the footer kept
 outside it. The shared public shell measures the visual viewport during browser
-chrome and keyboard resizing, ignores pinch-zoom reflow, and cleans up listeners.
+chrome and keyboard resizing/panning (height and visual viewport top offset),
+ignores pinch-zoom reflow, and cleans up resize, scroll and focus listeners. Focused
+inputs are kept above the footer by adjusting only the inner region scroll, never
+scrollIntoView on the document. The document and outer theme wrapper clip overflow
+to prevent Safari focus scrolling from exposing the site background.
 Light/dark backgrounds continue through the safe area and document edges; editor
 previews and other routes retain their existing scrolling behavior. Both form and
 card layouts reuse this shell. Product amounts always use English (en-US) formatting, Latin digits, an isolated
 standard numeric font and an unambiguous ISO currency code in all languages, so
 Safari's localized glyphs cannot reorder or obscure prices.
 Calculations, stored amounts and CSV values remain unchanged.
+Viewport sizing and panning follow the [VisualViewport API](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport), including its resize and scroll events.
