@@ -46,6 +46,7 @@ export function FormFlowPreview({
   const { currentIndex, contentRef, goTo } = useFormPreviewNavigation(
     ["content", "final"],
     finalPage,
+    presentation === "public",
   );
   const showFinal = currentIndex === 1;
   return (

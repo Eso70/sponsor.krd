@@ -6,6 +6,7 @@ import { useFormPreviewPageFocus } from "./use-form-preview-page-focus";
 export function useFormPreviewNavigation(
   pageIds: string[],
   finalPage: boolean,
+  publicPage = false,
 ) {
   const requestedPage = finalPage ? pageIds.at(-1)! : pageIds[0];
   const [selection, setSelection] = useState({
@@ -20,6 +21,7 @@ export function useFormPreviewNavigation(
   const currentIndex = Math.max(0, pageIds.indexOf(pageId));
   const { contentRef, prepareNavigation } = useFormPreviewPageFocus(
     pageIds[currentIndex],
+    publicPage,
   );
   const goTo = (next: string) => {
     if (!pageIds.includes(next) || next === pageIds[currentIndex]) return;

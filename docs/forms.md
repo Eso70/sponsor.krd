@@ -226,18 +226,18 @@ Crop code and image decoding have local Suspense/canvas placeholders shaped like
 
 ## Public mobile viewport and amounts
 
-Published form routes constrain the document and theme wrapper to the dynamic
-viewport, with scrolling restricted to the content region and the footer kept
-outside it. The shared public shell measures the visual viewport during browser
-chrome and keyboard resizing/panning (height and visual viewport top offset),
-ignores pinch-zoom reflow, and cleans up resize, scroll and focus listeners. Focused
-inputs are kept above the footer by adjusting only the inner region scroll, never
-scrollIntoView on the document. The document and outer theme wrapper clip overflow
-to prevent Safari focus scrolling from exposing the site background.
-Light/dark backgrounds continue through the safe area and document edges; editor
-previews and other routes retain their existing scrolling behavior. Both form and
-card layouts reuse this shell. Product amounts always use English (en-US) formatting, Latin digits, an isolated
-standard numeric font and an unambiguous ISO currency code in all languages, so
-Safari's localized glyphs cannot reorder or obscure prices.
+Published form and card routes use normal document scrolling and an in-flow
+footer. The public renderer has a minimum small-viewport height, not a fixed
+height, so longer content grows naturally. There are no visualViewport listeners,
+keyboard offsets, manual focused-input scrolling, nested content scroll locks or
+fixed footer positioning. Safari and other browsers handle keyboard panning and
+focus natively; public inputs retain 16px text to avoid focus zoom. The shared
+shell and document backgrounds follow the form appearance through safe areas.
+The oversized outer site background decoration is disabled on these routes, so
+it cannot add empty scroll space. Explicit page navigation resets document scroll
+to the top; input focus and keyboard changes never run a scroll override.
+Editor previews retain their own constrained drawer scrolling.
+
+Product amounts always use English (en-US) formatting, Latin digits, an isolated
+standard numeric font and an unambiguous ISO currency code in all languages.
 Calculations, stored amounts and CSV values remain unchanged.
-Viewport sizing and panning follow the [VisualViewport API](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport), including its resize and scroll events.

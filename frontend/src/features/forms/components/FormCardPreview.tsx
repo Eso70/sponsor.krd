@@ -47,6 +47,7 @@ export function FormCardPreview({
   const { currentIndex, contentRef, goTo } = useFormPreviewNavigation(
     allIds,
     finalPage,
+    presentation === "public",
   );
   const welcome = currentIndex === 0,
     final = currentIndex === allIds.length - 1;
