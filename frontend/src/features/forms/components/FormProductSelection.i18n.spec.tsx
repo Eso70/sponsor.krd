@@ -93,7 +93,7 @@ describe("Product selection translations", () => {
         screen.getAllByText(
           (_, element) =>
             element?.tagName === "BDI" &&
-            element.textContent === productMoney(56000, "IQD", language),
+            element.textContent === productMoney(56000, "IQD"),
         ),
       ).toHaveLength(2);
       preview.rerender(

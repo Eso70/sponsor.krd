@@ -7,7 +7,7 @@ import { formsCopy } from "../forms-copy";
 
 describe("shared form collection presentation", () => {
   it.each(["grid", "table"] as const)(
-    "%s displays persistent images, traffic, metadata and public links",
+    "%s displays traffic, metadata and public links without images",
     (variant) => {
       const copy = formsCopy("en");
       const form = {
@@ -39,9 +39,8 @@ describe("shared form collection presentation", () => {
           }}
         />,
       );
-      expect(
-        screen.getAllByRole("img", { name: "Contact" })[0],
-      ).toHaveAttribute("src", form.logo);
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: copy.image })).not.toBeInTheDocument();
       expect(screen.getAllByText(form.description).length).toBeGreaterThan(0);
       expect(screen.getAllByText("42").length).toBeGreaterThan(0);
       expect(screen.getAllByText("12").length).toBeGreaterThan(0);

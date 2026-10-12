@@ -1,4 +1,4 @@
-import type { FormQuestion, FormLanguage } from "./types";
+import type { FormQuestion } from "./types";
 export type ProductSelection = NonNullable<FormQuestion["productSelection"]>;
 export const MAX_PRODUCT_QUANTITY = 100_000;
 export const MAX_PRODUCT_PRICE = 10_000_000;
@@ -52,12 +52,14 @@ export function productLineTotal(unitPrice: number, quantity: string): number {
 export function productMoney(
   value: number,
   currency: ProductSelection["currency"],
-  language: FormLanguage,
 ): string {
   return new Intl.NumberFormat(
-    language === "ckb" ? "ckb-IQ" : language === "ar" ? "ar-IQ" : "en",
+    "en-US",
     {
       style: "currency",
+      numberingSystem: "latn",
+      currencyDisplay: "code",
+      minimumFractionDigits: 0,
       currency,
       maximumFractionDigits: 2,
     },

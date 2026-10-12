@@ -344,6 +344,7 @@ describe("Form layout builder", () => {
     expect(preview.getByText("سڵاو")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch", { name: "Banner" }));
     fireEvent.click(screen.getByRole("tab", { name: "Final page" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Call to action buttons" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Website URL" }), {
       target: { value: "javascript:alert(1)" },
     });
@@ -453,10 +454,10 @@ describe("Form layout builder", () => {
         <FormPreview form={form} language={language} placeholders finalPage />,
       );
       expect(screen.getByText(copy.thankYou)).toBeInTheDocument();
-      expect(screen.getByText(labels.finalDefault)).toBeInTheDocument();
+      expect(screen.queryByText(labels.finalDefault)).not.toBeInTheDocument();
       expect(
-        screen.getByRole("link", { name: labels.website }),
-      ).toBeInTheDocument();
+        screen.queryByRole("link", { name: labels.website }),
+      ).not.toBeInTheDocument();
     },
   );
   it("treats an edited default label as authored text after switching preview language", () => {

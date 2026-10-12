@@ -1,7 +1,7 @@
 import type { FormLanguage } from "../types";
 import type { FormProductAnswer } from "@linktree/types";
 import { productSelectionCopy } from "../product-selection-copy";
-import { productMoney } from "../product-selection";
+import { FormMoney } from "./FormMoney";
 
 /** Renders the stored price snapshot, never the form's current price list. */
 export function FormProductResponse({
@@ -27,15 +27,15 @@ export function FormProductResponse({
               <bdi>
                 {item.quantity}
                 {item.unit ? ` ${item.unit}` : ""} ×{" "}
-                {productMoney(item.unitPrice, answer.currency, language)} ={" "}
-                {productMoney(item.lineTotal, answer.currency, language)}
+                <FormMoney value={item.unitPrice} currency={answer.currency} /> ={" "}
+                <FormMoney value={item.lineTotal} currency={answer.currency} />
               </bdi>
             </p>
           </div>
         ))}
       <p className="font-semibold">
         {copy.total}:{" "}
-        <bdi>{productMoney(answer.total, answer.currency, language)}</bdi>
+        <FormMoney value={answer.total} currency={answer.currency} />
       </p>
     </div>
   );

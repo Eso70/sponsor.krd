@@ -1,5 +1,7 @@
 "use client";
 import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
+import { FormMoney } from "./FormMoney";
+import styles from "./FormPreview.module.css";
 import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import type { FormQuestion, FormLanguage } from "../types";
 import { productSelectionCopy } from "../product-selection-copy";
@@ -8,7 +10,6 @@ import {
   productQuantities,
   validProductQuantity,
   productLineTotal,
-  productMoney,
   MAX_PRODUCT_QUANTITY,
 } from "../product-selection";
 export function FormProductSelectionPreview({
@@ -48,18 +49,15 @@ export function FormProductSelectionPreview({
             <div className="min-w-0 space-y-1">
               <p className="break-words text-sm font-semibold">{item.name}</p>
               <p className="text-xs opacity-65">
-                {productMoney(item.unitPrice!, config.currency, language)}
+                <FormMoney value={item.unitPrice!} currency={config.currency} />
                 {item.unit ? ` / ${item.unit}` : ""}
               </p>
               <p className="text-xs font-semibold">
                 {copy.lineTotal}:{" "}
-                <bdi>
-                  {productMoney(
-                    productLineTotal(item.unitPrice!, quantity),
-                    config.currency,
-                    language,
-                  )}
-                </bdi>
+                <FormMoney
+                  value={productLineTotal(item.unitPrice!, quantity)}
+                  currency={config.currency}
+                />
               </p>
             </div>
             <label className="space-y-1 text-xs">
@@ -69,6 +67,7 @@ export function FormProductSelectionPreview({
                 aria-invalid={!validProductQuantity(quantity)}
                 type="number"
                 inputMode="decimal"
+                dir="ltr"
                 min={0}
                 max={MAX_PRODUCT_QUANTITY}
                 step="0.001"
@@ -82,7 +81,7 @@ export function FormProductSelectionPreview({
                     }),
                   )
                 }
-                className={FORM_QUESTION_INPUT_CLASS}
+                className={`${FORM_QUESTION_INPUT_CLASS} ${styles.numeric}`}
               />
             </label>
           </div>
@@ -99,9 +98,7 @@ export function FormProductSelectionPreview({
         className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--preview-border)] p-3 text-sm font-semibold"
       >
         <span>{copy.total}</span>
-        <bdi>
-          {invalid ? "—" : productMoney(total, config.currency, language)}
-        </bdi>
+        {invalid ? "—" : <FormMoney value={total} currency={config.currency} />}
       </div>
     </div>
   );

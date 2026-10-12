@@ -54,9 +54,9 @@ describe("product selection", () => {
         screen.getByRole("spinbutton", { name: "Quantity: Steel" }),
         { target: { value: "1.5" } },
       );
-      expect(screen.getByText("$56.00")).toBeInTheDocument();
-      expect(screen.getByText("$3.75")).toBeInTheDocument();
-      expect(screen.getByText("$59.75")).toBeInTheDocument();
+      expect(screen.getByText("USD 56")).toBeInTheDocument();
+      expect(screen.getByText("USD 3.75")).toBeInTheDocument();
+      expect(screen.getByText("USD 59.75")).toBeInTheDocument();
       expect(send).toBeEnabled();
       fireEvent.change(
         screen.getByRole("spinbutton", { name: "Quantity: Steel" }),
@@ -116,7 +116,7 @@ describe("product selection", () => {
           formsCopy(language),
         ),
       ).toEqual([]);
-      expect(productMoney(56, "IQD", language)).toBeTruthy();
+      expect(productMoney(56, "IQD")).toBeTruthy();
     },
   );
   it("rounds decimal money without drift", () => {

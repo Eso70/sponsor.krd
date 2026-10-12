@@ -33,6 +33,7 @@ describe("final-page actions", () => {
   it("shows a decorative hand by default and removes it when disabled without changing the CTA", () => {
     const form = {
       ...createForm("en"),
+      actionsEnabled: true,
       actions: [
         {
           id: "site",
@@ -59,6 +60,8 @@ describe("final-page actions", () => {
   });
   it("adds typed actions, keeps collapsed values, and reorders through the shared handle", () => {
     render(<Editor />);
+    expect(screen.getByRole("switch", { name: "Call to action buttons" })).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(screen.getByRole("switch", { name: "Call to action buttons" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Website URL" }), {
       target: { value: "https://example.com" },
     });
@@ -124,6 +127,7 @@ describe("final-page actions", () => {
         scrollable
         form={{
           ...createForm("en"),
+          actionsEnabled: true,
           showHandCursor: false,
           actions: [
             {

@@ -83,7 +83,7 @@ export function createForm(language: FormLanguage = "ckb"): FormDraft {
     logoEnabled: true,
     slogan: "",
 
-    actionsEnabled: true,
+    actionsEnabled: false,
     actions: [
       {
         id: createRuntimeId(),

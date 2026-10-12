@@ -1,5 +1,7 @@
+"use client";
 import type { FormEventHandler, ReactNode } from "react";
 import type { FormDraft } from "../types";
+import { usePublicFormViewport } from "../use-public-form-viewport";
 import styles from "./FormPreview.module.css";
 
 /** Responsive public canvas, also used while the form is loading. */
@@ -18,8 +20,10 @@ export function PublicFormShell({
   loadingLabel?: string;
   onChangeCapture?: FormEventHandler<HTMLElement>;
 }) {
+  const viewportRef = usePublicFormViewport();
   return (
     <main
+      ref={viewportRef}
       data-form-layout={layout}
       lang={language}
       data-appearance={appearance}

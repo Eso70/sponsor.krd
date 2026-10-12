@@ -85,9 +85,8 @@ describe("CSV conditional editor and preview", () => {
       expect(
         screen.queryByText(formsCopy("en").thankYou),
       ).not.toBeInTheDocument();
-      expect(city).toHaveFocus();
-      expect(city).toHaveAttribute("aria-invalid", "true");
-      expect(screen.getByRole("alert")).toHaveTextContent("Select an answer");
+      expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       choose(city, "San Diego");
       choose(dealer, "Dealer1");
       fireEvent.click(state);

@@ -84,6 +84,8 @@ Business forms belong to the session's business, never a body/query owner identi
 
 The separate required form title (`name`, maximum 100 characters) owns only the internal dashboard name and public URL. Introduction `headline` is optional, independently authored and never renames a form. Both public layouts omit the introduction heading when it is empty; the internal name is never a public heading or browser/share title fallback. Browser/share metadata uses the public headline, with a generic localized form title when absent. Slugs use the existing lowercase ASCII style with hyphens, up to 60 characters; titles without a usable ASCII slug receive a deterministic title-derived `form-<hash>` URL. Existing titles/URLs remain unchanged until the title is edited. Saving an edited title updates its URL, with an inline warning to update shared links. Business and Platform editors share a debounced, abortable title availability check and display the resulting `/form/<slug>` inline. Authenticated `GET /title-availability?title=...&excludeId=...` endpoints resolve the owner on the server, verify ownership of edited IDs and reserve archived and paused URLs too. Saves repeat the check before uploading media. Create/update use the same owner advisory lock and existing unique index; collisions return `FORM_TITLE_TAKEN` and focus the title field rather than silently adding a suffix. Different owners can reuse a title. Public forms use live, uncached availability checks and content-based indexing eligibility (public headline and useful description required). The shared proxy probes a lightweight availability endpoint before streaming so unavailable forms return HTTP 404 and transient failures return 503.
 
+New forms start with final-page call-to-action buttons disabled. Enabling the existing switch reveals the configured actions; saved forms retain their chosen setting in both layouts and dashboards.
+
 ## Persistence and lifecycle
 
 `forms` stores owner, slug, name, layout/configuration JSON, Active/Paused status, independent archive flag/time, revision, cumulative submission count and timestamps. The server owns these metadata fields even when the editor sends a full draft.
@@ -221,3 +223,16 @@ Unit and Unit price use the same shared EditorField label spacing so their input
 ## Form loading states
 
 Crop code and image decoding have local Suspense/canvas placeholders shaped like the crop workspace, with real localized aspect, blur, reset/zoom, preview and dimension labels. Cancellation stays available while the module loads, including the drawer footer portal. Fullscreen media imports the shared viewer directly, so opening an image does not show a module-loading placeholder or replace the form with a route skeleton. Lazy loading must never bubble to the homepage route fallback. The root loading boundary detects public form URLs, and business/platform route fallbacks recognize the forms workspace. Collection and analytics skeletons keep the correct six metric labels and matching table headers; editor placeholders retain title, Content/Final tabs and section labels. Unknown authored content is represented by placeholders rather than invented field names or zero data. Shared skeleton animation keeps theme and reduced-motion behavior.
+
+## Public mobile viewport and amounts
+
+Published form routes constrain the document and theme wrapper to the dynamic
+viewport, with scrolling restricted to the content region and the footer kept
+outside it. The shared public shell measures the visual viewport during browser
+chrome and keyboard resizing, ignores pinch-zoom reflow, and cleans up listeners.
+Light/dark backgrounds continue through the safe area and document edges; editor
+previews and other routes retain their existing scrolling behavior. Both form and
+card layouts reuse this shell. Product amounts always use English (en-US) formatting, Latin digits, an isolated
+standard numeric font and an unambiguous ISO currency code in all languages, so
+Safari's localized glyphs cannot reorder or obscure prices.
+Calculations, stored amounts and CSV values remain unchanged.

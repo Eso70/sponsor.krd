@@ -21,7 +21,7 @@ describe("frontend form rules", () => {
       appStoreUrl: "",
       googlePlayUrl: "",
     };
-    const form = { ...createForm("en"), name: "Contact", actions: [app] };
+    const form = { ...createForm("en"), name: "Contact", actionsEnabled: true, actions: [app] };
     expect(validateForm(form)).toBeNull();
     expect(validateForm({ ...form, status: "active" })).toBe("url");
     app.googlePlayUrl = "https://play.google.com/store/apps/details?id=example";
@@ -37,6 +37,7 @@ describe("frontend form rules", () => {
     "starts new %s forms with optional name then required phone fields",
     (language) => {
       const form = createForm(language);
+      expect(form.actionsEnabled).toBe(false);
       expect(form.actions).toEqual([
         expect.objectContaining({
           type: "website",
