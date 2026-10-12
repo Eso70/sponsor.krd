@@ -1,9 +1,12 @@
 "use client";
+import { toast } from "sonner";
+import type { FormsCopy } from "./forms-copy";
 import { useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api/request";
 import type { FormResponseValues } from "./components/FormPreview";
 export function useFormSubmission(
   onSubmit: ((response: FormResponseValues) => Promise<void>) | undefined,
+  copy?: FormsCopy,
 ) {
   const [busy, setBusy] = useState(false),
     [failed, setFailed] = useState(false);
@@ -25,10 +28,12 @@ export function useFormSubmission(
       setStale(false);
       try {
         await onSubmit?.(response);
+        if (copy) toast.success(copy.notifications.submitted);
         advance();
       } catch (error) {
         setStale(error instanceof ApiRequestError && error.status === 409);
         setFailed(true);
+        if (copy) toast.error(error instanceof ApiRequestError && error.status === 409 ? copy.formChanged : copy.submitError);
       } finally {
         lock.current = false;
         setBusy(false);

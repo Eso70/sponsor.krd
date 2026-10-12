@@ -5,7 +5,7 @@ import { copyToClipboard } from "@/lib/utils/clipboard";
 import { PageListUrl } from "./PageListUrl";
 
 vi.mock("@/lib/utils/clipboard", () => ({ copyToClipboard: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 const labels = {
   copyLink: "Copy link",
   copied: "Copied",
@@ -30,6 +30,7 @@ describe("shared public page URL", () => {
         "https://business.sponsor.krd/form/contact",
       ),
     );
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith(labels.copied));
     fireEvent.click(screen.getByRole("link"), { ctrlKey: true });
     expect(onOpen).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("link"));
@@ -45,5 +46,6 @@ describe("shared public page URL", () => {
       expect(toast.error).toHaveBeenCalledWith(labels.copyError),
     );
     expect(screen.queryByText(labels.copied)).not.toBeInTheDocument();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

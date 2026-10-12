@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { FormUploadError, formUploadIssues } from "../form-upload-error";
 import { ApiRequestError } from "@/lib/api/request";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
@@ -133,6 +134,7 @@ export function FormEditorDrawer({
     setFailedImage(null);
     if (issues.length) {
       setSelectedIssue(issues[0]);
+      toast.error(copy.fixFields, { description: issues[0].message });
       return;
     }
     setSelectedIssue(null);
@@ -146,6 +148,7 @@ export function FormEditorDrawer({
         isNew ? undefined : form.id,
       );
       if (!available.available) {
+        toast.error(copy.titleTaken);
         setTitleConflict(form.name);
         setSelectedIssue({
           field: "name",
@@ -159,6 +162,7 @@ export function FormEditorDrawer({
         name: formDraftName(form),
         updatedAt: new Date().toISOString(),
       });
+      toast.success(isNew ? copy.notifications.created : copy.notifications.saved);
     } catch (error) {
       const requestError =
         error instanceof FormUploadError ? error.cause : error;
@@ -174,11 +178,13 @@ export function FormEditorDrawer({
                 ? copy.saveRateError
                 : copy.saveImageError;
         setFailedImage({ image: error.image, message });
+        toast.error(message);
         setSelectedIssue(formUploadIssues(form, error.image, copy)[0] ?? null);
       } else if (
         requestError instanceof ApiRequestError &&
         requestError.code === "FORM_TITLE_TAKEN"
       ) {
+        toast.error(copy.titleTaken);
         setTitleConflict(form.name);
         setSelectedIssue({
           field: "name",
@@ -186,7 +192,7 @@ export function FormEditorDrawer({
           message: copy.titleTaken,
         });
       } else {
-        setSaveError(
+        const message =
           status === 409
             ? copy.saveConflict
             : status === 401
@@ -199,8 +205,9 @@ export function FormEditorDrawer({
                     ? copy.saveRateError
                     : status === 400
                       ? copy.saveInvalid
-                      : copy.saveError,
-        );
+                      : copy.saveError;
+        setSaveError(message);
+        toast.error(message);
       }
     } finally {
       saveLock.current = false;
@@ -364,6 +371,7 @@ export function FormEditorDrawer({
                       footerTarget={cropFooter}
                       onConfirm={async (file) => {
                         await cropRequest.onConfirm(file);
+                        toast.success(copy.notifications.cropApplied);
                         cancelCrop();
                       }}
                     />

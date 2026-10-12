@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { ClipboardList } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
@@ -86,11 +87,14 @@ export function FormsManagementPage({
     [],
   );
   const [deleting, setDeleting] = useState<FormSummary | null>(null);
+  useEffect(() => {
+    if (failed) toast.error(failureReason === "publish" ? copy.publishError : failureReason === "conflict" ? copy.saveConflict : copy.loadError);
+  }, [failed, failureReason, copy]);
   const refresh = () => {
-    void load();
+    void load().then((loaded) => { if (loaded) toast.success(copy.notifications.refreshed); });
   };
-  const run = (operation: Promise<unknown>) => {
-    void operation.then(() => setPage(0)).catch(() => undefined);
+  const run = (operation: Promise<unknown>, message: string) => {
+    void operation.then(() => { setPage(0); toast.success(message); }).catch(() => undefined);
   };
   const collection = forms;
   const visible = forms;
@@ -199,13 +203,14 @@ export function FormsManagementPage({
               archived={filter === "archived"}
               actions={{
                 onEdit: (form) => openEditor(form, false),
-                onArchive: (form) => run(archive(form)),
+                onArchive: (form) => run(archive(form), form.isArchived ? copy.notifications.restored : copy.notifications.archived),
                 onPause: (form) =>
                   run(
                     status(
                       form,
                       form.status === "active" ? "paused" : "active",
                     ),
+                    form.status === "active" ? copy.notifications.paused : copy.notifications.activated,
                   ),
                 onOpen: (form) =>
                   window.open(
@@ -297,6 +302,7 @@ export function FormsManagementPage({
         onConfirm={async () => {
           if (deleting) {
             await remove(deleting.id);
+            toast.success(copy.notifications.deleted);
             setPage(0);
           }
         }}

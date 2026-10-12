@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import {
   act,
   fireEvent,
@@ -14,6 +15,7 @@ import { createForm, createQuestion } from "../forms-model";
 import { formsCopy } from "../forms-copy";
 
 import { formsApi } from "../api";
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("../api", () => ({
   formsApi: {
     list: vi.fn(),
@@ -90,6 +92,7 @@ describe("Forms frontend workspace", () => {
           expect(formsApi.archive).toHaveBeenCalledWith(scope, form.id, true),
         );
         await screen.findByText("No forms yet");
+        expect(toast.success).toHaveBeenCalledWith(formsCopy("en").notifications.archived);
         fireEvent.click(button("Archived"));
         await screen.findAllByText(form.name);
         fireEvent.click(button("More actions"));
@@ -105,6 +108,7 @@ describe("Forms frontend workspace", () => {
         expect(formsApi.status).not.toHaveBeenCalled();
         expect(form.status).toBe(currentStatus);
         await screen.findByText("No archived forms");
+        expect(toast.success).toHaveBeenCalledWith(formsCopy("en").notifications.restored);
         fireEvent.click(button("Active"));
         await screen.findAllByText(form.name);
         fireEvent.click(button("More actions"));

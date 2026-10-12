@@ -72,7 +72,10 @@ export function PageListUrl({
                 onCopy(event);
                 return;
               }
-              if (await copyToClipboard(url)) setCopiedUrl(url);
+              if (await copyToClipboard(url)) {
+                setCopiedUrl(url);
+                toast.success(labels.copied);
+              }
               else if (labels.copyError) toast.error(labels.copyError);
             }}
             className="shrink-0 cursor-pointer rounded-lg p-1 text-gray-500 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700 active:scale-90 sm:p-1.5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200"

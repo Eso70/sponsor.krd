@@ -1,4 +1,5 @@
 "use client";
+import { Tooltip } from "@/components/shared/Tooltip";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
@@ -100,14 +101,14 @@ export function FormMediaPreview({
       className={`relative overflow-hidden ${option ? "size-14 shrink-0 rounded-lg" : logo ? `${logoClass} rounded-full border border-slate-400/20` : "w-full"}`}
     >
       {safeImages.length ? (
-        <button
+        <Tooltip content={`${copy.preview}: ${imageLabel}`}><button
           type="button"
           aria-label={`${copy.preview}: ${imageLabel}`}
           onClick={() => setOpenedIndex(current)}
           className="block w-full cursor-zoom-in"
         >
           {image}
-        </button>
+        </button></Tooltip>
       ) : (
         <div
           className={`flex items-center justify-center bg-slate-400/10 ${logo ? logoClass : banner ? "h-36" : "h-28"}`}
@@ -123,7 +124,7 @@ export function FormMediaPreview({
           className="pointer-events-none absolute inset-x-2 top-1/2 flex -translate-y-1/2 items-center justify-between text-white"
           dir="ltr"
         >
-          <button
+          <Tooltip content={copy.back}><button
             type="button"
             aria-label={copy.back}
             onClick={() =>
@@ -132,15 +133,15 @@ export function FormMediaPreview({
             className="pointer-events-auto flex size-7 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60"
           >
             <ChevronLeft className="size-4" />
-          </button>
-          <button
+          </button></Tooltip>
+          <Tooltip content={copy.next}><button
             type="button"
             aria-label={copy.next}
             onClick={() => setPosition((current + 1) % safeImages.length)}
             className="pointer-events-auto flex size-7 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60"
           >
             <ChevronRight className="size-4" />
-          </button>
+          </button></Tooltip>
         </div>
       )}
       {openedIndex !== null && safeImages.length > 0 && (

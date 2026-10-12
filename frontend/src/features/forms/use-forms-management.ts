@@ -42,9 +42,11 @@ export function useFormsManagement(
         setForms(items.items);
         setTotal(items.total);
         setMetrics(stats);
+        return true;
       })
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
+        return false;
       })
       .finally(() => {
         if (controller.signal.aborted) return;
@@ -95,7 +97,7 @@ export function useFormsManagement(
     load: async () => {
       setLoading(true);
       setFailed(false);
-      await load();
+      return load();
     },
     get: (form: FormSummary) =>
       mutate(() => formsApi.get(scope, form.id), false),

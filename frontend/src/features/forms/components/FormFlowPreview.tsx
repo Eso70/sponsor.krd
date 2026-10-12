@@ -41,7 +41,7 @@ export function FormFlowPreview({
     consent,
     setConsent,
   } = useFormPreviewResponses(form);
-  const submission = useFormSubmission(onSubmit);
+  const submission = useFormSubmission(onSubmit, copy);
   const visibleQuestions = visibleFormQuestions(form, answers);
   const { currentIndex, contentRef, goTo } = useFormPreviewNavigation(
     ["content", "final"],

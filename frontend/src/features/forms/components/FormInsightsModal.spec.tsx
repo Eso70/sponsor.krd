@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import {
   fireEvent,
   render,
@@ -12,6 +13,7 @@ import { formsCopy } from "../forms-copy";
 import { createForm } from "../forms-model";
 import { exportFormResponses } from "../form-responses-export";
 
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("../form-responses-export", () => ({ exportFormResponses: vi.fn() }));
 vi.mock("@/components/shared/DateTimeInput", () => ({
   DateTimeInput: ({
@@ -120,6 +122,7 @@ describe("combined form insights", () => {
       );
       expect(formsApi.submissions).toHaveBeenCalledTimes(1);
       await waitFor(() => expect(exportButton).toBeEnabled());
+      expect(toast.success).toHaveBeenCalledWith(copy.notifications.exported);
       fireEvent.click(exportButton);
       fireEvent.click(screen.getByRole("option", { name: copy.exportCsv }));
       await waitFor(() =>

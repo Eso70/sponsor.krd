@@ -1,4 +1,6 @@
 "use client";
+import { toast } from "sonner";
+import { Tooltip } from "@/components/shared/Tooltip";
 import { useFormValidation } from "./FormValidationContext";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
@@ -83,6 +85,7 @@ export function FormImagePicker({
     );
     setCropTarget(null);
     setError(false);
+    if (!requestCrop) toast.success(copy.notifications.cropApplied);
   };
   const openCrop = (index: number, src: string, returnFocus?: HTMLElement) => {
     const target = { index, src };
@@ -135,12 +138,13 @@ export function FormImagePicker({
             if (
               (replaceIndex !== null && files.length !== 1) ||
               files.length +
-                (multiple
-                  ? images.length - (replaceIndex !== null ? 1 : 0)
-                  : 0) >
-                (multiple ? 5 : 1)
+              (multiple
+                ? images.length - (replaceIndex !== null ? 1 : 0)
+                : 0) >
+              (multiple ? 5 : 1)
             ) {
               setError(true);
+              toast.error(copy.imageError);
               return;
             }
             const request = ++generation.current;
@@ -148,18 +152,20 @@ export function FormImagePicker({
             setError(false);
             try {
               const added = await Promise.all(files.map(readFormImage));
-              if (request === generation.current)
+              if (request === generation.current) {
                 onChangeRef.current(
                   multiple
                     ? replaceIndex !== null
                       ? images.map((image, index) =>
-                          index === replaceIndex ? added[0] : image,
-                        )
+                        index === replaceIndex ? added[0] : image,
+                      )
                       : [...images, ...added]
                     : added,
                 );
+                toast.success(copy.notifications.imageSelected);
+              }
             } catch {
-              if (request === generation.current) setError(true);
+              if (request === generation.current) { setError(true); toast.error(copy.imageError); }
             } finally {
               if (request === generation.current) setBusy(false);
             }
@@ -208,7 +214,7 @@ export function FormImagePicker({
                     ) : null}
                   </button>
                   {filled && (
-                    <button
+                    <Tooltip content={`${copy.remove} ${label} ${index + 1}`}><button
                       type="button"
                       disabled={busy}
                       aria-label={`${copy.remove} ${label} ${index + 1}`}
@@ -220,20 +226,20 @@ export function FormImagePicker({
                       className="absolute end-1 top-1 flex size-5 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-red-500"
                     >
                       <Trash2 className="size-3" />
-                    </button>
+                    </button></Tooltip>
                   )}
                   {filled && variant === "option" && (
-                    <button
+                    <Tooltip content={`${copy.preview}: ${label}`}><button
                       type="button"
                       aria-label={`${copy.preview}: ${label}`}
                       onClick={() => setOpenedImage(image)}
                       className="absolute bottom-1 end-1 flex size-5 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-slate-700"
                     >
                       <Eye className="size-3" />
-                    </button>
+                    </button></Tooltip>
                   )}
                   {filled && !sideActions && (
-                    <button
+                    <Tooltip content={`${copy.imageCrop.title}: ${label} ${index + 1}`}><button
                       type="button"
                       disabled={busy}
                       aria-label={`${copy.imageCrop.title}: ${label} ${index + 1}`}
@@ -244,7 +250,7 @@ export function FormImagePicker({
                       className="absolute bottom-1 start-1 flex size-6 items-center justify-center rounded-md bg-slate-950/70 text-white hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
                       <Crop className="size-3.5" />
-                    </button>
+                    </button></Tooltip>
                   )}
                 </div>
               );
@@ -252,7 +258,7 @@ export function FormImagePicker({
           </div>
           {sideActions && images.length > 0 && (
             <div className="space-y-1">
-              <button
+              <Tooltip content={`${copy.imageCrop.title}: ${label} 1`}><button
                 type="button"
                 disabled={busy || !isFormImage(images[0])}
                 aria-label={`${copy.imageCrop.title}: ${label} 1`}
@@ -261,7 +267,7 @@ export function FormImagePicker({
               >
                 <Crop className="size-3.5" />
                 {copy.imageCrop.title}
-              </button>
+              </button></Tooltip>
               <button
                 type="button"
                 disabled={busy}

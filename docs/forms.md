@@ -241,3 +241,16 @@ Editor previews retain their own constrained drawer scrolling.
 Product amounts always use English (en-US) formatting, Latin digits, an isolated
 standard numeric font and an unambiguous ISO currency code in all languages.
 Calculations, stored amounts and CSV values remain unchanged.
+
+## Toasts and tooltips
+
+Forms reuse the global Sonner AppToaster and shared Tooltip / icon-action controls,
+matching Linktree on both dashboards. Localized English, Kurdish and Arabic toasts
+confirm persisted creation/saving, activation/pause, archive/restore, deletion,
+manual refresh, CSV export, response-data clearing, copy and accepted public
+submissions. Request/upload errors also keep their existing inline explanations.
+Image selection and cropping explicitly say Save is still needed. Editor-only
+preview completion never emits a submission-success toast, and aborted requests
+and cancelled exports never emit failure/success notifications. Icon-only media
+and export-cancel controls now reuse the tooltip, alongside existing toolbar,
+collection, analytics, preview-navigation and crop controls.

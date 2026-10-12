@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { FormAnalytics, FormSubmissionFilters } from "@linktree/types";
+import { toast } from "sonner";
+import { Tooltip } from "@/components/shared/Tooltip";
 import { X } from "lucide-react";
 import { ManagementDrawer } from "@/components/shared/ManagementDrawer";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
@@ -72,7 +74,7 @@ export function FormInsightsModal({
           if (!controller.signal.aborted) setData(result);
         })
         .catch(() => {
-          if (!controller.signal.aborted) setResponseFailed(true);
+          if (!controller.signal.aborted) { setResponseFailed(true); toast.error(copy.responsesError); }
         })
         .finally(() => {
           if (!controller.signal.aborted) setResponseLoading(false);
@@ -84,7 +86,7 @@ export function FormInsightsModal({
       if (timeout !== undefined) window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [scope, form.id, page, responseRevision, filters]);
+  }, [scope, form.id, page, responseRevision, filters, copy]);
   useEffect(() => {
     const controller = new AbortController();
     formsApi
@@ -93,13 +95,20 @@ export function FormInsightsModal({
         if (!controller.signal.aborted) setMetrics(result);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setStatsFailed(true);
+        if (!controller.signal.aborted) { setStatsFailed(true); toast.error(copy.analyticsError); }
       })
       .finally(() => {
         if (!controller.signal.aborted) setStatsLoading(false);
       });
     return () => controller.abort();
-  }, [scope, form.id, statsRevision]);
+  }, [scope, form.id, statsRevision, copy]);
+  const refreshRequested = useRef(false);
+  useEffect(() => {
+    if (refreshRequested.current && !responseLoading && !statsLoading) {
+      refreshRequested.current = false;
+      if (!responseFailed && !statsFailed) toast.success(copy.notifications.refreshed);
+    }
+  }, [responseLoading, statsLoading, responseFailed, statsFailed, copy]);
   const retryResponses = () => {
     setResponseFailed(false);
     setResponseLoading(true);
@@ -126,8 +135,9 @@ export function FormInsightsModal({
         controller.signal,
         (count, total) => setExportProgress({ count, total }),
       );
+      if (!controller.signal.aborted) toast.success(copy.notifications.exported);
     } catch {
-      if (!controller.signal.aborted) setExportFailed(true);
+      if (!controller.signal.aborted) { setExportFailed(true); toast.error(copy.exportError); }
     } finally {
       if (exportController.current === controller) {
         exportController.current = null;
@@ -142,6 +152,7 @@ export function FormInsightsModal({
     setDeleteFailed(false);
     try {
       await formsApi.deleteSubmissions(scope, form.id);
+      toast.success(copy.notifications.cleared);
       setData({ items: [], total: 0 });
       setMetrics(undefined);
       setPage(0);
@@ -152,6 +163,7 @@ export function FormInsightsModal({
       onResponsesDeleted?.();
     } catch (error) {
       setDeleteFailed(true);
+      toast.error(copy.deleteResponsesError);
       throw error;
     } finally {
       deleteLock.current = false;
@@ -193,6 +205,7 @@ export function FormInsightsModal({
             }
             canDelete={canDeleteResponses}
             onRefresh={() => {
+              refreshRequested.current = true;
               retryResponses();
               retryStats();
             }}
@@ -268,14 +281,16 @@ export function FormInsightsModal({
                   {copy.exporting} · {exportProgress.count.toLocaleString()} /{" "}
                   {exportProgress.total.toLocaleString()}
                 </span>
-                <button
-                  type="button"
-                  aria-label={copy.cancelExport}
-                  onClick={() => exportController.current?.abort()}
-                  className="rounded-lg p-1"
-                >
-                  <X className="size-4" />
-                </button>
+                <Tooltip content={copy.cancelExport}>
+                  <button
+                    type="button"
+                    aria-label={copy.cancelExport}
+                    onClick={() => exportController.current?.abort()}
+                    className="rounded-lg p-1"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </Tooltip>
               </div>
             )}
             {responseLoading ? (

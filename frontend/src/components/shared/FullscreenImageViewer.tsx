@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "./Tooltip";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
@@ -79,10 +80,10 @@ export function FullscreenImageViewer({
   const fit =
     natural.width && natural.height
       ? Math.min(
-          1,
-          Math.max(1, viewport.width - 32) / natural.width,
-          Math.max(1, viewport.height - 32) / natural.height,
-        )
+        1,
+        Math.max(1, viewport.width - 32) / natural.width,
+        Math.max(1, viewport.height - 32) / natural.height,
+      )
       : 1;
   const width = natural.width * fit * zoom;
   const height = natural.height * fit * zoom;
@@ -107,7 +108,7 @@ export function FullscreenImageViewer({
       }}
     >
       <div className={styles.toolbar}>
-        <button
+        <Tooltip content={labels.zoomOut}><button
           type="button"
           className={buttonClass}
           aria-label={labels.zoomOut}
@@ -115,8 +116,8 @@ export function FullscreenImageViewer({
           onClick={() => setZoom((value) => Math.max(1, value / 1.5))}
         >
           <ZoomOut aria-hidden />
-        </button>
-        <button
+        </button></Tooltip>
+        <Tooltip content={labels.zoomIn}><button
           type="button"
           className={buttonClass}
           aria-label={labels.zoomIn}
@@ -124,8 +125,8 @@ export function FullscreenImageViewer({
           onClick={() => setZoom((value) => Math.min(4, value * 1.5))}
         >
           <ZoomIn aria-hidden />
-        </button>
-        <button
+        </button></Tooltip>
+        <Tooltip content={labels.close}><button
           ref={closeRef}
           type="button"
           className={buttonClass}
@@ -133,7 +134,7 @@ export function FullscreenImageViewer({
           onClick={onClose}
         >
           <X aria-hidden />
-        </button>
+        </button></Tooltip>
       </div>
       <div
         ref={stageRef}
@@ -164,7 +165,7 @@ export function FullscreenImageViewer({
           if (!drag.current) return;
           if (
             Math.abs(event.clientX - drag.current.x) +
-              Math.abs(event.clientY - drag.current.y) >
+            Math.abs(event.clientY - drag.current.y) >
             4
           )
             dragged.current = true;
@@ -214,22 +215,22 @@ export function FullscreenImageViewer({
       </div>
       {images.length > 1 && (
         <>
-          <button
+          <Tooltip content={labels.previous}><button
             type="button"
             className={`${buttonClass} ${styles.previous}`}
             aria-label={labels.previous}
             onClick={() => move(-1)}
           >
             <ChevronLeft aria-hidden />
-          </button>
-          <button
+          </button></Tooltip>
+          <Tooltip content={labels.next}><button
             type="button"
             className={`${buttonClass} ${styles.next}`}
             aria-label={labels.next}
             onClick={() => move(1)}
           >
             <ChevronRight aria-hidden />
-          </button>
+          </button></Tooltip>
         </>
       )}
     </div>,

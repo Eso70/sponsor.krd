@@ -40,7 +40,7 @@ export function FormCardPreview({
     consent,
     setConsent,
   } = useFormPreviewResponses(form);
-  const submission = useFormSubmission(onSubmit);
+  const submission = useFormSubmission(onSubmit, copy);
   const questions = visibleFormQuestions(form, answers);
   const pages = formCardPages(questions);
   const allIds = ["welcome", ...pages.map((page) => page.id), "final"];

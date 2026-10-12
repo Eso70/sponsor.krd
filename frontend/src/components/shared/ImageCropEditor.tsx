@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FullscreenImageViewer } from "./FullscreenImageViewer";
 import { ImageCropCanvasSkeleton } from "./ImageCropEditorSkeleton";
@@ -61,6 +62,9 @@ export function ImageCropEditor({
   const [fill, setFill] = useState(false);
   const [previewSource, setPreviewSource] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  useEffect(() => {
+    if (error) toast.error(copy.error);
+  }, [error, copy.error]);
   const [busy, setBusy] = useState(false);
   const [size, setSize] = useState({ width: 640, height: 440 });
   const [selection, setSelection] = useState<{
