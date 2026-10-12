@@ -5,11 +5,12 @@ import { DashboardHeader } from "@/components/shared/DashboardHeader";
 import { DashboardSidebar } from "@/components/shared/DashboardSidebar";
 
 describe("shared dashboard chrome", () => {
-  it("renders active navigation and closes the mobile sidebar after navigation", () => {
+  it.each(["business", "platform"])("%s renders active navigation and closes the mobile sidebar after navigation", (scope) => {
     const navigate = vi.fn();
     const close = vi.fn();
 
     render(
+      <div className="dark" data-business-dashboard={scope === "business" || undefined} data-platform-admin-theme={scope === "platform" || undefined}>
       <DashboardSidebar
         brandName="Sponsor.krd"
         brandSubtitle="Dashboard"
@@ -26,12 +27,14 @@ describe("shared dashboard chrome", () => {
         collapsed={false}
         mobileOpen
         onCloseMobile={close}
-      />,
+      />
+      </div>,
     );
 
     const item = screen.getByRole("button", { name: "Dashboard" });
     expect(item).toHaveAttribute("aria-current", "page");
     expect(item).toHaveClass("theme-fill");
+    expect(item.closest("aside")).toHaveAttribute("data-dashboard-sidebar");
     fireEvent.click(item);
     expect(navigate).toHaveBeenCalledOnce();
     expect(close).toHaveBeenCalledOnce();

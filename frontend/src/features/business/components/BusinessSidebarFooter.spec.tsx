@@ -39,6 +39,7 @@ describe("BusinessSidebarFooter", () => {
     );
 
     expect(screen.getByText("Max")).toBeInTheDocument();
+    expect(screen.getByText("Max").parentElement).toHaveClass("md:hidden");
     expect(
       screen.queryByText("پلانەکەت بەرز بکەرەوە"),
     ).not.toBeInTheDocument();

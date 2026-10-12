@@ -975,3 +975,12 @@ their existing fills, and the menu retains its normal elevation shadow.
 ## Persisted forms
 
 Form and Card public flows reuse the editor preview fields, buttons, calling-code selector and privacy/footer components. Public navigation follows validation; successful submissions alone reveal the final page. Shared business/platform management shows explicit loading/error states and locks pending saves. See [Forms](forms.md).
+
+## Sidebar active states and collapsed plans
+
+The shared Business/Platform DashboardSidebar marks active navigation with
+aria-current="page". Broad dark list-hover overrides exclude that active state;
+its accent background and readable theme ink remain unchanged on hover.
+Collapsed desktop plan controls remove their label flex boxes with md:hidden,
+so the remaining crown icon is centered. Mobile and expanded sidebar labels
+remain visible; upgrade and support behavior is unchanged.

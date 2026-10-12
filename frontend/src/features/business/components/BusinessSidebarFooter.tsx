@@ -49,7 +49,7 @@ export function BusinessSidebarFooter({
               <Crown className="h-4 w-4" aria-hidden="true" />
             </span>
             <div
-              className={`min-w-0 flex-1 transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
+              className={`min-w-0 flex-1 transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
             >
               <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
                 {t("currentPlan")}
@@ -70,7 +70,7 @@ export function BusinessSidebarFooter({
             >
               <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span
-                className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
+                className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
               >
                 {t("upgrade")}
               </span>
@@ -87,7 +87,7 @@ export function BusinessSidebarFooter({
         >
           <LifeBuoy className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span
-            className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:pointer-events-none md:w-0 md:overflow-hidden md:opacity-0" : "opacity-100"}`}
+            className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
           >
             {t("support")}
           </span>

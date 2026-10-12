@@ -2129,8 +2129,8 @@ img {
   transition: all 0.3s ease !important;
 }
 
-.dark [data-business-dashboard] .overflow-y-auto button.w-full:hover,
-.dark [role="dialog"] .overflow-y-auto button.w-full:hover {
+.dark [data-business-dashboard] .overflow-y-auto button.w-full:not([aria-current="page"]):hover,
+.dark [role="dialog"] .overflow-y-auto button.w-full:not([aria-current="page"]):hover {
   background: var(--color-bg-secondary) !important;
   color: #f3f4f6 !important;
 }
@@ -2500,4 +2500,10 @@ section[data-reorder-target="true"] > div:first-child {
     outline: none !important;
     box-shadow: none !important;
   }
+}
+
+/* Active navigation retains the accent's readable ink on both dashboard surfaces. */
+.dark [data-dashboard-sidebar] button[aria-current="page"],
+.dark [data-dashboard-sidebar] button[aria-current="page"]:hover {
+  color: var(--theme-ink, #fff) !important;
 }

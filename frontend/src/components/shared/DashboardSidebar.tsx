@@ -55,6 +55,7 @@ export function DashboardSidebar({
       ) : null}
 
       <aside
+        data-dashboard-sidebar
         className={`fixed bottom-0 left-0 top-0 z-50 flex flex-col overflow-hidden border-r border-slate-200 bg-white transition-[transform,width] duration-300 ease-out will-change-transform dark:border-white/10 dark:bg-[#161B22] md:sticky md:top-0 md:h-screen md:translate-x-0 md:will-change-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "w-64 md:w-20" : "w-64 md:w-72"}`}
