@@ -1,0 +1,18 @@
+.highlight {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(
+    --navigation-active-fill,
+    var(--theme-css, var(--theme-primary, #64748b))
+  );
+  box-shadow: 0 2px 5px
+    color-mix(in srgb, var(--theme-primary, #64748b) 12%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .highlight {
+    box-shadow: none;
+  }
+}

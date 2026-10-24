@@ -8,6 +8,7 @@ import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { sidebarSelectionColor } from "./dashboard-sidebar-theme";
 import styles from "./dashboard-sidebar.module.css";
 import chrome from "./dashboard-chrome.module.css";
+import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
 import { DashboardSidebarAction } from "./DashboardSidebarAction";
 import { Tooltip } from "@/components/shared/Tooltip";
 
@@ -136,6 +137,7 @@ export function DashboardSidebar({
         <nav
           className={`${styles.navigation} flex flex-1 flex-col gap-1.5 p-3`}
         >
+          <SegmentedTabsFrame vertical fullWidth plain>
           {items
             .filter((item) => !item.hidden)
             .map((item) => (
@@ -153,6 +155,7 @@ export function DashboardSidebar({
                 }}
               />
             ))}
+          </SegmentedTabsFrame>
         </nav>
 
         <div

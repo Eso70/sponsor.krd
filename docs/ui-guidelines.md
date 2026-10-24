@@ -210,14 +210,15 @@ aware opening transitions.
 
 Enabled buttons, links, expandable section headers, switches and upload controls
 share a white hand cursor with a tenant-colored outline, matching the normal
-arrow. Validated SVG data URLs and static public/cursors fallbacks are supplied
+arrow and the text-selection I-beam. Validated SVG data URLs and static public/cursors fallbacks are supplied
 through createCursorVariables by server host branding and live Business/Platform
 theme providers. Public pages, authentication and dashboards use the owner color.
-Text inputs, disabled/busy controls, crop resize handles and reorder controls
-retain their native interaction cursors. Root CursorGlow adds one decorative,
+Text inputs, textareas, editable text and cursor-text controls use the branded
+I-beam with a centered hotspot. Disabled/busy controls, crop resize handles and
+reorder controls retain their native interaction cursors. Root CursorGlow adds one decorative,
 soft radial halo with a short, frame-rate-independent trailing movement. It never
 replaces or delays the actual cursor, intercepts clicks, or stores pointer data.
-It stops rendering frames when settled and hides during dragging, editing,
+It stops rendering frames when settled and hides during pressing/dragging,
 window exit and reduced-motion/touch interaction. Its listeners and frames are
 cleaned up on unmount. Keep this shared implementation across all surfaces.
 During drag only, the shared ReorderHandle
@@ -1067,7 +1068,7 @@ theme back into a flat cyan fill.
   create page-specific shimmer colors or animations.
 - Platform dialogs use the shared `ManagementModal` Sponsor.krd mode. Tenant
   editors pass an explicit accent and continue to use the tenant theme.
-- All surfaces share the branded normal arrow and pointer hand; specialized interaction cursors stay native.
+- All surfaces share the branded normal arrow, pointer hand and text I-beam; resize, drag and status cursors stay native.
   Drag controls use grab before pressing
   and grabbing while held; the shared reorder handle keeps grabbing active until
   drop, cancellation, or unmount. CursorGlow is decorative only; the native cursor image remains immediate.
@@ -1470,3 +1471,13 @@ Analytics share-link deletion uses ConfirmDeleteModal above the sharing drawer.
 Only confirming calls the existing owner-scoped DELETE endpoint; cancellation
 preserves access, and failed deletion leaves the confirmation available for retry.
 Successful deletion removes the link and any revealed code from local state.
+
+Segmented navigation and sidebar page links share NavigationSelectionGroup and
+NavigationSelectionHighlight. Each group has its own motion layout scope; the
+active tenant-colored surface glides directly to its destination over 360 ms,
+passing intervening items without selecting or loading them. Reduced-motion
+preferences use an immediate selection. Rounded, borderless tab panels fill their available width by default, with
+equal-width buttons and white active text/icons. Compact toolbar choices retain
+their fitted group width and scale down on mobile. Keyboard Home/End and direction-aware arrow navigation remain intact.
+Sidebar page navigation uses the unframed vertical variant and moving selection
+in both dashboards, with a matching loading layout; it has no surrounding background. Footer actions remain separate.

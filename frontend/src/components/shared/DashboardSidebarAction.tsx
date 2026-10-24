@@ -1,5 +1,6 @@
 "use client";
 
+import { NavigationSelectionHighlight } from "./NavigationSelection";
 import type { ReactNode } from "react";
 import { Tooltip } from "./Tooltip";
 import styles from "./dashboard-sidebar.module.css";
@@ -64,6 +65,7 @@ export function DashboardSidebarAction({
           aria-label={label}
           className={className}
         >
+          {active && <NavigationSelectionHighlight />}
           {content}
         </button>
       )}

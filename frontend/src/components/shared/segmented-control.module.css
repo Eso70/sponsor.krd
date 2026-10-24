@@ -1,7 +1,9 @@
 .frame {
-  --shared-control-radius: var(--ui-radius-control, 18px);
+  --shared-control-radius: calc(var(--ui-radius-control, 18px) + 2px);
   --segment-height: 44px;
   min-width: 0;
+  width: fit-content;
+  max-width: 100%;
   padding: 4px;
   overflow-x: auto;
 }
@@ -15,19 +17,21 @@
   min-width: max-content;
 }
 .item {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
   gap: 8px;
   min-width: 0;
   height: var(--segment-height, 44px);
   border: 0;
-  border-radius: var(--ui-radius-compact, 14px);
+  border-radius: var(--ui-radius-control, 18px);
   padding-inline: 14px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   color: var(--shared-control-text, #64748b);
@@ -51,10 +55,10 @@
 }
 @media (max-width: 639px) {
   .frame {
-    --shared-control-radius: 16px;
+    --shared-control-radius: 18px;
   }
   .item {
-    border-radius: 12px;
+    border-radius: 16px;
     padding-inline: 10px;
   }
   .compact .item {
@@ -65,4 +69,35 @@
   .item {
     transition: none;
   }
+}
+
+.item[aria-pressed="true"],
+.item[aria-selected="true"] {
+  color: #ffffff !important;
+}
+.compact .item,
+.list[data-stretch="true"] > .item {
+  flex: 1 1 0;
+}
+.vertical {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+.vertical > * {
+  width: 100%;
+}
+
+.frame[data-full-width="true"] {
+  width: 100%;
+}
+
+.item[aria-pressed="true"] svg,
+.item[aria-selected="true"] svg {
+  color: inherit;
+}
+.plain:global(.shared-control) {
+  --shared-control-surface: transparent;
+  border: 0 !important;
+  padding: 0;
 }

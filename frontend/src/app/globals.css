@@ -2275,10 +2275,11 @@ img {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Shared branded arrow and hand; text, resize and status cursors stay native. */
+/* Shared branded arrow, hand and text cursor; resize and status cursors stay native. */
 html {
   --app-default-cursor: url("/cursors/default.svg") 4 3, default;
   --app-pointer-cursor: url("/cursors/pointer.svg") 10 3, pointer;
+  --app-text-cursor: url("/cursors/text.svg") 12 13, text;
   cursor: var(--app-default-cursor);
 }
 [data-theme-scope],
@@ -2296,9 +2297,12 @@ html {
   input[type="number"],
   textarea,
   [contenteditable="true"],
+  [contenteditable=""],
+  [contenteditable="plaintext-only"],
   [role="textbox"]
-) {
-  cursor: text;
+),
+.cursor-text {
+  cursor: var(--app-text-cursor, text);
 }
 
 /* Branded hand feedback for enabled interactive controls. */

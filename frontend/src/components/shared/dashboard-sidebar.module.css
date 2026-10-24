@@ -13,6 +13,7 @@
 
 .navigation {
   min-height: max-content;
+  --navigation-active-fill: var(--sidebar-primary);
 }
 .footer {
   padding-bottom: max(12px, env(safe-area-inset-bottom));
@@ -20,6 +21,9 @@
 
 .action {
   composes: control from "./dashboard-chrome.module.css";
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--ui-radius-control, 18px);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -128,4 +132,11 @@
   .backdrop {
     transition: none;
   }
+}
+
+/* The shared moving highlight owns selected navigation backgrounds. */
+.action[aria-current="page"]:has([data-navigation-highlight]),
+.action[aria-current="page"]:has([data-navigation-highlight]):hover:not(:disabled) {
+  background: transparent !important;
+  box-shadow: none;
 }

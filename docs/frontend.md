@@ -1904,7 +1904,10 @@ deletion, collections/statistics refresh and only failed IDs remain selected.
 Deleting the final Form on a server-paginated page clamps to an available page.
 
 Linktree drawers in both dashboards expose the shared Link slug field independently
-of the headline. New pages may leave it blank for server-generated addresses;
+of the headline, below Description. Its compact presentation shows only the URL
+path for a filled slug, with availability errors or progress when relevant. The
+automatic-link hint appears only while a new slug is blank. New pages may leave
+it blank for server-generated addresses;
 existing pages retain their saved slug until explicitly edited. Debounced,
 abortable availability checks use the authenticated owner's endpoint and exclude
 the current page. Invalid, taken, pending or failed checks block explicit URL

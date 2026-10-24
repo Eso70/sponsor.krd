@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+import { NavigationSelectionHighlight } from "./NavigationSelection";
 import { Tooltip } from "./Tooltip";
 import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
 import styles from "./segmented-control.module.css";
@@ -18,26 +20,34 @@ export function SegmentedControl<T extends string>({
   accentMode?: "tenant" | "platform";
   className?: string;
 }) {
-  const active =
-    accentMode === "platform"
-      ? "sa-gradient sa-ink"
-      : "theme-fill text-[var(--theme-ink)]";
   return (
-    <SegmentedTabsFrame compact className={className}>
+    <SegmentedTabsFrame
+      compact
+      className={className}
+      style={
+        accentMode === "platform"
+          ? ({
+              "--navigation-active-fill":
+                "var(--sponsor-krd-accent-gradient, var(--sponsor-krd-accent))",
+            } as CSSProperties)
+          : undefined
+      }
+    >
       {options.map((option) => (
         <Tooltip
           key={option.value}
           content={option.tooltip ?? option.label}
           side="bottom"
-          className="min-w-0 flex-1"
+          className="min-w-0"
         >
           <button
             type="button"
             aria-label={option.label}
             aria-pressed={value === option.value}
             onClick={() => onChange(option.value)}
-            className={`${styles.item} ${value === option.value ? active : ""}`}
+            className={styles.item}
           >
+            {value === option.value && <NavigationSelectionHighlight />}
             {option.label}
           </button>
         </Tooltip>

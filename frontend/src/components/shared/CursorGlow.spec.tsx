@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createTextCursor } from "@/lib/utils/default-cursor";
 import { CursorGlow } from "./CursorGlow";
 
 afterEach(() => { vi.restoreAllMocks(); document.body.style.removeProperty("cursor"); });
@@ -73,4 +74,15 @@ describe("shared decorative cursor movement", () => {
     expect(view.frames.size).toBe(0);
     view.unmount();
   });
+  it("shares the halo with branded text selection and hides while selecting", () => {
+    const view = setup();
+    document.body.style.cursor = createTextCursor("#8754df");
+    view.move(10);
+    expect(view.glow.style.opacity).toBe("1");
+    fireEvent.pointerDown(window);
+    expect(view.glow.style.opacity).toBe("0");
+    expect(view.frames.size).toBe(0);
+    view.unmount();
+  });
+
 });

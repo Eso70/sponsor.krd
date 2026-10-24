@@ -1,3 +1,4 @@
+import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
 import styles from "./dashboard-sidebar.module.css";
 import chrome from "./dashboard-chrome.module.css";
 import { sidebarPlanButtonClassName } from "./dashboard-sidebar-styles";
@@ -40,6 +41,7 @@ export function DashboardSidebarSkeleton({
         data-sidebar-skeleton="navigation"
         className={`${styles.navigation} flex flex-1 flex-col gap-1.5 p-3`}
       >
+        <SegmentedTabsFrame vertical fullWidth plain>
         {Array.from({ length: count }).map((_, index) => (
           <div
             key={index}
@@ -55,6 +57,7 @@ export function DashboardSidebarSkeleton({
             )}
           </div>
         ))}
+        </SegmentedTabsFrame>
       </div>
       <div
         className={`${styles.footer} shrink-0 border-t border-slate-200 p-3 dark:border-white/10`}

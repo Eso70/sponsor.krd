@@ -43,11 +43,13 @@ export function DuplicateSlugField({
   optional = false,
   help,
   maxLength = 50,
+  compact = false,
 }: {
   check: PageSlugCheck;
   optional?: boolean;
   help?: string;
   maxLength?: number;
+  compact?: boolean;
   locale: BusinessLocale;
   pageType: "form" | "linktree";
   onChange?: () => void;
@@ -87,18 +89,22 @@ export function DuplicateSlugField({
         autoCorrect="off"
         spellCheck={false}
       />
-      <p
-        role="status"
-        className="mt-2 text-xs text-slate-500 dark:text-slate-400"
-      >
-        {check.status === "checking"
-          ? text.checking
-          : check.status === "available"
-            ? labels.slugAvailable
-            : check.status === "error"
-              ? text.failed
-              : ""}
-      </p>
+      {(check.status === "checking" ||
+        check.status === "error" ||
+        (!compact && check.status === "available")) && (
+        <p
+          role="status"
+          className="mt-2 text-xs text-slate-500 dark:text-slate-400"
+        >
+          {check.status === "checking"
+            ? text.checking
+            : check.status === "available"
+              ? labels.slugAvailable
+              : check.status === "error"
+                ? text.failed
+                : ""}
+        </p>
+      )}
       {check.status === "error" && (
         <button
           type="button"
@@ -115,7 +121,7 @@ export function DuplicateSlugField({
       )}
       {check.slug && (
         <p className="mt-2 break-all text-xs text-slate-500 dark:text-slate-400">
-          {labels.publicLink}{" "}
+          {!compact && <>{labels.publicLink} </>}
           <bdi dir="ltr">
             /{pageType}/{check.slug}
           </bdi>

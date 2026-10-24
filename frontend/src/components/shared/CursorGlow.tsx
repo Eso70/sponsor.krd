@@ -47,7 +47,7 @@ export function CursorGlow() {
       }
       const target = event.target;
       const cursor = target instanceof Element ? getComputedStyle(target).cursor : "";
-      // Leave editing, resizing, disabled and drag feedback undisturbed.
+      // Leave native resizing, disabled and drag feedback undisturbed.
       if (cursor !== "default" && cursor !== "auto" && cursor !== "pointer" && !cursor.includes("/cursors/") && !cursor.includes("data:image/svg+xml")) {
         hide();
         return;

@@ -2097,12 +2097,13 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 >
                   <BasicInfoStep
                     slugField={<DuplicateSlugField
+                      compact
                       check={{ ...slugCheck, slug, setSlug: (value) => setSlug(value.toLowerCase()) }}
                       locale={locale}
                       pageType="linktree"
                       optional={!editData}
                       maxLength={255}
-                      help={editData && slug !== (editData.linktree.seo_name ?? "") ? slugCopy.warning : !editData ? slugCopy.automatic : undefined}
+                      help={editData && slug !== (editData.linktree.seo_name ?? "") ? slugCopy.warning : !editData && !slug ? slugCopy.automatic : undefined}
                     />}
                     categoryFields={
                       advancedSeoAllowed ? (
