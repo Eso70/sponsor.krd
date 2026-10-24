@@ -1,4 +1,6 @@
 "use client";
+
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
 import { useFormValidation } from "./FormValidationContext";
 import { useState } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
@@ -45,7 +47,7 @@ export function FormFinalActionEditor({
     <section
       data-reorder-id={action.id}
       data-reorder-group={group}
-      className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.03]"
+      className={`${SHARED_NESTED_CARD_CLASS} overflow-hidden`}
     >
       <div className="flex items-center gap-2 px-3 py-2">
         <ReorderHandle

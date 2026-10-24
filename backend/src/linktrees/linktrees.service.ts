@@ -602,9 +602,8 @@ export class LinktreesService {
     if (attempts >= 10)
       throw new ConflictException('Failed to generate unique UID');
 
-    // Canonical clients never supply a route; legacy explicit routes remain compatible.
-    let seoName =
-      input.headline !== undefined ? '' : data.seo_name || data.slug || '';
+    // Explicit routes are optional; otherwise the server generates a unique URL.
+    let seoName = data.seo_name || data.slug || '';
     if (seoName) {
       const slugCheck = await this.databaseService.query(
         'SELECT 1 FROM linktrees WHERE business_id = $1 AND seo_name = $2',
@@ -1399,8 +1398,7 @@ export class LinktreesService {
     const data = normalizeLinktreeContent(input);
     const isPlatform = scope === 'platform';
     const current = await this.getLinktreeById(id, businessId);
-    const nextSeoName =
-      input.headline !== undefined ? undefined : data.seo_name || data.slug;
+    const nextSeoName = data.seo_name || data.slug;
 
     if (nextSeoName && nextSeoName !== current.seo_name) {
       const slugCheck = await this.databaseService.query<{

@@ -16,7 +16,7 @@
   max-height: calc(100dvh - 32px);
   overflow: hidden;
   border: 1px solid #edf0f4;
-  border-radius: 24px;
+  border-radius: var(--ui-radius-card, 24px);
   background: #fff;
   color: #334155;
   box-shadow: 0 24px 80px rgb(15 23 42 / 16%);
@@ -29,7 +29,7 @@
   flex-shrink: 0;
   min-height: 36px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--ui-radius-control, 18px);
   background: #f4f6f8;
   color: #64748b;
   cursor: pointer;
@@ -42,7 +42,7 @@
 .primary:hover { background: color-mix(in srgb, var(--theme-primary, var(--sponsor-krd-accent)) 90%, black); color: #fff; }
 .danger { background: rgb(239 68 68 / 7%); color: #b91c1c; }
 .danger:hover { background: rgb(239 68 68 / 12%); color: #991b1b; }
-.searchField { display: flex; flex: 1; align-items: center; min-width: 0; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #f4f6f8; }
+.searchField { display: flex; flex: 1; align-items: center; min-width: 0; gap: 10px; padding: 10px 12px; border-radius: var(--ui-radius-control, 18px); background: #f4f6f8; }
 .searchField input { width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 0; outline: none; box-shadow: none; background: transparent; color: inherit; }
 .searchField input:focus { outline: none; box-shadow: none; }
 .searchField input::placeholder { color: #94a3b8; }

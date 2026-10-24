@@ -1,5 +1,6 @@
 "use client";
 
+import { SHARED_ACTION_CLASS } from "./shared-control-styles";
 import type { LucideIcon } from "lucide-react";
 import { Tooltip } from "./Tooltip";
 
@@ -15,7 +16,7 @@ const tones = {
   red: "bg-red-500/[0.05] text-red-700 hover:bg-red-500/[0.09] dark:bg-red-400/[0.07] dark:text-red-300 dark:hover:bg-red-400/[0.12]",
 };
 
-const actionStyle = "flex h-8 cursor-pointer items-center justify-center rounded-[14px] border-0 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none sm:h-9 sm:rounded-2xl";
+const actionStyle = `${SHARED_ACTION_CLASS} flex h-8 cursor-pointer items-center justify-center rounded-[14px] border-0 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none sm:h-9`;
 
 /** Flexible card actions share the page grid's sizing without fixed-width overflow. */
 export function GridCardActionButton({

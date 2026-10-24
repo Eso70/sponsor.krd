@@ -144,6 +144,7 @@ const LinktreeCard = memo(function LinktreeCard({
       className="text-center"
       media={
         <PageListCardMedia
+          selection={<PageSelectionCheckbox id={item.id} name={item.name} />}
           action={
             <PagePinButton
               iconOnly
@@ -154,12 +155,13 @@ const LinktreeCard = memo(function LinktreeCard({
           }
         >
           <LinktreeListBanner config={item.template_config} />
-          <div className="absolute left-3 top-3 z-10"><PageSelectionCheckbox id={item.id} name={item.name} /></div>
         </PageListCardMedia>
       }
     >
       <PageListCardHeader
         name={item.name}
+        verified={item.template_config?.verification_badge === true}
+        verificationLabel={labels.verificationBadge}
         logo={pageListLogo(item.image, item.business_default_avatar)}
         subtitle={item.subtitle}
         badges={

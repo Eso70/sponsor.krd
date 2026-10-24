@@ -1,5 +1,7 @@
 "use client";
 
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
+
 import { Skeleton } from "@/components/shared/Skeleton";
 
 export function SkeletonNotificationList({ rows = 4, loadingLabel = "Loading notifications" }: { rows?: number; loadingLabel?: string }) {
@@ -36,7 +38,7 @@ export function SkeletonSessionList({ rows = 3, loadingLabel = "Loading sessions
       {Array.from({ length: rows }).map((_, index) => (
         <div
           key={index}
-          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-[#161B22]"
+          className={`${SHARED_NESTED_CARD_CLASS} flex items-center gap-3 p-3`}
         >
           <Skeleton className="size-5 shrink-0" rounded="rounded-md" />
           <div className="min-w-0 flex-1">

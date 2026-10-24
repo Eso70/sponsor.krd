@@ -1,7 +1,7 @@
 import { Save, type LucideIcon } from "lucide-react";
 import { Tooltip } from "./Tooltip";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
-import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
+import { SHARED_SOFT_BUTTON_CLASS, SHARED_ACTION_CLASS } from "./shared-control-styles";
 import styles from "./page-management.module.css";
 
 export function SettingsActionButton({
@@ -35,7 +35,7 @@ export function SettingsActionButton({
         disabled={disabled || busy}
         aria-label={label}
         aria-busy={busy || undefined}
-        className={`${styles.create} ${iconOnly ? styles.iconAction : ""} ${variant === "soft" ? SHARED_SOFT_BUTTON_CLASS : accentMode === "platform" ? "sa-gradient sa-ink" : "theme-fill text-[var(--theme-ink)]"} border-0 transition-colors motion-reduce:transition-none`}
+        className={`${SHARED_ACTION_CLASS} ${styles.create} ${iconOnly ? styles.iconAction : ""} ${variant === "soft" ? SHARED_SOFT_BUTTON_CLASS : accentMode === "platform" ? "sa-gradient sa-ink" : "theme-fill text-[var(--theme-ink)]"} border-0 transition-colors motion-reduce:transition-none`}
       >
         <MotionSpinner active={busy}>
           <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />

@@ -1,7 +1,7 @@
 /* Navigation and header controls share one quiet, borderless treatment. */
 .control {
   border: 0;
-  border-radius: 15px;
+  border-radius: var(--ui-radius-control, 18px);
   background: transparent;
   color: #526174;
   cursor: pointer;

@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { CalendarClock, Ban, Trash2, Plus } from "lucide-react";
 import { AnalyticsShareActionButton } from "./AnalyticsShareActionButton";
 import {
@@ -51,6 +52,7 @@ export function AnalyticsShareDrawer({
   const [links, setLinks] = useState<AnalyticsShareLink[]>([]);
   const [expiry, setExpiry] = useState("never");
   const [date, setDate] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AnalyticsShareLink | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editExpiry, setEditExpiry] = useState("never");
   const [editDate, setEditDate] = useState("");
@@ -77,15 +79,17 @@ export function AnalyticsShareDrawer({
     return () => abort.abort();
   }, [apiBase]);
   async function run(operation: () => Promise<void>) {
-    if (lock.current) return;
+    if (lock.current) return false;
     lock.current = true;
     setBusy(true);
     setFailed(false);
     try {
       await operation();
+      return true;
     } catch {
       setFailed(true);
       toast.error(copy.failed);
+      return false;
     } finally {
       lock.current = false;
       setBusy(false);
@@ -97,6 +101,7 @@ export function AnalyticsShareDrawer({
   }
   const button = `${SHARED_SOFT_BUTTON_CLASS} min-h-9 rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-50`;
   return (
+    <>
     <ManagementDrawer
       isOpen
       onClose={onClose}
@@ -372,22 +377,7 @@ export function AnalyticsShareDrawer({
                         label={copy.remove}
                         tone="danger"
                         disabled={busy}
-                        onClick={() =>
-                          void run(async () => {
-                            await apiRequest(`${apiBase}/${link.id}`, {
-                              method: "DELETE",
-                            });
-                            setLinks((items) =>
-                              items.filter((item) => item.id !== link.id),
-                            );
-                            setCodes((items) => {
-                              const next = { ...items };
-                              delete next[link.id];
-                              return next;
-                            });
-                            toast.success(copy.revoked);
-                          })
-                        }
+                        onClick={() => setDeleteTarget(link)}
                       />
                     </>
                   }
@@ -450,5 +440,31 @@ export function AnalyticsShareDrawer({
         )}
       </div>
     </ManagementDrawer>
+    <ConfirmDeleteModal
+      isOpen={deleteTarget !== null}
+      title={copy.deleteTitle}
+      message={copy.deleteMessage}
+      confirmLabel={copy.remove}
+      cancelLabel={copy.cancel}
+      closeLabel={copy.close}
+      loadingLabel={copy.deleting}
+      isDeleting={busy}
+      zIndexClassName="z-[160]"
+      onClose={() => { if (!lock.current) setDeleteTarget(null); }}
+      onConfirm={async () => {
+        if (!deleteTarget || !links.some((link) => link.id === deleteTarget.id)) return;
+        const id = deleteTarget.id;
+        const deleted = await run(async () => {
+          await apiRequest(`${apiBase}/${encodeURIComponent(id)}`, { method: "DELETE" });
+          setLinks((items) => items.filter((link) => link.id !== id));
+          setCodes((items) => { const next = { ...items }; delete next[id]; return next; });
+          setEditing((current) => current === id ? null : current);
+          setDeleteTarget(null);
+          toast.success(copy.revoked);
+        });
+        if (!deleted) throw new Error(copy.failed);
+      }}
+    />
+    </>
   );
 }

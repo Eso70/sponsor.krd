@@ -1,4 +1,8 @@
 "use client";
+
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
+
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 import { useEffect, useId, useRef, useState } from "react";
 import { FormEditorAddButton } from "./FormEditorAddButton";
 import { ChevronDown, FileSpreadsheet } from "lucide-react";
@@ -37,7 +41,7 @@ export function FormConditionalEditor({
     [],
   );
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.02]">
+    <div className={`${SHARED_NESTED_CARD_CLASS} space-y-3 p-4`}>
       <div className="flex items-start gap-3">
         <FileSpreadsheet
           aria-hidden
@@ -51,7 +55,7 @@ export function FormConditionalEditor({
         <a
           href="/forms/conditional-answers-template.csv"
           download
-          className="theme-soft inline-flex min-h-10 items-center rounded-lg px-3 py-2 text-[13px] font-bold hover:opacity-80"
+          className={`${SHARED_SOFT_BUTTON_CLASS} inline-flex min-h-10 items-center px-3 py-2 text-[13px] font-semibold`}
         >
           {labels.download}
         </a>
@@ -125,7 +129,7 @@ export function FormConditionalEditor({
       )}
       {question.conditional && (
         <div
-          className="space-y-2 rounded-lg border border-slate-200 p-3 text-[13px] dark:border-white/10"
+          className={`${SHARED_NESTED_CARD_CLASS} space-y-2 p-3 text-[13px]`}
           role="status"
         >
           <p>

@@ -1,4 +1,6 @@
 "use client";
+
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
 import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { ChevronDown, Trash2, GitBranch, Type, List } from "lucide-react";
 import { FormValidationNotice } from "./FormValidationNotice";
@@ -50,7 +52,7 @@ export function FormQuestionEditorRow({
       data-reorder-group={reorderGroup}
       open={expanded || validation.selected?.questionId === question.id}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
-      className="group overflow-hidden rounded-lg border border-slate-200/70 bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.03]"
+      className={`${SHARED_NESTED_CARD_CLASS} group overflow-hidden`}
     >
       <summary className="flex min-h-13 cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm">
         <ReorderHandle

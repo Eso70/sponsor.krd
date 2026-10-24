@@ -1,9 +1,12 @@
+import { PageListName } from "./PageListName";
 import type { ReactNode } from "react";
 import { MANAGEMENT_TABLE_CARD_CLASS } from "./ManagementTable";
 
 /** The same record details and actions, stacked for a narrow table viewport. */
-export function PageListMobileCard({ title, image, selection, badges, description, children, actions }: {
+export function PageListMobileCard({ title, verified, verificationLabel, image, selection, badges, description, children, actions }: {
   title: string;
+  verified?: boolean;
+  verificationLabel?: string;
   image?: ReactNode;
   selection?: ReactNode;
   badges?: ReactNode;
@@ -17,7 +20,7 @@ export function PageListMobileCard({ title, image, selection, badges, descriptio
         {selection}
         {image}
         <div className="min-w-0 flex-1 space-y-1.5">
-          <h3 className="text-sm font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere]" dir="auto">{title}</h3>
+          <h3 className="text-sm font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere]" dir="auto"><PageListName name={title} verified={verified} verificationLabel={verificationLabel} /></h3>
           {badges}
         </div>
       </div>

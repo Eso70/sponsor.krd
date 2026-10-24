@@ -1075,7 +1075,7 @@ describe("Linktree crop workspace", () => {
       fireEvent.click(screen.getByRole("option", { name: "Custom" }));
       fireEvent.click(
         within(
-          screen.getByRole("dialog", { name: "Custom background" }),
+          await screen.findByRole("dialog", { name: "Custom background" }),
         ).getByRole("button", { name: "Crop image" }),
       );
       await screen.findByRole("region", { name: "Crop image" });
@@ -1098,7 +1098,7 @@ describe("Linktree crop workspace", () => {
       fireEvent.click(screen.getByRole("option", { name: "Custom" }));
       fireEvent.click(
         within(
-          screen.getByRole("dialog", { name: "Custom background" }),
+          await screen.findByRole("dialog", { name: "Custom background" }),
         ).getByRole("button", { name: "Crop image" }),
       );
       await screen.findByRole("region", { name: "Crop image" });
@@ -1178,3 +1178,26 @@ it.each([false, true])(
     ).toBeInTheDocument();
   },
 );
+
+
+describe("manual Linktree addresses", () => {
+  it.each([false, true])("checks and saves an explicit slug without changing it on rename (platform=%s)", async (platformTheme) => {
+    preferenceRequest.mockResolvedValue(true);
+    const save = vi.fn();
+    render(<LinktreeEditorDrawer isOpen locale="en" copy={englishEditorCopy} platformTheme={platformTheme}
+      apiEndpoints={{ upload: '/api/upload', checkName: '/api/check-name', checkSlug: platformTheme ? '/api/platform/linktrees/check-slug' : '/api/linktrees/check-slug' }}
+      onClose={vi.fn()} onSubmit={save} editData={{ linktree: { id: 'page-id', headline: 'Original page', seo_name: 'original-page', uid: 'stable-uid', background_color: '#ffffff' }, links: [{ id: 'link-id', platform: 'instagram', url: 'https://instagram.com/business', display_order: 0 }] }} />);
+    const input = screen.getByRole('textbox', { name: 'Link slug' });
+    expect(input).toHaveValue('original-page');
+    fireEvent.change(input, { target: { value: 'New-Address' } });
+    expect(input).toHaveValue('new-address');
+    expect(screen.getByText(/Existing links and QR codes/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await waitFor(() => expect(preferenceRequest).toHaveBeenCalledWith(expect.stringContaining('slug=new-address&excludeId=page-id'), expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+    fireEvent.change(screen.getByRole('textbox', { name: 'Headline' }), { target: { value: 'Renamed page' } });
+    expect(input).toHaveValue('new-address');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ headline: 'Renamed page', slug: 'new-address' }), 'page-id'));
+  });
+});

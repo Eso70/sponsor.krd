@@ -1,5 +1,8 @@
 "use client";
 
+import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
+import { SHARED_NESTED_CARD_CLASS } from "./shared-surface-styles";
+import { MANAGEMENT_MODAL_SURFACE_CLASS, MANAGEMENT_MODAL_HEADER_CLASS, MANAGEMENT_MODAL_FOOTER_CLASS } from "./management-modal-styles";
 import { memo } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -66,13 +69,13 @@ export const DetailViewModal = memo(function DetailViewModal({
 
       <MotionReveal
         className={`
-          relative z-10 w-full overflow-hidden rounded-2xl bg-white dark:bg-[#1c222b] border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh]
+          ${MANAGEMENT_MODAL_SURFACE_CLASS}
           ${wide ? "max-w-2xl" : "max-w-lg"}
         `}
       >
         {/* Header */}
         <div 
-          className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 p-4 sm:p-5 md:p-6 bg-linear-to-r from-white to-slate-55/30 dark:from-[#1c222b] dark:to-slate-900/10" 
+          className={`${MANAGEMENT_MODAL_HEADER_CLASS} items-center`} 
           dir="ltr"
         >
           <div className="flex min-w-0 items-start gap-3">
@@ -96,7 +99,7 @@ export const DetailViewModal = memo(function DetailViewModal({
             <button 
               type="button" 
               onClick={onClose} 
-              className="flex items-center justify-center rounded-xl p-2 bg-linear-to-br from-slate-50 to-gray-50 dark:from-white/5 dark:to-white/10 hover:from-slate-100 hover:to-gray-100 dark:hover:from-white/10 dark:hover:to-white/25 text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-white transition-all duration-300 border border-slate-150 dark:border-white/10 shadow-sm hover:shadow cursor-pointer"
+              className={`${SHARED_SOFT_BUTTON_CLASS} flex size-9 items-center justify-center`}
             >
               <X className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
@@ -107,7 +110,7 @@ export const DetailViewModal = memo(function DetailViewModal({
         <div 
           className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 bg-linear-to-br from-white to-slate-50/20 dark:from-[#1c222b] dark:to-slate-900/5 custom-scrollbar"
         >
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.02] divide-y divide-slate-100 dark:divide-white/5">
+          <div className={`${SHARED_NESTED_CARD_CLASS} overflow-hidden divide-y divide-slate-100 dark:divide-white/5`}>
             {fields.map((field, idx) => (
               field.fullWidth ? (
                 <div 
@@ -141,7 +144,7 @@ export const DetailViewModal = memo(function DetailViewModal({
         {/* Footer */}
         {footer && (
           <div 
-            className="p-4 sm:p-5 md:p-6 border-t border-slate-100 dark:border-white/5 flex justify-end gap-3 bg-linear-to-r from-slate-50/30 to-white dark:from-slate-900/10 dark:to-[#1c222b]"
+            className={`${MANAGEMENT_MODAL_FOOTER_CLASS} flex justify-end gap-3`}
           >
             {footer}
           </div>

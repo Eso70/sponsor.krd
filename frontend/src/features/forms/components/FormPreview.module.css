@@ -15,7 +15,7 @@
   --shared-control-hover: color-mix(in srgb, var(--preview-text) 7%, var(--preview-surface));
   --shared-control-text: var(--preview-text);
   --shared-control-muted: var(--preview-muted);
-  --shared-control-radius: 16px;
+  --shared-control-radius: var(--ui-radius-control, 18px);
   --shared-control-error: #fff1f2;
   --shared-control-error-text: #b91c1c;
   background: var(--preview-surface);
@@ -297,7 +297,7 @@
 .publicSurface footer :is(button, a):global(.theme-fill),
 .publicSurface > [role="region"] > :global(.theme-fill) {
   min-height: 54px;
-  border-radius: 16px;
+  border-radius: var(--ui-radius-control, 18px);
   font-size: 16px;
   padding: 0.875rem 1.25rem;
 }

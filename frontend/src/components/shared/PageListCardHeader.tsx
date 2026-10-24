@@ -1,3 +1,4 @@
+import { PageListName } from "./PageListName";
 import type { ReactNode } from "react";
 import { PageListImage } from "./PageListImage";
 
@@ -7,11 +8,15 @@ export function PageListCardHeader({
   logo,
   subtitle,
   badges,
+  verified,
+  verificationLabel,
 }: {
   name: string;
   logo?: string | null;
   subtitle?: string | null;
   badges?: ReactNode;
+  verified?: boolean;
+  verificationLabel?: string;
 }) {
   return (
     <div
@@ -28,7 +33,7 @@ export function PageListCardHeader({
           dir="auto"
           title={name}
         >
-          {name}
+          <PageListName name={name} verified={verified} verificationLabel={verificationLabel} />
         </h3>
         {subtitle?.trim() && (
           <p className="mb-1.5 line-clamp-2 text-xs text-gray-600" dir="auto">

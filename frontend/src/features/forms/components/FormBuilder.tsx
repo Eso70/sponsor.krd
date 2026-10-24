@@ -106,8 +106,10 @@ export function FormBuilder({
           previousSlug={form.slug}
         />
       )}
-      <div role="tablist" aria-label={copy.editor}>
+      <div>
         <SegmentedTabs
+          label={copy.editor}
+          compact
           value={tab}
           onChange={(tab) => {
             validation.select(null);
@@ -118,7 +120,6 @@ export function FormBuilder({
             { id: "final", label: copy.final, icon: CheckCircle2 },
           ]}
           fullWidth
-          className="!rounded-xl !p-1 [&_button]:!h-10 [&_button]:!text-sm"
         />
       </div>
       <div

@@ -34,6 +34,7 @@ export interface EditLinkData {
 export interface LinktreeEditorSubmitData {
   is_default?: boolean;
   headline: string;
+  slug?: string;
   slogan?: string;
   slogan_color?: string;
   description?: string;

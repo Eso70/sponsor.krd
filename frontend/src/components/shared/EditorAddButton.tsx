@@ -1,5 +1,6 @@
 "use client";
 
+import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import { Plus } from "lucide-react";
 
 /**
@@ -18,7 +19,7 @@ export function EditorAddButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-xs font-black text-slate-500 transition hover:border-slate-400 hover:bg-slate-50 dark:border-white/15 dark:text-slate-400 dark:hover:bg-white/5"
+      className={`${SHARED_SOFT_BUTTON_CLASS} flex min-h-10 w-full items-center justify-center gap-2 px-3 py-3 text-xs font-semibold`}
     >
       <Plus className="h-4 w-4" />
       {label}

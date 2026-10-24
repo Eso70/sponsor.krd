@@ -1,6 +1,7 @@
 import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 /** Labels for the shared page list. Platform callers keep the Kurdish defaults. */
 export const KURDISH_LINKTREE_LIST_COPY = {
+  verificationBadge: "نیشانەی پشتڕاستکردنەوە",
   
   copied: "کۆپیکرا",
   copyLink: "کۆپیکردنی بەستەر",

@@ -1446,9 +1446,10 @@ Information uses full-width fields in this order: Logo, Headline, Promotion
 slogan and Description. Headline is also the page name; there is no separate
 internal Title. Slogan and link-button color controls anchor the shared color
 picker as a popup, matching the background picker without a modal backdrop.
-The create/edit and duplicate editors expose no slug field or
-client-side route generation. Canonical writes use headline, slogan, slogan_color
-and logo; backend-generated seo_name remains a read-only response field. Platform choices use two mobile/three desktop columns.
+The create/edit and duplicate editors reuse the Link slug field with owner-scoped
+availability checks. New pages can retain automatic backend URL allocation.
+Canonical writes use headline, slogan, slogan_color and logo, with optional
+seo_name for explicit address changes. Platform choices use two mobile/three desktop columns.
 Link destination errors reuse ModalTextInput.error and FieldInputError inside
 the field, preserving values, aria-describedby and aria-errormessage. Save/blur
 errors are revealed without an extra card banner; destination errors do not
@@ -1901,3 +1902,12 @@ analytics clearing. Platform and Business use the same workflow and translations
 Requests are deduplicated and limited to five in flight. After partial record
 deletion, collections/statistics refresh and only failed IDs remain selected.
 Deleting the final Form on a server-paginated page clamps to an available page.
+
+Linktree drawers in both dashboards expose the shared Link slug field independently
+of the headline. New pages may leave it blank for server-generated addresses;
+existing pages retain their saved slug until explicitly edited. Debounced,
+abortable availability checks use the authenticated owner's endpoint and exclude
+the current page. Invalid, taken, pending or failed checks block explicit URL
+changes. A localized warning explains that changing the slug invalidates links
+and QR codes using the previous address. Business and Platform payload adapters
+send the explicit value as `seo_name`, including approval-governed updates.

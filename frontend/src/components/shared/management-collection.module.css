@@ -3,7 +3,7 @@
   max-width: 100%;
   overflow: hidden;
   border: 1px solid #edf0f4;
-  border-radius: 18px;
+  border-radius: var(--ui-radius-card, 24px);
   background: #fff;
 }
 

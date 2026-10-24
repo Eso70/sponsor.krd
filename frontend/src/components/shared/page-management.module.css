@@ -1,10 +1,11 @@
 .section {
   min-width: 0;
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: var(--ui-radius-card, 24px);
   box-shadow: none;
   container: page-management / inline-size;
   --page-control-height: 40px;
+  --shared-control-radius: var(--ui-radius-control, 18px);
 }
 .heading {
   display: flex;
@@ -53,38 +54,6 @@
   height: var(--page-control-height, 40px);
   padding-inline: 12px;
 }
-.segmentGroup {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  height: var(--page-control-height, 40px);
-  padding: 4px;
-  gap: 4px;
-  border-radius: 14px;
-  background: #edf0f4;
-}
-.segment {
-  min-height: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: calc(var(--page-control-height, 40px) - 8px);
-  min-width: 0;
-  white-space: nowrap;
-  padding-inline: 12px;
-  border-radius: 10px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
-}
-.segment:hover {
-  background-color: #e2e8f0;
-  color: #334155;
-}
 .selectionActions {
   display: flex;
   flex-wrap: wrap;
@@ -107,7 +76,7 @@
   height: var(--page-control-height, 40px);
   flex-shrink: 0;
   padding-inline: 16px;
-  border-radius: 14px;
+  border-radius: var(--shared-control-radius, var(--ui-radius-control, 18px));
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -122,7 +91,7 @@
 .iconAction { width: var(--page-control-height, 40px); padding-inline: 0 !important; }
 .actions { --page-control-height: 40px; }
 .actions > :global([data-management-search]) { flex: 1 1 180px; }
-.segment:focus-visible, .create:focus-visible {
+.create:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
@@ -133,16 +102,6 @@
 :global(.dark) .toolbarArea {
   background: #191f27;
   border-color: rgb(255 255 255 / 6%);
-}
-:global(.dark) .segmentGroup {
-  background: rgb(255 255 255 / 5%);
-}
-:global(.dark) .segment {
-  color: #a8b1bf;
-}
-:global(.dark) .segment:hover {
-  background: rgb(255 255 255 / 7%);
-  color: #e2e8f0;
 }
 @media (max-width: 639px) {
   .heading {
@@ -155,12 +114,6 @@
     padding: 16px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .segment {
-    transition: none;
-  }
-}
-
 @container page-management (max-width: 900px) {
   .actions { --page-control-height: 38px; }
   .toolbar {
@@ -169,15 +122,13 @@
     grid-template-areas: "search create" "status view";
     gap: 10px;
   }
-  .segmentGroup { display: flex; }
-  .segment { flex: 1; padding-inline: 8px; }
   .selectionActions { --page-control-height: 38px; }
 }
 @container page-management (max-width: 480px) {
-  .actions { --page-control-height: 36px; --shared-control-radius: 12px; }
+  .actions { --page-control-height: 36px; --shared-control-radius: 16px; }
   .toolbar, .selectionActions {
     --page-control-height: 36px;
-    --shared-control-radius: 12px;
+    --shared-control-radius: 16px;
   }
   .toolbar { gap: 8px; }
   .create { padding-inline: 12px; }

@@ -22,10 +22,6 @@ export function FormCollectionBadges({
       <span className="rounded-md border border-sky-500/20 bg-sky-500/10 px-1.5 py-0.5 text-sky-700 dark:text-sky-300">
         {form.layout === "form" ? copy.formLayout : copy.cardLayout}
       </span>
-      <span className="text-gray-500 dark:text-gray-400">
-        {copy.questions}: {form.questionCount ?? form.questions?.length ?? 0} ·{" "}
-        {copy.submissions}: {form.submissionCount ?? 0}
-      </span>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
 import { ShieldCheck } from "lucide-react";
 import { VisibilitySwitch } from "@/components/shared/VisibilitySwitch";
 import type { FormDraft } from "../types";
@@ -15,7 +16,7 @@ export function FormPrivacyEditor({
 }) {
   return (
     <div className="space-y-4">
-      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+      <div className={`${SHARED_NESTED_CARD_CLASS} space-y-3 p-4`}>
         <div className="flex items-center gap-2 text-sm font-bold">
           <ShieldCheck className="size-4" />
           {labels.automaticPrivacy}

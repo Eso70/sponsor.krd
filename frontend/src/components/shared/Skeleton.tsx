@@ -422,7 +422,7 @@ export function SkeletonDashboardPage({
         </StatCardGrid>
       )}
       {tabCount > 0 && (
-        <div className="flex gap-2 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.025]">
+        <SegmentedTabsFrame compact fullWidth>
           {Array.from({ length: tabCount }).map((_, index) => (
             <Skeleton
               key={index}
@@ -430,7 +430,7 @@ export function SkeletonDashboardPage({
               rounded="rounded-lg"
             />
           ))}
-        </div>
+        </SegmentedTabsFrame>
       )}
       <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025] sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">

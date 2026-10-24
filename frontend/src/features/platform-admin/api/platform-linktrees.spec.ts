@@ -5,6 +5,7 @@ describe("buildPlatformLinktreePayload", () => {
   it("sends only fields accepted by CreateLinktreeDto", () => {
     const payload = buildPlatformLinktreePayload({
       headline: " Campaign ",
+      slug: "custom-page",
       logo: null,
       background_color: "#ffffff",
       templateKey: "spectrum",
@@ -22,7 +23,7 @@ describe("buildPlatformLinktreePayload", () => {
     expect(payload).not.toHaveProperty("templateKey");
     expect(payload).not.toHaveProperty("templateConfig");
     expect(payload).not.toHaveProperty("slug");
-    expect(payload).not.toHaveProperty("seo_name");
+    expect(payload.seo_name).toBe("custom-page");
     expect(payload.logo).toBeNull();
     expect(payload).toHaveProperty("template_config");
     expect(payload).not.toHaveProperty("footer_text");

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
-import { Tooltip } from "./Tooltip";
+import { SegmentedControl } from "./SegmentedControl";
 import { SettingsActionButton } from "./SettingsActionButton";
 import { ManagementViewToggle } from "./ManagementViewToggle";
 import { ManagementSearchTrigger } from "./ManagementSearchTrigger";
@@ -52,36 +52,17 @@ export function ManagementToolbar({
   accentMode?: "tenant" | "platform";
   leadingAction?: ReactNode;
 }) {
-  const usesPlatformAccent = accentMode === "platform";
-  const activeClass = usesPlatformAccent
-    ? "sa-gradient sa-ink"
-    : "theme-fill text-[var(--theme-ink)]";
-
   return (
     <div data-page-management-toolbar>
       <div className={styles.toolbar}>
         <ManagementSearchTrigger query={searchQuery} open={isSearchModalOpen} onClick={onSearchAction} labels={labels} />
         {onArchiveFilterChange && (
-          <div className={`${styles.segmentGroup} ${styles.status}`}>
-            {(["active", "archived"] as const).map((filter) => (
-              <Tooltip
-                key={filter}
-                content={
-                  filter === "active" ? labels.activePages : labels.archivedPages
-                }
-                side="bottom"
-              >
-                <button
-                  type="button"
-                  onClick={() => onArchiveFilterChange(filter)}
-                  aria-pressed={archiveFilter === filter}
-                  className={`${styles.segment} ${archiveFilter === filter ? activeClass : ""}`}
-                >
-                  {filter === "active" ? labels.active : labels.archived}
-                </button>
-              </Tooltip>
-            ))}
-          </div>
+          <SegmentedControl value={archiveFilter} onChange={onArchiveFilterChange}
+            accentMode={accentMode} className={styles.status}
+            options={[
+              { value: "active", label: labels.active, tooltip: labels.activePages },
+              { value: "archived", label: labels.archived, tooltip: labels.archivedPages },
+            ]} />
         )}
         <ManagementViewToggle value={viewMode} onChange={onViewModeChange}
           gridLabel={labels.gridView} tableLabel={labels.tableView} accentMode={accentMode} />

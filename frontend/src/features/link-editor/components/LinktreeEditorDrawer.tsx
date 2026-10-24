@@ -12,6 +12,9 @@ import {
   startTransition,
   type ReactNode,
 } from "react";
+import { DuplicateSlugField } from "@/components/shared/DuplicateSlugField";
+import { usePageSlugAvailability } from "@/hooks/usePageSlugAvailability";
+import { linktreeSlugCopy } from "../linktree-slug-copy";
 import { LinktreeQuestionsEditor } from "./LinktreeQuestionsEditor";
 import { BasicInfoStep } from "@/features/link-editor/components/BasicInfoStep";
 import { LinktreeBannerEditor } from "./LinktreeBannerEditor";
@@ -259,6 +262,14 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
     businessDefaults?.default_avatar || null,
   );
   const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const slugCheck = usePageSlugAvailability(apiEndpoints.checkSlug, slug, {
+    enabled: isOpen && !isLoadingEditData,
+    excludeId: editData?.linktree.id,
+    initialSlug: editData?.linktree.seo_name ?? "",
+  });
+  const slugValid = (!editData?.linktree.seo_name && !slug) || slugCheck.status === "available";
+  const slugCopy = linktreeSlugCopy[locale];
   // Explicit edits keep their values even when they happen to match a default.
   const authoredText = useRef(new Set<string>());
   const previousCopy = useRef(copy);
@@ -747,6 +758,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       // VALIDATE AND SANITIZE EDIT DATA
       // ============================================
       const linktree = editData.linktree;
+      setSlug(linktree.seo_name ?? "");
 
       // Validate linktree ID
       if (!linktree.id || typeof linktree.id !== "string") {
@@ -912,6 +924,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       const defaultBusinessName = businessIdentity?.name?.trim() || "";
       const defaultBusinessPhone = businessIdentity?.phone?.trim() || "";
       setName(isDefault ? defaultBusinessName : "");
+      setSlug("");
       setSubtitle(DEFAULT_SUBTITLE);
       setSubtitleColor("");
       setDescription(copy?.defaultDescription ?? DEFAULT_DESCRIPTION);
@@ -1379,6 +1392,10 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
 
     try {
       setSubmitError(null);
+      if (!slugValid) {
+        setOpenSection("basic");
+        throw new Error(slugCopy.fix);
+      }
       const seoCheck = advancedSeoAllowed
         ? inspectLinktreeSeo(templateConfig.seo, true)
         : { value: undefined, errors: {} };
@@ -1632,6 +1649,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       await onSubmit(
         {
           headline: sanitizedName,
+          ...(slug ? { slug } : {}),
           slogan: sanitizedSubtitle,
           slogan_color: extractSolidHex(subtitleColor) || undefined,
           description: sanitizedDescription,
@@ -1819,7 +1837,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       subtitle,
       subtitleColor,
       description,
-      slug: editData?.linktree.seo_name ?? "",
+      slug: slug || editData?.linktree.seo_name || "",
       image: profileImagePreview,
       backgroundColor,
       backgroundImage: backgroundImagePreview,
@@ -1840,6 +1858,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       subtitleColor,
       description,
       editData?.linktree.seo_name,
+      slug,
       profileImagePreview,
       backgroundColor,
       templateKey,
@@ -1901,7 +1920,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
           <LinktreeEditorActions
             editing={isEditMode}
             locale={locale}
-            loading={isLoadingEditData || managementBusy}
+            loading={isLoadingEditData || managementBusy || !slugValid}
             saving={isSubmitting}
             managementActions={
               !isLoadingEditData && management ? (
@@ -2077,6 +2096,14 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                   }
                 >
                   <BasicInfoStep
+                    slugField={<DuplicateSlugField
+                      check={{ ...slugCheck, slug, setSlug: (value) => setSlug(value.toLowerCase()) }}
+                      locale={locale}
+                      pageType="linktree"
+                      optional={!editData}
+                      maxLength={255}
+                      help={editData && slug !== (editData.linktree.seo_name ?? "") ? slugCopy.warning : !editData ? slugCopy.automatic : undefined}
+                    />}
                     categoryFields={
                       advancedSeoAllowed ? (
                         <LinktreeCategoryFields

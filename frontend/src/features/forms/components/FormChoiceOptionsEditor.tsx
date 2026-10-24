@@ -1,5 +1,9 @@
 "use client";
 
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
+
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
+
 import { Plus, Trash2 } from "lucide-react";
 import { IconActionButton } from "@/components/shared/IconActionButton";
 import type { FormDraft, FormQuestion } from "../types";
@@ -80,7 +84,7 @@ export function FormChoiceOptionsEditor({
       {question.options.map((option, index) => (
         <div
           key={index}
-          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-200/70 bg-white p-3 dark:border-white/10 dark:bg-white/[0.02]"
+          className={`${SHARED_NESTED_CARD_CLASS} grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3`}
         >
           <FormImagePicker
             key={`${question.id}-${index}-${question.options.length}`}
@@ -123,7 +127,7 @@ export function FormChoiceOptionsEditor({
       <button
         type="button"
         disabled={question.options.length >= 20}
-        className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:border-white/15 dark:text-slate-300 dark:hover:bg-white/5"
+        className={`${SHARED_SOFT_BUTTON_CLASS} flex min-h-10 w-full items-center justify-center gap-2 text-[13px] font-semibold disabled:opacity-40`}
         onClick={() => {
           if (question.options.length >= 20) return;
           update({

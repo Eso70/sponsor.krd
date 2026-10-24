@@ -674,8 +674,9 @@ Linktree content accepts canonical `headline`, `description`, `slogan`,
 separate internal title. `normalizeLinktreeContent` is the sole legacy request
 adapter for name/subtitle/subtitle_color/image. Read projections expose matching
 canonical fields plus compatibility aliases used by existing public templates.
-New canonical requests do not supply slugs. URL allocation runs inside the owner
-transaction lock and preserves existing URLs on edit. See the Linktree content
+Canonical requests may optionally supply a validated manual slug. Automatic URL
+allocation runs inside the owner transaction lock; edits preserve existing URLs
+unless an explicit replacement is supplied. See the Linktree content
 migration and coordinated deployment notes before upgrading a live installation.
 
 Optional Linktree SEO uses the existing protected template_config write and
@@ -747,3 +748,11 @@ only `canRevealCode`. Old hash-only grants, expired/disabled/deleted grants and
 already-consumed recovery copies cannot reveal a code.
 
 Advanced Linktree SEO uses the Max product ceiling through featurePlanSql, with the same live subscription window used by other plan restrictions. Changed versioned SEO on business create/update requires Max; unchanged or omitted stored SEO is preserved. Public projection checks live access outside the cache and reduces lower-plan SEO to automatic content plus any existing noindex exclusion. See docs/seo.md for downgrade and sitemap behavior.
+
+Linktree create/update accept an explicit validated `seo_name` (legacy `slug`
+alias also accepted) alongside canonical headline fields. Omitting the address
+still generates a collision-free slug on create and preserves it on update.
+The shared content normalizer validates lowercase ASCII URL identifiers before
+writes, including approval execution. Owner-scoped uniqueness and the root-route
+registry remain authoritative; existing updates purge both old and new public
+cache keys after commit. No migration is required.

@@ -10,11 +10,11 @@ export function EditorBannerControls({ mode, onModeChange, ...picker }: Componen
   onModeChange: (mode: "image" | "carousel") => void;
 }) {
   return <>
-    <div role="tablist" aria-label={picker.labels?.banner} className="max-w-xs">
-      <SegmentedTabs value={mode} tabs={[
+    <div className="max-w-xs">
+      <SegmentedTabs compact label={picker.labels?.banner} value={mode} tabs={[
         { id: "image", label: picker.labels?.image ?? "Image", icon: ImageIcon },
         { id: "carousel", label: picker.labels?.carousel ?? "Carousel", icon: Images },
-      ]} onChange={onModeChange} fullWidth className="!rounded-2xl !border-transparent !shadow-none !bg-[var(--shared-control-surface)] !p-1 [&_button]:!h-8 [&_button]:!rounded-xl [&_button]:!text-xs" />
+      ]} onChange={onModeChange} fullWidth />
     </div>
     <EditorImagePicker {...picker} multiple={mode === "carousel"} variant="banner" />
   </>;

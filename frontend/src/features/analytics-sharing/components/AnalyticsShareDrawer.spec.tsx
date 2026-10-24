@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsShareDrawer } from "./AnalyticsShareDrawer";
 import { sharingCopy } from "../sharing-copy";
@@ -83,6 +83,9 @@ describe.each(["en", "ar", "ckb"] as const)(
         { method: "POST" },
       );
       fireEvent.click(screen.getByRole("button", { name: copy.remove }));
+      const confirmation = screen.getByRole("dialog", { name: copy.deleteTitle });
+      expect(request).not.toHaveBeenCalledWith("/api/forms/page/analytics-shares/share", { method: "DELETE" });
+      fireEvent.click(within(confirmation).getByRole("button", { name: copy.remove }));
       await screen.findByText(copy.empty);
       expect(request).toHaveBeenCalledWith(
         "/api/forms/page/analytics-shares/share",
@@ -172,4 +175,27 @@ it("changes the drawer language without discarding its links and uses the compac
   expect(request).toHaveBeenCalledWith("/shares/share/code", {
     method: "POST",
   });
+});
+
+it.each(["/api/linktrees/page/analytics-shares", "/api/platform/linktrees/page/analytics-shares", "/api/forms/page/analytics-shares", "/api/platform/forms/page/analytics-shares"])("cancels deletion and retries a failure without losing the share in %s", async (apiBase) => {
+  request.mockImplementation(async (_url, options) => {
+    if (options?.method === "DELETE") throw new Error("Denied");
+    return [link];
+  });
+  render(<AnalyticsShareDrawer apiBase={apiBase} locale="en" onClose={vi.fn()} />);
+  const copy = sharingCopy("en");
+  fireEvent.click(await screen.findByRole("button", { name: copy.remove }));
+  let dialog = screen.getByRole("dialog", { name: copy.deleteTitle });
+  fireEvent.click(within(dialog).getByRole("button", { name: copy.cancel }));
+  expect(request).not.toHaveBeenCalledWith(`${apiBase}/share`, { method: "DELETE" });
+  expect(screen.queryByRole("dialog", { name: copy.deleteTitle })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: copy.remove }));
+  dialog = screen.getByRole("dialog", { name: copy.deleteTitle });
+  fireEvent.click(within(dialog).getByRole("button", { name: copy.remove }));
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: copy.remove })).toBeEnabled());
+  expect(screen.getByRole("textbox", { name: copy.copyLink })).toHaveValue(link.url);
+  request.mockImplementation(async (_url, options) => options?.method === "DELETE" ? {} : [link]);
+  fireEvent.click(within(dialog).getByRole("button", { name: copy.remove }));
+  await screen.findByText(copy.empty);
+  expect(screen.queryByRole("dialog", { name: copy.deleteTitle })).not.toBeInTheDocument();
 });

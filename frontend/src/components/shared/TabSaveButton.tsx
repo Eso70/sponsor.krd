@@ -4,7 +4,7 @@ import { Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/shared/Tooltip";
 import styles from "./page-management.module.css";
-import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
+import { SHARED_SOFT_BUTTON_CLASS, SHARED_ACTION_CLASS } from "./shared-control-styles";
 
 /** Shared save state with the same sizing and radius as other management actions. */
 export function TabSaveButton({
@@ -43,7 +43,7 @@ export function TabSaveButton({
         disabled={!dirty || saving || disabled}
         aria-busy={saving}
         className={cn(
-          `${styles.create} border-0 transition-colors disabled:cursor-not-allowed disabled:opacity-60`,
+          `${SHARED_ACTION_CLASS} ${styles.create} border-0 transition-colors disabled:cursor-not-allowed disabled:opacity-60`,
           active,
         )}
       >

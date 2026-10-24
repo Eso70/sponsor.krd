@@ -71,6 +71,7 @@ export function FormsGrid({
           className="text-center"
           media={
             <PageListCardMedia
+              selection={<PageSelectionCheckbox id={form.id} name={form.name} />}
               action={
                 <PagePinButton
                   iconOnly
@@ -86,7 +87,6 @@ export function FormsGrid({
               }
             >
               <PageListBanner src={form.banner} />
-              <div className="absolute left-3 top-3 z-10"><PageSelectionCheckbox id={form.id} name={form.name} /></div>
             </PageListCardMedia>
           }
         >

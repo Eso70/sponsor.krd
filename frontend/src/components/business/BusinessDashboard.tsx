@@ -866,6 +866,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     async (
       data: {
         headline: string;
+        slug?: string;
         slogan?: string;
         slogan_color?: string;
         description?: string;
@@ -945,6 +946,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               headline: data.headline.trim(),
+              ...(data.slug ? { seo_name: data.slug } : {}),
               slogan: data.slogan?.trim() || null,
               slogan_color: data.slogan_color?.trim() || null,
               description: data.description?.trim() || null,
@@ -1313,6 +1315,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               headline: data.headline.trim(),
+              ...(data.slug ? { seo_name: data.slug } : {}),
               slogan: data.slogan?.trim() || null,
               slogan_color: data.slogan_color?.trim() || null,
               description: data.description?.trim() || null,

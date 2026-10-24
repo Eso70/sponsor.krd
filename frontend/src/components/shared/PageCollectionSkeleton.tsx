@@ -31,9 +31,10 @@ export function PageCollectionSkeleton({
         content: (
           <article aria-hidden="true" className="h-full">
             <ManagementCard intrinsicHeight={480} className="text-center" media={
-              <PageListCardMedia action={<Skeleton className="size-5" rounded="rounded-md" />}>
+              <PageListCardMedia
+                selection={selectable ? <Skeleton className="size-5" rounded="rounded-md" /> : undefined}
+                action={<Skeleton className="size-4" rounded="rounded-md" />}>
                 <Skeleton className="aspect-[3/1] w-full" rounded="rounded-none" />
-                {selectable && <Skeleton className="absolute left-4 top-4 size-5" rounded="rounded-md" />}
               </PageListCardMedia>
             }>
               <div className="relative -mt-9 mb-3 text-center sm:-mt-12 md:-mt-[52px]">

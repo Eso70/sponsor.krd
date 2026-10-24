@@ -40,6 +40,7 @@ interface BasicInfoStepProps {
   hideRemoveLogo?: boolean;
   hideImageUploads?: boolean;
   categoryFields?: ReactNode;
+  slugField?: ReactNode;
 }
 
 export const BasicInfoStep = memo(function BasicInfoStep(props: BasicInfoStepProps) {
@@ -62,6 +63,7 @@ export const BasicInfoStep = memo(function BasicInfoStep(props: BasicInfoStepPro
       </div>
       {errors.headline && props.touched.headline ? null : props.checkingHeadline ? <p role="status" className="mt-1 text-xs text-slate-400">{copy?.checkingName ?? "پشکنینی سەردێڕ..."}</p> : props.headlineWarning ? <p className="mt-1 text-xs text-amber-600">{props.headlineWarning}</p> : null}
     </EditorField>
+    {props.slugField}
     {props.categoryFields}
     <EditorField label={copy?.slogan ?? "درووشمی بانگەشە"} interactive className={EDITOR_FIELD_CLASS}>
       <div className="flex min-w-0 items-center gap-2">

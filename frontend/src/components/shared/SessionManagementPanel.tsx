@@ -1,5 +1,9 @@
 "use client";
 
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
+
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
+
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
 import { useCallback, useEffect, useState } from "react";
@@ -159,7 +163,7 @@ export function SessionManagementPanel({
               onClick={() => void load()}
               aria-busy={loading}
               disabled={loading}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-white disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/5"
+              className={`${SHARED_SOFT_BUTTON_CLASS} flex size-9 items-center justify-center disabled:opacity-50`}
               aria-label={copy?.refresh ?? "Refresh sessions"}
             >
               <MotionSpinner active={loading}>
@@ -180,7 +184,7 @@ export function SessionManagementPanel({
             sessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-[#161B22]"
+                className={`${SHARED_NESTED_CARD_CLASS} flex items-center gap-3 p-3`}
               >
                 <Monitor className="h-5 w-5 flex-shrink-0 text-slate-400" />
                 <div className="min-w-0 flex-1">

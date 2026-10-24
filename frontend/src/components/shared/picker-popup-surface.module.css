@@ -1,6 +1,6 @@
 .surface {
-  --picker-control-radius: 16px;
-  --picker-option-radius: 18px;
+  --picker-control-radius: var(--ui-radius-control, 18px);
+  --picker-option-radius: var(--ui-radius-control, 18px);
   --shared-control-radius: var(--picker-control-radius);
   --picker-surface: #ffffff;
   --picker-soft: var(--shared-control-surface, #f8fafc);
@@ -11,7 +11,7 @@
   background: var(--picker-surface) !important;
   color: var(--picker-text) !important;
   border-color: transparent !important;
-  border-radius: 20px;
+  border-radius: var(--ui-radius-popup, 20px);
   box-shadow: 0 8px 28px rgb(0 0 0 / 14%);
   --tw-shadow: 0 8px 28px rgb(0 0 0 / 14%);
   animation: surface-open 180ms ease-out !important;

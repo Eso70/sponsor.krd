@@ -15,6 +15,7 @@ export const sharedArabicLinktreeCopy = {
     create: pageActionCopy("ar").create, clearAnalytics: "مسح جميع بيانات المشاهدات والنقرات", noAnalytics: "لا توجد بيانات",
   },
   list: {
+    verificationBadge: "شارة التوثيق",
     loadingCards: "جارٍ تحميل بطاقات الصفحات", loadingTable: "جارٍ تحميل جدول الصفحات",
     paginationOf: "من", paginationPrevious: "الصفحة السابقة", paginationNext: "الصفحة التالية",
     copied: "تم النسخ", copyLink: "نسخ الرابط",

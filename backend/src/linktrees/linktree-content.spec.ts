@@ -93,7 +93,6 @@ describe('canonical Linktree content and backend URLs', () => {
           headline: 'Hello World',
           slogan: 'Slogan',
           logo: '/images/upload/logo.png',
-          slug: 'client-override',
         },
         'owner',
         scope,
@@ -117,6 +116,30 @@ describe('canonical Linktree content and backend URLs', () => {
       ]);
     },
   );
+  it.each(['business', 'platform'] as const)(
+    'accepts a manual URL alongside a headline for %s',
+    async (scope) => {
+      const { service } = setup();
+      const result = await service.createLinktree(
+        { headline: 'Hello World', seo_name: 'my-custom-address' },
+        'owner',
+        scope,
+      );
+      expect(result.seo_name).toBe('my-custom-address');
+    },
+  );
+  it.each([
+    'with spaces',
+    'UPPERCASE',
+    '/other/path',
+    '-invalid',
+    'x',
+    'x'.repeat(256),
+  ])('rejects an invalid manual URL %s', (slug) => {
+    expect(() =>
+      normalizeLinktreeContent({ headline: 'Page', seo_name: slug }),
+    ).toThrow('Invalid link slug');
+  });
   it('supports Kurdish headlines without a client slug', async () => {
     const { service } = setup();
     const result = await service.createLinktree(
@@ -126,48 +149,51 @@ describe('canonical Linktree content and backend URLs', () => {
     expect(result.seo_name).toMatch(/^page-[a-f0-9]{12}$/);
     expect(result.headline).toBe('ئیسماعیل');
   });
-  it('keeps a production URL when updating its headline', async () => {
-    const { service, query } = setup();
-    jest.spyOn(service, 'getLinktreeById').mockResolvedValue({
-      id: 'page',
-      name: 'Old',
-      seo_name: 'production-url',
-      uid: 'stable-id',
-      template_key: 'spectrum',
-      template_config: {},
-      status: 'active',
-    } as never);
-    query.mockImplementation(async (sql: string, params?: unknown[]) =>
-      sql.includes('UPDATE linktrees')
-        ? {
-            rows: [
-              {
-                id: 'page',
-                name: params?.[0],
-                seo_name: params?.[2],
-                uid: 'stable-id',
-                template_config: {},
-                template_key: 'spectrum',
-              },
-            ],
-          }
-        : { rows: [] },
-    );
-    await service.updateLinktree(
-      'page',
-      {
-        headline: 'New heading',
-        slogan: 'New slogan',
-        slug: 'ignored-client-route',
-      },
-      'owner',
-    );
-    const update = query.mock.calls.find(([sql]) =>
-      sql.includes('UPDATE linktrees'),
-    )!;
-    expect(update[1]?.[2]).toBe('production-url');
-    expect(update[0]).toContain('headline = $1');
-  });
+  it.each([undefined, 'changed-address'])(
+    'preserves or explicitly changes an existing URL (%s)',
+    async (slug) => {
+      const { service, query } = setup();
+      jest.spyOn(service, 'getLinktreeById').mockResolvedValue({
+        id: 'page',
+        name: 'Old',
+        seo_name: 'production-url',
+        uid: 'stable-id',
+        template_key: 'spectrum',
+        template_config: {},
+        status: 'active',
+      } as never);
+      query.mockImplementation(async (sql: string, params?: unknown[]) =>
+        sql.includes('UPDATE linktrees')
+          ? {
+              rows: [
+                {
+                  id: 'page',
+                  name: params?.[0],
+                  seo_name: params?.[2],
+                  uid: 'stable-id',
+                  template_config: {},
+                  template_key: 'spectrum',
+                },
+              ],
+            }
+          : { rows: [] },
+      );
+      await service.updateLinktree(
+        'page',
+        {
+          headline: 'New heading',
+          ...(slug ? { seo_name: slug } : {}),
+          slogan: 'New slogan',
+        },
+        'owner',
+      );
+      const update = query.mock.calls.find(([sql]) =>
+        sql.includes('UPDATE linktrees'),
+      )!;
+      expect(update[1]?.[2]).toBe(slug ?? 'production-url');
+      expect(update[0]).toContain('headline = $1');
+    },
+  );
 });
 
 describe('Linktree advanced SEO plan enforcement', () => {

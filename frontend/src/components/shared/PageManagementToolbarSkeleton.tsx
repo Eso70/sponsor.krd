@@ -1,3 +1,5 @@
+import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
+import segmentStyles from "./segmented-control.module.css";
 import { Skeleton } from "./SkeletonBlock";
 import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import styles from "./page-management.module.css";
@@ -10,13 +12,13 @@ export function PageManagementToolbarSkeleton() {
         <Skeleton className="h-3 w-16 sm:w-24" rounded="rounded-md" />
       </span>
       {[styles.status, styles.view].map((area) => (
-        <span key={area} className={`${styles.segmentGroup} ${area}`}>
+        <SegmentedTabsFrame compact key={area} className={area}>
           {[0, 1].map((key) => (
-            <span key={key} className={styles.segment}>
+            <span key={key} className={segmentStyles.item}>
               <Skeleton className="h-3 w-10" rounded="rounded-md" />
             </span>
           ))}
-        </span>
+        </SegmentedTabsFrame>
       ))}
       <span className={`${SHARED_SOFT_BUTTON_CLASS} ${styles.create}`}>
         <Skeleton className="size-4" rounded="rounded-md" />

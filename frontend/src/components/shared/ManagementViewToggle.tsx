@@ -1,7 +1,7 @@
-import { Tooltip } from "./Tooltip";
+import { SegmentedControl } from "./SegmentedControl";
 import styles from "./page-management.module.css";
 
-/** Text-only collection view controls shared by every management toolbar. */
+/** Collection views reuse the same segmented control as status filters. */
 export function ManagementViewToggle({
   value,
   onChange,
@@ -15,28 +15,16 @@ export function ManagementViewToggle({
   tableLabel: string;
   accentMode?: "tenant" | "platform";
 }) {
-  const activeClass =
-    accentMode === "platform"
-      ? "sa-gradient sa-ink"
-      : "theme-fill text-[var(--theme-ink)]";
   return (
-    <div className={`${styles.segmentGroup} ${styles.view}`}>
-      {(["grid", "table"] as const).map((mode) => {
-        const label = mode === "grid" ? gridLabel : tableLabel;
-        return (
-          <Tooltip key={mode} content={label} side="top">
-            <button
-              type="button"
-              onClick={() => onChange(mode)}
-              aria-label={label}
-              aria-pressed={value === mode}
-              className={`${styles.segment} ${value === mode ? activeClass : ""}`}
-            >
-              {label}
-            </button>
-          </Tooltip>
-        );
-      })}
-    </div>
+    <SegmentedControl
+      value={value}
+      onChange={onChange}
+      accentMode={accentMode}
+      className={styles.view}
+      options={[
+        { value: "grid", label: gridLabel },
+        { value: "table", label: tableLabel },
+      ]}
+    />
   );
 }

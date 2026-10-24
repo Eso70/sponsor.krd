@@ -1,5 +1,6 @@
 "use client";
 
+import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { useState } from "react";
 import { Eye, Pencil, Trash2, Layers3, ShieldCheck } from "lucide-react";
 import { SubscriptionPlanCard } from "@/features/billing/components/SubscriptionPlanCard";
@@ -42,21 +43,8 @@ export function SubscriptionPlansGrid({
         role="group"
         aria-label={copy.price}
       >
-        {(["monthly", "yearly"] as const).map((value) => (
-          <button
-            type="button"
-            key={value}
-            aria-pressed={cycle === value}
-            onClick={() => setCycle(value)}
-            className={`cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold ${
-              cycle === value
-                ? "bg-slate-100 text-slate-800 dark:bg-white/10 dark:text-white"
-                : "text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            {copy[value]}
-          </button>
-        ))}
+        <SegmentedControl value={cycle} onChange={setCycle} accentMode="platform"
+          options={[{ value: "monthly", label: copy.monthly }, { value: "yearly", label: copy.yearly }]} />
       </div>
       <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
         {plans.map((plan) => (

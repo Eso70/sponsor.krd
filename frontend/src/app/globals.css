@@ -490,6 +490,9 @@ html.dark ::-moz-selection {
 }
 
 @theme inline {
+  --shadow-sm: 0 1px 4px rgb(15 23 42 / 5%);
+  --shadow-md: 0 4px 16px rgb(15 23 42 / 8%);
+  --shadow-lg: 0 8px 28px rgb(15 23 42 / 10%);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: "Rabar", Arial, Helvetica, sans-serif;
@@ -525,11 +528,11 @@ html.dark ::-moz-selection {
   --color-card: var(--card);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-lg: var(--ui-radius-compact);
+  --radius-xl: var(--ui-radius-control);
+  --radius-2xl: var(--ui-radius-card);
+  --radius-3xl: calc(var(--ui-radius-card) + 4px);
+  --radius-4xl: calc(var(--ui-radius-card) + 8px);
 
   /* Brand palette derived from the single --sponsor-krd-accent source. */
   --color-brand-50: color-mix(in srgb, var(--sponsor-krd-accent) 8%, white);
@@ -2575,8 +2578,26 @@ section[data-reorder-target="true"] > div:first-child {
 }
 
 
+/* Shared geometry reaches utility-based and component-module UI alike. */
+:root {
+  --ui-radius-control: 18px;
+  --ui-radius-compact: 14px;
+  --ui-radius-card: 24px;
+  --ui-radius-popup: 20px;
+}
+@media (max-width: 639px) {
+  :root {
+    --ui-radius-control: 16px;
+    --ui-radius-compact: 12px;
+    --ui-radius-card: 20px;
+    --ui-radius-popup: 18px;
+  }
+}
+
 /* Shared field tokens inherit from the nearest local appearance boundary. */
 :root, .light, [data-appearance="light"] {
+  --ui-card-surface: #ffffff;
+  --ui-card-border: #edf0f4;
   --shared-control-surface: #f3f5f7;
   --shared-control-hover: #eaeef2;
   --shared-control-text: #475569;
@@ -2585,6 +2606,8 @@ section[data-reorder-target="true"] > div:first-child {
   --shared-control-error: #fff1f2;
 }
 .dark, [data-appearance="dark"] {
+  --ui-card-surface: #1c222b;
+  --ui-card-border: rgb(255 255 255 / 6%);
   --shared-control-surface: #20262e;
   --shared-control-hover: #282f38;
   --shared-control-text: #cbd5e1;
@@ -2639,4 +2662,11 @@ section[data-reorder-target="true"] > div:first-child {
 .dark [data-dashboard-sidebar] button[aria-current="page"],
 .dark [data-dashboard-sidebar] button[aria-current="page"]:hover {
   color: var(--sidebar-ink, var(--theme-ink, #fff)) !important;
+}
+
+@layer base {
+  .shared-control:focus-visible {
+    outline: 2px solid var(--theme-primary, #64748b) !important;
+    outline-offset: 2px;
+  }
 }

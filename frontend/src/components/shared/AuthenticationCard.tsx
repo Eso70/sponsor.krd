@@ -1,5 +1,7 @@
 "use client";
 
+import { SHARED_CARD_CLASS } from "./shared-surface-styles";
+
 interface AuthenticationCardProps {
   title: string;
   description?: string;
@@ -18,7 +20,7 @@ export function AuthenticationCard({
   return (
     <section
       dir="ltr"
-      className={`relative min-w-0 [overflow-wrap:anywhere] ${plain ? "py-2" : "rounded-[26px] border border-slate-200 bg-white/80 p-5 shadow-[0_18px_55px_rgba(15,23,42,.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[0_18px_55px_rgba(0,0,0,.22)] sm:p-6"}`}
+      className={`relative min-w-0 [overflow-wrap:anywhere] ${plain ? "py-2" : `${SHARED_CARD_CLASS} p-5 sm:p-6`}`}
     >
       <div className="mb-4 px-2 text-center">
         {leading}

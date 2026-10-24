@@ -208,10 +208,10 @@ export function SkeletonBusinessDirectoryPage({
           <SkeletonStatCard key={color} color={color} />
         ))}
       </StatCardGrid>
-      <div className="mb-6 flex gap-2 rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.025]">
+      <SegmentedTabsFrame compact fullWidth className="mb-6">
         <Skeleton className="h-10 flex-1" rounded="rounded-lg" />
         <Skeleton className="h-10 flex-1" rounded="rounded-lg" />
-      </div>
+      </SegmentedTabsFrame>
       <PageManagementSection title="" loading toolbar={<div className="flex flex-wrap items-center gap-2">
         <Skeleton className="h-10 min-w-32 flex-1" rounded="rounded-2xl" />
         <Skeleton className="h-10 w-32" rounded="rounded-2xl" />

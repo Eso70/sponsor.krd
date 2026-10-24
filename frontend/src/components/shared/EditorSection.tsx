@@ -1,4 +1,6 @@
 "use client";
+
+import { SHARED_CARD_CLASS } from "./shared-surface-styles";
 import { useId, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import styles from "./EditorSection.module.css";
@@ -39,7 +41,7 @@ export function EditorSection({
     <section
       data-reorder-id={reorderId}
       data-reorder-group={reorderGroup}
-      className={`${styles.section} overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/[0.06]`}
+      className={`${styles.section} ${SHARED_CARD_CLASS} overflow-hidden`}
     >
       <div className="relative flex items-center gap-3 bg-slate-50/70 px-4 dark:bg-white/[0.03]">
         {leading}

@@ -1,5 +1,6 @@
 "use client";
 
+import { SHARED_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api/request";
@@ -119,7 +120,7 @@ export function EmailCodeAuthenticationForm({
             setCode("");
             setError("");
           }}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          className={`${SHARED_SOFT_BUTTON_CLASS} inline-flex min-h-9 items-center gap-2 px-3 text-xs font-semibold`}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           {copy?.changeEmail ?? "Change email"}
@@ -172,7 +173,7 @@ export function EmailCodeAuthenticationForm({
           type="button"
           disabled={busy || resendIn > 0}
           onClick={() => void requestCode()}
-          className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:text-white"
+          className={`${SHARED_SOFT_BUTTON_CLASS} min-h-10 w-full px-3 text-center text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {resendIn > 0
             ? (copy?.resendIn?.replace("{seconds}", String(resendIn)) ??
@@ -197,7 +198,7 @@ export function EmailCodeAuthenticationForm({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder={emailPlaceholder}
-          className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[var(--sponsor-krd-accent)] focus:ring-2 focus:ring-[var(--sponsor-krd-accent)]/20 dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+          className={`${SHARED_CONTROL_CLASS} h-12 w-full pl-11 pr-4 text-sm`}
         />
       </div>
       {error ? (
@@ -211,7 +212,7 @@ export function EmailCodeAuthenticationForm({
       <button
         type="submit"
         disabled={busy}
-        className="theme-fill flex h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-bold text-[var(--theme-ink)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+        className={AUTHENTICATION_SUBMIT_BUTTON_CLASS}
       >
         {busy ? (
           <MotionSpinner>

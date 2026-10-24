@@ -1,4 +1,6 @@
 "use client";
+
+import { SHARED_NESTED_CARD_CLASS } from "@/components/shared/shared-surface-styles";
 import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon, Plus, Trash2 } from "lucide-react";
@@ -140,7 +142,7 @@ export function FormImageSetEditor({
         </div>
       </div>
       {active && (
-        <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className={`${SHARED_NESTED_CARD_CLASS} space-y-4 p-3`}>
           <div className="flex items-center justify-between">
             <h4 className="text-[13px] font-bold">
               {entryLabel} {products.indexOf(active) + 1}

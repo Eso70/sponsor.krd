@@ -1,5 +1,9 @@
 "use client";
 
+import { SHARED_CONTROL_CLASS } from "./shared-control-styles";
+
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
+
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { IconActionButton } from "./IconActionButton";
 import type { ImageCropCopy } from "./image-crop-copy";
@@ -30,12 +34,12 @@ export function ImageCropControls({
         type="button"
         disabled={disabled}
         onClick={onReset}
-        className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100 disabled:opacity-40 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+        className={`${SHARED_SOFT_BUTTON_CLASS} flex h-10 items-center gap-2 px-3 text-xs font-semibold disabled:opacity-40`}
       >
         <RotateCcw className="size-4" />
         {copy.reset}
       </button>
-      <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 shadow-sm dark:border-white/10 dark:bg-slate-800">
+      <div className={`${SHARED_CONTROL_CLASS} flex h-10 items-center gap-2 px-2`}>
         <IconActionButton
           label={copy.zoomIn}
           tone="surface"

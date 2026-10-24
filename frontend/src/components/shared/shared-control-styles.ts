@@ -14,3 +14,6 @@ export const HEADER_ACTION_SIZE_CLASS = "!size-10 !p-0 shrink-0";
 
 /** Shared by link and button header actions, including server-rendered shells. */
 export const HEADER_ACTION_BUTTON_CLASS = `${chromeStyles.control} ${chromeStyles.headerAction} group relative`;
+
+/** Shared action geometry without replacing tenant or semantic colors. */
+export const SHARED_ACTION_CLASS = styles.action;

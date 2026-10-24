@@ -8,7 +8,7 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 .surface:global(.shared-control) {
-  border-radius: var(--shared-control-radius, 14px) !important;
+  border-radius: var(--shared-control-radius, var(--ui-radius-control, 18px)) !important;
 }
 .inset {
   --shared-control-surface: var(--shared-control-hover, #eaeef2);
@@ -43,3 +43,13 @@
 @media (prefers-reduced-motion: reduce) {
   .surface { transition: none; }
 }
+
+/* Geometry-only actions retain their semantic/tenant fill. */
+.action {
+  border-radius: var(--shared-control-radius, var(--ui-radius-control, 18px));
+  box-shadow: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.button:focus-visible { outline: 2px solid currentColor !important; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .action { transition: none; } }

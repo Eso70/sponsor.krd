@@ -10,7 +10,12 @@ import {
   businessMessages,
   type BusinessLocale,
 } from "@/features/business/i18n/messages";
-import type { usePageDuplicateSlug } from "@/hooks/usePageDuplicateSlug";
+export interface PageSlugCheck {
+  slug: string;
+  status: "idle" | "invalid" | "checking" | "available" | "taken" | "error";
+  setSlug: (value: string) => void;
+  retry: () => void;
+}
 
 const copy = {
   en: {
@@ -29,14 +34,20 @@ const copy = {
     retry: "دووبارە هەوڵ بدەوە",
   },
 };
-/** Identical address editing for saved-page copies in both dashboards. */
+/** Shared address editing for page editors and copies in both dashboards. */
 export function DuplicateSlugField({
   check,
   locale,
   pageType,
   onChange,
+  optional = false,
+  help,
+  maxLength = 50,
 }: {
-  check: ReturnType<typeof usePageDuplicateSlug>;
+  check: PageSlugCheck;
+  optional?: boolean;
+  help?: string;
+  maxLength?: number;
   locale: BusinessLocale;
   pageType: "form" | "linktree";
   onChange?: () => void;
@@ -44,17 +55,19 @@ export function DuplicateSlugField({
   const labels = businessMessages[locale].DuplicateLinktree;
   const text = copy[locale];
   const error =
-    check.status === "taken"
-      ? labels.slugTaken
-      : check.status === "invalid"
-        ? check.slug.length < 2
-          ? labels.slugTooShort
-          : labels.slugInvalid
-        : undefined;
+    check.status === "idle" && !optional
+      ? labels.slugRequired
+      : check.status === "taken"
+        ? labels.slugTaken
+        : check.status === "invalid"
+          ? check.slug.length < 2
+            ? labels.slugTooShort
+            : labels.slugInvalid
+          : undefined;
   return (
     <EditorField
       label={labels.slugLabel}
-      required
+      required={!optional}
       className={EDITOR_FIELD_CLASS}
       error={error}
     >
@@ -66,7 +79,7 @@ export function DuplicateSlugField({
         }}
         aria-label={labels.slugLabel}
         placeholder={labels.slugLabel}
-        maxLength={50}
+        maxLength={maxLength}
         dir="ltr"
         className={EDITOR_INPUT_CLASS}
         aria-invalid={!!error}
@@ -94,6 +107,11 @@ export function DuplicateSlugField({
         >
           {text.retry}
         </button>
+      )}
+      {help && (
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          {help}
+        </p>
       )}
       {check.slug && (
         <p className="mt-2 break-all text-xs text-slate-500 dark:text-slate-400">

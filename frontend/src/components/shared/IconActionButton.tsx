@@ -1,5 +1,6 @@
 "use client";
 
+import { SHARED_ACTION_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import type { ReactNode } from "react";
 import { Tooltip } from "@/components/shared/Tooltip";
 
@@ -28,10 +29,10 @@ export function IconActionButton({
 }) {
   const toneClasses =
     tone === "danger"
-      ? "text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+      ? "bg-rose-500/[0.05] text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
       : tone === "surface"
-        ? "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-        : "text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200";
+        ? SHARED_SOFT_BUTTON_CLASS
+        : SHARED_SOFT_BUTTON_CLASS;
 
   return (
     <Tooltip content={label} side="top">
@@ -41,7 +42,7 @@ export function IconActionButton({
         disabled={disabled}
         aria-label={label}
         aria-expanded={expanded}
-        className={`inline-flex shrink-0 items-center justify-center align-middle rounded-xl p-1.5 leading-none transition disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer ${toneClasses}`}
+        className={`${SHARED_ACTION_CLASS} inline-flex size-8 shrink-0 items-center justify-center align-middle rounded-xl p-1.5 leading-none transition disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer ${toneClasses}`}
       >
         {children}
       </button>

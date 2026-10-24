@@ -1,5 +1,6 @@
 "use client";
 
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 import { memo, useState, useMemo, type ComponentProps } from "react";
 import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
 import { TikTokConfigModal } from "../TikTokConfigModal";
@@ -293,7 +294,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
             <button
               type="button"
               onClick={() => setShowTikTokModal(true)}
-              className="modal-standard-input flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:border-slate-400 focus:ring-slate-200/70 sm:rounded-xl sm:px-4 sm:py-3 sm:text-sm dark:border-white/10 dark:bg-[#161B22] dark:text-gray-100 dark:hover:border-white/20 dark:hover:bg-white/5"
+              className={`${SHARED_SOFT_BUTTON_CLASS} modal-standard-input flex w-full items-center justify-between px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm`}
             >
               <span>
                 {filledTikTokConfigs.length > 0
@@ -326,7 +327,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               onChange={onSubscriptionPlanChange}
               disabled={subscriptionPlansLoading || !subscriptionPlans.length}
               hideLabel
-              triggerClassName="h-auto rounded-lg sm:rounded-xl border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 dark:bg-[#161B22] dark:text-gray-100 dark:border-white/10 dark:hover:border-white/20"
+              triggerClassName="!h-auto px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm"
             />
           </div>
         </div>

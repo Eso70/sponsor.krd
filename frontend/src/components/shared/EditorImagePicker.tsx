@@ -1,4 +1,5 @@
 "use client";
+import { SHARED_CONTROL_CLASS } from "./shared-control-styles";
 import { toast } from "sonner";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
@@ -154,7 +155,7 @@ export function EditorImagePicker({
           className={
             thumbnails
               ? "sr-only"
-              : "block w-full rounded-lg border border-dashed border-slate-300 p-2 text-[13px] text-slate-500 file:me-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1.5 file:text-xs dark:border-white/20 dark:text-slate-400 dark:file:bg-white/10 dark:file:text-slate-200"
+              : `${SHARED_CONTROL_CLASS} block w-full p-2 text-[13px] file:me-2 file:rounded-lg file:border-0 file:bg-transparent file:px-2 file:py-1.5 file:text-xs file:text-inherit`
           }
           onChange={async (event) => {
             const files = Array.from(event.target.files ?? []);

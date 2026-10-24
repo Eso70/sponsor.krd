@@ -1,6 +1,7 @@
 "use client";
 
 import { PageSelectionCheckbox, usePageSelection } from "@/components/shared/PageSelection";
+import { PageListName } from "@/components/shared/PageListName";
 import { PageListMobileCard } from "@/components/shared/PageListMobileCard";
 import { LinktreeRowActions } from "./LinktreeRowActions";
 import { memo, useCallback, useState, type ComponentType } from "react";
@@ -190,7 +191,7 @@ const TableRow = memo(function TableRow({
       </td>
       <td className="px-2 sm:px-3 py-3">
         <span className="text-xs sm:text-sm font-semibold text-gray-900 wrap-break-word block mb-1">
-          {item.name}
+          <PageListName name={item.name} verified={item.template_config?.verification_badge === true} verificationLabel={labels.verificationBadge} />
         </span>
         <MetaBadgesComponent
           item={item}
@@ -305,6 +306,8 @@ const MobileCard = memo(function MobileCard({
   return (
     <PageListMobileCard
       title={item.name}
+      verified={item.template_config?.verification_badge === true}
+      verificationLabel={labels.verificationBadge}
       selection={<PageSelectionCheckbox id={item.id} name={item.name} />}
       image={<PageListImage src={pageListLogo(item.image, item.business_default_avatar)} name={item.name} variant="table" />}
       badges={<MetaBadgesComponent item={item} showAgeBadge={showPageMeta} showTemplate={showPageMeta} listCopy={metaCopy} />}

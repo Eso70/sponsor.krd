@@ -21,7 +21,7 @@
 .summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; opacity: 1; }
 .chevron { width: 14px; height: 14px; flex-shrink: 0; transition: transform 150ms ease; }
 .details[open] .chevron { transform: rotate(180deg); }
-.content { margin-top: 6px; border-radius: 18px; background: color-mix(in srgb, currentColor 4%, transparent); padding: 12px 14px; font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
+.content { margin-top: 6px; border-radius: var(--ui-radius-control, 18px); background: color-mix(in srgb, currentColor 4%, transparent); padding: 12px 14px; font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
 
 .overview { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; max-width: 100%; margin-top: 8px; font-size: 11px; line-height: 18px; }
 .fact { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; padding: 4px 9px; border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); }

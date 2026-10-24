@@ -1,0 +1,15 @@
+.card {
+  border: 1px solid var(--ui-card-border, #edf0f4);
+  border-radius: var(--ui-radius-card, 24px);
+  background: var(--ui-card-surface, #ffffff);
+  box-shadow: none;
+}
+.nested {
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-control, 18px);
+  background: color-mix(
+    in srgb,
+    var(--ui-card-surface, #ffffff) 65%,
+    var(--shared-control-surface, #f3f5f7)
+  );
+}

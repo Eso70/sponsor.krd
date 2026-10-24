@@ -1,9 +1,28 @@
 import type { HTMLAttributes } from "react";
+import { SHARED_CONTROL_CLASS } from "./shared-control-styles";
+import styles from "./segmented-control.module.css";
 
-/** Shared Settings-style tab surface for interactive and pending tab rows. */
-export function SegmentedTabsFrame({ fullWidth, className = "", children, ...props }: HTMLAttributes<HTMLDivElement> & { fullWidth?: boolean }) {
-  return <div {...props}
-    className={`custom-scrollbar brand-custom-scrollbar theme-custom-scrollbar overflow-x-auto rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-[#1c222b] ${fullWidth ? "w-full" : ""} ${className}`}>
-    <div className={`flex gap-1 ${fullWidth ? "w-full" : "min-w-max sm:min-w-0"}`}>{children}</div>
-  </div>;
+/** One soft surface and spacing system for tabs, collection toggles and skeletons. */
+export function SegmentedTabsFrame({
+  fullWidth,
+  compact,
+  className = "",
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  fullWidth?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      {...props}
+      className={`${SHARED_CONTROL_CLASS} ${styles.frame} ${compact ? styles.compact : ""} custom-scrollbar theme-custom-scrollbar ${fullWidth ? "w-full" : ""} ${className}`}
+    >
+      <div
+        className={`${styles.list} ${fullWidth || compact ? "w-full !min-w-0" : ""}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
 }

@@ -11,6 +11,12 @@ export function normalizeLinktreeContent<
     (typeof name !== 'string' || name.trim().length < 2 || name.length > 255)
   )
     throw new BadRequestException('Invalid headline');
+  const slug = input.seo_name ?? input.slug;
+  if (
+    slug !== undefined &&
+    (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{1,254}$/.test(slug))
+  )
+    throw new BadRequestException('Invalid link slug');
   return {
     ...input,
     name: name?.trim(),

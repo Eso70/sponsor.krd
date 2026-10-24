@@ -5,6 +5,7 @@ import { normalizeTemplateConfig } from "@/lib/templates/config";
 export function buildPlatformLinktreePayload(data: LinktreeEditorSubmitData) {
   return {
     headline: data.headline.trim(),
+    ...(data.slug ? { seo_name: data.slug } : {}),
     slogan: data.slogan?.trim() || "",
     slogan_color: data.slogan_color?.trim() || null,
     description: data.description?.trim() || undefined,

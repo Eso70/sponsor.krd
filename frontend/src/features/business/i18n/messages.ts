@@ -87,6 +87,7 @@ export const businessMessages = {
       noAnalytics: "هیچ داتایەک نییە",
     },
     LinktreeList: {
+      verificationBadge: "نیشانەی پشتڕاستکردنەوە",
       loadingCards: "پەیجەکان بار دەکرێن",
       loadingTable: "خشتەی پەیجەکان بار دەکرێت",
       paginationOf: "لە",

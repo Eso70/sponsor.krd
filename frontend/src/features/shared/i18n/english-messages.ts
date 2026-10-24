@@ -39,6 +39,7 @@ export const englishBusinessMessages = {
     create: pageActionCopy("en").create, clearAnalytics: "Clear all views and clicks", noAnalytics: "No data",
   },
   LinktreeList: {
+    verificationBadge: "Verified badge",
     loadingCards: "Loading pages", loadingTable: "Loading page table", paginationOf: "of",
     paginationPrevious: "Previous page", paginationNext: "Next page", 
     copied: "Copied", copyLink: "Copy link", linkCopied: "Link copied",

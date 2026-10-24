@@ -1432,3 +1432,41 @@ page/form deletion (trash icon), with matching warning/danger confirmation tones
 Both controls appear only after selection, reuse the same responsive action row,
 and clearly describe whether submitted answers and contact details are preserved
 or deleted. Select all/deselect remain neutral; default Linktrees cannot be deleted.
+
+
+PageListCardMedia owns a single banner-overlay controls row for Form and Linktree
+grids and their skeletons. Selection stays left and Pin stays right, centered in
+equal 32px slots on the same row in every language and at every breakpoint.
+
+
+Management status/view toggles and Settings/Templates tabs share SegmentedTabsFrame
+and segmented-control.module.css. Use SegmentedControl for text-only pressed
+choices and SegmentedTabs for tab panels. Both use borderless soft surfaces,
+rounded options, theme-colored active states and the same hover/focus treatment.
+Management skeletons reuse the frame and option styles; primary toolbar/save
+buttons share the management radius token (18px desktop, 16px compact).
+
+
+## System design tokens
+
+Global utility radii and shared component modules use --ui-radius-control,
+--ui-radius-compact, --ui-radius-card and --ui-radius-popup. Defaults are
+18/14/24/20px; small screens use 16/12/20/18px. This applies to nested controls,
+loading frames, dashboard/authentication UI and public renderers. Keep intrinsic
+circles (avatars, switches, radio indicators, color swatches) and the compact
+calendar geometry explicit. Do not force ordinary button geometry onto them.
+Shared action geometry preserves tenant and semantic fills. Neutral buttons,
+file controls, add actions, crop controls and authentication fields use the shared
+soft surface. Editor groups and detail/session cards use shared-surface-styles;
+nested surfaces remain slightly lighter than their fields. Existing authored
+public-page colors, event handlers, permissions and tracking remain unchanged.
+
+
+Linktree grid, desktop table and mobile table identities share PageListName and
+the existing VerificationBadge when template_config.verification_badge is exactly
+true. The badge remains visible beside long/truncated names and uses localized
+accessible copy. Forms do not acquire this page appearance setting.
+Analytics share-link deletion uses ConfirmDeleteModal above the sharing drawer.
+Only confirming calls the existing owner-scoped DELETE endpoint; cancellation
+preserves access, and failed deletion leaves the confirmation available for retry.
+Successful deletion removes the link and any revealed code from local state.

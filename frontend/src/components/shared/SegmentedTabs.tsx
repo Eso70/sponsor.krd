@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
+import styles from "./segmented-control.module.css";
 import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
 import {
   isWebsiteColor,
@@ -23,6 +24,8 @@ export function SegmentedTabs<T extends string>({
   accent,
   fullWidth,
   className,
+  compact = false,
+  label,
 }: {
   tabs: SegmentedTab<T>[];
   value: T;
@@ -30,6 +33,8 @@ export function SegmentedTabs<T extends string>({
   accent?: string;
   fullWidth?: boolean;
   className?: string;
+  compact?: boolean;
+  label?: string;
 }) {
   const accentStyle = (() => {
     if (!accent) return undefined;
@@ -48,6 +53,8 @@ export function SegmentedTabs<T extends string>({
   return (
     <SegmentedTabsFrame
       className={className}
+      compact={compact}
+      aria-label={label}
       fullWidth={fullWidth}
       style={accentStyle}
       role="tablist"
@@ -57,7 +64,7 @@ export function SegmentedTabs<T extends string>({
             <button
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-xs font-semibold outline-none transition sm:text-sm ${value === tab.id ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"}`}
+              className={`${styles.item} ${value === tab.id ? "theme-fill text-[var(--theme-ink)]" : ""}`}
               aria-selected={value === tab.id}
               tabIndex={value === tab.id ? 0 : -1}
               role="tab"
