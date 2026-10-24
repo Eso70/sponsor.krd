@@ -2,17 +2,23 @@ import { SkeletonAuthenticationPage } from "@/components/shared/SkeletonAuthenti
 import { fetchBusinessSubdomainThemeFromHeaders } from "@/lib/utils/business-error-theme.server";
 import { BUSINESS_LOGO_PLACEHOLDER } from "@/lib/brand/brand-assets";
 import { cookies } from "next/headers";
-import { BUSINESS_LOCALE_COOKIE, businessLocaleFromCookie } from "@/features/business/i18n/locale-cookie";
+import {
+  BUSINESS_LOCALE_COOKIE,
+  businessLocaleFromCookie,
+} from "@/features/business/i18n/locale-cookie";
 import { businessPreAuthCopy } from "@/features/business/i18n/pre-auth-copy";
 
 export default async function BusinessWorkspaceEntryLoading() {
-  const theme = await fetchBusinessSubdomainThemeFromHeaders().catch(() => null);
-  const locale = businessLocaleFromCookie((await cookies()).get(BUSINESS_LOCALE_COOKIE)?.value);
+  const theme = await fetchBusinessSubdomainThemeFromHeaders().catch(
+    () => null,
+  );
+  const locale = businessLocaleFromCookie(
+    (await cookies()).get(BUSINESS_LOCALE_COOKIE)?.value,
+  );
   const copy = businessPreAuthCopy[locale];
 
   return (
     <SkeletonAuthenticationPage
-      rememberDevice
       brandDescription={copy.entryDescription}
       brandName={theme?.name || copy.business}
       brandLogo={theme?.logo ?? BUSINESS_LOGO_PLACEHOLDER}
@@ -22,7 +28,11 @@ export default async function BusinessWorkspaceEntryLoading() {
       language={locale}
       loadingLabel={copy.loadingAuthentication}
       backLabel={copy.back}
-      themeCopy={{ label: copy.theme, light: copy.lightTheme, dark: copy.darkTheme }}
+      themeCopy={{
+        label: copy.theme,
+        light: copy.lightTheme,
+        dark: copy.darkTheme,
+      }}
     />
   );
 }

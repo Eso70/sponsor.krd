@@ -1,28 +1,31 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   CircleDollarSign,
   DollarSign,
   Eye,
-  LayoutGrid,
   Megaphone,
   MousePointerClick,
   Plus,
-  Search,
-  Table2,
   TrendingUp,
-  X,
 } from "lucide-react";
 
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PageManagementActions } from "@/components/shared/PageManagementActions";
+import { ManagementSearchTrigger } from "@/components/shared/ManagementSearchTrigger";
+import { ManagementViewToggle } from "@/components/shared/ManagementViewToggle";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
+import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 import { SearchModal } from "@/components/shared/SearchModal";
 import { StatCard } from "@/components/shared/StatCard";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
-import { Tooltip } from "@/components/shared/Tooltip";
 import { OBJECTIVE_LABELS } from "../campaign-objectives";
-import { formatCostPerConversion } from "../campaign-metrics";
+import { campaignReportedValue, formatCostPerConversion } from "../campaign-metrics";
 import type { CampaignStatus, TikTokCampaign } from "../types";
 import { CampaignDetailsModal } from "./CampaignDetailsModal";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
@@ -31,6 +34,7 @@ import { CreateCampaignModal } from "./CreateCampaignModal";
 import { TikTokCampaignsGrid } from "./TikTokCampaignsGrid";
 import { TikTokCampaignsTable } from "./TikTokCampaignsTable";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
 import { campaignCopy } from "../campaign-copy";
 import { useCampaignText } from "../use-campaign-text";
 
@@ -67,6 +71,7 @@ export function PlatformCampaignsPage() {
   const t = useCampaignText();
   const localStorageKey = "platform_tiktok_campaigns";
 
+  const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<TikTokCampaign[]>([]);
   const [view, setView] = useState<CampaignView>("grid");
   const [statusFilter, setStatusFilter] = useState<CampaignFilter>("all");
@@ -80,27 +85,25 @@ export function PlatformCampaignsPage() {
   );
   const deferredSearch = useDeferredValue(searchQuery.trim().toLowerCase());
 
-  // Load persisted campaigns if available
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const stored = window.localStorage.getItem(localStorageKey);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            const savedCampaigns = parsed.filter((campaign) => !/^camp-00[1-4]$/.test(campaign?.id));
-            setCampaigns(savedCampaigns);
-            if (savedCampaigns.length !== parsed.length) {
-              window.localStorage.setItem(localStorageKey, JSON.stringify(savedCampaigns));
-            }
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
+  const loadCampaigns = useCallback((rethrow = false) => {
+    try {
+      const stored = window.localStorage.getItem(localStorageKey);
+      const parsed: unknown = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(parsed)) throw new Error("Invalid stored campaigns");
+      const savedCampaigns = (parsed as TikTokCampaign[]).filter((campaign) => !/^camp-00[1-4]$/.test(campaign?.id));
+      setCampaigns(savedCampaigns);
+      if (savedCampaigns.length !== parsed.length) window.localStorage.setItem(localStorageKey, JSON.stringify(savedCampaigns));
+    } catch (error) {
+      if (rethrow) throw error;
+    } finally {
+      setLoading(false);
+    }
   }, [localStorageKey]);
+  const refreshing = useRegisterDashboardRefresh("campaigns", () => loadCampaigns(true));
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadCampaigns(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadCampaigns]);
 
   const saveCampaigns = (
     updater: TikTokCampaign[] | ((prev: TikTokCampaign[]) => TikTokCampaign[]),
@@ -174,8 +177,11 @@ export function PlatformCampaignsPage() {
 
   return (
     <div className="space-y-8" dir="ltr">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{copy.reportingUnavailable}</p>
       <StatCardGrid columns={3}>
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Megaphone}
           label={copy.totalCampaigns}
           value={summary.campaigns}
@@ -183,120 +189,61 @@ export function PlatformCampaignsPage() {
           color="blue"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={Eye}
           label={copy.totalImpressions}
-          value={summary.impressions}
+          value={campaignReportedValue(summary.impressions)}
           color="purple"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={MousePointerClick}
           label={copy.totalClicks}
-          value={summary.clicks}
+          value={campaignReportedValue(summary.clicks)}
           color="green"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={DollarSign}
           label={copy.totalSpent}
-          value={`$${summary.totalSpent.toFixed(2)}`}
+          value={campaignReportedValue(`$${summary.totalSpent.toFixed(2)}`)}
           color="orange"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={TrendingUp}
           label={copy.totalConversions}
-          value={summary.conversions}
+          value={campaignReportedValue(summary.conversions)}
           color="pink"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={platformLoadingCopy[locale].loading}
           icon={CircleDollarSign}
           label={copy.costPerConversion}
-          value={formatCostPerConversion({
+          value={campaignReportedValue(formatCostPerConversion({
             totalSpent: summary.totalSpent,
             conversions: summary.conversions,
-          })}
+          }))}
           color="slate"
         />
       </StatCardGrid>
 
-      <section className="w-full space-y-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-        <PageHeader
-          title={copy.title}
-          description={copy.description}
-          icon={Megaphone}
-          action={
-            <>
-              <Tooltip
-                content={
-                  searchQuery.trim() ? copy.clearSearch : copy.searchShortcut
-                }
-                side="bottom"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (searchQuery.trim()) setSearchQuery("");
-                    else setSearchOpen(true);
-                  }}
-                  className={`group flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition hover:shadow sm:px-3.5 ${searchQuery.trim() ? "sa-soft sa-soft-border" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 sm:w-44 sm:justify-between"}`}
-                  aria-label={
-                    searchQuery.trim() ? copy.clearSearch : copy.search
-                  }
-                >
-                  {searchQuery.trim() ? (
-                    <X className="h-4 w-4" />
-                  ) : (
-                    <>
-                      <span className="flex items-center gap-2">
-                        <Search className="h-4 w-4" />
-                        <span className="hidden text-xs font-semibold sm:inline">
-                          {copy.searchPlaceholder}
-                        </span>
-                      </span>
-                      <kbd className="hidden rounded bg-slate-100 px-1 py-0.5 font-sans text-[8px] font-bold text-slate-400 dark:bg-white/10 sm:inline-flex">
-                        Ctrl K
-                      </kbd>
-                    </>
-                  )}
-                </button>
-              </Tooltip>
+      <PageManagementSection title={copy.title} description={copy.description} icon={<Megaphone className="size-5" />}
+        toolbar={<PageManagementActions>
+          <ManagementSearchTrigger query={searchQuery} open={searchOpen}
+            onClick={() => searchQuery.trim() ? setSearchQuery("") : setSearchOpen(true)}
+            labels={{ clearSearch: copy.clearSearch, searchTooltip: copy.searchShortcut, search: copy.search, searchPlaceholder: copy.searchPlaceholder }} />
+          <ManagementViewToggle value={view} onChange={setView} gridLabel={pageActionCopy(locale).gridView} tableLabel={pageActionCopy(locale).tableView} accentMode="platform" />
+          <SettingsActionButton label={copy.newCampaign} icon={Plus} onClick={() => setCreateOpen(true)} />
+        </PageManagementActions>}>
+        <DashboardRefreshRegion loading={loading || refreshing} label={platformLoadingCopy[locale].loading}>
 
-              <div className="flex h-10 shrink-0 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-white/5">
-                <Tooltip content={copy.gridView} side="bottom">
-                  <button
-                    type="button"
-                    onClick={() => setView("grid")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${view === "grid" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"}`}
-                    aria-label={copy.gridView}
-                    aria-pressed={view === "grid"}
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-                <Tooltip content={copy.tableView} side="bottom">
-                  <button
-                    type="button"
-                    onClick={() => setView("table")}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${view === "table" ? "sa-gradient sa-ink shadow-md" : "text-slate-500 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"}`}
-                    aria-label={copy.tableView}
-                    aria-pressed={view === "table"}
-                  >
-                    <Table2 className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="sa-gradient sa-ink flex h-10 items-center justify-center gap-2 rounded-xl px-3.5 text-xs font-bold shadow-md transition hover:brightness-95"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">{copy.newCampaign}</span>
-              </button>
-            </>
-          }
-        />
-
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-5 dark:border-white/5">
+        <div className="flex flex-wrap items-center gap-2 pb-5">
           {STATUS_FILTERS.map((filter) => {
             const count =
               filter === "all"
@@ -308,11 +255,11 @@ export function PlatformCampaignsPage() {
                 key={filter}
                 type="button"
                 onClick={() => setStatusFilter(filter)}
-                className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all duration-200 ${statusFilter === filter ? "sa-soft sa-soft-border shadow-sm" : "border-transparent bg-transparent text-slate-500 hover:border-slate-200/70 hover:bg-white dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/5"}`}
+                className={`${SHARED_SOFT_BUTTON_CLASS} inline-flex h-9 items-center gap-2 px-3 text-xs font-semibold`}
                 aria-pressed={statusFilter === filter}
               >
                 {copy.filters[filter]}
-                <span className="font-mono text-[10px] opacity-70">
+                <span className="text-[10px] tabular-nums opacity-70">
                   {count}
                 </span>
               </button>
@@ -325,7 +272,8 @@ export function PlatformCampaignsPage() {
         ) : (
           <TikTokCampaignsTable {...collectionProps} />
         )}
-      </section>
+        </DashboardRefreshRegion>
+      </PageManagementSection>
 
       <SearchModal
         isOpen={searchOpen}

@@ -2,10 +2,11 @@ import { formsCopy, type FormsCopy } from "../forms-copy";
 import { formEditorCopy } from "../form-editor-copy";
 import { PublicFormShell } from "./PublicFormShell";
 import styles from "./FormPreview.module.css";
+import { SkeletonPageManagement } from "@/components/shared/SkeletonPageLayouts";
+import { FormsStats } from "./FormsStats";
 import { Skeleton, SkeletonStatCard } from "@/components/shared/Skeleton";
+import type { StatCardColor } from "@/components/shared/StatCard";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
-import { ManagementGrid } from "@/components/shared/ManagementGrid";
-import { ManagementCard } from "@/components/shared/ManagementCard";
 
 export function FormsStatsSkeleton({
   label,
@@ -16,90 +17,24 @@ export function FormsStatsSkeleton({
   compact?: boolean;
   copy?: FormsCopy;
 }) {
+  if (!compact) return <div role="status" aria-busy="true" aria-label={label}>
+    <div aria-hidden="true"><FormsStats count={0} copy={copy} loading /></div>
+  </div>;
+  const colors: StatCardColor[] = ["purple", "green", "orange", "theme", "slate", "blue"];
   return (
     <div role="status" aria-busy="true" aria-label={label}>
-      <StatCardGrid columns={3} className={compact ? "" : "mb-8"}>
-        {(compact
-          ? [
-              copy.views,
-              copy.starts,
-              copy.submissions,
-              copy.rate,
-              copy.visitors,
-              copy.interactions,
-            ]
-          : [
-              copy.total,
-              copy.views,
-              copy.visitors,
-              copy.starts,
-              copy.submissions,
-              copy.rate,
-            ]
-        ).map((title) => (
-          <SkeletonStatCard key={title} label={title} />
+      <StatCardGrid columns={3}>
+        {[
+          copy.views, copy.starts, copy.submissions,
+          copy.rate, copy.visitors, copy.interactions,
+        ].map((title, index) => (
+          <SkeletonStatCard
+            key={title}
+            color={colors[index]}
+            showDetail={title === copy.rate}
+          />
         ))}
       </StatCardGrid>
-    </div>
-  );
-}
-
-export function FormsCollectionSkeleton({
-  label,
-  viewMode,
-  copy = formsCopy("en"),
-}: {
-  label: string;
-  viewMode: "grid" | "table";
-  copy?: FormsCopy;
-}) {
-  if (viewMode === "table")
-    return (
-      <FormRowsSkeleton
-        label={label}
-        headers={[
-          copy.name,
-          copy.descriptionLabel,
-          "URL",
-          copy.analytics,
-          copy.created,
-          copy.updated,
-          copy.actions,
-        ]}
-      />
-    );
-  return (
-    <div role="status" aria-busy="true" aria-label={label}>
-      <ManagementGrid
-        desktopColumns={3}
-        data={[0, 1, 2, 3, 4, 5]}
-        getItemKey={(index) => String(index)}
-        renderItem={() => (
-          <ManagementCard intrinsicHeight={320}>
-            <div className="space-y-4">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-3 w-2/3" />
-              <div className="flex gap-2 pt-4">
-                <button
-                  disabled
-                  className="h-9 flex-1 rounded-lg border text-xs"
-                >
-                  {copy.analytics}
-                </button>
-                <button
-                  disabled
-                  className="h-9 flex-1 rounded-lg border text-xs"
-                >
-                  {copy.edit}
-                </button>
-                <Skeleton className="size-9" />
-              </div>
-            </div>
-          </ManagementCard>
-        )}
-      />
     </div>
   );
 }
@@ -241,7 +176,7 @@ export function FormRowsSkeleton({
       role="status"
       aria-busy="true"
       aria-label={label}
-      className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10"
+      className="min-w-0 w-full max-w-full overflow-x-auto rounded-2xl border border-slate-200/70 dark:border-white/10"
     >
       <div className="space-y-3 p-3 md:hidden">
         {[0, 1, 2].map((row) => (
@@ -286,15 +221,20 @@ export function FormRowsSkeleton({
     </div>
   );
 }
-export function FormResponsesSkeleton({ copy }: { copy: FormsCopy }) {
+export function FormResponsesSkeleton({
+  copy,
+  essential = false,
+}: {
+  copy: FormsCopy;
+  essential?: boolean;
+}) {
   return (
     <FormRowsSkeleton
       label={copy.loading}
       headers={[
         copy.submittedAt,
         copy.answerPreview,
-        copy.source,
-        copy.timeSpent,
+        ...(!essential ? [copy.source, copy.timeSpent] : []),
         copy.viewDetails,
       ]}
     />
@@ -302,41 +242,6 @@ export function FormResponsesSkeleton({ copy }: { copy: FormsCopy }) {
 }
 
 export function FormsPageSkeleton({ copy }: { copy: FormsCopy }) {
-  return (
-    <div
-      className="space-y-6"
-      role="status"
-      aria-busy="true"
-      aria-label={copy.loading}
-    >
-      <header className="space-y-4">
-        <h1 className="text-2xl font-bold">{copy.title}</h1>
-        <p className="text-sm text-slate-500">{copy.description}</p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            copy.active,
-            copy.archived,
-            copy.search,
-            copy.refresh,
-            copy.create,
-          ].map((label) => (
-            <button
-              key={label}
-              type="button"
-              disabled
-              className="rounded-lg border border-slate-200 px-3 py-2 text-xs dark:border-white/10"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </header>
-      <FormsStatsSkeleton copy={copy} label={copy.loading} />
-      <FormsCollectionSkeleton
-        copy={copy}
-        label={copy.loading}
-        viewMode="grid"
-      />
-    </div>
-  );
+  return <SkeletonPageManagement loadingLabel={copy.loading}
+    stats={<FormsStats count={0} copy={copy} loading />} />;
 }

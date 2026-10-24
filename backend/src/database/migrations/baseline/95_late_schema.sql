@@ -35,8 +35,6 @@ COMMENT ON COLUMN public.businesses.profile_changed_at IS
 COMMENT ON COLUMN public.linktrees.subtitle_color IS
     'Optional CSS colour value for the subtitle shown on the public Linktree page. NULL inherits the template text colour.';
 
-COMMENT ON COLUMN public.linktrees.is_campaign_active IS
-    'Indicates whether this Linktree is actively used in an advertising campaign.';
 
 COMMENT ON COLUMN public.linktrees.is_archived IS
     'Indicates whether this Linktree is hidden from the active dashboard view.';

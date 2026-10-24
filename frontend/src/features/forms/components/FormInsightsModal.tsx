@@ -2,8 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { FormAnalytics, FormSubmissionFilters } from "@linktree/types";
 import { toast } from "sonner";
-import { Tooltip } from "@/components/shared/Tooltip";
-import { X } from "lucide-react";
+import { FormExportProgress } from "./FormExportProgress";
 import { ManagementDrawer } from "@/components/shared/ManagementDrawer";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { FormInsightsActions } from "./FormInsightsActions";
@@ -74,7 +73,10 @@ export function FormInsightsModal({
           if (!controller.signal.aborted) setData(result);
         })
         .catch(() => {
-          if (!controller.signal.aborted) { setResponseFailed(true); toast.error(copy.responsesError); }
+          if (!controller.signal.aborted) {
+            setResponseFailed(true);
+            toast.error(copy.responsesError);
+          }
         })
         .finally(() => {
           if (!controller.signal.aborted) setResponseLoading(false);
@@ -95,7 +97,10 @@ export function FormInsightsModal({
         if (!controller.signal.aborted) setMetrics(result);
       })
       .catch(() => {
-        if (!controller.signal.aborted) { setStatsFailed(true); toast.error(copy.analyticsError); }
+        if (!controller.signal.aborted) {
+          setStatsFailed(true);
+          toast.error(copy.analyticsError);
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setStatsLoading(false);
@@ -106,7 +111,8 @@ export function FormInsightsModal({
   useEffect(() => {
     if (refreshRequested.current && !responseLoading && !statsLoading) {
       refreshRequested.current = false;
-      if (!responseFailed && !statsFailed) toast.success(copy.notifications.refreshed);
+      if (!responseFailed && !statsFailed)
+        toast.success(copy.notifications.refreshed);
     }
   }, [responseLoading, statsLoading, responseFailed, statsFailed, copy]);
   const retryResponses = () => {
@@ -135,9 +141,13 @@ export function FormInsightsModal({
         controller.signal,
         (count, total) => setExportProgress({ count, total }),
       );
-      if (!controller.signal.aborted) toast.success(copy.notifications.exported);
+      if (!controller.signal.aborted)
+        toast.success(copy.notifications.exported);
     } catch {
-      if (!controller.signal.aborted) { setExportFailed(true); toast.error(copy.exportError); }
+      if (!controller.signal.aborted) {
+        setExportFailed(true);
+        toast.error(copy.exportError);
+      }
     } finally {
       if (exportController.current === controller) {
         exportController.current = null;
@@ -272,26 +282,12 @@ export function FormInsightsModal({
             />
             {exportFailed && <FormRequestError message={copy.exportError} />}
             {exporting && (
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex items-center justify-between rounded-xl bg-sky-50 px-4 py-3 text-xs text-sky-700 dark:bg-sky-500/10 dark:text-sky-200"
-              >
-                <span>
-                  {copy.exporting} · {exportProgress.count.toLocaleString()} /{" "}
-                  {exportProgress.total.toLocaleString()}
-                </span>
-                <Tooltip content={copy.cancelExport}>
-                  <button
-                    type="button"
-                    aria-label={copy.cancelExport}
-                    onClick={() => exportController.current?.abort()}
-                    className="rounded-lg p-1"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </Tooltip>
-              </div>
+              <FormExportProgress
+                copy={copy}
+                count={exportProgress.count}
+                total={exportProgress.total}
+                onCancel={() => exportController.current?.abort()}
+              />
             )}
             {responseLoading ? (
               <FormResponsesSkeleton copy={copy} />

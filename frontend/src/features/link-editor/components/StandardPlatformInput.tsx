@@ -4,7 +4,7 @@ import { useCallback, useState, type ChangeEvent } from "react";
 import { X } from "lucide-react";
 import { CountrySelector } from "@/components/ui/CountrySelector";
 import { Tooltip } from "@/components/shared/Tooltip";
-import { modalInputClass } from "../modal-input-styles";
+import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import { arabicCountrySelectorCopy, englishCountrySelectorCopy, getEditorPlatformPlaceholder, type EditorCopy } from "../editor-copy";
 
 export const PHONE_PLATFORMS = ["whatsapp", "phone", "viber"] as const;
@@ -27,28 +27,12 @@ export function normalizeNationalPhoneInput(
 }
 
 export function platformInputPlaceholder(platform: string): string {
-  if (isPhonePlatform(platform)) return "0750 123 4567";
-  const placeholders: Record<string, string> = {
-    gps: "36.191, 44.009",
-    telegram: "@username یان t.me/+کۆدی بانگهێشت یان +کۆد",
-    instagram: "@username یان instagram.com/username",
-    tiktok: "@username یان tiktok.com/@username",
-    snapchat: "username یان snapchat.com/add/username",
-    twitter: "@username یان x.com/username",
-    x: "@username یان x.com/username",
-    facebook: "username یان facebook.com/username",
-    linkedin: "username یان linkedin.com/in/username",
-    youtube: "@username یان youtube.com/@username",
-    discord: "ناسنامەی بەکارهێنەر یان discord.gg/...",
-    email: "name@business.com",
-    website: "example.com",
-    custom: "https://example.com",
-  };
-  return placeholders[platform] || "بەهاکە بنووسە";
+  return getEditorPlatformPlaceholder(platform);
 }
 
 export interface StandardPlatformInputProps {
   copy?: EditorCopy;
+  ariaLabel?: string;
   platform: string;
   value: string;
   onChange: (value: string) => void;
@@ -60,12 +44,14 @@ export interface StandardPlatformInputProps {
   inputClassName?: string;
   countryClassName?: string;
   showError?: boolean;
+  revealError?: boolean;
   showClear?: boolean;
   disabled?: boolean;
 }
 
 export function StandardPlatformInput({
   copy,
+  ariaLabel,
   platform,
   value,
   onChange,
@@ -77,12 +63,13 @@ export function StandardPlatformInput({
   inputClassName = "",
   countryClassName = "",
   showError = false,
+  revealError = false,
   showClear = false,
   disabled = false,
 }: StandardPlatformInputProps) {
   const [touched, setTouched] = useState(false);
   const phoneBased = isPhonePlatform(platform);
-  const errorVisible = touched && Boolean(error);
+  const errorVisible = (touched || revealError) && Boolean(error);
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       onChange(
@@ -103,9 +90,10 @@ export function StandardPlatformInput({
 
   return (
     <div className="w-full">
-      <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+      <div className="flex w-full items-center gap-2">
         {phoneBased && (
           <CountrySelector
+            language={copy?.language === "en" ? "en" : copy ? "ar" : "ckb"}
             copy={copy?.language === "en" ? englishCountrySelectorCopy : copy ? arabicCountrySelectorCopy : undefined}
             value={countryCode || "964"}
             onChange={handleCountryChange}
@@ -113,7 +101,8 @@ export function StandardPlatformInput({
           />
         )}
         <div className="relative min-w-0 flex-1">
-          <input
+          <ModalTextInput
+            aria-label={ariaLabel}
             type={platform === "email" ? "email" : "text"}
             inputMode={phoneBased ? "tel" : undefined}
             dir="ltr"
@@ -127,11 +116,10 @@ export function StandardPlatformInput({
               setTouched(true);
               onBlur?.();
             }}
-            placeholder={placeholder || (copy && getEditorPlatformPlaceholder(platform, copy)) || (copy?.language === "en" && !["whatsapp", "phone", "viber", "gps", "email", "website", "custom"].includes(platform) ? "Enter a value" : platformInputPlaceholder(platform))}
-            className={modalInputClass(
-              errorVisible,
-              `h-11 min-w-0 flex-1 py-0 md:rounded-xl md:px-4 md:py-0 text-xs sm:text-sm ${inputClassName}`,
-            )}
+            placeholder={placeholder || getEditorPlatformPlaceholder(platform, copy)}
+            hasError={errorVisible}
+            error={(showError || revealError) && errorVisible ? error : undefined}
+            className={`h-11 min-w-0 flex-1 py-0 md:rounded-xl md:px-4 md:py-0 text-xs sm:text-sm ${inputClassName}`}
             style={showClear && value ? { paddingRight: "2.75rem" } : undefined}
             aria-invalid={errorVisible}
             disabled={disabled}
@@ -154,11 +142,7 @@ export function StandardPlatformInput({
           )}
         </div>
       </div>
-      {showError && errorVisible && error && (
-        <p className="mt-1.5 text-[10px] font-semibold leading-4 text-rose-500">
-          {error}
-        </p>
-      )}
+
     </div>
   );
 }

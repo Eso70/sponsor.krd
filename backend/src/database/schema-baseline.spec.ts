@@ -157,26 +157,24 @@ describe('full_schema.sql baseline', () => {
   });
 
   describe('current Linktree schema', () => {
+    it('omits the retired campaign flag from fresh installs and permissions', () => {
+      expect(tableBlock('linktrees')).not.toContain('is_campaign_active');
+      expect(SCHEMA).not.toContain('idx_linktrees_business_campaign');
+      expect(SCHEMA).not.toContain('idx_linktrees_business_default_campaign');
+      expect(DATA).not.toContain('"is_campaign_active"');
+    });
+
     it('declares dashboard state and subtitle styling directly', () => {
       const block = tableBlock('linktrees');
       expect(block).toContain('subtitle_color character varying(50)');
-      expect(block).toContain(
-        'is_campaign_active boolean DEFAULT false NOT NULL',
-      );
       expect(block).toContain('is_archived boolean DEFAULT false NOT NULL');
       expect(block).toContain('archived_at timestamp with time zone');
     });
 
     it('includes the matching indexes and permission fields', () => {
-      expect(SCHEMA).toContain('idx_linktrees_business_campaign_active');
-      expect(SCHEMA).toContain('idx_linktrees_business_default_campaign');
+      expect(SCHEMA).toContain('idx_linktrees_business_default');
       expect(SCHEMA).toContain('idx_linktrees_business_archived');
-      for (const field of [
-        'status',
-        'subtitle_color',
-        'is_campaign_active',
-        'is_archived',
-      ]) {
+      for (const field of ['status', 'subtitle_color', 'is_archived']) {
         expect(DATA).toContain(`"${field}"`);
       }
     });

@@ -6,6 +6,7 @@ import {
   summarizeCampaigns,
 } from "./PlatformCampaignsPage";
 import type { TikTokCampaign } from "../types";
+import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
 function storeCampaign() {
@@ -43,8 +44,8 @@ describe("PlatformCampaignsPage", () => {
 
     expect(screen.getByText("إجمالي الحملات")).toBeInTheDocument();
     expect(screen.getByText("إدارة الحملات")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "عرض الجدول" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "عرض الجدول" }));
+    expect(screen.getByRole("button", { name: pageActionCopy("ar").tableView })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: pageActionCopy("ar").tableView }));
     expect(screen.getByRole("columnheader", { name: "الفيديو" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "الميزانية / الإنفاق" })).toBeInTheDocument();
   });
@@ -60,10 +61,11 @@ describe("PlatformCampaignsPage", () => {
     expect(within(dialog).getByText("التحسين والمزايدة")).toBeInTheDocument();
   });
 
-  it("renders the shared six-card campaign summary", () => {
+  it("renders the shared six-card campaign summary", async () => {
     renderCampaigns();
 
-    expect(screen.getByText("کۆی کەمپەینەکان")).toBeInTheDocument();
+    expect(screen.getAllByRole("status")).toHaveLength(7);
+    expect(await screen.findByText("کۆی کەمپەینەکان")).toBeInTheDocument();
     expect(screen.getByText(/کەمپەینی چالاک/)).toBeInTheDocument();
     expect(screen.getByText("کۆی پیشاندانەکان")).toBeInTheDocument();
     expect(screen.getByText("کۆی کلیکەکان")).toBeInTheDocument();
@@ -80,7 +82,7 @@ describe("PlatformCampaignsPage", () => {
     renderCampaigns();
     await screen.findByText("saved.mp4");
 
-    fireEvent.click(screen.getByRole("button", { name: "بینینی خشتە" }));
+    fireEvent.click(screen.getByRole("button", { name: pageActionCopy("ckb").tableView }));
 
     expect(
       screen.getByRole("columnheader", { name: "ڤیدیۆ" }),
@@ -197,10 +199,9 @@ describe("PlatformCampaignsPage", () => {
     expect(
       within(detailsDialog).getByText("ئەنجامی کەمپەین"),
     ).toBeInTheDocument();
-    expect(
-      within(detailsDialog).getByText("ڕێژەی گۆڕان 7.18%"),
-    ).toBeInTheDocument();
-    expect(within(detailsDialog).getByText("$0.68")).toBeInTheDocument();
+    expect(within(detailsDialog).queryByText("ڕێژەی گۆڕان 7.18%")).not.toBeInTheDocument();
+    expect(within(detailsDialog).queryByText("$0.68")).not.toBeInTheDocument();
+    expect(within(detailsDialog).getAllByText("—").length).toBeGreaterThan(0);
   });
 
   it("derives every total from the campaign collection", () => {

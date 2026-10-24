@@ -16,7 +16,6 @@ import {
   Megaphone,
   MessageSquare,
   Plus,
-  RefreshCw,
   Search,
   Send,
   ShieldAlert,
@@ -32,9 +31,14 @@ import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { DateTimeInput } from "@/components/shared/DateTimeInput";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ManagementModal } from "@/components/shared/ManagementModal";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PageManagementActions } from "@/components/shared/PageManagementActions";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
 import { SearchModal } from "@/components/shared/SearchModal";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonStatCards } from "@/components/shared/Skeleton";
 import { communicationRequest } from "@/features/communications/api";
@@ -121,6 +125,7 @@ export function CommunicationCenterPage() {
       ? (queryTab as CenterTab)
       : "overview";
   });
+  const [loadFailed, setLoadFailed] = useState(false);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -140,7 +145,7 @@ export function CommunicationCenterPage() {
   const [announcementStatus, setAnnouncementStatus] = useState("all");
   const [announcementSearchOpen, setAnnouncementSearchOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (rethrow = false) => {
     setLoading(true);
     try {
       const [
@@ -162,6 +167,7 @@ export function CommunicationCenterPage() {
         ),
         communicationRequest<{ plans?: PlanOption[] }>("/api/platform/billing"),
       ]);
+      setLoadFailed(false);
       setOverview(overviewData);
       setAnnouncements(announcementData);
       setConversations(conversationData);
@@ -181,13 +187,17 @@ export function CommunicationCenterPage() {
         setTab("messages");
       }
     } catch (error) {
+      setLoadFailed(true);
       toast.error(tRef.current("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو"), {
         description: platformRequestError(error instanceof Error ? error.message : null, tRef.current("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو"), localeRef.current),
       });
+      if (rethrow) throw error;
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useRegisterDashboardRefresh("communications", () => load(true));
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void load());
@@ -209,6 +219,7 @@ export function CommunicationCenterPage() {
           "/api/platform/communications/conversations",
         ),
       ]);
+      setLoadFailed(false);
       const serializedOverview = JSON.stringify(overviewData);
       if (serializedOverview !== lastOverviewRef.current) {
         lastOverviewRef.current = serializedOverview;
@@ -230,7 +241,8 @@ export function CommunicationCenterPage() {
         }
       }
     } catch {
-      // Keep the last valid communication state during transient failures.
+      setLoadFailed(true);
+      // Keep the last valid rows, but do not present their counters as current.
     }
   };
 
@@ -278,7 +290,7 @@ export function CommunicationCenterPage() {
   if (loading && !overview) {
     return (
       <div className="min-h-[55vh] py-4">
-        <SkeletonStatCards count={4} className="grid-cols-2 lg:grid-cols-4" loadingLabel={platformLoadingCopy[locale].loading} />
+        <SkeletonStatCards count={4} columns={4} loadingLabel={platformLoadingCopy[locale].loading} />
       </div>
     );
   }
@@ -330,29 +342,34 @@ export function CommunicationCenterPage() {
 
   return (
     <div className="space-y-5" dir="ltr">
+      {loadFailed && <RequestErrorNotice message={t("بارکردنی ناوەندی پەیوەندی سەرکەوتوو نەبوو")} />}
       <StatCardGrid>
         <StatCard
+          loading={loading}
           icon={Megaphone}
           label={t("ڕاگەیاندنی چالاک")}
-          value={overview?.announcements.active || 0}
+          value={loadFailed ? "—" : overview?.announcements.active ?? "—"}
           color="blue"
         />
         <StatCard
+          loading={loading}
           icon={CalendarClock}
           label={t("ڕێکخراو")}
-          value={overview?.announcements.scheduled || 0}
+          value={loadFailed ? "—" : overview?.announcements.scheduled ?? "—"}
           color="purple"
         />
         <StatCard
+          loading={loading}
           icon={MessageSquare}
           label={t("پەیامی نەخوێندراو")}
-          value={overview?.conversations.unreadMessages || 0}
+          value={loadFailed ? "—" : overview?.conversations.unreadMessages ?? "—"}
           color="orange"
         />
         <StatCard
+          loading={loading}
           icon={Globe2}
           label={t("لە ماڵپەڕ")}
-          value={overview?.announcements.homepage || 0}
+          value={loadFailed ? "—" : overview?.announcements.homepage ?? "—"}
           color="green"
         />
       </StatCardGrid>
@@ -364,86 +381,24 @@ export function CommunicationCenterPage() {
         accent="var(--sponsor-krd-accent)"
       />
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-        <PageHeader
+      <PageManagementSection
           title={contentMeta.title}
           description={contentMeta.description}
-          icon={contentMeta.icon}
-          action={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Tooltip content={t("نوێکردنەوە")} side="bottom">
-                <button
-                  type="button"
-                  onClick={() => void load()}
-                  disabled={loading}
-                  className="group flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 cursor-pointer"
-                  aria-label={t("نوێکردنەوە")}
-                >
-                  <MotionSpinner active={loading}><RefreshCw
-                    className="h-4 w-4 -transform"
-                   /></MotionSpinner>
-                </button>
-              </Tooltip>
-              {tab === "announcements" && (
-                <>
-                  <Tooltip content={t("گەڕان و پاڵاوتن (Ctrl+K)")} side="top">
-                    <button
-                      type="button"
-                      onClick={() => setAnnouncementSearchOpen(true)}
-                      className={`group relative flex h-10 min-w-10 flex-1 items-center justify-between rounded-xl border px-3.5 shadow-sm transition-all hover:shadow sm:w-48 sm:flex-none cursor-pointer ${
-                        announcementSearchOpen || announcementFilterCount > 0
-                          ? "sa-soft sa-soft-border"
-                          : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
-                      }`}
-                      title={t("گەڕان و پاڵاوتن (Ctrl+K)")}
-                      aria-label={t("گەڕان و پاڵاوتن")}
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:scale-110 dark:text-gray-500" />
-                        <span className="truncate text-xs font-semibold">
-                          {t("گەڕان و پاڵاوتن")}
-                        </span>
-                      </div>
-                    {announcementFilterCount > 0 ? (
-                      <span className="sa-gradient flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-bold">
-                        {announcementFilterCount}
-                      </span>
-                    ) : (
-                      <kbd className="hidden items-center gap-0.5 rounded bg-slate-100 px-1 py-0.5 font-sans text-[8px] font-bold text-slate-400 select-none dark:bg-white/10 dark:text-gray-500 sm:inline-flex">
-                        Ctrl K
-                      </kbd>
-                    )}
-                  </button>
-                </Tooltip>
-                  {announcementFilterCount > 0 && (
-                    <Tooltip content={t("پاککردنەوەی پاڵاوتنەکان")} side="bottom">
-                      <button
-                        type="button"
-                        onClick={clearAnnouncementFilters}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 shadow-sm transition hover:border-red-300 hover:bg-red-100 hover:text-red-600 hover:shadow dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/35 dark:hover:text-red-300 cursor-pointer"
-                        aria-label={t("پاککردنەوەی پاڵاوتنەکان")}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </Tooltip>
-                  )}
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() =>
-                  openComposer(tab === "homepage" ? "homepage" : undefined)
-                }
-                className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                {tab === "homepage" ? t("زیادکردنی ماڵپەڕ") : t("ڕاگەیاندنی نوێ")}
-              </button>
-            </div>
+          icon={<contentMeta.icon className="size-5" />}
+          toolbar={
+            <PageManagementActions>
+              {tab === "announcements" && <>
+                <SettingsActionButton label={t("گەڕان و پاڵاوتن")} icon={SlidersHorizontal} variant="soft" onClick={() => setAnnouncementSearchOpen(true)} />
+                {announcementFilterCount > 0 && <SettingsActionButton label={t("پاککردنەوەی پاڵاوتنەکان")} icon={X} variant="soft" onClick={clearAnnouncementFilters} />}
+              </>}
+              <SettingsActionButton label={tab === "homepage" ? t("زیادکردنی ماڵپەڕ") : t("ڕاگەیاندنی نوێ")} icon={Plus}
+                onClick={() => openComposer(tab === "homepage" ? "homepage" : undefined)} />
+            </PageManagementActions>
           }
-        />
+      >
 
         <div className="min-h-[34rem]">
+        <DashboardRefreshRegion loading={loading} label={platformLoadingCopy[locale].loading}>
         {tab === "overview" && (
           <OverviewTab
             overview={overview}
@@ -488,8 +443,9 @@ export function CommunicationCenterPage() {
             onArchive={(item) => setConfirmation({ type: "archive", item })}
           />
         )}
+        </DashboardRefreshRegion>
         </div>
-      </section>
+      </PageManagementSection>
 
       <SearchModal
         isOpen={tab === "announcements" && announcementSearchOpen}

@@ -21,11 +21,18 @@ export type FormPreviewProps = {
   placeholders?: boolean;
   scrollable?: boolean;
   presentation?: "preview" | "public";
+  /** Device previews use the public responsive layout without public behavior. */
+  viewport?: "embedded" | "device";
 };
 export function FormPreview(props: FormPreviewProps) {
+  // Samples belong to the editor preview, never the published page or draft.
+  const previewProps = {
+    ...props,
+    placeholders: props.presentation !== "public" && props.placeholders === true,
+  };
   return props.form.layout === "card" ? (
-    <FormCardPreview {...props} />
+    <FormCardPreview {...previewProps} />
   ) : (
-    <FormFlowPreview {...props} />
+    <FormFlowPreview {...previewProps} />
   );
 }

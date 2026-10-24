@@ -1,11 +1,12 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
+
 import { planStatusOptions, subscriptionStatusOptions } from "./BillingDisplay";
 import { BusinessesSubscriptionsTable } from "./BusinessesSubscriptionsTable";
 import { PlanDetailModal } from "./PlanDetailModal";
 import { BusinessSubscriptionDetailModal } from "./BusinessSubscriptionDetailModal";
 import { SubscriptionAssignmentModal } from "./SubscriptionAssignmentModal";
 
-import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
 import {
   useCallback,
@@ -28,7 +29,6 @@ import {
   Building2,
   Layers3,
   Plus,
-  RefreshCw,
   Search,
   SlidersHorizontal,
   UsersRound,
@@ -40,10 +40,16 @@ import {
   CustomSelect,
   type CustomSelectOption,
 } from "@/components/shared/CustomSelect";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PageManagementActions } from "@/components/shared/PageManagementActions";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
 import { SearchModal } from "@/components/shared/SearchModal";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { TablePagination } from "@/components/shared/TablePagination";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonStatCards } from "@/components/shared/Skeleton";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
@@ -83,6 +89,8 @@ export function BillingPage() {
     tRef.current = t;
   }, [t]);
   const [tab, setTab] = useState<Tab>("plans");
+  const startRequest = useLatestRequest();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,13 +117,14 @@ export function BillingPage() {
     planSearch.trim().toLocaleLowerCase(),
   );
   const load = useCallback(
-    async (quiet = false) => {
+    async (quiet = false, rethrow = false) => {
       if (quiet) setRefreshing(true);
       else setLoading(true);
+      const current = startRequest();
       try {
         const params = new URLSearchParams({
           page: String(businessPage),
-          limit: "10",
+          limit: String(PAGE_MANAGEMENT_PAGE_SIZE),
         });
         if (businessSearch.trim()) params.set("search", businessSearch.trim());
         const unassigned =
@@ -145,8 +154,13 @@ export function BillingPage() {
             ),
           );
         }
+        if (!result.data?.summary) throw new Error("Invalid dashboard summary");
+        if (!current()) return;
+        setLoadFailed(false);
         setOverview(result.data);
       } catch (error) {
+        if (!current()) return;
+        setLoadFailed(true);
         toast.error(
           platformRequestError(
             error instanceof Error ? error.message : null,
@@ -154,12 +168,16 @@ export function BillingPage() {
             locale,
           ),
         );
+        if (rethrow) throw error;
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (current()) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [
+      startRequest,
       businessPage,
       businessPlanFilter,
       businessSearch,
@@ -167,6 +185,8 @@ export function BillingPage() {
       locale,
     ],
   );
+
+  useRegisterDashboardRefresh("billing", () => load(true, true));
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => void load());
@@ -226,7 +246,7 @@ export function BillingPage() {
     });
   }, [businessRows, businessSort]);
 
-  const pageSize = overview?.pagination.limit || 10;
+  const pageSize = overview?.pagination.limit || PAGE_MANAGEMENT_PAGE_SIZE;
   const totalBusinessPages = overview?.pagination.totalPages || 1;
   const currentBusinessPage = overview?.pagination.page || businessPage;
   const pagedBusinesses = filteredBusinesses;
@@ -266,7 +286,7 @@ export function BillingPage() {
       <div className="min-h-[55vh] py-4">
         <SkeletonStatCards
           count={3}
-          className="sm:grid-cols-3"
+          columns={3}
           loadingLabel={platformLoadingCopy[locale].loading}
         />
       </div>
@@ -275,23 +295,27 @@ export function BillingPage() {
 
   return (
     <div className="space-y-5" dir="ltr">
+      {loadFailed && <RequestErrorNotice message={t("بارکردنی بەشداربوونەکان سەرکەوتوو نەبوو")} />}
       <StatCardGrid columns={3}>
         <StatCard
+          loading={loading || refreshing}
           icon={Layers3}
           label={t("پلانە چالاکەکان")}
-          value={overview?.summary.activePlans || 0}
+          value={loadFailed ? "—" : overview?.summary.activePlans ?? "—"}
           color="green"
         />
         <StatCard
+          loading={loading || refreshing}
           icon={UsersRound}
           label={t("بەشداربوونی چالاک")}
-          value={overview?.summary.activeSubscriptions || 0}
+          value={loadFailed ? "—" : overview?.summary.activeSubscriptions ?? "—"}
           color="blue"
         />
         <StatCard
+          loading={loading || refreshing}
           icon={AlertTriangle}
           label={t("پێویستی بە سەرنجدان")}
-          value={overview?.summary.attentionRequired || 0}
+          value={loadFailed ? "—" : overview?.summary.attentionRequired ?? "—"}
           color="orange"
         />
       </StatCardGrid>
@@ -306,8 +330,7 @@ export function BillingPage() {
         accent="var(--sponsor-krd-accent)"
       />
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-        <PageHeader
+      <PageManagementSection
           title={
             tab === "plans"
               ? t("پلانەکانی بەشداربوون")
@@ -320,42 +343,16 @@ export function BillingPage() {
                   "پلانی دیاریکراو، دۆخی بەشداربوون و ماوەی هەر بزنسێک بەڕێوە ببە.",
                 )
           }
-          icon={tab === "plans" ? Layers3 : Building2}
-          action={
-            <>
-              <button
-                type="button"
-                onClick={() => void load(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/10"
-                aria-label={t("نوێکردنەوە")}
-              >
-                <MotionSpinner active={refreshing}>
-                  <RefreshCw className="h-4 w-4" />
-                </MotionSpinner>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                {t("گەڕان")}
-              </button>
-              {tab === "plans" && (
-                <button
-                  type="button"
-                  onClick={() => setPlanModal("create")}
-                  className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-md"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("پلانی نوێ")}
-                </button>
-              )}
-            </>
+          icon={tab === "plans" ? <Layers3 className="size-5" /> : <Building2 className="size-5" />}
+          toolbar={
+            <PageManagementActions>
+              <SettingsActionButton label={t("گەڕان")} icon={SlidersHorizontal} variant="soft" onClick={() => setSearchOpen(true)} />
+              {tab === "plans" && <SettingsActionButton label={t("پلانی نوێ")} icon={Plus} onClick={() => setPlanModal("create")} />}
+            </PageManagementActions>
           }
-        />
+      >
 
-        <div className="border-t border-slate-100 pt-5 dark:border-white/5">
+          <DashboardRefreshRegion loading={loading || refreshing} label={platformLoadingCopy[locale].loading}>
           {tab === "plans" ? (
             <SubscriptionPlansGrid
               plans={filteredPlans}
@@ -398,8 +395,8 @@ export function BillingPage() {
               />
             </>
           )}
-        </div>
-      </section>
+          </DashboardRefreshRegion>
+      </PageManagementSection>
 
       <SearchModal
         isOpen={searchOpen}

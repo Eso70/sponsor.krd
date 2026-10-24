@@ -1,3 +1,4 @@
+import { brandIcons } from "@/lib/brand/tab-branding";
 import { cookies, headers } from "next/headers";
 import { HomeLanding } from "@/components/home/HomeLanding";
 import { PlatformOrganizationStructuredData } from "@/components/public/PlatformOrganizationStructuredData";
@@ -27,10 +28,6 @@ import {
   internalProxyKey,
 } from "@/lib/security/internal-proxy-key";
 import {
-  BUSINESS_FAVICON_PLACEHOLDER,
-  BUSINESS_LOGO_PLACEHOLDER,
-  SPONSOR_KRD_FAVICON,
-  SPONSOR_KRD_APPLE_ICON,
   SPONSOR_KRD_APP_ICON,
 } from "@/lib/brand/brand-assets";
 
@@ -173,36 +170,16 @@ export async function generateMetadata() {
         const json = await res.json();
         const business = json?.data;
         if (business) {
-          // The tab icon is the business's favicon, and only that. Listing the
-          // logo and the default avatar alongside it as larger `sizes` handed
-          // the browser a bigger candidate to prefer, so the tab showed the
-          // default avatar and the favicon the business had uploaded never
-          // appeared. The larger art belongs on the apple touch icon, which is
-          // a separate slot rather than a competing candidate.
-          const icons = {
-            icon: [
-              {
-                url:
-                  business.favicon ||
-                  business.logo ||
-                  BUSINESS_FAVICON_PLACEHOLDER,
-              },
-            ],
-            apple:
-              business.logo ||
-              business.default_avatar ||
-              BUSINESS_LOGO_PLACEHOLDER,
-          };
+          const icons = brandIcons(business.favicon, business.logo);
           return {
             title: businessTabTitle(
               business.name,
               businessPublicCopy[locale].footer.home,
             ),
             description:
-              business.footer_text?.trim() ||
               businessPublicCopy[locale].hero.description,
             icons,
-            themeColor: business.website_color || SPONSOR_KRD_ACCENT_COLOR,
+            robots: {index: false, follow: true},
           };
         }
       }
@@ -220,6 +197,10 @@ export async function generateMetadata() {
     title: "Sponsor.krd",
     alternates: { canonical: `${context.origin}/` },
     openGraph: {
+      type: "website",
+      title: "Sponsor.krd",
+      description: rootPublicCopy[rootLocale].metadataDescription,
+      locale: { en: "en_US", ckb: "ckb_IQ", ar: "ar_IQ" }[rootLocale],
       url: `${context.origin}/`,
       images: [
         {
@@ -230,12 +211,9 @@ export async function generateMetadata() {
         },
       ],
     },
-    twitter: { card: "summary", images: [SPONSOR_KRD_APP_ICON] },
+    twitter: { card: "summary", title: "Sponsor.krd", description: rootPublicCopy[rootLocale].metadataDescription, images: [SPONSOR_KRD_APP_ICON] },
     description: rootPublicCopy[rootLocale].metadataDescription,
-    icons: {
-      icon: [{ url: SPONSOR_KRD_FAVICON, type: "image/png", sizes: "96x96" }],
-      apple: SPONSOR_KRD_APPLE_ICON,
-    },
+
     themeColor: SPONSOR_KRD_ACCENT_COLOR,
   };
 }

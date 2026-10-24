@@ -27,6 +27,45 @@ function quotedDatabase(name: string): string {
   return `"${name}"`;
 }
 
+function runMigration() {
+  const runner = join(__dirname, '../node_modules/ts-node/dist/bin.js');
+  const result = spawnSync(
+    process.execPath,
+    [runner, 'scripts/db-migrate.ts'],
+    {
+      cwd: join(__dirname, '..'),
+      env: {
+        ...process.env,
+        DB_NAME: fixtureDatabase,
+        DB_MAINTENANCE_NAME: process.env.DB_MAINTENANCE_NAME || 'postgres',
+        PLATFORM_ADMIN_USERNAME: '',
+      },
+      encoding: 'utf8',
+      timeout: 90_000,
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `Migration runner failed:\n${result.stdout || ''}\n${result.stderr || ''}`,
+    );
+  }
+}
+
+async function restorePreviousContentSchema(fixture: Pool) {
+  // Only used on this suite's guarded disposable fixture database.
+  await fixture.query(`
+    ALTER TABLE linktrees RENAME COLUMN headline TO name;
+    ALTER TABLE linktrees RENAME COLUMN slogan TO subtitle;
+    ALTER TABLE linktrees RENAME COLUMN slogan_color TO subtitle_color;
+    ALTER TABLE linktrees RENAME COLUMN logo TO image;
+    UPDATE auth_permissions SET field_schema = field_schema
+      - 'headline' - 'slogan' - 'slogan_color' - 'logo'
+      WHERE permission_key IN ('business:linktrees:update','platform:linktrees:update');
+    DELETE FROM schema_migrations
+      WHERE filename = '2026-10-13_linktree_form_content.sql';
+  `);
+}
+
 describe('consolidated database schema commands (e2e)', () => {
   jest.setTimeout(120_000);
   let maintenance: Pool;
@@ -286,28 +325,8 @@ describe('consolidated database schema commands (e2e)', () => {
        RETURNING id`,
       [invitation.rows[0].id, user.rows[0].id],
     );
-    const runner = join(__dirname, '../node_modules/ts-node/dist/bin.js');
-    const result = spawnSync(
-      process.execPath,
-      [runner, 'scripts/db-migrate.ts'],
-      {
-        cwd: join(__dirname, '..'),
-        env: {
-          ...process.env,
-          DB_NAME: fixtureDatabase,
-          DB_MAINTENANCE_NAME: process.env.DB_MAINTENANCE_NAME || 'postgres',
-          PLATFORM_ADMIN_USERNAME: '',
-        },
-        encoding: 'utf8',
-        timeout: 90_000,
-      },
-    );
-
-    if (result.status !== 0) {
-      throw new Error(
-        `Migration runner failed:\n${result.stdout || ''}\n${result.stderr || ''}`,
-      );
-    }
+    await restorePreviousContentSchema(fixture);
+    runMigration();
     const ledger = await fixture.query<{ filename: string }>(
       'SELECT filename FROM schema_migrations ORDER BY filename',
     );
@@ -359,6 +378,148 @@ describe('consolidated database schema commands (e2e)', () => {
       column_exists: true,
       index_exists: true,
     });
+  });
+
+  it('upgrades an already-baselined previous content schema without losing page data', async () => {
+    const page = await fixture.query<{
+      id: string;
+      headline: string;
+      slogan: string;
+      slogan_color: string;
+      logo: string;
+      seo_name: string;
+      uid: string;
+    }>(`
+      INSERT INTO linktrees (business_id, headline, slogan, slogan_color, logo, seo_name, uid)
+      VALUES ('00000000-0000-4000-8000-000000000001',
+        'Existing headline', 'Existing slogan', '#ff0000', '/images/existing.png',
+        'existing-migration-page', 'existing-migration-page')
+      RETURNING id, headline, slogan, slogan_color, logo, seo_name, uid
+    `);
+    const publicPage = await fixture.query(
+      'SELECT id, source_linktree_id, slug FROM public_pages WHERE source_linktree_id=$1',
+      [page.rows[0].id],
+    );
+    await restorePreviousContentSchema(fixture);
+    runMigration();
+    const retainedPage = await fixture.query(
+      'SELECT id, headline, slogan, slogan_color, logo, seo_name, uid FROM linktrees WHERE id=$1',
+      [page.rows[0].id],
+    );
+    expect(retainedPage.rows).toEqual(page.rows);
+    const retainedPublicPage = await fixture.query(
+      'SELECT id, source_linktree_id, slug FROM public_pages WHERE source_linktree_id=$1',
+      [page.rows[0].id],
+    );
+    expect(retainedPublicPage.rows).toEqual(publicPage.rows);
+    // A second run must skip the applied rename and retain the same values.
+    runMigration();
+    const rerunPage = await fixture.query(
+      'SELECT id, headline, slogan, slogan_color, logo, seo_name, uid FROM linktrees WHERE id=$1',
+      [page.rows[0].id],
+    );
+    expect(rerunPage.rows).toEqual(page.rows);
+  });
+
+  it('retires the service without removing other pages or their analytics', async () => {
+    const client = await fixture.connect();
+    await client.query('BEGIN');
+    try {
+      const owner = (
+        await client.query<{ id: string }>(
+          "INSERT INTO businesses(username,name,subdomain) VALUES('retirement-test','Retirement test','retirement-test') RETURNING id",
+        )
+      ).rows[0].id;
+      await client.query(
+        "INSERT INTO linktrees(business_id,headline,seo_name,uid) VALUES($1,'Retained page','retained-page','retained-page')",
+        [owner],
+      );
+      await client.query(
+        "INSERT INTO forms(business_id,name,slug,definition) VALUES($1,'Retained form','retained-form','{}')",
+        [owner],
+      );
+      const retained = (
+        await client.query(
+          'SELECT * FROM public_pages WHERE business_id=$1 ORDER BY id',
+          [owner],
+        )
+      ).rows;
+      expect(retained).toHaveLength(3);
+      const retainedActions = (
+        await client.query(
+          'SELECT * FROM public_page_actions WHERE public_page_id IN (SELECT id FROM public_pages WHERE business_id=$1) ORDER BY id',
+          [owner],
+        )
+      ).rows;
+      expect(retainedActions.length).toBeGreaterThan(0);
+      // Recreate the retired domain on this suite's disposable database only.
+      await client.query(`
+        CREATE TABLE advertising_pages(id uuid PRIMARY KEY DEFAULT gen_random_uuid());
+        ALTER TABLE public_pages ADD COLUMN source_advertising_page_id uuid UNIQUE REFERENCES advertising_pages(id);
+        ALTER TABLE public_pages DROP CONSTRAINT public_pages_page_type_check;
+        ALTER TABLE public_pages DROP CONSTRAINT public_pages_source_check;
+        INSERT INTO advertising_pages DEFAULT VALUES;
+      `);
+      await client.query(
+        `INSERT INTO public_pages(business_id,page_type,name,slug,source_advertising_page_id)
+        SELECT $1,'advertising','Retired service','advertising',id FROM advertising_pages`,
+        [owner],
+      );
+      await client.query(
+        `INSERT INTO public_pages(business_id,page_type,name,slug)
+        VALUES($1,'route','Retired guide','advertising-video-code')`,
+        [owner],
+      );
+      const migration = readFileSync(
+        join(migrationsDirectory, '2026-10-15_remove_advertising_service.sql'),
+        'utf8',
+      );
+      await client.query(migration);
+      await client.query(migration);
+      expect(
+        (
+          await client.query(
+            'SELECT * FROM public_pages WHERE business_id=$1 ORDER BY id',
+            [owner],
+          )
+        ).rows,
+      ).toEqual(retained);
+      expect(
+        (
+          await client.query(
+            'SELECT * FROM public_page_actions WHERE public_page_id IN (SELECT id FROM public_pages WHERE business_id=$1) ORDER BY id',
+            [owner],
+          )
+        ).rows,
+      ).toEqual(retainedActions);
+      expect(
+        (
+          await client.query<{ retired: string | null }>(
+            "SELECT to_regclass('public.advertising_pages') AS retired",
+          )
+        ).rows[0].retired,
+      ).toBeNull();
+      expect(
+        (
+          await client.query(
+            "SELECT 1 FROM auth_permissions WHERE permission_key LIKE 'business:advertising:%' OR permission_key='business:pages:advertising-access'",
+          )
+        ).rowCount,
+      ).toBe(0);
+      expect(
+        (
+          await client.query(
+            "SELECT 1 FROM billing_entitlements WHERE entitlement_key='feature.advertising_page'",
+          )
+        ).rowCount,
+      ).toBe(0);
+      await client.query(
+        readFileSync(join(migrationsDirectory, '2026-10-10_forms.sql'), 'utf8'),
+      );
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
   });
 
   it('refuses a reset by default while the backend is connected', async () => {

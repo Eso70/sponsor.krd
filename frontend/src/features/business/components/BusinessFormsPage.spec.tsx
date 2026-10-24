@@ -25,9 +25,9 @@ beforeEach(() => {
 });
 describe("Business Forms integration", () => {
   it.each([
-    ["ckb", "فۆڕمەکان", "فۆڕمی نوێ"],
-    ["ar", "النماذج", "إنشاء نموذج"],
-    ["en", "Forms", "Create form"],
+    ["ckb", "فۆڕمەکان", "دروستکردن"],
+    ["ar", "النماذج", "إنشاء"],
+    ["en", "Forms", "Create"],
   ] as const)("renders the shared workspace in %s", (locale, title, create) => {
     render(
       <BusinessLocaleProvider initialLocale={locale}>
@@ -49,7 +49,7 @@ describe("Business Forms integration", () => {
         <BusinessFormsPage theme="light" mounted onToggleTheme={toggle} />
       </BusinessLocaleProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     const chooser = within(
       screen.getByRole("dialog", { name: "Choose form layout" }),
     );

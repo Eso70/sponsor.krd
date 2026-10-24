@@ -10,6 +10,47 @@ import { sitemapXml, sitemapIndexXml } from "./sitemap";
 const page = { name: "Real business", uid: "random-id", seo_name: "business", subtitle: "Services provided by this business", description: "Actual description", template_config: {} } as PublicLinktree;
 
 describe("public SEO boundary", () => {
+  it("does not assume an organization for an unspecified custom category", () => {
+    const content = { ...page, template_config: { seo: { version: 1, category: "other", customCategory: "Authored category" } } };
+    const schema = buildPageJsonLd(content, "https://a.sponsor.krd");
+    expect(schema["@type"]).toBe("WebPage");
+    expect(schema).not.toHaveProperty("mainEntity");
+  });
+  it("shares custom descriptions while structured data keeps visible factual content", () => {
+    const content = { ...page, subtitle: "Real services", description: LINKTREE_DEFAULT_DESCRIPTION, template_config: { seo: { version: 1, category: "professional", description: "Custom sharing description" } } };
+    expect(automaticPageSeo(content).imageSubtitle).toBe("Custom sharing description");
+    expect(buildPageJsonLd(content, "https://a.sponsor.krd")).toMatchObject({ description: "Real services", mainEntity: { description: "Real services" } });
+  });
+  it("honors versioned customization without allowing canonical injection", () => {
+    const content = { ...page, updated_at: "2026-10-14T20:00:00Z", template_config: { seo: { version: 1, title: "Custom title", description: "Custom description", language: "ar", indexing: "noindex", canonicalUrl: "https://evil.test" } } } as PublicLinktree;
+    const metadata = buildPageMetadata(content, "https://a.sponsor.krd");
+    expect(metadata.title).toEqual({ absolute: "Custom title" });
+    expect(metadata.description).toBe("Custom description");
+    expect(metadata.openGraph).toMatchObject({ locale: "ar_IQ" });
+    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(metadata.alternates?.canonical).toBe("https://a.sponsor.krd/linktree/business");
+    expect(metadata.twitter).toMatchObject({ images: [expect.stringContaining("?v=2026-")] });
+  });
+  it("keeps versioned indexing in parity with the backend", () => {
+    for (const category of ["food", "other", "invalid"]) for (const indexing of ["auto", "noindex"]) {
+      const content = { ...page, subtitle: "", description: "", template_config: { seo: { version: 1, category, indexing } } };
+      expect(isPageIndexable(content)).toBe(isIndexableLinktree(content));
+    }
+  });
+  it("uses factual localized category context only when meaningful content is absent", () => {
+    const content = { ...page, subtitle: "", description: "", template_config: { seo: { version: 1, category: "food", businessType: "restaurant", language: "en", business: { city: "Erbil" } } } };
+    expect(automaticPageSeo(content).description).toBe("Real business — Restaurant · Erbil");
+    expect(buildPageJsonLd(content, "https://a.sponsor.krd").mainEntity?.["@type"]).toBe("Organization");
+    expect(automaticPageSeo({ ...content, description: "Authored biography" }).description).toBe("Authored biography");
+  });
+  it("emits local business claims only from supplied visible details", () => {
+    const content = { ...page, template_config: { seo: { version: 1, category: "food", businessType: "restaurant", business: { street: "Real street", city: "Erbil", cuisine: "Kurdish", hours: { days: ["Mo"], opens: "09:00", closes: "18:00" } } } } };
+    const entity = buildPageJsonLd(content, "https://a.sponsor.krd", [{ platform: "phone", url: "tel:+9647501234567" }]).mainEntity;
+    expect(entity).toMatchObject({ "@type": "Restaurant", servesCuisine: "Kurdish", telephone: "+9647501234567", address: { addressLocality: "Erbil" }, openingHoursSpecification: { opens: "09:00", closes: "18:00" } });
+    expect(entity).not.toHaveProperty("aggregateRating");
+    expect(entity).not.toHaveProperty("geo");
+    expect(buildPageJsonLd({ ...page, template_config: { seo: { version: 1, category: "personal" } } }, "https://a.sponsor.krd")).toMatchObject({ "@type": "ProfilePage", mainEntity: { "@type": "Person" } });
+  });
   it("keeps indexing policy aligned across SQL/server/frontend and all UI languages", () => {
     expect(backendStarterText).toEqual(NON_DESCRIPTIVE_PAGE_TEXT);
     for (const description of NON_DESCRIPTIVE_PAGE_TEXT) {
@@ -67,7 +108,7 @@ describe("public SEO boundary", () => {
   it("cleans whitespace, removes duplicate descriptions and bounds long text", () => {
     expect(automaticPageSeo({ ...page, subtitle: " Real\nservices ", description: "Real services" }).description).toBe("Real services");
     const seo = automaticPageSeo({ ...page, name: "😀".repeat(160), subtitle: "", description: "Actual services ".repeat(100) });
-    expect(Array.from(seo.title)).toHaveLength(150);
+    expect(Array.from(seo.title)).toHaveLength(70);
     expect(seo.description.length).toBeLessThanOrEqual(200);
     expect(seo.description).toMatch(/…$/);
     expect(seo.imageSubtitle.length).toBeLessThanOrEqual(100);

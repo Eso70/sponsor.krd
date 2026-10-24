@@ -15,9 +15,11 @@ export function FormPreviewSurface({
   backgroundImage,
   navigation,
   presentation = "preview",
+  viewport = "embedded",
 }: {
   children: ReactNode;
   presentation?: "preview" | "public";
+  viewport?: "embedded" | "device";
   language: FormLanguage;
   appearance: FormDraft["appearance"];
   color: string;
@@ -26,20 +28,22 @@ export function FormPreviewSurface({
   backgroundImage?: string;
   navigation?: ReactNode;
 }) {
+  const fullViewport = presentation === "public" || viewport === "device";
   return (
     <div
-      className={`${presentation === "public" ? styles.publicPreview : "mx-auto w-full max-w-sm"} ${scrollable ? "flex min-h-0 flex-1 flex-col" : ""}`}
+      className={`${fullViewport ? styles.publicPreview : "mx-auto w-full max-w-sm"} ${scrollable ? "flex min-h-0 flex-1 flex-col" : ""}`}
     >
       {navigation}
       <div
         data-form-presentation={presentation}
+        data-form-viewport={viewport}
         data-form-preview
         data-card-preview={card || undefined}
         data-appearance={appearance}
         dir={language === "en" ? "ltr" : "rtl"}
         lang={language}
         style={formPreviewStyle(color)}
-        className={`${styles.surface} ${presentation === "public" ? styles.publicSurface : ""} ${card ? styles.cardFrame : ""} relative isolate flex flex-col overflow-hidden rounded-2xl border shadow-sm ${scrollable ? "min-h-0 flex-1" : card ? "min-h-[480px]" : ""}`}
+        className={`${styles.surface} ${fullViewport ? styles.publicSurface : ""} ${viewport === "device" ? styles.deviceSurface : ""} ${card ? styles.cardFrame : ""} relative isolate flex flex-col overflow-hidden rounded-2xl border shadow-sm ${scrollable ? "min-h-0 flex-1" : card ? "min-h-[480px]" : ""}`}
       >
         {card && (
           <FormPreviewBackdrop

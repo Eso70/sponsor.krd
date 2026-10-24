@@ -1,6 +1,13 @@
 "use client";
 
+import { EditorField } from "./EditorField";
+import {
+  EDITOR_FIELD_CLASS,
+  EDITOR_IMAGE_ACTION_CLASS,
+} from "./editor-control-styles";
+import { Upload } from "lucide-react";
 import { createPortal } from "react-dom";
+import { StatCardGrid } from "./StatCardGrid";
 import { Skeleton, SkeletonStatCard } from "@/components/shared/Skeleton";
 import {
   MANAGEMENT_MODAL_BACKDROP_CLASS,
@@ -34,9 +41,7 @@ function ModalFrame({
       data-platform-admin-theme={platformAdminTheme ? true : undefined}
     >
       <div className={MANAGEMENT_MODAL_BACKDROP_CLASS} />
-      <div
-        className={`${MANAGEMENT_MODAL_SURFACE_CLASS} ${maxWidth}`}
-      >
+      <div className={`${MANAGEMENT_MODAL_SURFACE_CLASS} ${maxWidth}`}>
         <div className={`${MANAGEMENT_MODAL_HEADER_CLASS} items-center`}>
           <div className="min-w-0 flex-1">
             <Skeleton
@@ -78,144 +83,49 @@ function ModalFrame({
   );
 }
 
-/** Mirrors the complete first step of the shared Linktree editor. */
-export function SkeletonLinktreeEditorModal({
-  platformAdminTheme = false,
-  loadingLabel = "Loading Linktree editor",
-  informationLabel = "Loading Linktree information",
+export function SkeletonLinktreeBasicInfo({
+  loadingLabel = "Loading Linktree information",
+  labels = {
+    upload: "Logo",
+    name: "Headline",
+    subtitle: "Promotion slogan",
+    description: "Description",
+  },
 }: {
-  platformAdminTheme?: boolean;
   loadingLabel?: string;
-  informationLabel?: string;
+  labels?: {
+    upload: string;
+    name: string;
+    subtitle: string;
+    description: string;
+  };
 } = {}) {
   return (
-    <ModalFrame
-      label={loadingLabel}
-      progress
-      footer
-      maxWidth="max-w-2xl"
-      platformAdminTheme={platformAdminTheme}
-    >
-      <SkeletonLinktreeBasicInfo loadingLabel={informationLabel} />
-    </ModalFrame>
-  );
-}
-
-export function SkeletonLinktreeBasicInfo({ loadingLabel = "Loading Linktree information" }: { loadingLabel?: string } = {}) {
-  return (
     <div
-      className="max-h-[58vh] space-y-5 overflow-hidden"
+      className="space-y-4"
       role="status"
       aria-busy="true"
       aria-label={loadingLabel}
     >
-      <div className="flex items-center gap-4">
-        <Skeleton className="size-20 shrink-0" rounded="rounded-full" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-3 w-32" rounded="rounded-md" />
-          <Skeleton className="h-10 w-40" rounded="rounded-xl" />
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Skeleton
+          className="size-24 border border-slate-200 dark:border-white/10"
+          rounded="rounded-xl"
+        />
+        <button type="button" disabled className={EDITOR_IMAGE_ACTION_CLASS}>
+          <Upload className="size-3.5" />
+          {labels.upload}
+        </button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index}>
-            <Skeleton className="mb-2 h-3 w-24" rounded="rounded-md" />
-            <Skeleton className="h-11 w-full" rounded="rounded-xl" />
-          </div>
-        ))}
-      </div>
-      <div>
-        <Skeleton className="mb-2 h-3 w-28" rounded="rounded-md" />
-        <Skeleton className="h-20 w-full" rounded="rounded-xl" />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index}>
-            <Skeleton className="mb-2 h-3 w-20" rounded="rounded-md" />
-            <Skeleton className="h-11 w-full" rounded="rounded-xl" />
-          </div>
-        ))}
-      </div>
-      <div>
-        <Skeleton className="mb-2 h-3 w-32" rounded="rounded-md" />
-        <div className="flex gap-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
-          <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
-          <Skeleton className="size-11" rounded="rounded-xl" />
-        </div>
-      </div>
-      <Skeleton className="h-16 w-full" rounded="rounded-xl" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Skeleton className="h-16 w-full" rounded="rounded-xl" />
-        <Skeleton className="h-16 w-full" rounded="rounded-xl" />
-      </div>
-      <Skeleton className="h-28 w-full" rounded="rounded-xl" />
-    </div>
-  );
-}
-
-export function SkeletonPageAnalyticsModal({
-  summaryOnly = false,
-  platformAdminTheme = false,
-  loadingLabel = "Loading page analytics",
-  dataLabel = "Loading page analytics data",
-}: {
-  summaryOnly?: boolean;
-  platformAdminTheme?: boolean;
-  loadingLabel?: string;
-  dataLabel?: string;
-}) {
-  return (
-    <ModalFrame
-      label={loadingLabel}
-      platformAdminTheme={platformAdminTheme}
-    >
-      <SkeletonPageAnalyticsContent summaryOnly={summaryOnly} loadingLabel={dataLabel} />
-    </ModalFrame>
-  );
-}
-
-export function SkeletonPageAnalyticsContent({
-  summaryOnly = false,
-  loadingLabel = "Loading page analytics data",
-}: {
-  summaryOnly?: boolean;
-  loadingLabel?: string;
-}) {
-  return (
-    <div
-      className="max-h-[64vh] space-y-5 overflow-hidden"
-      role="status"
-      aria-busy="true"
-      aria-label={loadingLabel}
-    >
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <SkeletonStatCard key={index} />
-        ))}
-      </div>
-      {!summaryOnly ? (
-        <>
-          <div className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
-            <Skeleton className="mb-2 h-4 w-36" rounded="rounded-md" />
-            <Skeleton
-              className="mb-4 h-3 w-64 max-w-full"
-              rounded="rounded-md"
-            />
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 border-t border-slate-100 py-3 first:border-0 dark:border-white/5"
-                >
-                  <Skeleton className="size-9 shrink-0" rounded="rounded-lg" />
-                  <Skeleton className="h-3 flex-1" rounded="rounded-md" />
-                  <Skeleton className="h-3 w-12" rounded="rounded-md" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      ) : null}
+      <EditorField label={labels.name} className={EDITOR_FIELD_CLASS}>
+        <Skeleton className="h-10 w-full" rounded="rounded-lg" />
+      </EditorField>
+      <EditorField label={labels.subtitle} className={EDITOR_FIELD_CLASS}>
+        <Skeleton className="h-10 w-full" rounded="rounded-lg" />
+      </EditorField>
+      <EditorField label={labels.description} className={EDITOR_FIELD_CLASS}>
+        <Skeleton className="h-20 w-full" rounded="rounded-lg" />
+      </EditorField>
     </div>
   );
 }
@@ -230,16 +140,15 @@ export function SkeletonBusinessAnalyticsModal({
   contentLoadingLabel?: string;
 } = {}) {
   return (
-    <ModalFrame
-      label={loadingLabel}
-      platformAdminTheme={platformAdminTheme}
-    >
+    <ModalFrame label={loadingLabel} platformAdminTheme={platformAdminTheme}>
       <SkeletonBusinessAnalyticsContent loadingLabel={contentLoadingLabel} />
     </ModalFrame>
   );
 }
 
-export function SkeletonBusinessAnalyticsContent({ loadingLabel = "Loading business analytics data" }: { loadingLabel?: string } = {}) {
+export function SkeletonBusinessAnalyticsContent({
+  loadingLabel = "Loading business analytics data",
+}: { loadingLabel?: string } = {}) {
   return (
     <div
       className="max-h-[64vh] space-y-5 overflow-hidden"
@@ -247,10 +156,10 @@ export function SkeletonBusinessAnalyticsContent({ loadingLabel = "Loading busin
       aria-busy="true"
       aria-label={loadingLabel}
     >
-      <div className="grid grid-cols-2 gap-4">
+      <StatCardGrid columns={2}>
         <SkeletonStatCard />
         <SkeletonStatCard />
-      </div>
+      </StatCardGrid>
       <div className="flex gap-3">
         <Skeleton className="h-10 flex-1" rounded="rounded-xl" />
         <Skeleton className="h-10 w-52" rounded="rounded-xl" />
@@ -291,7 +200,9 @@ export function SkeletonBusinessAnalyticsContent({ loadingLabel = "Loading busin
 }
 
 /** Mirrors BusinessInfoStep while an existing business record is fetched. */
-export function SkeletonBusinessInfoForm({ loadingLabel = "Loading business information" }: { loadingLabel?: string } = {}) {
+export function SkeletonBusinessInfoForm({
+  loadingLabel = "Loading business information",
+}: { loadingLabel?: string } = {}) {
   return (
     <div
       role="status"

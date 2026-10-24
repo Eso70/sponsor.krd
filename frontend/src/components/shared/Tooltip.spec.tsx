@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Tooltip } from "./Tooltip";
+import { createRef } from "react";
 
 vi.mock("react-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-dom")>();
@@ -13,6 +14,20 @@ describe("Tooltip component", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("preserves React 19 popup anchors and existing field descriptions", () => {
+    const anchor = createRef<HTMLButtonElement>();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<><p id="design-error">Choose a design</p><Tooltip content="Page design"><button ref={anchor} aria-describedby="design-error">Design</button></Tooltip></>);
+    const button = screen.getByRole("button", { name: "Design" });
+    expect(anchor.current).toBe(button);
+    expect(button).toHaveAccessibleDescription("Choose a design");
+    fireEvent.mouseEnter(button);
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(button.getAttribute("aria-describedby")).toContain("design-error");
+    expect(error).not.toHaveBeenCalled();
   });
 
   it("renders trigger element without showing tooltip initially", () => {

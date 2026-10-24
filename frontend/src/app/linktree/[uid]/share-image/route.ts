@@ -15,12 +15,24 @@ export async function GET(_request: Request, { params }: { params: Promise<{ uid
   const result = await fetchPublicLinktree(uid);
   if (!result) return new Response("Not found", { status: 404 });
   if (typeof result === "string") return new Response("Unavailable", { status: 503 });
-  font ||= readFile(path.join(process.cwd(), "public/fonts/KurdishFont-share.ttf"));
-  const fontBytes = await font;
-  const seo = automaticPageSeo(result.linktree);
-  return new ImageResponse(
+  try {
+    font ||= readFile(path.join(process.cwd(), "public/fonts/KurdishFont-share.ttf")).catch((error: unknown) => {
+      font = undefined;
+      throw error;
+    });
+    const fontBytes = await font;
+    const seo = automaticPageSeo(result.linktree);
+    const image = new ImageResponse(
     createElement(PublicPageShareImage, { title: seo.title, subtitle: seo.imageSubtitle, hostname: new URL(result.origin).hostname }),
     { width: 1200, height: 630, fonts: [{ name: "Rabar", data: fontBytes.buffer.slice(fontBytes.byteOffset, fontBytes.byteOffset + fontBytes.byteLength) as ArrayBuffer, weight: 400 }],
       headers: { "Cache-Control": "public, max-age=300", "X-Robots-Tag": "noindex" } },
-  );
+    );
+    // Finish rendering before sending headers: WASM/font errors otherwise break
+    // an already-started image stream and appear as gateway failures downstream.
+    return new Response(await image.arrayBuffer(), { headers: image.headers });
+  } catch (error) {
+    console.error("[share-image] Rendering failed", error);
+    return new Response("Image temporarily unavailable", { status: 503,
+      headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Robots-Tag": "noindex" } });
+  }
 }

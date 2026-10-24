@@ -24,7 +24,6 @@ import {
   STANDARD_TEMPLATE_HEADER_CLASSES,
   TemplateActionButton,
   TemplateActionButtonList,
-  TemplateFooter,
   TemplateHeader,
   TemplateLinkLabel,
   TemplateViewportLayout,
@@ -234,11 +233,12 @@ export const SerenityTemplate = memo(function SerenityTemplate({
                   {/* Label text */}
                   <TemplateLinkLabel
                     link={link}
+                    style={{ color: "#ffffff" }}
                     titleClassName="mb-0.5 block truncate font-kurdish text-base font-bold leading-tight"
-                    titleStyle={{ color: textColor }}
+                    titleStyle={{ color: "#ffffff" }}
                     detailsClassName="flex min-w-0 items-baseline gap-1 leading-tight"
-                    platformClassName="min-w-0 truncate font-sans text-xs font-medium"
-                    platformStyle={{ color: textSecondaryColor }}
+                    platformClassName="min-w-0 truncate font-sans text-xs font-medium opacity-80"
+                    platformStyle={{ color: "#ffffff" }}
                   />
 
                   {/* Arrow with white background */}
@@ -276,16 +276,6 @@ export const SerenityTemplate = memo(function SerenityTemplate({
             onOpen={onLinkClick}
           />
         </>
-      }
-      footer={
-        <TemplateFooter
-          footerText={linktree.footer_text}
-          footerPhone={linktree.footer_phone}
-          footerButtonColor={linktree.template_config?.footer_button_color}
-          footerHidden={linktree.footer_hidden ?? false}
-          textColor={textColor}
-          textSecondaryColor={textSecondaryColor}
-        />
       }
     />
   );

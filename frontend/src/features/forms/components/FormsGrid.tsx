@@ -1,4 +1,12 @@
+import { PageListDescription } from "@/components/shared/PageListDescription";
+import { PageSelectionCheckbox } from "@/components/shared/PageSelection";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
+import { PageListCardMedia } from "@/components/shared/PageListCardMedia";
+import { pageListLogo } from "@/components/shared/page-list-logo";
+import { PageListCardHeader } from "@/components/shared/PageListCardHeader";
+import { PageListBanner } from "@/components/shared/PageListBanner";
 import { ClipboardList } from "lucide-react";
+import { PagePinButton } from "@/components/shared/PagePinButton";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
 import { PageListUrl } from "@/components/shared/PageListUrl";
@@ -49,32 +57,51 @@ export function FormsGrid({
       desktopColumns={3}
       data={forms}
       getItemKey={(form) => form.id}
-      pagination={pagination ?? { mode: "client", pageSize: 20 }}
+      pagination={
+        pagination ?? { mode: "client", pageSize: PAGE_MANAGEMENT_PAGE_SIZE }
+      }
       paginationCopy={{
         of: locale === "en" ? "of" : locale === "ar" ? "من" : "لە",
         previous: copy.back,
         next: copy.next,
       }}
       renderItem={(form) => (
-        <ManagementCard intrinsicHeight={320}>
-          <div className="mb-2 flex items-start gap-2 sm:mb-3 sm:gap-3">
-            <div className="min-w-0 flex-1">
-              <h3
-                className="mb-0.5 truncate text-xs font-bold text-gray-900 sm:mb-1 sm:text-base"
-                dir="auto"
-                title={form.name}
-              >
-                {form.name}
-              </h3>
-              <FormCollectionBadges form={form} copy={copy} />
-            </div>
-          </div>
-          <p
-            className="mb-2 line-clamp-2 text-xs text-gray-500 sm:mb-3"
-            dir="auto"
-          >
-            {form.description?.trim() || "—"}
-          </p>
+        <ManagementCard
+          intrinsicHeight={480}
+          className="text-center"
+          media={
+            <PageListCardMedia
+              action={
+                <PagePinButton
+                  iconOnly
+                  id={form.id}
+                  pinned={form.isPinned}
+                  control={
+                    actions.capabilities?.update === false
+                      ? undefined
+                      : actions.pinControl
+                  }
+                  disabled={actions.busy}
+                />
+              }
+            >
+              <PageListBanner src={form.banner} />
+              <div className="absolute left-3 top-3 z-10"><PageSelectionCheckbox id={form.id} name={form.name} /></div>
+            </PageListCardMedia>
+          }
+        >
+          <PageListCardHeader
+            name={form.name}
+            logo={pageListLogo(form.logo)}
+            badges={
+              <FormCollectionBadges
+                form={form}
+                copy={copy}
+                className="justify-center"
+              />
+            }
+          />
+          <PageListDescription>{form.description}</PageListDescription>
           {form.slug && (
             <PageListUrl
               url={getAbsoluteUrl(form.slug, "/form")}
@@ -83,28 +110,29 @@ export function FormsGrid({
             />
           )}
           <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
-            <LinktreeMetaField
-              label={copy.created}
-              value={form.createdAt ? formatDate(form.createdAt) : "—"}
-            />
+            {form.createdAt && (
+              <LinktreeMetaField
+                label={copy.created}
+                value={formatDate(form.createdAt)}
+              />
+            )}
             <LinktreeMetaField
               label={copy.updated}
               value={formatDate(form.updatedAt)}
             />
           </div>
           <PageListTraffic
+            centered
             views={form.views ?? 0}
             interactions={form.interactions ?? 0}
             labels={copy}
           />
-          <div className="mt-auto border-t border-gray-200 pt-2 sm:pt-2.5 dark:border-white/10">
             <FormRowActions
               form={form}
               copy={copy}
               actions={actions}
               variant="grid"
             />
-          </div>
         </ManagementCard>
       )}
     />

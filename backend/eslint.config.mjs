@@ -12,6 +12,7 @@ export default tseslint.config(
     ignores: [
       'eslint.config.mjs',
       'dist/**',
+      'dist-seo-verify/**',
       'coverage/**',
       'node_modules/**',
     ],

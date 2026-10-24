@@ -1,4 +1,5 @@
 "use client";
+import { clearSelectedAnalytics } from "@/features/shared/clear-selected-analytics";
 
 import {
   memo,
@@ -17,10 +18,11 @@ import {
   LogOut,
   User,
   Settings,
-  Megaphone,
 } from "lucide-react";
 import { TbBrandTiktok } from "react-icons/tb";
 import dynamic from "next/dynamic";
+import { DrawerPresence } from "@/components/shared/DrawerPresence";
+import { LinktreeEditorDrawer } from "@/features/link-editor/components/LinktreeEditorDrawer";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   normalizeTemplateConfig,
@@ -32,16 +34,15 @@ import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
 import { useLinktrees } from "@/features/business/hooks/useLinktrees";
 import type {
   BusinessLinktreeSummary as Linktree,
-  LinktreeListItem,
 } from "@linktree/types";
 import { BusinessLinktreesPage } from "@/features/business/components/BusinessLinktreesPage";
 import { BusinessFormsPage } from "@/features/business/components/BusinessFormsPage";
-import { DuplicateLinktreeModal } from "@/components/business/DuplicateLinktreeModal";
 import { LinktreeSearchModal } from "@/components/shared/LinktreeSearchModal";
 import type { EffectiveAccessManifest } from "@linktree/types";
 import { BusinessCommunicationBell } from "@/features/communications/BusinessCommunicationBell";
 import { BusinessAnnouncementBanners } from "@/features/communications/BusinessAnnouncementBanners";
 import { DashboardHeader } from "@/components/shared/DashboardHeader";
+import { DashboardAppearanceControls } from "@/components/shared/DashboardAppearanceControls";
 import { useTranslations } from "next-intl";
 import { BusinessLanguageSelector } from "@/features/business/components/BusinessLanguageSelector";
 import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
@@ -62,12 +63,11 @@ import {
 } from "@/lib/business-page-access";
 import { LockedContent } from "@/components/shared/LockedContent";
 import { usePolling } from "@/lib/utils/usePolling";
-import { persistAppTheme } from "@/lib/app-theme";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useBusinessAnalyticsTotals } from "@/features/business/hooks/useBusinessAnalyticsTotals";
 import {
   getBusinessDashboardState,
   logoutBusiness,
-  setBusinessLinktreeCampaignStatus,
 } from "@/features/business/api";
 import { apiRequest, isApiRequestError } from "@/lib/api/request";
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
@@ -75,28 +75,18 @@ import { businessErrorTheme } from "@/components/error-pages/error-theme";
 import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
 import { DEFAULT_BUSINESS_ACCENT } from "@/lib/utils/business-error-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
+import { applyTabIcon } from "@/lib/brand/tab-branding";
 import { businessTabTitle } from "@/lib/utils/tab-title";
 import { SkeletonDashboardPage } from "@/components/shared/Skeleton";
 import { BusinessLoadingSkeleton } from "@/features/business/components/BusinessLoadingSkeleton";
 import {
-  BusinessDashboardRefreshProvider,
-  useBusinessDashboardRefreshController,
-} from "@/features/business/dashboard-refresh";
+  DashboardRefreshProvider,
+  useDashboardRefreshController,
+} from "@/components/shared/dashboard-refresh";
 import { BusinessSidebarFooter } from "@/features/business/components/BusinessSidebarFooter";
 
 // Dynamically import heavy components with preloading only when needed
-// Create/Edit modal: large multi-step form
-const LinktreeEditorModal = dynamic(
-  () =>
-    import("@/components/business/LinktreeEditorModal").then((mod) => ({
-      default: mod.LinktreeEditorModal,
-    })),
-  {
-    ssr: false,
-    loading: () => <BusinessLoadingSkeleton kind="linktreeEditor" />,
-    // Preload on hover/focus for better UX
-  },
-);
+// The shared drawer shell stays available; individual previews load lazily.
 
 const BusinessSettingsPage = dynamic(
   () =>
@@ -117,10 +107,10 @@ const TemplatesPage = dynamic(
   { ssr: false, loading: () => <BusinessLoadingSkeleton kind="templates" /> },
 );
 
-const BusinessLinktreeAnalyticsModal = dynamic(
+const PageAnalyticsDrawer = dynamic(
   () =>
-    import("@/components/business/BusinessLinktreeAnalyticsModal").then(
-      (mod) => ({ default: mod.BusinessLinktreeAnalyticsModal }),
+    import("@/features/analytics/components/PageAnalyticsDrawer").then(
+      (mod) => ({ default: mod.PageAnalyticsDrawer }),
     ),
   {
     ssr: false,
@@ -141,16 +131,7 @@ const BusinessTikTokConfigPage = dynamic(
   },
 );
 
-const AdvertisingServicePage = dynamic(
-  () =>
-    import("@/features/advertising/components/AdvertisingServicePage").then(
-      (mod) => ({ default: mod.AdvertisingServicePage }),
-    ),
-  {
-    ssr: false,
-    loading: () => <BusinessLoadingSkeleton kind="advertising" />,
-  },
-);
+
 
 const BusinessGettingStarted = dynamic(
   () =>
@@ -172,6 +153,7 @@ interface BusinessDashboardProps {
     default_footer_phone?: string | null;
     default_template?: string | null;
     default_background_color?: string | null;
+    default_background_pattern?: string | null;
     default_footer_hidden?: boolean;
     default_whatsapp_enabled?: boolean;
     default_avatar?: string | null;
@@ -182,14 +164,12 @@ interface BusinessDashboardProps {
   onboardingStep?: number;
 }
 
-type BusinessTheme = "light" | "dark";
 function getBusinessPage(pathname: string): BusinessDashboardPage {
   const segment = pathname.split("/").filter(Boolean)[1];
   if (!segment) return "linktrees";
   if (segment === "pages") return "linktrees";
   return segment === "tiktok-config" ||
     segment === "forms" ||
-    segment === "advertising" ||
     segment === "templates" ||
     segment === "profile" ||
     segment === "settings"
@@ -245,15 +225,15 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   // All hooks must be called before any conditional returns
   const {
     linktrees: linktreesData,
+    unavailable: pagesUnavailable,
     isLoading,
     reload: fetchLinktrees,
     removeLinktree,
     mergeLinktree,
     prependLinktree,
-    mapLinktrees,
   } = useLinktrees(initialLinktrees);
   const createDefaultFromUrl = searchParams.get("create") === "default";
-  const [isModalOpen, setIsModalOpen] = useState(createDefaultFromUrl);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(createDefaultFromUrl);
   const [isLoadingEditData, setIsLoadingEditData] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [linktreeToDelete, setLinktreeToDelete] = useState<{
@@ -263,15 +243,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid"); // Default to grid view
-  const [theme, setTheme] = useState<BusinessTheme>(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const saved = window.localStorage.getItem("app-theme");
-      return saved === "dark" ? "dark" : "light";
-    } catch {
-      return "light";
-    }
-  });
+  const { theme, toggleTheme } = useAppTheme();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const activeTab = getBusinessPage(pathname);
@@ -305,13 +277,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         active: activeTab === "templates",
         onClick: () => router.push("/business/templates"),
       },
-      {
-        id: "advertising",
-        label: t("advertising"),
-        icon: <Megaphone className="h-4 w-4" />,
-        active: activeTab === "advertising",
-        onClick: () => router.push("/business/advertising"),
-      },
+      
       {
         id: "settings",
         label: t("settings"),
@@ -328,15 +294,11 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const [badGateway, setBadGateway] = useState(false);
   const [gatewayTimeout, setGatewayTimeout] = useState(false);
-  const [isClearAnalyticsModalOpen, setIsClearAnalyticsModalOpen] =
-    useState(false);
   const [isClearingAnalytics, setIsClearingAnalytics] = useState(false);
   const [analyticsModalLinktree, setAnalyticsModalLinktree] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const [duplicateTargetLinktree, setDuplicateTargetLinktree] =
-    useState<LinktreeListItem | null>(null);
   const [isCreatingDefault, setIsCreatingDefault] =
     useState(createDefaultFromUrl);
 
@@ -351,6 +313,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     useState<EffectiveAccessManifest | null>(null);
   const liveEffectiveAccess =
     refreshedEffectiveAccess ?? effectiveAccess ?? null;
+  const linktreePinPermission = liveEffectiveAccess?.permissions["business:linktrees:update"];
+  const canPinLinktrees = linktreePinPermission?.outcome === "allow" &&
+    (linktreePinPermission.fieldModes.isPinned ?? linktreePinPermission.accessMode) === "direct";
   const pageLocked = isBusinessPageLocked(activeTab, liveEffectiveAccess);
   const pageLockReason = actionT("upgradeRequired");
   useEffect(() => {
@@ -369,7 +334,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       linktrees: t("linktrees"),
       forms: t("forms"),
       "tiktok-config": t("tiktokSettings"),
-      advertising: t("advertising"),
+      
       templates: t("templates"),
       profile: t("profile"),
       settings: t("settings"),
@@ -378,18 +343,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       name || currentUsername || t("businessFallback"),
       sectionTitles[activeTab],
     );
-    if (favicon) {
-      let link = document.querySelector(
-        "link[rel~='icon']",
-      ) as HTMLLinkElement | null;
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "icon";
-        document.head.appendChild(link);
-      }
-      link.href = favicon;
-    }
-  }, [name, favicon, currentUsername, activeTab, t]);
+    applyTabIcon(favicon, businessLogo);
+  }, [name, favicon, businessLogo, currentUsername, activeTab, t]);
 
   // Last payloads seen, so an unchanged response costs nothing. Previously every
   // tick re-set state and dispatched events, re-rendering the whole dashboard
@@ -505,6 +460,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           typeof detail.default_template === "string"
             ? detail.default_template
             : current?.default_template,
+        default_background_pattern: typeof detail.default_background_pattern === "string" ? detail.default_background_pattern : current?.default_background_pattern,
         default_background_color:
           typeof detail.default_background_color === "string"
             ? detail.default_background_color
@@ -539,12 +495,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
-  const toggleTheme = useCallback(() => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-  }, [theme]);
-
-  const isDarkActive = theme === "dark";
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setMounted(true));
@@ -557,9 +507,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     window.location.href = "/business/workspace-entry";
   }, []);
 
-  useEffect(() => {
-    persistAppTheme(isDarkActive ? "dark" : "light");
-  }, [isDarkActive]);
 
   // Search keyboard shortcuts (Ctrl+K / Escape)
   useEffect(() => {
@@ -597,10 +544,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
   const {
     totals: analyticsTotals,
-    hasData: hasAnalyticsData,
     isLoading: isAnalyticsLoading,
+    isRefreshing: isAnalyticsRefreshing,
+    unavailable: analyticsUnavailable,
     refresh: fetchAnalyticsTotals,
-    reset: resetAnalyticsTotals,
   } = useBusinessAnalyticsTotals("linktree", activeTab === "linktrees");
   const isSubmittingRef = useRef(false); // Prevent duplicate submissions
   const [editData, setEditData] = useState<{
@@ -623,10 +570,12 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       try {
         const { flushNow } = await import("@/lib/utils/client-queue");
         await flushNow().catch(() => {});
-        await Promise.all([
+        const results = await Promise.allSettled([
           fetchLinktrees(false, true, true),
           fetchAnalyticsTotals({ rethrow: true }),
         ]);
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
       } catch (error) {
         if (rethrow) throw error;
         toast.error(actionT("pagesRefreshFailed"));
@@ -641,7 +590,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     () => refreshDashboardState(true),
     [refreshDashboardState],
   );
-  const dashboardRefresh = useBusinessDashboardRefreshController(
+  const dashboardRefresh = useDashboardRefreshController(
     refreshSharedDashboardData,
   );
   const handleGlobalDashboardRefresh = useCallback(async () => {
@@ -653,48 +602,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     toast.success(actionT("refreshSuccess"));
   }, [dashboardRefresh, actionT]);
 
-  const handleClearAllAnalytics = async () => {
-    if (isClearingAnalytics || !hasAnalyticsData) return;
-
+  const handleClearSelectedAnalytics = async (ids: readonly string[]) => {
+    if (isClearingAnalytics || !ids.length) return;
     setIsClearingAnalytics(true);
     try {
-      await Promise.all(
-        linktreesData.map(async (linktree) => {
-          const response = await fetch(
-            `/api/linktrees/${encodeURIComponent(linktree.id)}/analytics/clear`,
-            {
-              method: "POST",
-              credentials: "include",
-              cache: "no-store",
-            },
-          );
-          if (!response.ok) {
-            throw new Error("Failed to clear Linktree analytics");
-          }
-        }),
-      );
-
+      await clearSelectedAnalytics("/api/linktrees", ids);
+    } finally {
       const { clearCachedData } = await import("@/lib/utils/cache");
       clearCachedData("/api/linktrees");
-
-      resetAnalyticsTotals();
-      mapLinktrees((item) => ({
-        ...item,
-        analytics: item.analytics
-          ? {
-              ...item.analytics,
-              unique_views: 0,
-              unique_clicks: 0,
-              total_clicks: 0,
-            }
-          : item.analytics,
-      }));
-      setIsClearAnalyticsModalOpen(false);
-      await Promise.all([fetchLinktrees(false, true), fetchAnalyticsTotals()]);
-    } catch (error) {
-      console.error("Error clearing analytics:", error);
-    } finally {
-      setIsClearingAnalytics(false);
+      try { await handleRefresh(true); }
+      finally { setIsClearingAnalytics(false); }
     }
   };
 
@@ -707,17 +624,16 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     }
   }, [currentUsername]);
 
-  useEffect(() => {
-    // Preload modal component in background for faster subsequent opens
-    import("@/components/business/LinktreeEditorModal").catch(() => {
-      // Silently fail preload - not critical
-    });
-  }, []);
 
+  const editRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => editRequest.current?.abort(), []);
   const handleEdit = useCallback(
     async (id: string) => {
-      // Open modal immediately for better UX
-      setIsModalOpen(true);
+      editRequest.current?.abort();
+      const controller = new AbortController();
+      editRequest.current = controller;
+      // Keep the same drawer mounted while its data loads.
+      setIsDrawerOpen(true);
       setIsLoadingEditData(true);
       setEditData(null); // Clear previous data
 
@@ -727,7 +643,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         const data = await apiRequest<{
           linktree: Linktree;
           links: NonNullable<typeof editData>["links"];
-        }>(`/api/linktrees/${id}/edit`);
+        }>(`/api/linktrees/${id}/edit`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
 
         // Validate required fields
         if (!data?.linktree?.id) {
@@ -740,6 +657,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
         setEditData({ linktree: data.linktree, links: data.links });
       } catch (error) {
+        if (controller.signal.aborted) return;
         // If unauthorized, suggest re-login and keep the modal open otherwise.
         if (isApiRequestError(error, 401)) {
           const shouldReload = window.confirm(actionT("sessionExpired"));
@@ -755,9 +673,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             : "Failed to load linktree data";
         console.error(`Failed to load linktree data: ${errorMessage}`);
 
-        setIsModalOpen(false); // Close modal on error
+        setIsDrawerOpen(false); // Close modal on error
       } finally {
-        setIsLoadingEditData(false);
+        if (!controller.signal.aborted) setIsLoadingEditData(false);
       }
     },
     [actionT],
@@ -839,7 +757,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
       mergeLinktree(id, {
         is_archived: nextStatus,
         archived_at: nextStatus ? new Date().toISOString() : null,
-        ...(nextStatus ? { is_campaign_active: false } : {}),
       });
 
       try {
@@ -875,36 +792,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     [mergeLinktree, fetchLinktrees, actionT],
   );
 
-  const handleToggleCampaign = useCallback(
-    async (id: string, isCampaignActive: boolean) => {
-      mergeLinktree(id, { is_campaign_active: isCampaignActive });
-
-      try {
-        await setBusinessLinktreeCampaignStatus(id, isCampaignActive);
-
-        const { clearCachedData } = await import("@/lib/utils/cache");
-        clearCachedData("/api/linktrees");
-        clearCachedData(`/api/linktrees/${id}`);
-
-        toast.success(
-          isCampaignActive
-            ? actionT("campaignActivated")
-            : actionT("campaignRemoved"),
-        );
-      } catch (error) {
-        await fetchLinktrees(false, true);
-        console.error("Error changing campaign status:", error);
-        toast.error(actionT("campaignFailed"));
-      }
-    },
-    [mergeLinktree, fetchLinktrees, actionT],
-  );
-
   const handleToggleStatus = useCallback(
     async (id: string, nextStatus: "active" | "inactive") => {
       mergeLinktree(id, {
         status: nextStatus,
-        ...(nextStatus === "inactive" ? { is_campaign_active: false } : {}),
       });
 
       try {
@@ -944,8 +835,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   // wrapping it in useCallback trips react-hooks/preserve-manual-memoization.
   // It only calls state setters, so a fresh identity per render is harmless.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleModalClose = () => {
-    setIsModalOpen(false);
+  const handleDrawerClose = () => {
+    editRequest.current?.abort();
+    setIsLoadingEditData(false);
+    setIsDrawerOpen(false);
     setEditData(null);
     setIsCreatingDefault(false);
   };
@@ -963,30 +856,29 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   }, [editParam, handleEdit, router]);
 
   const handleCreateNew = useCallback(() => {
+    editRequest.current?.abort();
+    setIsLoadingEditData(false);
     setEditData(null);
-    setIsModalOpen(true);
+    setIsDrawerOpen(true);
   }, []);
 
   const handleSubmit = useCallback(
     async (
       data: {
-        name: string;
-        subtitle?: string;
-        subtitle_color?: string;
+        headline: string;
+        slogan?: string;
+        slogan_color?: string;
         description?: string;
-        slug: string;
-        image: string | null;
+        logo: string | null;
         background_color: string;
         templateKey: TemplateKey;
         templateConfig: Record<string, unknown>;
-        footer_text?: string;
-        footer_phone?: string;
-        footer_hidden?: boolean;
         platforms: string[];
         links: Record<string, string[]>;
         linkMetadata?: Record<
           string,
           Array<{
+            display_order?: number;
             display_name?: string;
             description?: string;
             default_message?: string;
@@ -1020,11 +912,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
           // Validate required fields
           if (
-            !data.name?.trim() ||
-            !data.slug?.trim() ||
+            !data.headline?.trim() ||
             !data.background_color
           ) {
-            console.error("Name, slug, and background color are required");
+            console.error("Headline and background color are required");
             throw new Error("Missing required fields");
           }
 
@@ -1053,17 +944,13 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             credentials: "include", // Include cookies for authentication
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              name: data.name.trim(),
-              subtitle: data.subtitle?.trim() || null,
-              subtitle_color: data.subtitle_color?.trim() || null,
+              headline: data.headline.trim(),
+              slogan: data.slogan?.trim() || null,
+              slogan_color: data.slogan_color?.trim() || null,
               description: data.description?.trim() || null,
-              seo_name: data.slug.trim(),
-              image: data.image || null,
+              logo: data.logo || null,
               background_color: data.background_color,
               template_config: normalizedTemplateConfig,
-              footer_text: data.footer_text?.trim() || null,
-              footer_phone: data.footer_phone?.trim() || null,
-              footer_hidden: data.footer_hidden ?? false,
             }),
           });
 
@@ -1176,7 +1063,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             throw new Error(errorMessage);
           }
 
-          // Step 2: Fetch existing links (must delete ALL before creating new ones)
+          // Step 2: Fetch existing identities for the legacy batch request shape.
           const linksResponse = await fetch(`/api/linktrees/${editId}/links`, {
             credentials: "include",
             cache: "no-store",
@@ -1253,7 +1140,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 linksToCreate.push({
                   platform: trimmedPlatform,
                   url: trimmedUrl,
-                  display_order: displayOrder++,
+                  display_order: typeof metadata.display_order === "number" && Number.isSafeInteger(metadata.display_order) && metadata.display_order >= 0
+                    ? metadata.display_order : displayOrder,
                   display_name: metadata.display_name?.trim() || null,
                   description: metadata.description?.trim() || null,
                   default_message: metadata.default_message?.trim() || null,
@@ -1269,12 +1157,18 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 linkIdToIndexMap[linkCreateIndex] =
                   `${trimmedPlatform}_${index}`;
                 linkCreateIndex++;
+                displayOrder++;
               });
             }
           }
 
-          // Step 4: Batch update links (delete ALL old links first, then create new ones)
-          // Always delete existing links first to prevent duplicates, even if linksToCreate is empty
+          // Keep global order across grouped platforms and their validation identities.
+          const orderedLinks = linksToCreate.map((link, index) => ({ link, errorKey: linkIdToIndexMap[index] }))
+            .sort((a, b) => a.link.display_order - b.link.display_order);
+          linksToCreate.splice(0, linksToCreate.length, ...orderedLinks.map(({ link }) => link));
+          orderedLinks.forEach(({ errorKey }, index) => { linkIdToIndexMap[index] = errorKey; });
+
+          // The shared batch sync preserves matching link identities and analytics.
           if (existingLinkIds.length > 0 || linksToCreate.length > 0) {
             const batchResponse = await fetch(
               `/api/linktrees/${editId}/links/batch`,
@@ -1283,8 +1177,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({
-                  deleteIds: existingLinkIds, // Delete all existing links
-                  createLinks: linksToCreate, // Create new links
+                  deleteIds: existingLinkIds,
+                  createLinks: linksToCreate,
                 }),
               },
             );
@@ -1380,7 +1274,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           }
 
           // Close modal immediately for better UX
-          setIsModalOpen(false);
+          setIsDrawerOpen(false);
           setEditData(null);
 
           // Background refresh disabled to reduce server load on free hosting
@@ -1391,11 +1285,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
           // Validate required fields
           if (
-            !data.name?.trim() ||
-            !data.slug?.trim() ||
+            !data.headline?.trim() ||
             !data.background_color
           ) {
-            console.error("Name, slug, and background color are required");
+            console.error("Headline and background color are required");
             throw new Error("Missing required fields");
           }
 
@@ -1419,17 +1312,13 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             credentials: "include", // Include cookies for authentication
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              name: data.name.trim(),
-              subtitle: data.subtitle?.trim() || null,
-              subtitle_color: data.subtitle_color?.trim() || null,
+              headline: data.headline.trim(),
+              slogan: data.slogan?.trim() || null,
+              slogan_color: data.slogan_color?.trim() || null,
               description: data.description?.trim() || null,
-              slug: data.slug.trim(),
-              image: data.image || null,
+              logo: data.logo || null,
               background_color: data.background_color,
               template_config: normalizedTemplateConfig,
-              footer_text: data.footer_text?.trim() || null,
-              footer_phone: data.footer_phone?.trim() || null,
-              footer_hidden: data.footer_hidden ?? false,
               platforms: data.platforms,
               links: data.links,
               linkMetadata: data.linkMetadata,
@@ -1459,7 +1348,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             prependLinktree(result.data);
 
             toast.success(actionT("created"));
-            handleModalClose();
+            handleDrawerClose();
 
             // Background refresh disabled to reduce server load on free hosting
           } else {
@@ -1486,7 +1375,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
         isSubmittingRef.current = false;
       }
     },
-    [handleModalClose, mergeLinktree, prependLinktree, actionT, locale],
+    [handleDrawerClose, mergeLinktree, prependLinktree, actionT, locale],
   );
 
   // Don't render anything if not authenticated (after all hooks)
@@ -1570,16 +1459,27 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     return null; // Return null while redirecting
   }
 
+  const editingLinktree = editData ? linktreesData.find(item => item.id === editData.linktree.id) : undefined;
+  const drawerHeaderControls = (<DashboardAppearanceControls
+                  compact
+                  languageControl={<BusinessLanguageSelector compact />}
+                  theme={theme}
+                  mounted={mounted}
+                  onToggleTheme={toggleTheme}
+                  labels={{
+                    theme: headerT("theme"),
+                    darkTheme: headerT("darkTheme"),
+                    lightTheme: headerT("lightTheme"),
+                    themeLabel: headerT("themeLabel"),
+                  }}
+                />);
+
   return (
-    <ThemeProvider websiteColor={wColor ?? null} documentTheme="business">
-      <BusinessDashboardRefreshProvider value={dashboardRefresh}>
+    <ThemeProvider websiteColor={wColor || websiteColor || DEFAULT_BUSINESS_ACCENT} documentTheme="business">
+      <DashboardRefreshProvider value={dashboardRefresh}>
         <BusinessSubscriptionModal
           isOpen={subscriptionOpen}
           onClose={() => setSubscriptionOpen(false)}
-          onSupport={() => {
-            setSubscriptionOpen(false);
-            router.push("/business/settings?tab=messages");
-          }}
           locale={locale}
         />
         <div
@@ -1590,6 +1490,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
           aria-hidden={onboardingRequired ? true : undefined}
         >
           <DashboardSidebar
+            accentColor={wColor || websiteColor || DEFAULT_BUSINESS_ACCENT}
             brandName="Sponsor.krd"
             brandSubtitle={t("subtitle")}
             brandImage={SPONSOR_KRD_LOGO}
@@ -1602,13 +1503,14 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             onCloseMobile={() => setIsMobileSidebarOpen(false)}
             closeLabel={sidebarT("closeLabel")}
             closeTooltip={sidebarT("close")}
+            websiteLabel={sidebarT("website")}
             footer={
               <BusinessSidebarFooter
                 collapsed={isSidebarCollapsed}
                 planCode={liveEffectiveAccess?.subscription.planCode}
                 planName={liveEffectiveAccess?.subscription.planName}
-                onSupport={() => router.push("/business/settings?tab=messages")}
-                onUpgrade={() => setSubscriptionOpen(true)}
+                onSupport={() => { setIsMobileSidebarOpen(false); router.push("/business/settings?tab=messages"); }}
+                onUpgrade={() => { setIsMobileSidebarOpen(false); setSubscriptionOpen(true); }}
               />
             }
           />
@@ -1625,8 +1527,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 menuLabel: headerT("menuLabel"),
                 refresh: headerT("refresh"),
                 refreshLabel: headerT("refreshLabel"),
-                home: headerT("home"),
-                homeLabel: headerT("homeLabel"),
                 theme: headerT("theme"),
                 darkTheme: headerT("darkTheme"),
                 lightTheme: headerT("lightTheme"),
@@ -1714,22 +1614,27 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                     />
                   ) : activeTab === "linktrees" ? (
                     <BusinessLinktreesPage
+                      headerControls={drawerHeaderControls}
+                      accentColor={wColor ?? null}
                       linktrees={filteredLinktrees}
                       linktreeCount={linktreesData.length}
-                      isLoading={isLoading || isAnalyticsLoading}
+                      isLoading={isLoading}
+                      analyticsLoading={isAnalyticsLoading || isAnalyticsRefreshing}
+                      analyticsUnavailable={analyticsUnavailable}
+                      pagesUnavailable={pagesUnavailable}
                       totalViews={analyticsTotals.total_views}
                       uniqueViews={analyticsTotals.unique_views}
                       totalClicks={analyticsTotals.total_clicks}
-                      conversions={analyticsTotals.conversions}
+                      uniqueClicks={analyticsTotals.unique_clicks}
+                      contactActions={analyticsTotals.contact_actions}
                       isRefreshing={isRefreshing}
                       isClearingAnalytics={isClearingAnalytics}
-                      hasAnalyticsData={hasAnalyticsData}
                       searchQuery={searchQuery}
                       isSearchModalOpen={isSearchModalOpen}
                       viewMode={viewMode}
-                      onClearAnalytics={() =>
-                        setIsClearAnalyticsModalOpen(true)
-                      }
+                      onClearAnalytics={handleClearSelectedAnalytics}
+                      canDelete={liveEffectiveAccess?.permissions["business:linktrees:delete"]?.outcome === "allow"}
+                      canClearAnalytics={liveEffectiveAccess?.permissions["business:analytics:clear-linktree"]?.outcome === "allow"}
                       onRefresh={handleRefresh}
                       onSearchAction={() =>
                         searchQuery.trim()
@@ -1739,12 +1644,12 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                       onViewModeChange={setViewMode}
                       onCreate={handleCreateNew}
                       onEdit={handleEdit}
-                      onDuplicate={(item) => setDuplicateTargetLinktree(item)}
                       onDelete={handleDelete}
                       onViewAnalytics={handleViewAnalytics}
-                      onToggleCampaign={handleToggleCampaign}
+                      onPinnedChange={(id, pinned) => mergeLinktree(id, { is_pinned: pinned })}
+                      canPin={canPinLinktrees}
+                      canShareAnalytics={linktreePinPermission?.outcome === "allow" && liveEffectiveAccess?.permissions["business:linktrees:read"]?.outcome === "allow"}
                       onToggleArchive={handleToggleArchive}
-                      onToggleStatus={handleToggleStatus}
                     />
                   ) : activeTab === "forms" ? (
                     <BusinessFormsPage
@@ -1777,16 +1682,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                     />
                   ) : activeTab === "templates" ? (
                     <TemplatesPage
+                      locale={locale}
                       accessMode="entitlement"
                       copy={businessMessages[locale].TemplatesPage}
-                    />
-                  ) : activeTab === "advertising" ? (
-                    <AdvertisingServicePage
-                      name={name || currentUsername || t("businessFallback")}
-                      logo={logo}
-                      accentColor={parseWebsiteColor(wColor).primary}
-                      phone={phone}
-                      subdomain={currentUsername}
                     />
                   ) : activeTab === "settings" ? (
                     <BusinessSettingsPage />
@@ -1836,25 +1734,9 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             />
           )}
 
-          {/* Clear All Analytics Confirmation Modal */}
-          <ConfirmDeleteModal
-            isOpen={isClearAnalyticsModalOpen}
-            onClose={() => {
-              if (!isClearingAnalytics) setIsClearAnalyticsModalOpen(false);
-            }}
-            onConfirm={handleClearAllAnalytics}
-            title={t("clearAnalytics")}
-            confirmLabel={t("confirmClear")}
-            loadingLabel={t("clearing")}
-            cancelLabel={t("cancel")}
-            closeLabel={t("close")}
-            isDeleting={isClearingAnalytics}
-            message={<p>{t("clearAnalyticsQuestion")}</p>}
-          />
-
-          {/* Create/Edit Modal */}
-          {isModalOpen && (
-            <LinktreeEditorModal
+          {/* Shared create/edit drawer */}
+          <DrawerPresence>{isDrawerOpen && (
+            <LinktreeEditorDrawer
               copy={
                 locale === "ar"
                   ? arabicEditorCopy
@@ -1867,23 +1749,29 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                   ? undefined
                   : businessMessages[locale].SettingsColorPicker
               }
-              isOpen={isModalOpen}
-              onClose={handleModalClose}
+              advancedSeoAllowed={liveEffectiveAccess?.subscription.planCode?.trim().toLowerCase() === "max" && ["trialing", "active", "grace_period"].includes(liveEffectiveAccess.subscription.status)}
+              locale={locale}
+              headerControls={drawerHeaderControls}
+              isOpen={isDrawerOpen}
+              onClose={handleDrawerClose}
               onSubmit={handleSubmit}
               editData={editData}
+              management={editingLinktree ? { item: editingLinktree, onToggleStatus: handleToggleStatus, onToggleArchive: handleToggleArchive, onDuplicated: () => { void handleRefresh(); } } : undefined}
               isLoadingEditData={isLoadingEditData}
               businessDefaults={isCreatingDefault ? undefined : defaults}
               businessIdentity={{ name, phone }}
               isDefault={isCreatingDefault}
             />
-          )}
+          )}</DrawerPresence>
 
-          {analyticsModalLinktree && (
-            <BusinessLinktreeAnalyticsModal
+          <DrawerPresence>{analyticsModalLinktree && (
+            <PageAnalyticsDrawer
               isOpen={Boolean(analyticsModalLinktree)}
               onClose={() => setAnalyticsModalLinktree(null)}
-              linktreeId={analyticsModalLinktree.id}
-              linktreeName={analyticsModalLinktree.name}
+              pageId={analyticsModalLinktree.id}
+              pageName={analyticsModalLinktree.name}
+              headerControls={drawerHeaderControls}
+              locale={locale}
               copy={
                 locale === "ckb"
                   ? undefined
@@ -1895,19 +1783,8 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 ]?.outcome === "allow"
               }
             />
-          )}
+          )}</DrawerPresence>
 
-          {duplicateTargetLinktree && (
-            <DuplicateLinktreeModal
-              isOpen={Boolean(duplicateTargetLinktree)}
-              onClose={() => setDuplicateTargetLinktree(null)}
-              targetLinktree={duplicateTargetLinktree}
-              copy={businessMessages[locale].DuplicateLinktree}
-              onSuccess={() => {
-                void handleRefresh();
-              }}
-            />
-          )}
 
           {/* Floating Command Palette Search Modal */}
           <LinktreeSearchModal
@@ -1956,7 +1833,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
             }
           />
         ) : null}
-      </BusinessDashboardRefreshProvider>
+      </DashboardRefreshProvider>
     </ThemeProvider>
   );
 });

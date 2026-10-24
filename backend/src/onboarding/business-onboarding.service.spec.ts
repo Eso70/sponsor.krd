@@ -171,7 +171,7 @@ describe('BusinessOnboardingService invitations', () => {
       userId: 'user-1',
       ipAddress: '127.0.0.1',
       userAgent: 'test-agent',
-      rememberDevice: false,
+      rememberDevice: true,
     });
     expect(session).toEqual({
       sessionToken: 'session-token',
@@ -248,7 +248,10 @@ describe('BusinessOnboardingService invitations', () => {
       redirectUrl: 'http://lvh.me:3011/ops-9c741e5b2f8a4d63b017ce95',
     });
     expect(sessions.createPlatformAdminSession).toHaveBeenCalledWith(
-      expect.objectContaining({ platformAdminId: 'admin-1' }),
+      expect.objectContaining({
+        platformAdminId: 'admin-1',
+        rememberDevice: true,
+      }),
     );
 
     database.query.mockResolvedValueOnce({
@@ -772,6 +775,7 @@ describe('BusinessOnboardingService invitations', () => {
         user_id: 'user-1',
         business_id: 'business-1',
         subdomain: 'tenant',
+        rememberDevice: true,
       }),
       60,
     );
@@ -924,7 +928,7 @@ describe('BusinessOnboardingService invitations', () => {
       name: 'Sponsor.krd',
       ipAddress: '127.0.0.1',
       userAgent: 'test-agent',
-      rememberDevice: false,
+      rememberDevice: true,
     });
     expect(session.redirectUrl).toBe(
       'http://lvh.me:3011/ops-9c741e5b2f8a4d63b017ce95',

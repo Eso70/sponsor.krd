@@ -17,8 +17,10 @@
 /** Included in every plan, so a new business can always render it. */
 export const DEFAULT_LINKTREE_TEMPLATE_KEY = 'spectrum';
 
-/** A white canvas, matching the link editor's `pure-white` swatch. */
-export const DEFAULT_LINKTREE_BACKGROUND_COLOR = '#ffffff';
+export {
+  DEFAULT_LINKTREE_BACKGROUND_COLOR,
+  DEFAULT_LINKTREE_BACKGROUND_PATTERN,
+} from '@linktree/types/linktree-defaults.cjs';
 
 /**
  * `true` means the "شاردنەوەی فوتر" (hide footer) switch starts ON, so a new

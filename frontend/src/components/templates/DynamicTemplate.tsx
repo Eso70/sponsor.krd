@@ -1,9 +1,13 @@
 "use client";
+import { readLinktreeSeo } from "@linktree/types/linktree-seo.cjs";
 
 import { memo, useMemo } from "react";
 import type { TemplateComponentProps } from "./types";
 import { TEMPLATE_COMPONENTS, TEMPLATE_DEFAULT_ID, type TemplateKey } from ".";
 import { isTemplateKey, normalizeTemplateConfig } from "@/lib/templates/config";
+import { readLinktreeBanner, LINKTREE_BANNER_KEY } from "@linktree/types";
+import { isLocalRasterImage } from "@/lib/images/local-raster-image";
+import { TemplateMediaContext } from "./shared/TemplateMediaContext";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -50,6 +54,7 @@ export const DynamicTemplate = memo(function DynamicTemplate({
   links,
   theme,
   onLinkClick,
+  onMediaAction,
 }: TemplateComponentProps) {
   const normalizedConfig = useMemo(() => {
     const configObject = coerceTemplateConfig(linktree.template_config);
@@ -80,6 +85,14 @@ export const DynamicTemplate = memo(function DynamicTemplate({
     TEMPLATE_COMPONENTS[builtInKey as TemplateKey] ??
     TEMPLATE_COMPONENTS[TEMPLATE_DEFAULT_ID];
   return (
+    <TemplateMediaContext.Provider value={{
+      seo: readLinktreeSeo(normalizedConfig.seo),
+      preview: linktree.id.includes("preview"),
+      banner: linktree.id.includes("preview")
+        ? readLinktreeBanner(normalizedConfig[LINKTREE_BANNER_KEY], isLocalRasterImage)
+        : readLinktreeBanner(normalizedConfig[LINKTREE_BANNER_KEY]),
+      onAction: onMediaAction,
+    }}>
     <div className="public-template-shell" data-template-key={builtInKey}>
       <TemplateComponent
         linktree={linktreeWithConfig}
@@ -88,5 +101,6 @@ export const DynamicTemplate = memo(function DynamicTemplate({
         onLinkClick={onLinkClick}
       />
     </div>
+    </TemplateMediaContext.Provider>
   );
 });

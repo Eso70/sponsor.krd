@@ -24,7 +24,6 @@ interface BusinessData {
   footer_text?: string | null;
   footer_phone?: string | null;
   whatsapp_enabled?: boolean | null;
-  advertising_enabled?: boolean | null;
   branding_removed?: boolean | null;
 }
 
@@ -63,11 +62,7 @@ export function BusinessLanding({
         <PublicBusinessLanguageToggle locale={locale} onChange={setLocale} />
       }
       navbarCopy={copy.navbar}
-      navigationItems={[
-        ...(business.advertising_enabled
-          ? [{ label: copy.nav.advertising, href: "/advertising" }]
-          : []),
-      ]}
+      navigationItems={[]}
       action={
         contactHref
           ? { label: copy.nav.contact, href: contactHref, external: true }
@@ -79,7 +74,6 @@ export function BusinessLanding({
         copy: copy.footer,
         phone: business.footer_phone,
         whatsappEnabled: business.whatsapp_enabled,
-        advertisingEnabled: Boolean(business.advertising_enabled),
         brandingRemoved: Boolean(business.branding_removed),
       }}
     >

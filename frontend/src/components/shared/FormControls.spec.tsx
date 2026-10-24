@@ -37,14 +37,12 @@ describe("shared form controls", () => {
     });
 
     fireEvent.click(trigger);
-    expect(trigger).toHaveClass("theme-soft");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("listbox")).toHaveStyle({
       "--theme-primary": "#25F4EE",
       "--theme-css": "#25F4EE",
     });
-    expect(screen.getByRole("option", { name: "Basic" })).toHaveClass(
-      "theme-fill",
-    );
+    expect(screen.getByRole("option", { name: "Basic" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("keeps a continuous gradient in the select trigger and portal", () => {
@@ -69,9 +67,7 @@ describe("shared form controls", () => {
     expect(screen.getByRole("listbox")).toHaveStyle({
       "--theme-css": gradient,
     });
-    expect(screen.getByRole("option", { name: "Active" })).toHaveClass(
-      "theme-fill",
-    );
+    expect(screen.getByRole("option", { name: "Active" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("reports checkbox changes through a real checkbox input", () => {
@@ -97,7 +93,7 @@ describe("shared form controls", () => {
     expect(input.nextElementSibling).toHaveClass("theme-fill");
   });
 
-  it("selects date and time through the custom picker", () => {
+  it("selects date and time through the custom picker", async () => {
     const onChange = vi.fn();
     render(
       <DateTimeInput label="کاتی بڵاوکردنەوە" value="" onChange={onChange} />,
@@ -106,11 +102,36 @@ describe("shared form controls", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "کردنەوەی کاتی بڵاوکردنەوە" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "ئەمڕۆ" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ئەمڕۆ" }));
 
     expect(onChange).toHaveBeenCalledWith(
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
     );
+  });
+
+  it("opens from the date field and keeps manual typing focused", async () => {
+    const change = vi.fn();
+    render(<DateTimeInput locale="en" label="Schedule" value="2028-07-20T14:35" onChange={change} />);
+    const field = screen.getByRole("textbox", { name: "Schedule" });
+    fireEvent.click(field);
+    expect(await screen.findByRole("dialog", { name: "Schedule" })).toBeInTheDocument();
+    expect(field).toHaveFocus();
+    fireEvent.change(field, { target: { value: "28/07/21" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(change).toHaveBeenCalledWith("2028-07-21T14:35");
+    expect(screen.getByRole("dialog", { name: "Schedule" })).toBeInTheDocument();
+  });
+
+  it("allows historical dates while respecting explicit bounds", () => {
+    const change = vi.fn();
+    render(<DateInput locale="en" label="Date" value="" min="2020-01-01" max="2025-12-31" onChange={change} />);
+    const field = screen.getByRole("textbox", { name: "Date" });
+    fireEvent.change(field, { target: { value: "24/07/20" } }); fireEvent.blur(field);
+    expect(change).toHaveBeenCalledWith("2024-07-20");
+    change.mockClear();
+    fireEvent.change(field, { target: { value: "19/07/20" } }); fireEvent.blur(field);
+    expect(change).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
   it("returns a date-only value through the reusable date picker", () => {

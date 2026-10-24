@@ -1,3 +1,4 @@
+import { PagePinDto } from '../common/page-pin.dto';
 import {
   Controller,
   Get,
@@ -12,6 +13,7 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { LinktreesService } from './linktrees.service';
 import { LinksService } from '../links/links.service';
@@ -19,7 +21,6 @@ import { BatchSyncLinksDto } from '../links/dto/sync-links.dto';
 import { CreateLinktreeDto } from './dto/create-linktree.dto';
 import {
   UpdateLinktreeDto,
-  ToggleLinktreeCampaignDto,
   ToggleLinktreeArchiveDto,
   ToggleLinktreeStatusDto,
 } from './dto/update-linktree.dto';
@@ -158,6 +159,23 @@ export class LinktreesController {
     return { success: true, data: linktree };
   }
 
+  @Get(':id/duplicate-options')
+  @RequireCapabilities(Capability.BusinessLinktreesCreate)
+  async duplicateOptions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('slug') slug: string | undefined,
+    @CurrentUser() business: SessionUser,
+  ) {
+    return {
+      success: true,
+      data: await this.linktreesService.getDuplicateOptions(
+        id,
+        business.id,
+        slug,
+      ),
+    };
+  }
+
   @Patch(':id')
   @RequireCapabilities(Capability.BusinessLinktreesUpdate)
   async update(
@@ -173,19 +191,17 @@ export class LinktreesController {
     return { success: true, data: linktree };
   }
 
-  @Patch(':id/campaign-status')
+  @Patch(':id/pin')
   @RequireCapabilities(Capability.BusinessLinktreesUpdate)
-  async toggleCampaignStatus(
-    @Param('id') id: string,
-    @Body() dto: ToggleLinktreeCampaignDto,
-    @CurrentUser() business: SessionUser,
+  async pin(
+    @CurrentUser() user: SessionUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: PagePinDto,
   ) {
-    const linktree = await this.linktreesService.toggleCampaignActive(
-      id,
-      business.id,
-      dto.is_campaign_active,
-    );
-    return { success: true, data: linktree };
+    return {
+      success: true,
+      data: await this.linktreesService.pin(user.id, id, body.isPinned),
+    };
   }
 
   @Patch(':id/archive')

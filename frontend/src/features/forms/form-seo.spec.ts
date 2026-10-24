@@ -70,7 +70,7 @@ describe("public form discovery", () => {
       ).twitter,
     ).toMatchObject({ card: "summary" });
   });
-  it("uses the public headline and uploaded logo with a business-logo fallback", () => {
+  it("uses the public headline and owner branding rather than the form image", () => {
     const own = buildFormMetadata(
       { ...form, name: "Form name", logo: "/images/upload/logo.png" },
       "https://a.sponsor.krd",
@@ -78,7 +78,7 @@ describe("public form discovery", () => {
     );
     expect(own.title).toEqual({ absolute: form.headline });
     expect(own.icons).toMatchObject({
-      icon: "https://a.sponsor.krd/images/upload/logo.png",
+      icon: [{url: "/api/public/brand-icon?asset=%2Fimages%2Fupload%2Fbusiness.png"}],
     });
     expect(
       buildFormMetadata(
@@ -87,7 +87,7 @@ describe("public form discovery", () => {
         "/images/upload/business.png",
       ).icons,
     ).toMatchObject({
-      icon: "https://a.sponsor.krd/images/upload/business.png",
+      icon: [{url: "/api/public/brand-icon?asset=%2Fimages%2Fupload%2Fbusiness.png"}],
     });
   });
   it("never substitutes the internal name for an empty public headline", () => {

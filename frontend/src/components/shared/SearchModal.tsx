@@ -1,8 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+"use client";
+
+import React, { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
 import { MotionReveal } from "@/components/motion/MotionPrimitives";
-import { Tooltip } from "@/components/shared/Tooltip";
+import { Tooltip } from "./Tooltip";
+import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import { useDocumentScrollLock } from "@/hooks/useDocumentScrollLock";
+import { useIsMounted } from "@/hooks/useIsMounted";
+import styles from "./soft-modal.module.css";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -13,6 +19,10 @@ interface SearchModalProps {
   children?: React.ReactNode;
   wide?: boolean;
   businessTheme?: boolean;
+  platformTheme?: boolean;
+  onSearchSubmit?: () => void;
+  showClear?: boolean;
+  shortcutLabel?: string;
   clearLabel?: string;
   applyLabel?: string;
   clearAriaLabel?: string;
@@ -20,116 +30,55 @@ interface SearchModalProps {
 }
 
 export function SearchModal({
-  isOpen,
-  onClose,
-  placeholder,
-  searchQuery,
-  onSearchQueryChange,
-  children,
+  isOpen, onClose, placeholder, searchQuery, onSearchQueryChange, children,
   wide = false,
-  businessTheme = false,
+  platformTheme = false, onSearchSubmit, showClear = true, shortcutLabel = "Enter",
   clearLabel = "پاککردنەوەی گەڕان",
   applyLabel = "جێبەجێکردن و داخستن",
   clearAriaLabel = "Clear search",
   applyAriaLabel = "Apply and close",
 }: SearchModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mounted = useIsMounted();
+  useModalKeyboard({
+    isOpen: isOpen && mounted,
+    onEscape: onClose,
+    dialogRef: modalRef,
+    initialFocusRef: inputRef,
+  });
+  useDocumentScrollLock(isOpen && mounted);
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div
-      className="modal-ltr fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300"
-      data-sponsor-krd-theme={businessTheme ? undefined : true}
-      data-platform-admin-theme={businessTheme ? undefined : true}
-      style={
-        businessTheme
-          ? undefined
-          : ({
-              "--theme-primary": "var(--sponsor-krd-accent)",
-              "--theme-css": "var(--sponsor-krd-accent-gradient)",
-              "--theme-ink": "var(--sponsor-krd-accent-ink)",
-            } as React.CSSProperties)
-      }
-    >
-      <div className="fixed inset-0" onClick={onClose} />
-      <MotionReveal
-        ref={modalRef}
-        className={`relative w-full rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden dark:border-white/10 dark:bg-[#1c222b] selection:bg-brand-500/30 dark:selection:bg-brand-500/40 ${wide ? "max-w-2xl" : "max-w-lg"}`}
-        dir="ltr"
-      >
-        {/* Search Input Box */}
-        <div className="relative flex items-center border-b border-slate-100 bg-linear-to-r from-white to-slate-50/30 dark:border-white/5 dark:from-[#1c222b] dark:to-slate-900/10">
-          <div className="absolute right-4 text-slate-400 dark:text-slate-400 pointer-events-none">
-            <Search className="h-5 w-5" />
-          </div>
-          <input
-            autoFocus
-            type="text"
-            placeholder={placeholder}
-            value={searchQuery}
-            onChange={(e) => onSearchQueryChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onClose();
-              }
-            }}
-            className={`w-full pr-12 py-4 text-sm sm:text-base bg-transparent focus:outline-none text-slate-700 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 font-kurdish text-left ${searchQuery ? "pl-32" : "pl-24"}`}
-          />
-          <div className="absolute left-4 flex items-center gap-1.5">
-            {searchQuery && (
-              <Tooltip content={clearLabel} side="bottom">
-                <button
-                  type="button"
-                  onClick={() => onSearchQueryChange("")}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer"
-                  aria-label={clearAriaLabel}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-            <Tooltip content={applyLabel} side="bottom">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer"
-                aria-label={applyAriaLabel}
-              >
-                <kbd className="block rounded border border-slate-200 px-2 py-1 font-sans text-[9px] font-bold text-slate-400 dark:border-white/10 dark:text-slate-400 dark:bg-white/5">
-                  Enter
-                </kbd>
+    <div className={`${styles.overlay} modal-ltr z-[100]`} dir="ltr"
+      data-platform-admin-theme={platformTheme ? true : undefined}
+      data-sponsor-krd-theme={platformTheme ? true : undefined}
+      style={platformTheme ? { "--theme-primary": "var(--sponsor-krd-accent)", "--theme-css": "var(--sponsor-krd-accent-gradient)", "--theme-ink": "var(--sponsor-krd-accent-ink)" } as React.CSSProperties : undefined}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <MotionReveal ref={modalRef} role="dialog" aria-modal="true" aria-label={placeholder}
+        tabIndex={-1} className={`${styles.panel} ${wide ? "max-w-2xl" : "max-w-lg"}`}>
+        <div className={styles.header}>
+          <div className={styles.searchField}>
+            <Search aria-hidden className={`${styles.accent} size-4 shrink-0`} />
+            <input ref={inputRef} type="search" aria-label={placeholder} placeholder={placeholder}
+              value={searchQuery} onChange={(event) => onSearchQueryChange(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); if (onSearchSubmit) onSearchSubmit(); else onClose(); } }}
+              className="text-sm font-kurdish text-left" />
+            {showClear && searchQuery && <Tooltip content={clearLabel} side="bottom">
+              <button type="button" onClick={() => { onSearchQueryChange(""); inputRef.current?.focus(); }}
+                className={`${styles.control} size-9`} aria-label={clearAriaLabel}>
+                <X aria-hidden className="size-4" />
               </button>
-            </Tooltip>
+            </Tooltip>}
           </div>
+          <Tooltip content={applyLabel} side="bottom">
+            <button type="button" onClick={onClose} className={`${styles.control} ${styles.primary} px-3`}
+              aria-label={applyAriaLabel}><kbd className="font-sans text-[10px] font-semibold">{shortcutLabel}</kbd></button>
+          </Tooltip>
         </div>
-
-        {/* Results List */}
-        <div
-          className={`custom-scrollbar brand-custom-scrollbar theme-custom-scrollbar overscroll-contain ${wide ? "max-h-[540px]" : "max-h-[320px]"} overflow-y-auto p-2`}
-        >
-          {children}
-        </div>
+        {children && <div className={`${styles.results} custom-scrollbar theme-custom-scrollbar ${wide ? "max-h-[540px]" : "max-h-[320px]"}`}>{children}</div>}
       </MotionReveal>
-    </div>,
-    document.body,
+    </div>, document.body,
   );
 }

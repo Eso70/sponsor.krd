@@ -9,11 +9,48 @@ model. See [Forms](forms.md) for naming, concurrency and export safeguards.
 
 Forms at `/business/forms` and the Platform console share `FormsManagementPage`,
 the authenticated dashboard layout, six real stat cards and paginated management
-grid/table views. The shared toolbar provides search, refresh, view switch and
-Active/Archive controls. The Active tab includes non-archived Active and Paused forms; Archive is a separate collection flag, never a status. Owner-scoped
+grid/table views. The shared toolbar provides search, view switch and
+Active/Archive controls through PageManagementSection and ManagementToolbar.
+Page and Form collections show 15 records per page in both views; Linktrees use
+the shared client pagination setting, while Forms use matching server offsets.
+Grid card designs and page actions remain unchanged. Loading sections reuse the
+same heading/toolbar/body layout.
+Page management has no separate refresh action. The global header invokes the
+shared dashboard-refresh coordinator, which refreshes shared identity/inbox data
+and the currently mounted collection, including its statistics. Forms and
+Linktrees register their current loaders in both dashboards; overlapping clicks
+are deduplicated and the header remains busy until the requests settle. Search,
+archive filter, view mode, current page and open editor drafts remain in place.
+Linktree manual refresh passes the same busy state to statistics and both collection
+views, matching Forms loading feedback on Business and Platform. Business refresh
+waits for both list and summary requests to settle, including partial failures.
+The Platform header refreshes its business directory only while that page is
+active, and retains its server-route refresh for server-owned data. No browser
+reload or system-wide cache clearing is performed.
+Linktree collections replace the always-visible clear-all action with shared
+PageSelection controls. Only selected IDs are sent to the existing per-page
+analytics-clear endpoints (at most five concurrent requests). Business and
+Platform adapters reload their real list and summary in a finally block so
+partial failures never zero unrelated totals; selections remain for retry.
+Business selection requires the per-Linktree analytics-clear permission.
+The Active tab includes non-archived Active and Paused forms; Archive is a separate collection flag, never a status. Owner-scoped
 APIs persist definitions and uploads; public `/form/<slug>` pages collect real
 responses through the same Form/Card renderers. Editor previews remain temporary.
-Grid/table use shared Linktree action-button styles with Analytics before Edit and secondary actions behind three dots; Preview and Duplicate are removed. Form analytics uses the shared read-only page summary modal. Full definitions load on edit; collection requests load summaries only.
+`FormsPageSkeleton` delegates to the shared SkeletonPageManagement, with Form
+statistic slots, and PageCollectionSkeleton renders static cards through the
+server-safe ManagementGridLayout. Forms and Linktrees share collection skeletons
+and the StatCard loading prop, including responsive frames and selection slots.
+The interactive ManagementGrid delegates to that same layout after resolving its
+pagination and render callbacks on the client. Loading routes never pass
+getItemKey/renderItem callbacks across the React Server Component boundary.
+Grid/table use shared Linktree action-button styles with Analytics before Edit,
+followed by Share analytics, Delete and Open. Pause/Activate, Archive/Restore and Duplicate live
+in the saved-form edit drawer footer through shared EditorPageActions, with no
+redundant three-dot list control. Duplicate uses the existing scoped endpoint
+and requires create permission; mutations require update permission. Lifecycle
+responses update only persisted metadata in the open draft, preserving edits and
+revision safety. Form analytics uses the shared analytics drawer. Full definitions
+load on edit; collection requests load summaries only.
 Create/Save stays clickable for invalid drafts: clicking reveals localized inline
 field errors and a footer summary; hovering/focusing the primary action previews
 the requirements. Selecting a summary item opens the correct tab/accordion and
@@ -305,7 +342,7 @@ allowlist for fixed public routes. It resolves the canonical server identity,
 reports through `createPageTracker`, and mounts the shared TikTok loader.
 Tracking starts automatically on allowlisted public pages. Linktree renderers
 keep their specialized action tracking but use the same
-dispatch primitives. Individual landing, join, and advertising components
+dispatch primitives. Individual landing and join components
 must not call TikTok directly.
 
 ## Private business onboarding
@@ -412,8 +449,9 @@ flag. See
 Business and platform dashboard route transitions use the shared
 `SkeletonDashboardShell`. It reserves the desktop sidebar, responsive header,
 and initial content surface while server data or a route bundle resolves. Keep
-route-level dashboard loading states on this shared shell so they never fall
-back to the unrelated public landing-page skeleton.
+route-level dashboard loading states on this shared shell. There is no global
+root loading fallback: navigation must not show an unrelated homepage composition.
+Routes without a matching loading boundary wait for their actual content.
 
 Authentication routes use the shared `SkeletonAuthenticationPage` boundary so
 navigation reserves the real split-screen authentication layout in both light
@@ -516,114 +554,7 @@ routing, and frontend commands.
 
 ## Public platform and business pages
 
-### Advertising-service frontend preview
-
-The business dashboard exposes `/business/advertising` as the frontend preview
-of a reusable tenant advertising-service feature. It composes the shared
-dashboard header, statistic cards, segmented tabs, skeletons, tenant theme, and
-public navigation/footer rather than creating a parallel dashboard shell. The
-editor covers public copy, availability, contact, currency, payment labels,
-packages, estimated outcomes, durations, and FAQs. Its public counterpart is
-served at `/advertising` on a business subdomain and uses the current tenant's
-public branding.
-
-Until the backend domain is implemented, configuration is browser-local mock
-state stored under a versioned key. The dashboard labels this limitation and
-must not claim that edits are published across devices. This temporary frontend
-state must not collect payments, TikTok credentials, authorization codes, or
-customer orders. A future backend implementation must persist configuration per
-business, calculate prices server-side, enforce tenant ownership, encrypt and
-redact authorization codes, verify payment webhooks idempotently, and expose
-only enabled public configuration.
-
-The business homepage navigation links to the public advertising route. The
-advertising surface follows the public site's left-to-right page structure and
-reuses `BusinessPublicFooter`, the same tenant footer composition used by the
-business homepage, including published Linktree and configured
-contact columns. Public-route loading uses the current full-width 60px navbar
-footprint rather than the retired floating-header skeleton.
-
-The advertising surface also installs the tenant accent as the public cursor,
-text-selection and theme color, restoring Sponsor.krd
-defaults when it unmounts. Its metadata uses the tenant favicon plus logo or
-default-avatar fallback for browser and social-preview imagery. Authenticated
-business routes use short English browser-tab suffixes, and public content
-titles are whitespace-normalized and bounded so user-entered names cannot
-create excessively long browser tabs.
-
-`BusinessPublicSiteShell` is the single visual and behavioral frame for both
-the tenant homepage and tenant advertising page. It owns the public navbar,
-continuous `BusinessGridBackdrop`, light/dark page surfaces, tenant theme
-variables, cursor lifecycle, selection color, and shared
-business footer. Public business features must compose this shell rather than
-copying those concerns. Advertising sections use the same transparent section
-surfaces, responsive spacing, heading scale, soft cards, and
-`BusinessSectionDecorations` pattern as the homepage, so future shell-level
-style changes propagate to both routes. Public business landing sections have
-no separators on either route; only the shared footer retains its top boundary.
-The tenant homepage has one hero, with mobile template mockups inside it, and,
-when public Linktrees exist, one gallery section. Former About Us and
-digital-presence sections and their navigation anchors are removed.
-The homepage's fixed interface text has a visitor-controlled AR/EN/KU switch in
-the shared navbar. The selection is immediate and stored in the host-only
-`business_public_locale` cookie, independently of the private Dashboard
-language. Server-rendered homepage metadata reads this cookie on subsequent
-requests. Business-authored names, subtitles, and footer descriptions remain
-unchanged; the visitor switch translates only application-owned text.
-The same visitor preference now applies to the public advertising page,
-video-code guide, and published business Linktrees. Their navigation, footer,
-guide controls, default Linktree copy, WhatsApp question defaults, loading
-announcements, metadata fallbacks, and business-host error pages follow AR/EN/KU.
-Dismiss controls in the optional homepage communications component follow the
-root visitor locale.
-The Platform's own Linktrees keep their existing defaults. Persisted advertising
-content, custom Linktree descriptions, link labels, payment provider details,
-and owner-authored WhatsApp questions remain exactly as published; localization
-does not silently rewrite them. This public preference is never used as an
-authentication or tracking input.
-
-Both public hero sections render `BusinessHeroAccentBackdrop`. It provides the
-same tenant-colored radial atmosphere and restrained top highlight while
-leaving the shared grid visible beneath it. The component is decorative,
-non-interactive, theme-aware, and is the single place to tune this effect for
-the homepage and advertising page together.
-
-The advertising route uses a compact introductory title instead of a second
-marketing hero. It contains no badge, CTA, preparation note, floating label,
-or secondary action. A concise Kurdish description sits below the title;
-public advertising copy uses `ØªÛŒÚ©ØªÛ†Ú©` and omits sentence-ending periods for a
-consistent editorial style.
-
-Its sponsorship journey is a dedicated interactive tutorial rather than a
-generic card row. Five keyboard-operable steps explain sponsor type, package
-selection, payment, receipt/video-code submission, and activation. The visual
-examples use the established landing-section surfaces and Motion transitions,
-show the bundled FIB, QiCard, FastPay, and Korek marks, and clearly identify
-receipt and training media as examples. The public tutorial never collects
-payment credentials, account passwords, receipts, authorization codes, or
-orders; submission continues through the configured contact channel until a
-tenant-scoped backend workflow exists.
-The sponsor type, price rows, and payment-provider choices are local selection
-controls rather than decorative options. A stable mockup frame owns
-the guide header, content stage, and bottom navigation bar. Desktop uses a
-descriptive step rail; mobile uses five compact English-number controls and
-keeps the active Kurdish title immediately above them without horizontal
-scrolling. Visible step descriptions and redundant `Step` labels are omitted.
-English Back and Next controls and a progress indicator move through the
-journey while preserving all illustrative selections.
-The second tutorial stage uses one compact responsive semantic pricing table.
-It shows only the sponsor type selected in the first stage, lets visitors
-select an individual price row, and displays the complete English-number IQD
-price and estimated-view schedule for that type. This tutorial state remains
-illustrative and browser-local.
-The changing stage is visually flat inside that frame: it does not wrap option
-groups in another bordered card. Blue, violet, amber, rose, and emerald tones
-differentiate the five steps, while individual sponsor, package, and provider
-choices use distinct restrained tints and a consistent selected-state control.
-The mockup header uses the shared full-color TikTok mark on its native dark
-surface. Its full-width footer progress track uses five softly differentiated
-segments matching the tutorial's blue, violet, amber, rose, and emerald steps;
-future segments remain visible at reduced opacity.
+The tenant homepage uses the shared public navbar, footer, theme, and visitor language controls. Published Linktrees and Forms keep their shared renderers and tracking.
 
 - The root domain renders the Sponsor.krd landing page.
 - Published platform announcements can appear as root-domain banners or
@@ -637,7 +568,7 @@ future segments remain visible at reduced opacity.
   The mockups preview template designs; only the gallery represents published
   tenant pages. No helper workspace or tabs appear on the homepage. The shared
   tenant navbar, contact action, theme behavior,
-  public footer, and advertising route link remain available.
+  and public footer remain available.
 - The public homepage loading state reserves the hero mockups and Linktree gallery
   footprints. The gallery is omitted when the business has no published pages.
 - Business and root pages share `PublicSiteNavbar`. The business variant keeps
@@ -714,11 +645,6 @@ future segments remain visible at reduced opacity.
   one leading zero.
   Older links fall back to extracting the same identity from their destination
   URL.
-- The grid's campaign-revenue action opens one shared modal in business and
-  platform management. It loads, creates, edits, and deletes durable records
-  through the surface-specific Linktree API base path. The modal derives live
-  previews for immediate feedback, while persisted converted spend, duration,
-  net revenue, and the summed total come from server responses.
 - Approved public marketing routes load a business's TikTok pixel and report
   through `createPageTracker`
   (`features/analytics/page-tracking.ts`). Adding tracking to anything on
@@ -856,6 +782,7 @@ future segments remain visible at reduced opacity.
     through to the root marketing pages; both delegate to the same shared
     component.
 
+
 ## Business dashboard
 
 ### Business dashboard language
@@ -890,49 +817,6 @@ profile through the API. A fresh browser defaults to Kurdish. Shared
 authentication and error components receive optional Business copy, leaving
 Platform and root-domain defaults unchanged.
 
-Translation messages live in `features/business/i18n/messages.ts`. Dashboard
-chrome, sidebar plan/support controls, dashboard-owned dialogs and action
-feedback, locked-feature notices, and the Linktree management summary/actions
-use the Business locale.
-The shared Linktree management page receives typed copy from its Business
-and Platform adapters. The Business adapter also
-supplies localized copy to the shared Linktree grid, table, and status badges,
-including action tooltips, pagination, loading announcements, accessibility
-labels, and copy-link feedback. The page grid and table's lazy-chunk loading
-announcements use that same copy, rather than the shared skeleton's English
-default; the Platform screen supplies its own localized announcement. The
-Business page search, duplicate, campaign-profit, analytics, delete, and
-clear-analytics dialogs also receive localized copy. The campaign-profit calendar
-receives the active Business locale, including English. Public Linktree GPS controls
-and Google Maps labels use the visitor locale; the saved location title itself
-remains user-authored. The shared Linktree editor receives Arabic and English
-Business copy for its wizard, validation, template, pattern,
-color, icon, and country pickers; Platform supplies Arabic and English copy while
-keeping Kurdish as its default. Stored
-page names, descriptions, questions, and link labels remain user-authored content
-and are not rewritten when the dashboard language changes. The Business TikTok
-route now translates its delivery history, Pixel configuration, and Pixel-group controls; shared configuration
-components receive Business-only copy and keep their Platform defaults. The
-shared Pixel test result translates the Request ID label in all three languages.
-The TikTok delivery-status panel accepts the same three locales for its status,
-explanations, and timestamps; API-provided error bodies remain unchanged.
-Business Settings profile, defaults, security, and message tabs translate their
-page labels, account identity, save control, sessions, conversations, template
-selector, and color picker. Session confirmation controls, dates, brand upload
-errors, cooldown dates, and accessible brand-image labels also follow Arabic or English when selected. The Business advertising editor translates its
-navigation tabs, forms, action controls, dialogs, and editor-only previews;
-saved advertising content and the public advertising page are not translated
-by the dashboard preference. The Business notification bell, inbox actions,
-detail dialog, dates, loading announcement, feedback, and announcement dismiss control also follow
-the Business locale; notification titles, bodies, and banner content remain
-author-authored. Platform notifications keep their Kurdish defaults. Shared business/platform UI should
-receive translated labels or use an explicitly business-scoped provider, not
-be forked.
-The platform-administrator impersonation warning follows the Business
-member's saved language even though it sits outside the dashboard provider.
-Business loading screens use localized screen-reader announcements; shared
-skeleton components keep their existing defaults in the Platform console.
-
 The required first-time Business setup modal also uses the saved dashboard
 locale for its fields, validation, brand asset controls, color picker, verified
 owner identity, and TikTok group editor. Shared controls retain their existing
@@ -964,7 +848,7 @@ management. The shared edit fields, brand controls, color picker, TikTok
 settings, session panel, and loading announcements receive platform-specific
 copy without changing their Business integrations. The Platform Linktrees page
 also supplies Arabic and English labels to the shared manager, grid/table, search, editor,
-duplication, campaign-profit, and analytics dialogs, plus its platform-specific
+duplication and analytics drawers, plus its platform-specific
 empty states, confirmations, loading announcements, and action feedback. The
 Arabic copy shared with Business lives in `features/link-editor/shared-arabic-copy.ts`;
 the shared English dashboard catalogue lives in `features/shared/i18n/english-messages.ts`.
@@ -1004,8 +888,7 @@ editor receives the common Arabic or English copy through its typed adapter;
 the shared TikTok ad-account modal accepts a translation callback so other
 surfaces keep their own defaults.
 The shared notification bell's loading announcement follows either dashboard's
-selected language. The shared campaign-profit calendar receives the active Business or Platform
-Arabic or English locale; platform search and copy-value controls receive localized
+selected language. Platform search and copy-value controls receive localized
 action, success, failure, and accessibility labels.
 Shared stat-card loading announcements and the Platform Linktree list fallback
 also follow the selected language. The management-table fallback accepts the
@@ -1029,11 +912,22 @@ available in both expanded and collapsed layouts. The navigation region scrolls
 independently on shorter screens so the account controls remain reachable.
 
 Dashboard metrics use the shared `components/shared/StatCard.tsx` component.
-Its `standard`, `funnel`, `live`, `comparison`, and `story` variants preserve
-the visual requirements of each context without duplicating metric markup.
-Color, icon, compact sizing, descriptions, actions, and loading state remain
-configurable. The component's loading state selects the matching
-`SkeletonStatCard` shape so data arrival does not change the card's footprint.
+It has one Linktree-inspired horizontal presentation across dashboard pages,
+settings, analytics drawers and shared reports. `StatCardFrame` owns the card,
+icon, value, caption and action geometry for both ready and pending content;
+`stat-card-styles` owns the shared color tokens. Color, optional icon, compact
+sizing, descriptions, actions, and loading announcement remain configurable.
+The old funnel/live/comparison/story presentations are removed. Loading replaces
+all slots (including captions and actions) with noninteractive shared skeletons,
+without fake zero values or data-dependent text. Known metric colors and caption
+context are reserved by Forms and page analytics skeletons. `StatCardGrid` owns
+spacing and column breakpoints in both states: two columns below desktop, with
+an explicit one-column option for a single statistic. Long text truncates with
+shared keyboard/hover tooltips; caption context stays beside the label.
+Initial fetches show skeletons; existing values remain visible on background
+refresh. Campaign collections also wait for their local persisted data before
+showing totals. Settings use an unavailable value for data not yet requested,
+rather than presenting false zero counts or inactive states.
 Linktree initial data, lazy page bundles, grids, tables, edit
 forms, and analytics content use the matching shared skeleton composition.
 Per-page analytics, Event Tracking, TikTok configuration, Settings,
@@ -1044,7 +938,7 @@ the rest of the page blank.
 The business Templates route uses a catalog-specific skeleton while template
 permissions load, including its metrics, header actions, catalog cards, and
 phone preview footprints. The shared skeleton contract covers responsive
-management tables and cards, page management, settings, advertising, TikTok,
+management tables and cards, page management, settings, TikTok,
 business directories, analytics modals, editor
 forms, and communication lists. A route shell and an embedded content fallback
 are kept distinct when the surrounding header or dashboard chrome is already
@@ -1071,10 +965,10 @@ unique visitors, interactions, interaction rate, and conversions. Linktree
 summaries use `pageType=linktree`; clearing analytics remains page-scoped.
 
 - linktree creation, editing, deletion, publication status, default-page
-  selection, campaign activation, slug checks, link ordering, link batch
+  selection, slug checks, link ordering, link batch
   synchronization, image uploads, template selection, footer settings, and
-  WhatsApp modal settings. Campaign-active pages are promoted directly below
-  the default page in both grid and table views;
+  WhatsApp modal settings. The default page is pinned first, followed by pages
+  ordered newest first in both grid and table views;
 - template browsing subject to the business's plan;
 - profile and branding management, including logo, favicon, default avatar,
   website color, business name, username, phone, and email;
@@ -1135,7 +1029,7 @@ segment directly; there is no physical public implementation route.
 The console provides:
 
 - platform-owned Linktree creation, editing, duplication, uploads, availability
-  checks, campaign/archive/status controls, deletion, and root-domain previews.
+  checks, archive/status controls, deletion, and root-domain previews.
   Business and Platform render one role-configured Linktree manager, including
   the same six summary cards, archive filter, grid/table views, search, editor,
   and analytics modal. Platform analytics include date ranges, conversions,
@@ -1166,6 +1060,11 @@ The billing implementation is an internal access, plan, subscription, and
 quota system. It does not collect money. There is no payment-provider
 checkout, payment-method management, invoice generation, refund processing,
 or payment reconciliation.
+
+The Business dashboard's Plans & subscription modal currently shows only a
+localized Coming soon message and its close control. It does not load billing
+data or expose the unfinished comparison, usage or management controls. Platform
+plan administration and existing subscription/access enforcement remain active.
 
 Routes (mounted beneath the private console path): `/`, `/businesses`,
 `/linktrees`, `/templates`, `/campaigns`, `/access-control`, `/billing`,
@@ -1500,7 +1399,6 @@ Both preview flows reset only their own scroll and move focus to the new preview
 page after Start/Back/Next/Send. Editing or changing editor tabs does not move
 keyboard focus away from the editor.
 
-
 Form question conditions apply automatically when authored; the global Logic
 settings switch and flag are removed. Questions default to Always show, with
 condition source/answer controls available when an earlier choice question exists.
@@ -1520,3 +1418,486 @@ user-created local campaigns are retained. Connection and existing add-on IDs
 are entered explicitly, without fictional account choices. This workspace remains
 frontend-only; cleanup does not add a TikTok campaign synchronization backend.
 Template preview data and automated test fixtures remain isolated from saved data.
+
+## Shared Linktree editor drawer
+
+The optional Banner section precedes Information and defaults off for existing
+and new Linktrees. Forms and Linktree reuse EditorBannerControls,
+EditorImagePicker, PublicImageGallery, and the inline crop workspace. Single-image
+and carousel modes retain up to five images; Linktree accepts JPEG/PNG up to 5 MB.
+The drawer preview and all six public templates share full-width banner rendering
+through TemplateViewportLayout and TemplateBanner. Banners retain their image
+proportions, with no card border or rounded frame. TemplateHeader overlaps the
+unchanged template logo halfway across the banner's bottom edge. Banner
+and logo clicks open FullscreenImageViewer with navigation/zoom controls, while
+explicit Update actions retain image replacement. With Banner disabled, no banner
+markup or spacing is added. Preview image interactions are allowed without
+navigation or tracking; public interactions use the shared page tracker.
+
+Shared input helpers, ModalTextInput/ModalTextArea and CustomSelect all reuse
+SHARED_CONTROL_CLASS for borderless surfaces and inherited light/dark appearance.
+Form previews preserve those surfaces rather than restoring field borders.
+Validation remains intact with inline messages and soft error fills.
+Linktree and Forms reuse compact editor-control styles (40 px inputs, 80 px
+textareas, 13 px field labels), EditorImageTile thumbnails and image actions.
+Linktree profile/background uploads use the same 96 px square tile as form logos,
+with neutral light/dark surfaces. Built-in platform marks keep their brand colors.
+Information uses full-width fields in this order: Logo, Headline, Promotion
+slogan and Description. Headline is also the page name; there is no separate
+internal Title. Slogan and link-button color controls anchor the shared color
+picker as a popup, matching the background picker without a modal backdrop.
+The create/edit and duplicate editors expose no slug field or
+client-side route generation. Canonical writes use headline, slogan, slogan_color
+and logo; backend-generated seo_name remains a read-only response field. Platform choices use two mobile/three desktop columns.
+Link destination errors reuse ModalTextInput.error and FieldInputError inside
+the field, preserving values, aria-describedby and aria-errormessage. Save/blur
+errors are revealed without an extra card banner; destination errors do not
+color Button text. Shared field tokens increase contrast against editor cards
+while retaining borderless styling.
+Each link card groups its drag handle, platform name and actions in the header,
+followed by the destination row with the platform icon, input and color picker
+together in that order; country code stays beside its number. A full-width
+Button text field sits below that row. Business and Platform drawers share this
+layout. Icon selection uses the shared anchored popup positioning and outside
+dismissal, retaining search, categories and image uploads without a backdrop.
+Shared popup placement aligns with the trigger start edge, clamps to the owning
+dialog and viewport horizontally, and prefers below when at least 320 px is
+available; otherwise it opens above with a bounded scrollable height.
+The icon popup reuses editor search inputs, image-action buttons and compact
+close controls. A compact library dropdown replaces overflowing tabs above
+a five-column icon grid with readable two-line names, with visible pressed states and a reduced-motion
+aware 180 ms opening transition. Search blends into its parent surface without a
+border or colored ring, including the global theme override; selected icons use a soft theme tint with
+readable neutral text in both appearances. CountrySelector always delegates to the searchable CustomSelect popup; both
+compact public phone fields and dashboard phone fields share its theme-aware
+menu. Country and icon pickers reuse PickerPopupHeader and the same soft search
+surface, popup corners and neutral option spacing. Compact country triggers avoid
+legacy input styling so public Forms use this shared appearance too. Link color selection remains an anchored color popup, sharing the same surface
+palette and header as icon/country pickers. HEX/RGB/HSL fields stay borderless on
+focus; segmented controls use soft selected states and Apply is compact and
+aligned right. Color popups align their end edge with the trigger so they extend
+over the editor rather than the preview; Icon pickers keep start alignment.
+Page design and Background pattern reuse PickerPopup and PickerOptionCard
+for a matching three-column gallery, with readable captions and miniature
+previews. Locked templates remain disabled; selection still saves the existing
+identifier and closes.
+Primary actions inherit the owning tenant solid/gradient accent and readable ink
+across the portal. Actual preview colors and channel gradients remain unchanged.
+Link cards use the shared Forms ReorderHandle for pointer/touch dragging,
+auto-scroll and keyboard Up/Down ordering, with localized labels. A per-drawer
+group isolates drop targets. GPS remains the separate final section. Grouped
+link metadata carries global display_order so duplicate platform instances
+retain their position in create, Business batch sync and Platform edits.
+Their crop actions reuse EditorImageCropWorkspace and useEditorImageCrop inside
+the existing drawer, preserving hidden draft controls and moving Confirm/Cancel
+into its fixed footer. Both editors share the crop workspace skeleton. Linktree
+crops encode PNG to remain compatible with its PNG/JPEG upload endpoints; Forms
+retain WebP fallback. Initial Linktree loading reuses disabled EditorSection
+headers with localized labels and placeholders matching the loaded field geometry.
+The preview loading state uses the same fitted phone frame as the live preview.
+
+Business and Platform Linktree creation/editing use one feature-owned
+`features/link-editor/components/LinktreeEditorDrawer`. The old business modal
+and re-export wrapper are removed. The shell uses the same ManagementDrawer as
+Forms: fixed header/footer, contained desktop panes, mobile body scrolling,
+shared motion/reduced-motion behavior, focus trap, Escape and focus restoration.
+EditorPreviewLayout owns the responsive edit/preview pane geometry for both
+Linktree and Forms. Linktree uses a single editor with Information, Platforms, Links and optional
+WhatsApp questions accordion sections. It reuses EditorSection with Forms, opens
+Information initially, and keeps collapsed draft controls mounted. Create/Save
+validates the entire draft and opens the first invalid section; there are no
+Next/Back actions, progress steps or synthetic Enter-to-advance behavior. Link
+display names are edited directly; individual links have no language-toggle button. Changing the drawer language updates recognized built-in link names, the
+default description and WhatsApp dialog/question/message defaults in the draft.
+Explicitly edited fields (including edits back to a default), custom questions,
+page names, URLs and phone numbers stay unchanged. The shared editor tracks
+authored fields for the open draft; the preview and save use the same values. It retains
+advisory headline availability checks, selected-link normalization, owner-specific upload
+and save endpoints, business defaults and template entitlement boundaries.
+
+The drawer stays mounted while edit data loads. Both owner adapters cancel
+pending edit reads on close or replacement so late responses cannot replace a
+new draft. Editor state is available immediately like the Forms editor; the
+preview and selected template load lazily behind a local preview skeleton.
+Memoized draft projections and useDeferredValue keep typing/validation responsive.
+Preview content uses DynamicTemplate inside PhoneMockup/DeviceViewport and the
+selected business default template (Spectrum fallback), rather than a second
+renderer or sample contact data. Headline, logo, slogan, description, uploaded
+background, patterns, badge, ordered links and custom icons/colors follow
+the unsaved draft. Local raster backgrounds are preview-only; published image
+validation still requires owner upload paths. Public and preview palettes share
+createLinktreeTemplateTheme. Preview anchors and modified clicks
+are contained, and preview interactions cannot submit the editor.
+No tracker, pixel, submit or analytics endpoint is mounted by the preview.
+The Linktree editor uses FittedPhoneMockup to fit the complete hardware frame
+to the preview pane's width and remaining height using CSS container units.
+Its aspect ratio stays intact, resizing needs no JavaScript measurement, and
+long pages scroll inside the phone rather than clipping or scrolling the frame.
+Both owner adapters pass DashboardAppearanceControls and their existing language
+selector into the Linktree drawer header, matching Forms. The controls change
+the dashboard's existing appearance and locale preferences; they preserve the
+open draft and expanded section and do not change the authored page palette.
+
+Public Linktree templates no longer render the sponsorship footer or its
+WhatsApp button. This applies to saved pages, the template catalog and editor
+previews. The shared footer renderer, editor footer fields, validation and
+outgoing footer payloads are removed, as are business page-default footer controls.
+Legacy storage and response fields remain compatible with existing installations
+and other business contact information; they cannot re-enable the removed block.
+
+LinktreeEditorPreviewPanel places the page theme selector above the phone, using
+the shared CustomSelect styling from Forms. Its Light, Dark and Custom options
+combine the old background field into one control. Light writes `#ffffff`, Dark
+writes `#161b22`, and Custom opens the shared ColorGradientModal picker used by
+Forms, anchored above the preview without a backdrop. The color picker has an
+optional Image tab using BackgroundImageUpload, which is also reused by the
+existing compact background uploader. No preset swatch row is rendered below
+the page-theme selector. Applying the Image tab retains the uploaded image;
+applying a color replaces it. Selecting a preset clears the image override; returning to
+Custom restores the last custom color in the open draft. Existing custom pages
+open in Custom without being rewritten. The preview and save payload continue to
+use `background_color` and the existing image configuration, with no new schema.
+Page appearance remains separate from the dashboard's header theme toggle.
+Page design, background pattern and theme live in one three-column preview row.
+LinktreeDesignControls reuses TemplateSelector's entitlement checks and the
+shared BackgroundPatternModal on both owner surfaces, passing anchors to open
+compact popups instead of centered dialogs. All three pickers share
+useAnchoredPopup for placement, theme inheritance and outside dismissal.
+Selecting Custom again reopens its picker without adding a fourth button.
+The choices remain
+available across all editor sections, update the live preview, and save through the
+existing template configuration. Loading placeholders follow the visible content fields;
+no URL input or placeholder is rendered.
+
+Linktree category controls follow Headline in BasicInfoStep. Both dashboard
+surfaces reuse LinktreeCategoryFields and LinktreeSeoEditor, including optional
+localized business details, indexing, language, sharing image and search preview.
+Public details use TemplateHeader's shared media context across every template.
+SEO settings remain draft state until Save; validation runs before image uploads.
+Preferred page language controls public HTML language/direction and preview
+direction independently of the dashboard's editing language. See [seo.md](seo.md).
+## Linktree Information defaults and opening hours
+
+The shared Business/Platform Linktree SEO editor displays automatic title and
+description values derived from Information until a custom override is entered.
+Automatic values stay derived instead of being saved as stale overrides. Clearing
+an override or choosing Use Information restores automatic updates.
+
+Business opening and closing hours reuse TimeInput with the shared anchored
+PickerPopup. Display is twelve-hour, while persisted values remain HH:mm. The
+optional fields support clearing, typed entry and keyboard selection; no native
+time widget or database change is required.
+
+DateInput and DateTimeInput also reuse PickerPopup; standalone portal positioning
+is removed. All date/time fields open through the full control and keep manual
+typing available while open. Typing another datetime date retains its previously
+selected time. Historical dates are allowed unless explicit min/max bounds reject
+them. Other picker callers retain their existing focus behavior and sizing.
+
+## Linktree analytics drawer
+
+BusinessDashboard and PlatformLinktreesPage both lazy-load
+`features/analytics/components/PageAnalyticsDrawer.tsx`, using ManagementDrawer
+like Form insights. The same drawer skeleton, filters and content serve both
+roles, with explicit data-source/capability props. Range controls are above the
+metrics, with localized shared DateInput controls. PageEngagementOverview shows
+active time, engagement, contact intent, confirmed outcomes/revenue, sources and
+devices in English, Arabic and Kurdish. Unknown measurements display a dash.
+See tracking.md for measurement, retention and server-confirmation definitions.
+
+Both integrations pass their existing shared appearance controls into the drawer
+header. Changing language updates labels and date formatting without reloading
+data or resetting expanded sections. The loading state uses the actual metric
+labels, range controls, collapsed sections and button rows. Essential view,
+click and contact cards remain visible; engagement/audience, confirmed outcomes
+and WhatsApp question details expand on demand. All metric accents reuse shared
+StatCard colors in light and dark mode. Linktree analytics uses the existing
+standard shared StatCard presentation used by Linktree and Forms, with its
+matching SkeletonStatCard loading state; it has no separate analytics variant.
+Contact actions and unique contacts belong inside the collapsed Engagement &
+audience section, alongside active time, engagement, sources and devices.
+
+## Saved-page editor actions
+
+Linktree and Form edit drawers share EditorPageActions for Pause/Activate,
+Archive/Restore and Duplicate. These actions are absent from cards/tables and new
+page drawers. Default Linktrees retain their protected status/archive restrictions.
+The shared Linktree editor adapter serves Business and Platform endpoints and
+reuses each host's existing mutation callbacks and inline duplicate workspace. Actions lock
+other mutations while pending; status changes are reflected in the editor so a
+later Save cannot undo a pause. Form duplication uses the existing scoped endpoint
+and does not copy unsaved draft changes. No schema changes are required.
+
+## Client-generated identifiers
+
+Use `lib/utils/random-id.ts` (`createRuntimeId`) for client-generated item IDs,
+including newly added WhatsApp questions. Calling `crypto.randomUUID` directly
+can fail in browser contexts where that method is unavailable. The shared helper
+uses supported UUID generation with compatibility fallbacks. Existing saved IDs
+remain unchanged, preserving ordering, messages and question attribution. These
+IDs identify records; they are not authentication tokens or security nonces.
+
+Carousel image update actions include the field name and image position in their
+accessible label, so repeated image controls remain distinguishable. Picker
+integration tests wait for the anchored popup's animation-frame initialization;
+they query labeled controls rather than presentation-only placeholders.
+
+## Form preview sample copy
+
+New form drafts leave optional introduction and completion text empty. Headline, description, slogan, purpose, and final-page custom text are saved only when entered by the owner. Shared preview renderers supply localized samples without changing the draft. Public rendering disables samples, including final-page action guidance; the standard submission thank-you acknowledgement remains. This applies to both layouts and Business/Platform editors. Existing authored content is preserved.
+
+
+## Inline Linktree duplication
+
+The Business and Platform editors open LinktreeDuplicateWorkspace inside the existing ManagementDrawer, with the shared editor/phone-preview layout. Its starting values come from saved edit data, independently of unsaved source changes. Headline, slogan and slogan color, description, verification badge, logo, banner/carousel, page design, background pattern, and theme/background image can be customized. The shared crop, image, banner, appearance and design controls update the live preview. A server-suggested slug is visible, editable and checked for availability; the future relative URL updates immediately. Only changed fields and persisted owner upload URLs enter the duplicate request. Cancel returns to the untouched source draft; success refreshes the list. No standalone duplication modal is used.
+
+
+## Inline Forms duplication
+
+Forms duplication uses the existing edit drawer, shared FormBuilder, preview, crop workspace and media upload pipeline in Business and Platform. The Duplicate action loads a saved source snapshot and an owner-scoped available name/address suggestion. The copy supports all form fields, banner/carousel ordering, logo, final-page details, questions and appearance; its address is editable through the same DuplicateSlugField and usePageDuplicateSlug used by Linktrees. No record is created until Duplicate succeeds. Cancel restores the original unsaved draft. Copies are unarchived, paused, have fresh identities and no responses. The create capability controls both duplication endpoints and the editor action.
+
+## Linktree overview statistics
+
+Business and Platform Linktree management share LinktreeStats with six existing StatCards: Pages, Views, Unique visitors, Clicks, Unique clickers, and Contact actions. Cards have value and label only. All six use one pending state until list and summary requests settle, including refresh. The loading layout uses the same StatCardGrid (two columns below desktop, three on desktop) and six shared card skeletons. Overview totals cover the owner collection independently of list search/archive filters.
+
+Views/clicks come from owner-scoped Linktree summary rollups. Exact unique visitors/clickers and contact intent come from retained raw analytics; contact intent never claims a sent message or completed order. The summary boundary validates counters. Failed or missing data displays a dash, while successful zero traffic displays zero. Platform summary failure does not block list management, and per-page unique visitors are never summed into an owner total. The old overview click rate and conversions cards are removed; detailed reporting remains in the analytics drawer.
+
+The Linktree campaign toggle, badge, highlight and sorting priority are retired
+from the shared Business/Platform grid and table. Publication and archive
+actions remain in the editor.
+
+## Page pinning
+
+Forms and Linktrees use the same icon-only `PagePinButton` and
+`usePagePinning` request lifecycle in Business and Platform grids, desktop rows
+and mobile cards. Tooltips and announcements support English, Kurdish and
+Arabic. Saved pins sort before unpinned pages; within each group the existing
+order applies (default Linktree first, then creation date; Forms by update date).
+Unpinning restores that order. A successful change returns pagination to the
+first page without remounting the Linktree collection. Pending writes disable
+the affected control; failures retain the existing state and show a toast.
+Pinning does not change public content, publication or archive state.
+
+## Share analytics actions
+
+Form and Linktree grid/table action sections reuse AnalyticsShareButton,
+AnalyticsShareDrawer and ShareExpiryField in Business and Platform dashboards.
+Sharing defaults to No expiration. New Form shares enable Include form responses
+by default; owners can turn it off before creation. Existing links are unchanged.
+The create action shares the expiry trigger's 40px height and aligns with that
+trigger even when a custom date field is displayed beneath it. Presets and the shared DateTimeInput support
+optional expiry during creation or later editing. Disabling or deleting a link
+revokes access. The link and six-digit code share one panel, with separate copy
+actions. New codes appear at creation and can be revealed once more through an
+owner-only action; old hash-only codes cannot be recovered. All text supports English,
+Kurdish and Arabic. The public code gate and read-only report reuse shared fields,
+selects, statistic cards and loading primitives. Linktree reports render the same
+PageAnalyticsContent as Business/Platform drawers: range presets, four overview
+cards, engagement/audience, confirmed outcomes/revenue, WhatsApp question selections
+and per-action details, in the same order and with the same collapsed defaults.
+The grant-scoped reader applies validated calendar ranges to summary and actions;
+actions retain the drawer reader's ordering without a separate top-50 cutoff.
+
+The sharing drawer reuses ManagementDrawer chrome, EditorSection accordions,
+ModalStepActions and shared soft controls, including matching field-shaped loading
+placeholders. Both collection views pass the tenant accent explicitly into the
+portal; platform collections explicitly retain the platform theme. Page design
+colors do not override the business dashboard accent.
+
+The shared report portal uses tenant colors after unlocking, shared language
+and theme controls, collapsible report sections, responsive shared tables and
+matching report skeletons. New Form shares can explicitly include submitted
+answers/contact details. The portal reuses FormSubmissionsTable with expandable
+details and server pagination; it provides no response editing or deletion.
+
+Form portals render FormAnalyticsOverview with the same six cards and detailed
+insights as the Forms drawer, followed by FormSubmissionsTable and its matching
+skeleton when the grant includes responses. Source and time spent use the same
+read-only response projection. They reuse admin search, row limits, CSV menu,
+range export and cancellable export progress. The shared snapshot exporter uses a
+grant-scoped reader and the same CSV column builder as the drawer. Answer summaries
+are omitted when the owner has not enabled sharing responses. Search is debounced and retains focus; phones use answer
+cards while tablet/desktop use the shared table. The code gate reuses
+AuthenticationCard with an accessible single numeric field and six-dash placeholder.
+
+The share code gate uses the same AuthenticationShell split layout, preview panel,
+pre-auth language toggle and AuthenticationCard as Business sign-in. Code input
+and submit styling are shared with EmailCodeAuthenticationForm through
+authentication-control-styles; pending access checks keep the real controls
+visible and disabled. The authenticated report navbar contains a single-line page name alongside
+matching compact refresh, theme and language controls. Long names truncate within
+the available width; read-only and expiry labels do not add header rows. Report
+content starts directly with analytics; grant expiry remains enforced by the API.
+
+Share pages resolve live public owner branding server-side before rendering the
+code gate. Business sign-in chrome uses the tenant logo, color, name and favicon;
+the neutral business logo is the fallback. Existing root-domain share URLs
+redirect to the business's current canonical subdomain or selected custom domain.
+Proxy routing permits the share route only after normal host registration checks.
+
+The share route has a dedicated localized not-found screen explaining that the
+link expired, was disabled or was deleted, using the shared sign-in shell and
+tenant branding. An already-open report switches to that screen when a denied
+read is followed by a failed live branding check; an ordinary expired viewer
+session still offers code entry when the grant itself remains live.
+
+
+### Shared app appearance
+
+Business and Platform dashboard shells, public marketing navigation, and standalone
+appearance controls use `useAppTheme`. Its external store owns the document class,
+`data-app-theme` preference marker, local storage and server-readable cookie. The
+root layout renders the cookie preference before hydration. One storage listener is
+attached while controls are mounted; repeated preferences avoid storage/cookie
+writes. Tenant palette context values are memoized independently of appearance.
+
+User-triggered changes use a 180ms native View Transition with synchronous React
+updates, so portaled drawers and page chrome enter the new theme together. Queued
+callbacks from superseded transitions cannot overwrite newer choices. Unsupported
+browsers use a short color-only CSS fallback; reduced-motion users switch without
+animation. Initialization and cross-tab synchronization do not start animations.
+The transition is scoped to explicit appearance changes and does not change
+navigation transitions or authored Form/Linktree preview palettes.
+
+
+### Drawer animation and lifetime
+
+All end-side editors and analytics surfaces reuse ManagementDrawer. ManagementModal
+keeps its hydrated drawer content in a propagating DrawerPresence; ManagementDialog
+owns retained chrome, focus and the scroll lock. Ordinary centered dialogs retain
+their existing presentation. MotionSlide shares 320ms entry / 220ms exit timing,
+the app's entry ease, a 200ms backdrop fade and reduced-motion handling. It animates
+only the panel transform and backdrop opacity, and uses Motion's temporary
+will-change management instead of a permanent transformed layer.
+
+For a conditionally mounted feature, keep DrawerPresence outside the condition:
+
+```tsx
+<DrawerPresence>
+  {open && <FeatureDrawer onClose={close} />}
+</DrawerPresence>
+```
+
+An always-mounted drawer can pass isOpen directly to ManagementDrawer. Do not
+place an early null return above that shared shell. DrawerSession preserves the
+first entrance across a lazy module's fallback/content replacement; retain the
+owner key for the same opening. Business and Platform form/Linktree editors,
+analytics and share controls use these boundaries. The panel, backdrop, focus trap
+and reference-counted scroll lock remain until exit completes. Reopening can
+reverse an exit, duplicate dismissals are ignored during exit, and closing one
+of several overlays cannot unlock or refocus the page beneath a newer overlay.
+DrawerPresence normalizes keys in both session modes and stops supplying new
+children when its parent exits. Motion retains the outgoing surface itself, so
+late form updates during close cannot insert it twice or duplicate animation keys.
+
+TikTok settings use one continuous workspace without Events/Configuration tabs.
+The four overview cards show configured Pixels, API connections, delivered events
+and delivery success rate. Shared Pixel/API configuration appears first, followed
+by real delivery diagnostics; plans without diagnostics see a compact locked
+notice rather than fabricated preview data. Loading mirrors this combined layout.
+The overview uses shared StatCard/StatCardGrid above the panel, with four desktop
+columns and the same responsive skeleton. Pixel groups and delivery diagnostics
+live inside one shared PageManagementSection with one heading, the group controls
+in its shared toolbar strip, and one Save footer at the very bottom.
+Embedded sections omit independent headers, refresh controls and panel frames;
+delivery content is composed inside the shared Pixel editor before its footer.
+Platform settings preserve the standalone editor. Loading mirrors this structure.
+
+TikTok overview cards use the same shared StatCard loading prop as LinktreeStats,
+including metric colors, icon slots and pending captions. Embedded Pixel groups
+are flat divided rows with shared field surfaces; reconciliation uses compact
+label/value rows instead of nested stat cards. The management loading body follows
+that flat layout as well.
+
+TikTok pending groups match the real four-field row (Pixel ID, token, test code,
+event selector/test action) at the same mobile/tablet/desktop breakpoints. The
+shared toolbar skeleton mirrors its label, helper and Add action. Delivery pending
+content reserves the reconciliation heading/badge, two value rows and status row;
+it has no removed error-log title or arbitrary large blocks. The final Save slot
+remains below both setup and delivery during loading.
+
+Business Settings exposes Profile, New page defaults and Messages tabs. The former
+Sign-in and sessions tab is no longer rendered or mounted from this page; session
+security behavior and Platform administrator session controls are unchanged.
+
+The [dashboard data audit](dashboard-data-audit.md) records each overview/collection
+source and scope, unknown-versus-zero behavior and reporting limitations. Shared
+request guards prevent stale responses winning, and mounted billing/access/
+communications/settings screens register with global dashboard refresh.
+
+## Shared cursor feedback
+
+RootLayout sets createCursorVariables from verified request branding before hydration.
+Business and Platform theme providers reuse that contract for the white arrow,
+white pointer hand, tenant outlines and soft static halos. CursorGlow mounts once
+at the root and adds a small decorative trailing halo through a frame-rate-independent
+transform, without replacing the browser cursor or rendering React state per move.
+It stops frames when settled, respects reduced motion and mouse-only input, and
+cleans up listeners/frames. Specialized text, resize, drag and disabled cursors remain native.
+
+Settings profile/defaults and TikTok configuration reuse SectionSaveActions for
+a bottom-right save row inside the management section. The Settings loading
+skeleton places its save placeholder in the same footer position. Save permissions,
+validation and dirty-state behavior remain feature-owned.
+
+## Global refresh feedback across dashboard pages
+
+useRegisterDashboardRefresh returns the coordinator pending state so Settings,
+Templates and TikTok can reuse their actual skeletons for explicit header refresh.
+Pixel configuration, delivery, active messages, signup applications, blocked
+subdomains and the stored platform Ads connection register their own loaders.
+Business directory, access control, billing and communications pair StatCard
+loading with DashboardRefreshRegion for content without an exact existing skeleton.
+The region uses shared accessible LoadingState and hides pending content without
+unmounting it, preserving collection pagination, local filters and editor state.
+No guessed replacement cards or full document reload are introduced. Platform
+Settings waits for both general and active-section loaders even if either fails.
+
+Forms and Linktrees use PageManagementCollection for identical initial and refresh
+collection skeletons. Linktrees wait for both list and analytics readiness before
+revealing the collection, matching Forms rather than exposing cards beneath pending
+statistics. The shared shell, toolbar, responsive grid/table primitives, selection
+and 15-item pagination remain common; labels, metrics and columns are resource-specific.
+LinktreesPageSkeleton supplies the real six Linktree statistic slots to the same
+SkeletonPageManagement used by FormsPageSkeleton. Business and Platform route loading
+select this composition for Pages/Linktrees instead of generic gray statistics or
+the Platform business-directory skeleton.
+
+## Dashboard consistency contract
+
+PageManagementSection is the common management heading, toolbar and content shell
+for Business/Platform Pages, Forms, Templates, Settings, TikTok, businesses,
+Campaigns, Access Control, Billing and Communications. Resource-specific controls
+stay explicit; shared controls use ManagementSearchTrigger, ManagementViewToggle,
+PageManagementActions and SettingsActionButton. Inline management refresh controls
+are removed in favor of the global header coordinator. Platform Form toolbars use
+the same explicit platform accent as Platform Linktrees. Management collections
+use PAGE_MANAGEMENT_PAGE_SIZE (15), including default grids/tables, campaigns,
+Business directory requests, access control and billing; response-table page-size
+choices remain explicit to their analytics use case.
+
+Linktree/Form grids share PageListDescription and PageListActions, including
+content direction, footer spacing, action radii and three actions per table row.
+Linktree table/mobile actions include the same Open action as its grid. Empty
+optional descriptions stay omitted; Linktree load errors use RequestErrorNotice
+with translated copy, matching Forms. Remaining campaign/subscription browser date
+fields use DateTimeInput without changing their stored date formats.
+
+Both dashboard route boundaries share DashboardPageLoading and DashboardLoadingShell.
+They resolve the actual route, retain verified owner branding before hydration,
+and select a real matching skeleton. When no exact skeleton exists they use shared
+LoadingState instead of unrelated cards. Business-directory loading mirrors its
+updated shell, toolbar and six metric colors. The campaign global refresh reloads
+its existing stored draft collection; it does not imply connected live reporting.
+
+
+Form and Linktree selection toolbars share PageSelectionActions for two separate
+confirmed writes: amber Delete analytics preserves pages/forms and form responses;
+red Delete pages/forms removes the selected records through existing owner-scoped
+DELETE endpoints. Business Linktree deletion requires its delete capability,
+independently of analytics-clear permission. Default Linktrees (is_default or the
+reserved id slug) are excluded from record deletion but remain eligible for
+analytics clearing. Platform and Business use the same workflow and translations.
+Requests are deduplicated and limited to five in flight. After partial record
+deletion, collections/statistics refresh and only failed IDs remain selected.
+Deleting the final Form on a server-paginated page clamps to an available page.

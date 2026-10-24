@@ -140,6 +140,14 @@ export class PlatformLinktreesService {
     return created;
   }
 
+  async getDuplicateOptions(id: string, slug?: string) {
+    return this.linktrees.getDuplicateOptions(
+      id,
+      await this.workspaceId(),
+      slug,
+    );
+  }
+
   async duplicate(id: string, dto?: DuplicateLinktreeDto) {
     const businessId = await this.workspaceId();
     let duplicated;
@@ -165,6 +173,10 @@ export class PlatformLinktreesService {
       updated = await this.linktrees.updateLinktree(
         id,
         {
+          headline: data.headline,
+          slogan: data.slogan,
+          slogan_color: data.slogan_color,
+          logo: data.logo,
           name: data.name,
           subtitle: data.subtitle,
           subtitle_color: data.subtitle_color,
@@ -201,15 +213,8 @@ export class PlatformLinktreesService {
     return updated;
   }
 
-  async toggleCampaign(id: string, isCampaignActive: boolean) {
-    const businessId = await this.workspaceId();
-    const updated = await this.linktrees.toggleCampaignActive(
-      id,
-      businessId,
-      isCampaignActive,
-    );
-    await this.invalidate(updated.uid, updated.seo_name);
-    return updated;
+  async pin(id: string, isPinned: boolean) {
+    return this.linktrees.pin(await this.workspaceId(), id, isPinned);
   }
 
   async toggleArchive(id: string, isArchived: boolean) {

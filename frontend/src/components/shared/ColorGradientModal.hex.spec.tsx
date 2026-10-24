@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ColorGradientModal } from "./ColorGradientModal";
 
@@ -24,7 +24,7 @@ function open(value: string, onChange = vi.fn()) {
 }
 
 function hexField(base: HTMLElement) {
-  return base.querySelector<HTMLInputElement>('input[placeholder="#000000"]')!;
+  return within(base).getByRole<HTMLInputElement>("textbox");
 }
 
 function swatch(base: HTMLElement, hex: string) {

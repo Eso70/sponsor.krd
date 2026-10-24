@@ -1,8 +1,11 @@
 "use client";
+import { applyTabIcon } from "@/lib/brand/tab-branding";
+import { privateTabTitle } from "@/lib/brand/tab-sections";
 
 import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { DashboardRefreshProvider, useDashboardRefreshController } from "@/components/shared/dashboard-refresh";
 import { usePathname, useRouter } from "next/navigation";
 import { MotionPulseIcon } from "@/components/motion/MotionPrimitives";
 import {
@@ -21,7 +24,7 @@ import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { CreateBusinessModal } from "@/features/platform-admin/components/CreateBusinessModal";
 import { PlatformTemplatesPage } from "@/features/platform-admin/components/PlatformTemplatesPage";
 import { SearchModal } from "@/components/shared/SearchModal";
-import { Tooltip } from "@/components/shared/Tooltip";
+import { DashboardSidebarAction } from "@/components/shared/DashboardSidebarAction";
 import { PlatformSettingsPage } from "@/features/platform-admin/components/PlatformSettingsPage";
 import { BillingPage } from "@/features/platform-admin/components/BillingPage";
 import dynamic from "next/dynamic";
@@ -53,13 +56,14 @@ import {
   SPONSOR_KRD_ACCENT_GRADIENT,
   SPONSOR_KRD_ACCENT_VALUE,
 } from "@/lib/sponsor-krd-theme";
-import { persistAppTheme } from "@/lib/app-theme";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { PlatformAdminErrorPage } from "@/features/platform-admin/components/PlatformAdminErrorPage";
 import {
   DashboardSidebar,
   type DashboardSidebarItem,
 } from "@/components/shared/DashboardSidebar";
 import { DashboardHeader } from "@/components/shared/DashboardHeader";
+import { DashboardAppearanceControls } from "@/components/shared/DashboardAppearanceControls";
 import { apiRequest } from "@/lib/api/request";
 import { PlatformFormsPage } from "./PlatformFormsPage";
 import { formsCopy } from "@/features/forms/forms-copy";
@@ -88,7 +92,6 @@ const BusinessAnalyticsModal = dynamic(
   },
 );
 
-type PlatformTheme = "light" | "dark";
 
 export function PlatformAdminDashboard() {
   const copy = usePlatformCopy();
@@ -143,14 +146,10 @@ export function PlatformAdminDashboard() {
     setSearch: setSearchQuery,
     pagination: businessPagination,
     summary: businessSummary,
+    summaryUnavailable: businessSummaryUnavailable,
   } = useBusinesses(handleUnauthorized);
 
-  const [theme, setTheme] = useState<PlatformTheme>(() => {
-    if (typeof window === "undefined") return "light";
-    const saved = localStorage.getItem("app-theme");
-    if (saved === "light" || saved === "dark") return saved;
-    return "light";
-  });
+  const { theme, toggleTheme } = useAppTheme();
   const [mounted, setMounted] = useState(false);
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -158,6 +157,10 @@ export function PlatformAdminDashboard() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const activePage = getPlatformPage(pathname);
+  useEffect(() => {
+    document.title = privateTabTitle(activePage, platformBranding.name, locale);
+  }, [activePage, platformBranding.name, locale]);
+
   const canPage = useCallback((_page: PlatformPage) => true, []);
   const permissionsLoaded = true;
   const activePageAllowed = true;
@@ -189,16 +192,8 @@ export function PlatformAdminDashboard() {
         accentInk: getSponsorKrdAccentInk(accent.primary),
       });
 
-      if (typeof settings.favicon === "string" && settings.favicon) {
-        let favicon =
-          document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
-        if (!favicon) {
-          favicon = document.createElement("link");
-          favicon.rel = "icon";
-          document.head.appendChild(favicon);
-        }
-        favicon.href = settings.favicon;
-      }
+      applyTabIcon(typeof settings.favicon === "string" ? settings.favicon : null, typeof settings.logo === "string" ? settings.logo : null, true);
+
     },
     [],
   );
@@ -252,16 +247,8 @@ export function PlatformAdminDashboard() {
     return () => window.cancelAnimationFrame(frame);
   }, [loadAdministratorProfile]);
 
-  const toggleTheme = useCallback(() => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-  }, [theme]);
-
   const filteredBusinesses = businesses;
 
-  useEffect(() => {
-    persistAppTheme(theme);
-  }, [theme]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -283,14 +270,22 @@ export function PlatformAdminDashboard() {
     router.push(`${consoleBasePath}/login`);
   };
 
+  const refreshSharedDashboardData = useCallback(async () => {
+    try {
+      await Promise.all([
+        activePage === "businesses" ? handleRefresh() : Promise.resolve(),
+        loadAdministratorProfile(),
+        notificationsRef.current?.refresh(),
+      ]);
+    } finally {
+      router.refresh();
+    }
+  }, [activePage, handleRefresh, loadAdministratorProfile, router]);
+  const dashboardRefresh = useDashboardRefreshController(refreshSharedDashboardData);
   const handleGlobalRefresh = useCallback(async () => {
-    await Promise.all([
-      handleRefresh(),
-      loadAdministratorProfile().catch(() => undefined),
-      notificationsRef.current?.refresh().catch(() => undefined),
-    ]);
-    router.refresh();
-  }, [handleRefresh, loadAdministratorProfile, router]);
+    const result = await dashboardRefresh.refresh();
+    if (result.failed) toast.error(copy.applicationActionFailed);
+  }, [dashboardRefresh, copy.applicationActionFailed]);
 
   const sidebarItems = useMemo<DashboardSidebarItem[]>(
     () => [
@@ -448,6 +443,7 @@ export function PlatformAdminDashboard() {
       );
       if (res.ok) {
         removeBusiness(deletingBusiness.id);
+        await fetchBusinesses();
         toast.success(copy.deleteSuccess);
       } else {
         const errData = await res.json();
@@ -476,7 +472,7 @@ export function PlatformAdminDashboard() {
 
   if (loading) {
     return (
-      <SkeletonDashboardShell navigationItems={12} platformAdminTheme>
+      <SkeletonDashboardShell navigationItems={sidebarItems.filter((item) => !item.hidden).length} sidebarCollapsed={isSidebarCollapsed} platformAdminTheme>
         <SkeletonBusinessDirectoryPage
           loadingLabel={platformLoadingCopy[locale].businessDirectory}
         />
@@ -528,6 +524,7 @@ export function PlatformAdminDashboard() {
   }
 
   return (
+    <DashboardRefreshProvider value={dashboardRefresh}>
     <div
       className="h-screen bg-slate-50 dark:bg-[#161B22] text-slate-800 dark:text-gray-100 flex flex-col md:flex-row relative overflow-hidden"
       dir="ltr"
@@ -536,6 +533,7 @@ export function PlatformAdminDashboard() {
       data-platform-admin-theme
     >
       <DashboardSidebar
+        accentColor={platformBranding.accentColor}
         brandName={platformBranding.name}
         brandSubtitle={copy.generalControl}
         brandImage={platformBranding.logo || SPONSOR_KRD_LOGO}
@@ -543,36 +541,9 @@ export function PlatformAdminDashboard() {
         collapsed={isSidebarCollapsed}
         mobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        footer={
-          <div className="shrink-0 border-t border-slate-200 p-4 dark:border-white/10">
-            <Tooltip
-              content={copy.adminSettings}
-              side="right"
-              disabled={!isSidebarCollapsed}
-            >
-              <button
-                type="button"
-                onClick={() => router.push(`${consoleBasePath}/settings`)}
-                className={`flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-slate-100 cursor-pointer ${
-                  isSidebarCollapsed ? "md:justify-center md:px-0" : "gap-3"
-                }`}
-                title={copy.adminSettings}
-                aria-label={copy.adminSettings}
-              >
-                <UserCog className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span
-                  className={`whitespace-nowrap transition-all duration-300 ${
-                    isSidebarCollapsed
-                      ? "overflow-hidden md:pointer-events-none md:w-0 md:opacity-0"
-                      : "opacity-100"
-                  }`}
-                >
-                  {copy.adminSettings}
-                </span>
-              </button>
-            </Tooltip>
-          </div>
-        }
+        websiteLabel={copy.website}
+        footer={<DashboardSidebarAction collapsed={isSidebarCollapsed} label={copy.adminSettings} icon={<UserCog className="size-4" />} onClick={() => { router.push(`${consoleBasePath}/settings`); setIsMobileSidebarOpen(false); }} />}
+
       />
 
       {/* Main Content Area */}
@@ -581,7 +552,7 @@ export function PlatformAdminDashboard() {
           title={pageTitle[activePage]}
           theme={theme}
           mounted={mounted}
-          refreshing={isRefreshing}
+          refreshing={dashboardRefresh.isRefreshing || isRefreshing}
           onToggleSidebar={() => {
             if (window.matchMedia("(max-width: 767px)").matches) {
               setIsMobileSidebarOpen((open) => !open);
@@ -597,8 +568,6 @@ export function PlatformAdminDashboard() {
             menuLabel: copy.menu,
             refresh: copy.refreshData,
             refreshLabel: copy.refreshData,
-            home: copy.home,
-            homeLabel: copy.home,
             theme: copy.theme,
             darkTheme: copy.darkTheme,
             lightTheme: copy.lightTheme,
@@ -657,6 +626,7 @@ export function PlatformAdminDashboard() {
                 page={businessPage}
                 pagination={businessPagination}
                 summary={businessSummary}
+                summaryUnavailable={businessSummaryUnavailable}
                 onPageChange={setBusinessPage}
                 onRefresh={handleRefresh}
                 onSearchAction={() =>
@@ -700,7 +670,23 @@ export function PlatformAdminDashboard() {
                 onOpenDashboard={handleOpenDashboard}
               />
             ) : activePage === "linktrees" ? (
-              <PlatformLinktreesPage />
+              <PlatformLinktreesPage
+                headerControls={
+                  <DashboardAppearanceControls
+                    compact
+                    languageControl={<PlatformLanguageSelector compact />}
+                    theme={theme}
+                    mounted={mounted}
+                    onToggleTheme={toggleTheme}
+                    labels={{
+                      theme: copy.theme,
+                      darkTheme: copy.darkTheme,
+                      lightTheme: copy.lightTheme,
+                      themeLabel: copy.theme,
+                    }}
+                  />
+                }
+              />
             ) : activePage === "forms" ? (
               <PlatformFormsPage theme={theme} mounted={mounted} onToggleTheme={toggleTheme} />
             ) : activePage === "templates" ? (
@@ -876,5 +862,6 @@ export function PlatformAdminDashboard() {
         )}
       </SearchModal>
     </div>
+    </DashboardRefreshProvider>
   );
 }

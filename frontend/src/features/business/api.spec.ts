@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   getBusinessDashboardState,
-  setBusinessLinktreeCampaignStatus,
 } from "./api";
 
 /**
@@ -108,23 +107,3 @@ describe("getBusinessDashboardState", () => {
   });
 });
 
-describe("setBusinessLinktreeCampaignStatus", () => {
-  it("updates campaign status through the tenant-scoped Linktree endpoint", async () => {
-    const fetchMock = vi.fn(async () =>
-      jsonResponse({ success: true, data: {} }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await setBusinessLinktreeCampaignStatus("linktree-1", true);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/linktrees/linktree-1/campaign-status",
-      expect.objectContaining({
-        method: "PATCH",
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({ is_campaign_active: true }),
-      }),
-    );
-  });
-});

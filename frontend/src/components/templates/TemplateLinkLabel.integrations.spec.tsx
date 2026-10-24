@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { LinktreePresentation } from "@linktree/types";
 import type { TemplateComponent } from "./types";
@@ -30,6 +30,24 @@ const templates: Array<[string, TemplateComponent]> = [
 ];
 
 describe("Linktree template button labels", () => {
+  it("centers Spotlight labels independently of the icon and preserves navigation", () => {
+    const onLinkClick = vi.fn();
+    const { container } = render(<SpotlightTemplate
+      linktree={linktree}
+      links={[{ id: "centered", platform: "whatsapp", url: "https://wa.me/9647502485829", display_name: "پەیوەندی بکە — Contact our team", is_active: true, metadata: { custom_color: "#ffffff" } }]}
+      theme={{ from: "#ffffff", via: "#ffffff", to: "#ffffff" }}
+      onLinkClick={onLinkClick}
+    />);
+    const action = container.querySelector('a[data-action-key="link:centered"]')!;
+    expect(action).toHaveClass("flex", "items-center", "justify-center");
+    expect(action.querySelector("[data-template-link-label]")).toHaveClass("min-w-0", "text-center");
+    expect(action.querySelector("[data-template-link-details]")).toHaveClass("justify-center");
+    expect(action.querySelector("[data-template-link-details]")).toHaveAttribute("dir", "ltr");
+    expect(action.querySelector("[data-link-title]")).toHaveClass("truncate");
+    expect(action).toHaveStyle({ color: "#111827" });
+    fireEvent.click(action);
+    expect(onLinkClick).toHaveBeenCalledWith("centered", "https://wa.me/9647502485829", "whatsapp", undefined);
+  });
   it.each(templates)(
     "%s keeps the small English platform name static",
     (_, Template) => {

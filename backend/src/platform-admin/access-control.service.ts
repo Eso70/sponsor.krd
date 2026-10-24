@@ -1,3 +1,4 @@
+import { resolveLinktreeFieldMode } from '../common/linktree-field-policy';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import type { SimulateAuthorizationDto } from './dto/access-control.dto';
@@ -94,12 +95,22 @@ export class AccessControlService {
     const deniedFields = changedFields.filter(
       (field) =>
         !knownFields.has(field) ||
-        (policy.fieldModes?.[field] || policy.accessMode) === 'deny',
+        resolveLinktreeFieldMode(
+          dto.permission,
+          field,
+          policy.fieldModes,
+          policy.accessMode,
+        ) === 'deny',
     );
     const approvalFields = changedFields.filter(
       (field) =>
         knownFields.has(field) &&
-        (policy.fieldModes?.[field] || policy.accessMode) === 'approval',
+        resolveLinktreeFieldMode(
+          dto.permission,
+          field,
+          policy.fieldModes,
+          policy.accessMode,
+        ) === 'approval',
     );
 
     let outcome: 'allow' | 'deny' | 'approval' = 'allow';

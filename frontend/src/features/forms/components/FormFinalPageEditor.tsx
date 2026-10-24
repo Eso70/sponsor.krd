@@ -44,14 +44,12 @@ export function FormFinalPageEditor({
       <FormEditorInput
         label={copy.headline}
         value={form.finalTitle}
-        placeholder={copy.thankYou}
         onChange={(finalTitle) => onChange({ finalTitle })}
         maxLength={100}
       />
       <FormEditorInput
         label={copy.descriptionLabel}
         value={form.finalDescription}
-        placeholder={labels.finalDefault}
         onChange={(finalDescription) => onChange({ finalDescription })}
         multiline
         maxLength={300}

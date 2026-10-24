@@ -39,6 +39,11 @@ const input = () => ({
   },
 });
 describe('form configuration and response validation', () => {
+  it('accepts saved pin metadata but keeps it out of public definitions and duplicates', () => {
+    expect(
+      validateDefinition({ ...form(), isPinned: true }, false),
+    ).not.toHaveProperty('isPinned');
+  });
   it('accepts bounded TikTok match keys and rejects excess or response properties', () => {
     const payload = input();
     expect(

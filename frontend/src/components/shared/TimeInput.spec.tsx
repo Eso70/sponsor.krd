@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TimeInput, parseTypedTime } from "./TimeInput";
 
 describe("parseTypedTime", () => {
@@ -22,16 +22,51 @@ describe("parseTypedTime", () => {
 });
 
 describe("TimeInput", () => {
+  it("uses a custom popup, supports keyboard selection, and restores focus", async () => {
+    const change = vi.fn();
+    render(<TimeInput label="Time" locale="en" value="09:00" onChange={change} />);
+    expect(screen.getByRole("textbox", { name: "Time" })).toHaveAttribute("type", "text");
+    const trigger = screen.getByRole("button", { name: "Open Time" });
+    fireEvent.click(trigger);
+    const group = await screen.findByRole("group", { name: "Hour" });
+    const selected = group.querySelector<HTMLButtonElement>('[aria-selected="true"]')!;
+    fireEvent.keyDown(selected, { key: "ArrowDown" });
+    expect(change).toHaveBeenCalledWith("10:00");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Time" })).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+  it("accepts a single-digit typed hour and lets an optional value be cleared", () => {
+    const change = vi.fn();
+    render(<TimeInput label="Time" value="09:00" onChange={change} />);
+    const field = screen.getByRole("textbox", { name: "Time" });
+    fireEvent.change(field, { target: { value: "9:30" } }); fireEvent.blur(field);
+    expect(change).toHaveBeenCalledWith("09:30");
+    fireEvent.change(field, { target: { value: "" } }); fireEvent.blur(field);
+    expect(change).toHaveBeenLastCalledWith("");
+  });
   it.each([
     { locale: "ar" as const, open: "فتح الوقت", hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم" },
     { locale: "en" as const, open: "Open Time", hour: "Hour", minute: "Minute", now: "Now", done: "Done" },
-  ])("localizes the time picker in $locale", ({ locale, open, hour, minute, now, done }) => {
+  ])("localizes the time picker in $locale", async ({ locale, open, hour, minute, now, done }) => {
     render(<TimeInput label={locale === "ar" ? "الوقت" : "Time"} locale={locale} value="09:00" onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: open }));
-    expect(screen.getByRole("group", { name: hour })).toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: hour })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: minute })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: now })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: done })).toBeInTheDocument();
+  });
+
+  it("opens from the field while leaving manual entry available", async () => {
+    const change = vi.fn();
+    render(<TimeInput locale="en" label="Time" value="09:00" onChange={change} />);
+    const field = screen.getByRole("textbox", { name: "Time" });
+    fireEvent.click(field);
+    expect(await screen.findByRole("dialog", { name: "Time" })).toBeInTheDocument();
+    expect(field).toHaveFocus();
+    fireEvent.change(field, { target: { value: "10:30 PM" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(change).toHaveBeenCalledWith("22:30");
   });
 
   it("shows the stored 24-hour value in 12-hour form", () => {
@@ -58,11 +93,11 @@ describe("TimeInput", () => {
     expect(field).toHaveValue("09:00 AM");
   });
 
-  it("opens the wheels and commits a chosen hour", () => {
+  it("opens the wheels and commits a chosen hour", async () => {
     const onChange = vi.fn();
     render(<TimeInput label="کات" value="09:00" onChange={onChange} />);
     fireEvent.click(screen.getByLabelText("کردنەوەی کات"));
-    const hours = screen.getByRole("group", { name: "کاتژمێر" });
+    const hours = await screen.findByRole("group", { name: "کاتژمێر" });
     fireEvent.click(within(hours).getByText("11"));
     expect(onChange).toHaveBeenCalledWith("11:00");
   });

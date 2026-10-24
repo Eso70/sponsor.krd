@@ -1,11 +1,21 @@
 "use client";
+import { useDeleteSelectedPages } from "@/features/shared/use-delete-selected-pages";
+import { PageManagementCollection } from "@/components/shared/PageManagementCollection";
 
+import { PageSelectionContext } from "@/components/shared/PageSelection";
+import { usePageSelectionState } from "@/components/shared/use-page-selection-state";
+import { PageSelectionActions } from "@/components/shared/PageSelectionActions";
+import { pageSelectionCopy } from "@/components/shared/page-selection-copy";
+import { clearSelectedAnalytics } from "@/features/shared/clear-selected-analytics";
+import { formsApi } from "../api";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { usePagePinning } from "@/features/shared/use-page-pinning";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ClipboardList } from "lucide-react";
-import { AnimatePresence } from "motion/react";
-import { DashboardSurface } from "@/components/shared/DashboardSurface";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { DrawerPresence } from "@/components/shared/DrawerPresence";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { FormsStats } from "./FormsStats";
 import { FormsTable } from "./FormsTable";
@@ -19,7 +29,6 @@ import type { FormDraft, FormLanguage, FormSummary } from "../types";
 
 import { useFormsManagement } from "../use-forms-management";
 import type { FormsScope } from "../api";
-import { FormsStatsSkeleton, FormsCollectionSkeleton } from "./FormSkeletons";
 import { FormRequestError } from "./FormRequestError";
 import { FormInsightsModal } from "./FormInsightsModal";
 
@@ -51,13 +60,72 @@ export function FormsManagementPage({
     busy,
     failed,
     failureReason,
+    dataUnavailable,
     load,
     get,
     save,
     status,
     archive,
+    duplicate,
     remove,
   } = useFormsManagement(scope, page, query, filter);
+  const lastAvailablePage = Math.max(0, Math.ceil(total / PAGE_MANAGEMENT_PAGE_SIZE) - 1);
+  if (!loading && !dataUnavailable && page > lastAvailablePage) setPage(lastAvailablePage);
+  const apiBase = scope === "platform" ? "/api/platform/forms" : "/api/forms";
+  const selectionScope = JSON.stringify([scope, query, filter, capabilities.remove]);
+  const selection = usePageSelectionState(selectionScope);
+  const [selectingAll, setSelectingAll] = useState(false);
+  const [clearingAnalytics, setClearingAnalytics] = useState(false);
+  const selectionRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => selectionRequest.current?.abort(), [selectionScope]);
+  const bulkDelete = useDeleteSelectedPages({
+    apiBase, enabled: capabilities.remove && !loading && !busy && !selectingAll && !clearingAnalytics,
+    onSelectionChange: selection.select,
+    refresh: async () => { if (!(await load())) throw new Error(copy.loadError); },
+  });
+  const selectionDisabled = loading || busy || selectingAll || clearingAnalytics || bulkDelete.deleting;
+  const selectionControl = capabilities.remove ? {
+    ids: new Set(selection.ids), disabled: selectionDisabled,
+    selectLabel: pageSelectionCopy(locale).selectForm, toggle: selection.toggle,
+  } : null;
+  const selectAll = async () => {
+    if (selectionDisabled) return;
+    const controller = new AbortController();
+    selectionRequest.current?.abort();
+    selectionRequest.current = controller;
+    setSelectingAll(true);
+    try {
+      const ids = await formsApi.selection(scope, query, filter, controller.signal);
+      if (!controller.signal.aborted && selectionRequest.current === controller) selection.select(ids);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        console.error("Form selection failed:", error);
+        toast.error(copy.loadError);
+      }
+    } finally {
+      if (selectionRequest.current === controller) {
+        selectionRequest.current = null;
+        setSelectingAll(false);
+      }
+    }
+  };
+  const deleteSelectedAnalytics = async (ids: readonly string[]) => {
+    if (clearingAnalytics || !capabilities.remove || !ids.length) throw new Error("Analytics deletion unavailable");
+    setClearingAnalytics(true);
+    try { await clearSelectedAnalytics(apiBase, ids); }
+    finally {
+      try { if (!(await load())) throw new Error(copy.loadError); }
+      finally { setClearingAnalytics(false); }
+    }
+  };
+  const pinControl = usePagePinning(
+    apiBase,
+    locale,
+    async () => {
+      if (page !== 0) setPage(0);
+      else await load();
+    },
+  );
   const changeQuery = (query: string) => {
     setQuery(query);
     setPage(0);
@@ -88,14 +156,18 @@ export function FormsManagementPage({
   );
   const [deleting, setDeleting] = useState<FormSummary | null>(null);
   useEffect(() => {
-    if (failed) toast.error(failureReason === "publish" ? copy.publishError : failureReason === "conflict" ? copy.saveConflict : copy.loadError);
+    if (failed)
+      toast.error(
+        failureReason === "publish"
+          ? copy.publishError
+          : failureReason === "conflict"
+            ? copy.saveConflict
+            : copy.loadError,
+      );
   }, [failed, failureReason, copy]);
-  const refresh = () => {
-    void load().then((loaded) => { if (loaded) toast.success(copy.notifications.refreshed); });
-  };
-  const run = (operation: Promise<unknown>, message: string) => {
-    void operation.then(() => { setPage(0); toast.success(message); }).catch(() => undefined);
-  };
+  useRegisterDashboardRefresh("forms", async () => {
+    if (!(await load())) throw new Error(copy.loadError);
+  });
   const collection = forms;
   const visible = forms;
   const openEditor = (form: FormSummary, preview: boolean) => {
@@ -129,105 +201,104 @@ export function FormsManagementPage({
     return () => window.removeEventListener("keydown", handler);
   }, [editor, deleting, opening]);
   return (
-    <>
-      {loading ? (
-        <FormsStatsSkeleton copy={copy} label={copy.loading} />
-      ) : (
-        <FormsStats
-          count={metrics.totalForms ?? forms.length}
-          copy={copy}
-          metrics={metrics}
-        />
-      )}
-      <DashboardSurface>
-        <PageHeader
-          title={copy.title}
-          description={copy.description}
-          icon={ClipboardList}
-          action={
-            <FormsToolbar
-              copy={copy}
-              busy={busy || !!opening}
-              canCreate={capabilities.create}
-              filter={filter}
-              onFilter={changeFilter}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              isSearchModalOpen={search}
-              query={query}
-              onSearch={() => setSearch(true)}
-              onClear={() => changeQuery("")}
-              onRefresh={refresh}
-              onCreate={() =>
-                setEditor({
-                  form: createForm(),
-                  preview: false,
-                  isNew: true,
-                })
-              }
-            />
-          }
-        />
-        <div className="border-t border-slate-100 pt-6 dark:border-white/5">
-          {failed && (
-            <FormRequestError
-              message={
-                failureReason === "publish"
-                  ? copy.publishError
-                  : failureReason === "conflict"
-                    ? copy.saveConflict
-                    : copy.loadError
-              }
-            />
-          )}
-          {loading ? (
-            <FormsCollectionSkeleton
-              copy={copy}
-              label={copy.loading}
-              viewMode={viewMode}
-            />
-          ) : (
-            <Collection
-              forms={visible}
-              pagination={{
-                mode: "server",
-                page,
-                pageSize: 20,
-                totalItems: total,
-                totalPages: Math.max(1, Math.ceil(total / 20)),
-                onPageChange: setPage,
-              }}
-              copy={copy}
-              locale={locale}
-              filtered={!!query.trim()}
-              archived={filter === "archived"}
-              actions={{
-                onEdit: (form) => openEditor(form, false),
-                onArchive: (form) => run(archive(form), form.isArchived ? copy.notifications.restored : copy.notifications.archived),
-                onPause: (form) =>
-                  run(
-                    status(
-                      form,
-                      form.status === "active" ? "paused" : "active",
-                    ),
-                    form.status === "active" ? copy.notifications.paused : copy.notifications.activated,
-                  ),
-                onOpen: (form) =>
-                  window.open(
-                    `/form/${form.slug}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  ),
-                onAnalytics: setAnalyticsForm,
-                busy,
-                capabilities,
-                onDelete: setDeleting,
-              }}
-            />
-          )}
-        </div>
-      </DashboardSurface>
-      <AnimatePresence>
+    <PageSelectionContext.Provider value={selectionControl}>
+      <FormsStats count={metrics.totalForms ?? null} copy={copy} metrics={metrics}
+        loading={loading} unavailable={dataUnavailable} />
+      <PageManagementSection
+        title={copy.title}
+        description={copy.description}
+        icon={<ClipboardList className="size-5" />}
+        toolbar={
+          <FormsToolbar
+            accentMode={scope === "platform" ? "platform" : "tenant"}
+            copy={copy}
+            busy={busy || !!opening || bulkDelete.deleting}
+            canCreate={capabilities.create}
+            selectionActions={capabilities.remove && <PageSelectionActions key={selectionScope} resource="form"
+              ids={selection.ids} locale={locale} disabled={selectionDisabled} onSelectAll={() => void selectAll()}
+              onDeselect={selection.clear} onDelete={deleteSelectedAnalytics}
+              onDeleteRecords={bulkDelete.remove} />}
+            filter={filter}
+            onFilter={changeFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            isSearchModalOpen={search}
+            query={query}
+            onSearch={() => setSearch(true)}
+            onClear={() => changeQuery("")}
+            onCreate={() =>
+              setEditor({
+                form: createForm(),
+                preview: false,
+                isNew: true,
+              })
+            }
+          />
+        }
+      >
+        {failed && (
+          <FormRequestError
+            message={
+              failureReason === "publish"
+                ? copy.publishError
+                : failureReason === "conflict"
+                  ? copy.saveConflict
+                  : copy.loadError
+            }
+          />
+        )}
+        <PageManagementCollection loading={loading || bulkDelete.deleting} viewMode={viewMode}
+          selectable={Boolean(selectionControl)} columns={selectionControl ? 8 : 7}
+          loadingLabel={copy.loading}>
+          <Collection
+            forms={visible}
+            pagination={{
+              mode: "server",
+              page: page + 1,
+              pageSize: PAGE_MANAGEMENT_PAGE_SIZE,
+              totalItems: total,
+              totalPages: Math.max(
+                1,
+                Math.ceil(total / PAGE_MANAGEMENT_PAGE_SIZE),
+              ),
+              onPageChange: (nextPage) => setPage(nextPage - 1),
+            }}
+            copy={copy}
+            locale={locale}
+            filtered={!!query.trim()}
+            archived={filter === "archived"}
+            actions={{
+              onEdit: (form) => openEditor(form, false),
+              onOpen: (form) =>
+                window.open(
+                  `/form/${form.slug}`,
+                  "_blank",
+                  "noopener,noreferrer",
+                ),
+              onAnalytics: setAnalyticsForm,
+              busy: busy || bulkDelete.deleting,
+              capabilities,
+              pinControl: capabilities.update ? pinControl : undefined,
+              sharing: capabilities.update
+                ? {
+                    apiBase:
+                      scope === "platform"
+                        ? "/api/platform/forms"
+                        : "/api/forms",
+                    locale,
+                    disabled: busy,
+                    accentColor,
+                    platformTheme: scope === "platform",
+                    pageType: "form",
+                    headerControls,
+                  }
+                : undefined,
+              onDelete: setDeleting,
+            }}
+          />
+        </PageManagementCollection>
+      </PageManagementSection>
+      <DrawerPresence>
         {(editor || opening) && (
           <FormEditorDrawer
             key={editor?.form.id ?? opening!.id}
@@ -236,6 +307,39 @@ export function FormsManagementPage({
             isNew={editor?.isNew}
             scope={scope}
             headerControls={headerControls}
+            canDuplicate={capabilities.create}
+            onDuplicate={
+              capabilities.create && !editor?.isNew
+                ? async (id, form, slug) => {
+                    await duplicate(id, form, slug);
+                    setPage(0);
+                  }
+                : undefined
+            }
+            onManage={
+              capabilities.update && !editor?.isNew
+                ? async (action, form) => {
+                    const updated =
+                      action === "archive"
+                        ? await archive(form)
+                        : await status(
+                            form,
+                            form.status === "active" ? "paused" : "active",
+                          );
+                    if (action === "archive") selection.select(selection.ids.filter((id) => id !== form.id));
+                    toast.success(
+                      action === "archive"
+                        ? form.isArchived
+                          ? copy.notifications.restored
+                          : copy.notifications.archived
+                        : form.status === "active"
+                          ? copy.notifications.paused
+                          : copy.notifications.activated,
+                    );
+                    return updated;
+                  }
+                : undefined
+            }
             copy={copy}
             direction={locale === "en" ? "ltr" : "rtl"}
             accentColor={accentColor}
@@ -250,7 +354,7 @@ export function FormsManagementPage({
             }}
           />
         )}
-      </AnimatePresence>
+      </DrawerPresence>
       {search && (
         <ManagementSearchModal
           isOpen
@@ -278,7 +382,7 @@ export function FormsManagementPage({
           }}
         />
       )}
-      <AnimatePresence>
+      <DrawerPresence>
         {analyticsForm && (
           <FormInsightsModal
             key={analyticsForm.id}
@@ -295,13 +399,14 @@ export function FormsManagementPage({
             onClose={() => setAnalyticsForm(null)}
           />
         )}
-      </AnimatePresence>
+      </DrawerPresence>
       <ConfirmDeleteModal
         isOpen={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={async () => {
           if (deleting) {
             await remove(deleting.id);
+            selection.select(selection.ids.filter((id) => id !== deleting.id));
             toast.success(copy.notifications.deleted);
             setPage(0);
           }
@@ -313,6 +418,6 @@ export function FormsManagementPage({
         closeLabel={copy.close}
         zIndexClassName="z-[160]"
       />
-    </>
+    </PageSelectionContext.Provider>
   );
 }

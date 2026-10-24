@@ -1,4 +1,5 @@
 "use client";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
 
 import { useCallback, useState } from "react";
 import { CheckCircle2, Clipboard, Clock3, Link2, Mail } from "lucide-react";
@@ -9,7 +10,6 @@ import { ModalWizardProgress } from "@/components/shared/ModalWizardProgress";
 import { apiRequest } from "@/lib/api/request";
 import { copyToClipboard } from "@/lib/utils/clipboard";
 import { formatDateTime } from "@/lib/utils/format-date-time";
-import { Tooltip } from "@/components/shared/Tooltip";
 import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 
 type InvitationStep = "details" | "result";
@@ -82,22 +82,7 @@ export function BusinessInvitationButton({
 
   return (
     <div className="relative">
-      <Tooltip content={label} side="bottom">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={label}
-          title={label}
-          className={`sa-gradient sa-gradient-hover group flex h-10 items-center justify-center gap-2 rounded-xl border border-transparent shadow-sm hover:shadow cursor-pointer ${showLabel ? "w-10 px-0 sm:w-auto sm:px-3.5" : "w-10"}`}
-        >
-          <Link2 className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
-          {showLabel ? (
-            <span className="hidden text-xs font-bold sm:inline">
-              {label}
-            </span>
-          ) : null}
-        </button>
-      </Tooltip>
+      <SettingsActionButton label={label} icon={Link2} iconOnly={!showLabel} onClick={() => setOpen(true)} />
 
       <ManagementModal
         isOpen={open}

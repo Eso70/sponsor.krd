@@ -22,6 +22,7 @@ import { PRIVACY_VERSION } from '../common/legal-versions';
 import { DatabaseService } from '../database/database.service';
 import { PlatformContentWorkspaceService } from '../platform-workspace/platform-content-workspace.service';
 import { StorageService } from '../storage/storage.service';
+import type { DuplicateFormDto } from './dto/duplicate-form.dto';
 import {
   UnifiedAnalyticsService,
   CLICK_EVENTS,
@@ -39,6 +40,7 @@ type FormRow = {
   slug: string;
   name: string;
   status: FormDraft['status'];
+  is_pinned?: boolean;
   is_archived: boolean;
   archived_at: Date | string | null;
   definition: FormDraft;
@@ -53,6 +55,7 @@ function mapped(row: FormRow): FormDraft {
     name: row.name,
     slug: row.slug,
     status: row.status,
+    isPinned: row.is_pinned === true,
     isArchived: row.is_archived,
     archivedAt: row.archived_at
       ? new Date(row.archived_at).toISOString()
@@ -67,6 +70,12 @@ export function formSlug(title: string): string {
     slugifyPublicPageName(title) ||
     `form-${createHash('sha256').update(title.trim().normalize('NFKC').toLowerCase()).digest('hex').slice(0, 12)}`
   );
+}
+function collectionFilter(owner: string, query: string, archived: boolean) {
+  return {
+    where: 'business_id=$1 AND is_archived=$2::boolean AND name ILIKE $3',
+    values: [owner, archived, `%${query.replace(/[\\%_]/g, '\\$&')}%`],
+  };
 }
 @Injectable()
 export class FormsService {
@@ -98,26 +107,49 @@ export class FormsService {
     query = '',
     archived = false,
   ): Promise<FormCollectionPage> {
-    const values = [owner, archived, `%${query.replace(/[\\%_]/g, '\\$&')}%`];
-    const where =
-      'business_id=$1 AND is_archived=$2::boolean AND name ILIKE $3';
+    const pageSize = 15;
+    const { where, values } = collectionFilter(owner, query, archived);
     const result = await this.db.query<FormSummary>(
       `WITH selected_forms AS (
-         SELECT id,name,slug,status,is_archived AS "isArchived",archived_at AS "archivedAt",definition->>'layout' layout,definition->>'language' language,definition->>'logo' logo,definition->>'description' description,revision,submission_count AS "submissionCount",jsonb_array_length(definition->'questions') AS "questionCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM forms WHERE ${where} ORDER BY updated_at DESC,id LIMIT 20 OFFSET $4
+         SELECT id,name,slug,status,is_pinned AS "isPinned",is_archived AS "isArchived",archived_at AS "archivedAt",definition->>'layout' layout,definition->>'language' language,CASE WHEN definition->>'logoEnabled' = 'false' THEN '' ELSE definition->>'logo' END logo,CASE WHEN definition->>'bannerEnabled' = 'false' THEN NULL ELSE COALESCE(NULLIF(definition->'bannerImages'->>0,''),NULLIF(definition->>'banner','')) END banner,definition->>'description' description,revision,submission_count AS "submissionCount",jsonb_array_length(definition->'questions') AS "questionCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM forms WHERE ${where} ORDER BY is_pinned DESC,updated_at DESC,id LIMIT ${pageSize} OFFSET $4
        ) SELECT form.*,traffic.views,traffic.interactions FROM selected_forms form
        LEFT JOIN LATERAL (
          SELECT count(DISTINCT event.visitor_id) FILTER (WHERE event.event_name='page_view')::integer views,
                 count(DISTINCT event.visitor_id) FILTER (WHERE event.event_name=ANY($5::text[]))::integer interactions
          FROM public_pages page JOIN analytics_events event ON event.public_page_id=page.id
          WHERE page.business_id=$1 AND page.source_form_id=form.id AND page.page_type='form' AND event.is_bot=false
-       ) traffic ON true ORDER BY form."updatedAt" DESC,form.id`,
-      [...values, page * 20, [...CLICK_EVENTS]],
+       ) traffic ON true ORDER BY form."isPinned" DESC,form."updatedAt" DESC,form.id`,
+      [...values, page * pageSize, [...CLICK_EVENTS]],
     );
     const count = await this.db.query<{ total: string }>(
       `SELECT count(*)::text total FROM forms WHERE ${where}`,
       values,
     );
     return { items: result.rows, total: Number(count.rows[0].total) };
+  }
+  async selectionIds(owner: string, query = '', archived = false) {
+    const { where, values } = collectionFilter(owner, query, archived);
+    const result = await this.db.query<{ id: string }>(
+      `SELECT id FROM forms WHERE ${where} ORDER BY id`,
+      values,
+    );
+    return result.rows.map((row) => row.id);
+  }
+  async clearAnalytics(owner: string, id: string) {
+    await this.db.transaction(async (client) => {
+      // Share the submission writer's lock, without deleting or changing answers.
+      const owned = await client.query(
+        'SELECT id FROM forms WHERE business_id=$1 AND id=$2 FOR UPDATE',
+        [owner, id],
+      );
+      if (!owned.rows.length) throw new NotFoundException('Form not found');
+      const pages = await client.query(
+        "SELECT id FROM public_pages WHERE business_id=$1 AND source_form_id=$2 AND page_type='form'",
+        [owner, id],
+      );
+      // Never-visited forms legitimately have no tracking page to clear yet.
+      if (pages.rows.length) await this.analytics.clear(owner, id, client);
+    });
   }
   async get(owner: string, id: string) {
     const result = await this.db.query<FormRow>(
@@ -127,7 +159,11 @@ export class FormsService {
     if (!result.rows[0]) throw new NotFoundException('Form not found');
     return mapped(result.rows[0]);
   }
-  async create(owner: string, body: unknown) {
+  async create(
+    owner: string,
+    body: unknown,
+    copyOptions?: { slug?: string; paused: boolean },
+  ) {
     const definition = validateDefinition(body, false);
     if (!(await this.storage.areBusinessAssetsOwned(owner, definition)))
       throw new BadRequestException('Invalid form images');
@@ -137,7 +173,8 @@ export class FormsService {
     } catch {
       status = 'paused';
     }
-    const slug = formSlug(definition.name);
+    if (copyOptions?.paused) status = 'paused';
+    const slug = copyOptions?.slug ?? formSlug(definition.name);
     return this.db.transaction(async (client) => {
       // Serialize title reservations with updates; the unique index is the final boundary.
       await client.query(
@@ -224,6 +261,15 @@ export class FormsService {
       return mapped(updated.rows[0]);
     });
   }
+  async pin(owner: string, id: string, isPinned: boolean) {
+    const result = await this.db.query<{ id: string; isPinned: boolean }>(
+      'UPDATE forms SET is_pinned=$3 WHERE business_id=$1 AND id=$2 RETURNING id,is_pinned AS "isPinned"',
+      [owner, id, isPinned],
+    );
+    if (!result.rows[0]) throw new NotFoundException('Form not found');
+    return result.rows[0];
+  }
+
   async archive(owner: string, id: string, isArchived: unknown) {
     if (typeof isArchived !== 'boolean')
       throw new BadRequestException('Invalid archive value');
@@ -234,14 +280,54 @@ export class FormsService {
     if (!result.rows[0]) throw new NotFoundException('Form not found');
     return mapped(result.rows[0]);
   }
-  async duplicate(owner: string, id: string) {
+  async duplicateOptions(owner: string, id: string, slug?: string) {
     const source = await this.get(owner, id);
-    return this.create(owner, {
-      ...source,
-      isArchived: false,
-      archivedAt: null,
-      name: `${source.name.slice(0, 90)} (copy)`,
-    });
+    if (slug !== undefined) {
+      if (typeof slug !== 'string' || !/^[a-z0-9][a-z0-9-]{1,49}$/.test(slug))
+        throw new BadRequestException('Invalid form slug');
+      const result = await this.db.query(
+        'SELECT 1 FROM forms WHERE business_id=$1 AND slug=$2',
+        [owner, slug],
+      );
+      return { slug, available: result.rows.length === 0 };
+    }
+    const prefix = formSlug(source.name).slice(0, 40).replace(/-+$/, '');
+    const reserved = await this.db.query<{ slug: string }>(
+      'SELECT slug FROM forms WHERE business_id=$1 AND slug LIKE $2',
+      [owner, `${prefix}-copy%`],
+    );
+    const taken = new Set(reserved.rows.map((row) => row.slug));
+    for (let index = 1; index <= 1000; index++) {
+      const suffix = index === 1 ? ' (copy)' : ` (copy ${index})`;
+      const name = `${source.name.slice(0, 100 - suffix.length)}${suffix}`;
+      const slugSuffix = index === 1 ? '-copy' : `-copy-${index}`;
+      const suggestion = `${prefix}${slugSuffix}`;
+      if (!taken.has(suggestion))
+        return { slug: suggestion, name, available: true, form: source };
+    }
+    throw new ConflictException('Choose another form address');
+  }
+  async duplicate(owner: string, id: string, input?: DuplicateFormDto) {
+    const source = await this.get(owner, id);
+    const options = input?.definition
+      ? undefined
+      : await this.duplicateOptions(owner, id);
+    const definition = input?.definition ?? { ...source, name: options!.name! };
+    const slug = input?.slug ?? options?.slug;
+    if (slug !== undefined && !/^[a-z0-9][a-z0-9-]{1,49}$/.test(slug))
+      throw new BadRequestException('Invalid form slug');
+    return this.create(
+      owner,
+      {
+        ...definition,
+        isArchived: false,
+        archivedAt: null,
+        id: undefined,
+        revision: undefined,
+        submissionCount: 0,
+      },
+      { slug, paused: true },
+    );
   }
   async delete(owner: string, id: string) {
     const result = await this.db.query(
@@ -385,6 +471,7 @@ export class FormsService {
     id: string,
     page: number,
     filters: FormSubmissionFilters = {},
+    answersOnlySearch = false,
   ): Promise<FormSubmissionsPage> {
     const owned = await this.db.query<{ snapshotAt: Date }>(
       'SELECT CURRENT_TIMESTAMP AS "snapshotAt" FROM forms WHERE business_id=$1 AND id=$2',
@@ -407,7 +494,7 @@ export class FormsService {
       AND ($4::date IS NULL OR response.created_at < (($4::date + 1)::timestamp AT TIME ZONE 'UTC'))
       AND ($5::timestamptz IS NULL OR response.created_at <= $5::timestamptz)
       AND ($2='%%' OR EXISTS (SELECT 1 FROM jsonb_array_elements(response.answers) answer WHERE answer->>'value' ILIKE $2)
-        OR event.utm_source ILIKE $2 OR event.utm_campaign ILIKE $2 OR event.country_code ILIKE $2 OR response.id::text ILIKE $2)`;
+        ${answersOnlySearch ? '' : 'OR event.utm_source ILIKE $2 OR event.utm_campaign ILIKE $2 OR event.country_code ILIKE $2 OR response.id::text ILIKE $2'})`;
     const joined = `FROM form_submissions response LEFT JOIN analytics_events event ON event.id=response.analytics_event_id AND event.business_id=$6`;
     const result = await this.db.query<FormSubmission & { total: string }>(
       `SELECT response.id,response.created_at AS "createdAt",response.revision,response.answers,response.consent,response.privacy_version AS "privacyVersion",response.duration_ms AS "durationMs",jsonb_build_object('channel',event.channel,'campaign',event.utm_campaign,'source',event.utm_source,'medium',event.utm_medium,'country',event.country_code,'device',event.device_type,'browser',event.browser,'os',event.operating_system,'referrer',event.referrer,'content',event.utm_content,'term',event.utm_term) attribution,count(*) OVER()::text total ${joined} WHERE ${where} ORDER BY response.created_at DESC,response.id DESC LIMIT $7 OFFSET $8`,

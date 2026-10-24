@@ -17,6 +17,7 @@ describe('PlatformLinktreesService', () => {
     accentColor: '#25F4EE',
   };
   const linktrees = {
+    pin: jest.fn(),
     getAllLinktrees: jest.fn(),
     createLinktree: jest.fn(),
     duplicateLinktree: jest.fn(),
@@ -24,7 +25,6 @@ describe('PlatformLinktreesService', () => {
     updateLinktree: jest.fn(),
     syncSubmittedLinks: jest.fn(),
     deleteLinktree: jest.fn(),
-    toggleCampaignActive: jest.fn(),
     toggleArchive: jest.fn(),
   } as unknown as LinktreesService;
   const workspace = {
@@ -59,6 +59,18 @@ describe('PlatformLinktreesService', () => {
   );
 
   beforeEach(() => jest.clearAllMocks());
+
+  it('pins only within the server-resolved platform workspace', async () => {
+    (linktrees.pin as jest.Mock).mockResolvedValue({
+      id: 'page',
+      isPinned: true,
+    });
+    await expect(service.pin('page', true)).resolves.toEqual({
+      id: 'page',
+      isPinned: true,
+    });
+    expect(linktrees.pin).toHaveBeenCalledWith(workspaceId, 'page', true);
+  });
 
   /**
    * The root Linktree namespace is shared across platform pages, so the console's
@@ -225,24 +237,14 @@ describe('PlatformLinktreesService', () => {
     });
   });
 
-  it('uses the shared tenant-scoped campaign and archive mutations', async () => {
-    (linktrees.toggleCampaignActive as jest.Mock).mockResolvedValue({
-      uid: 'one',
-      seo_name: 'page',
-    });
+  it('uses the shared tenant-scoped archive mutation', async () => {
     (linktrees.toggleArchive as jest.Mock).mockResolvedValue({
       uid: 'one',
       seo_name: 'page',
     });
 
-    await service.toggleCampaign('page-id', true);
     await service.toggleArchive('page-id', true);
 
-    expect(linktrees.toggleCampaignActive).toHaveBeenCalledWith(
-      'page-id',
-      workspaceId,
-      true,
-    );
     expect(linktrees.toggleArchive).toHaveBeenCalledWith(
       'page-id',
       workspaceId,

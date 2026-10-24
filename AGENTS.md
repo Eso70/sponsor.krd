@@ -255,7 +255,7 @@ Never expose data across tenant boundaries.
 The TikTok pixel and the Events API apply to explicitly allowlisted public
 marketing pages only. They must not be
 added to the platform's own site, the admin console, the business dashboard,
-the business subdomain landing page, or the advertising page.
+the business subdomain landing page.
 
 Any new feature on either public page reports through the shared page tracker
 and registers a `public_page_actions` row. Never call the pixel directly.

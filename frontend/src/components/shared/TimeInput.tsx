@@ -1,18 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useId, useRef, useState } from "react";
+import { PickerPopup } from "./PickerPopup";
 import { Clock3 } from "lucide-react";
-import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import { SHARED_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
+import pickerStyles from "./DateTimeInput.module.css";
 import { TimeColumn } from "./TimeColumn";
 
 /**
- * A time-only field with the same popover as `DateTimeInput`, minus the calendar.
- *
- * The browser's own `<input type="time">` was doing this job, which meant every
- * device drew a different control, none of them in the product's style. This one
- * types like the date field — masked, keyboard first — and opens the same three
- * wheels for hour, minute and period.
+ * A keyboard-editable time field using the shared anchored PickerPopup and
+ * ordered hour, minute and period choices from DateTimeInput.
  *
  * `value` is always 24-hour `HH:MM`, which is what the API stores; the field
  * itself reads in 12-hour form because that is how the popover presents it.
@@ -23,15 +20,15 @@ const MINUTE_STEP = 5;
 const TIME_INPUT_COPY = {
   ckb: {
     optional: "ئارەزوومەندانە", open: "کردنەوەی", invalid: "کاتەکە بە شێوەی 09:30 AM بنووسە.",
-    hour: "کاتژمێر", minute: "خولەک", now: "ئێستا", done: "تەواو",
+    hour: "کاتژمێر", minute: "خولەک", now: "ئێستا", done: "تەواو", close: "داخستن",
   },
   ar: {
     optional: "اختياري", open: "فتح", invalid: "أدخل الوقت بصيغة 09:30 AM.",
-    hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم",
+    hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم", close: "إغلاق",
   },
   en: {
     optional: "Optional", open: "Open", invalid: "Enter the time as 09:30 AM.",
-    hour: "Hour", minute: "Minute", now: "Now", done: "Done",
+    hour: "Hour", minute: "Minute", now: "Now", done: "Done", close: "Close",
   },
 } as const;
 
@@ -90,6 +87,7 @@ export function parseTypedTime(raw: string): string | null {
 /** Keeps typing inside `hh:mm PP` without fighting the caret. */
 function maskTyped(raw: string): string {
   const cleaned = raw.replace(/[^\dapmAPM: ]/g, "").slice(0, 8);
+  if (cleaned.includes(":")) return cleaned;
   const digits = cleaned.replace(/\D/g, "").slice(0, 4);
   const suffix = /[ap]/i.exec(cleaned)?.[0]?.toUpperCase();
   const period = suffix ? `${suffix}M` : "";
@@ -97,294 +95,66 @@ function maskTyped(raw: string): string {
   return `${digits.slice(0, 2)}:${digits.slice(2)}${period ? ` ${period}` : ""}`;
 }
 
-export function TimeInput({
-  value,
-  onChange,
-  label,
-  hideLabel = false,
-  disabled = false,
-  className = "",
-  required = false,
-  accent = BUSINESS_ACCENT,
-  locale = "ckb",
-}: {
-  /** 24-hour `HH:MM`. */
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  hideLabel?: boolean;
-  disabled?: boolean;
-  className?: string;
-  required?: boolean;
-  /** Highlight colour for the field and the wheels. */
-  accent?: string;
-  locale?: keyof typeof TIME_INPUT_COPY;
+export function TimeInput({ value, onChange, label, hideLabel = false, disabled = false, className = "", required = false, accent = BUSINESS_ACCENT, locale = "ckb" }: {
+  value: string; onChange: (value: string) => void; label: string; hideLabel?: boolean;
+  disabled?: boolean; className?: string; required?: boolean; accent?: string; locale?: keyof typeof TIME_INPUT_COPY;
 }) {
   const copy = TIME_INPUT_COPY[locale];
   const [isOpen, setIsOpen] = useState(false);
-  // Only held while the field is being typed in. The rest of the time the text
-  // is derived from `value`, so an outside change — the "same hours every day"
-  // button, a wheel in the popover — shows up without an effect to sync it.
   const [typing, setTyping] = useState<string | null>(null);
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const pickerRef = useRef<HTMLElement>(null);
-  const errorId = useId();
   const [invalid, setInvalid] = useState(false);
-  const [position, setPosition] = useState<{
-    left: number;
-    width: number;
-    maxHeight: number;
-    top?: number;
-    bottom?: number;
-  } | null>(null);
-
-  useModalKeyboard({
-    isOpen,
-    onEscape: () => setIsOpen(false),
-    escapeEnabled: true,
-  });
-
-  const updatePosition = useCallback(() => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const gap = 6;
-    const padding = 8;
-    const width = Math.min(300, window.innerWidth - padding * 2);
-    const left = Math.min(
-      Math.max(padding, rect.left),
-      window.innerWidth - width - padding,
-    );
-    // Below the field by default, above it when that is where the room is, and
-    // never taller than the space it lands in — a row near the bottom of a long
-    // modal would otherwise open a panel running off the screen.
-    const preferredHeight = 330;
-    const roomBelow = window.innerHeight - rect.bottom - gap - padding;
-    const roomAbove = rect.top - gap - padding;
-    const openAbove = roomBelow < Math.min(preferredHeight, roomAbove);
-    setPosition({
-      left,
-      width,
-      maxHeight: Math.max(200, openAbove ? roomAbove : roomBelow),
-      ...(openAbove
-        ? { bottom: window.innerHeight - rect.top + gap }
-        : { top: rect.bottom + gap }),
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    updatePosition();
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !triggerRef.current?.contains(target) &&
-        !pickerRef.current?.contains(target)
-      )
-        setIsOpen(false);
-    };
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [isOpen, updatePosition]);
-
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const errorId = useId();
+  const close = useCallback(() => { setIsOpen(false); requestAnimationFrame(() => buttonRef.current?.focus()); }, []);
   const current = parseTimeValue(value) ?? { hours: 9, minutes: 0 };
   const hour12 = current.hours % 12 || 12;
-  const period: "AM" | "PM" = current.hours >= 12 ? "PM" : "AM";
-
-  // Five-minute steps: opening hours land on the quarter hour, and sixty rows
-  // to scroll only gets in the way. A minute typed by hand joins the list so it
-  // stays selectable even when it is off the step.
-  const steppedMinutes = Array.from({ length: 60 / MINUTE_STEP }, (_, index) =>
-    String(index * MINUTE_STEP).padStart(2, "0"),
-  );
+  const period = current.hours >= 12 ? "PM" : "AM";
+  const steppedMinutes = Array.from({ length: 60 / MINUTE_STEP }, (_, index) => String(index * MINUTE_STEP).padStart(2, "0"));
   const currentMinute = String(current.minutes).padStart(2, "0");
-  const minuteValues = steppedMinutes.includes(currentMinute)
-    ? steppedMinutes
-    : [...steppedMinutes, currentMinute].sort();
-
-  const displayed = typing ?? toDisplay(value);
-
-  const commit = (hours: number, minutes: number) => {
-    setInvalid(false);
-    setTyping(null);
-    onChange(toValue(hours, minutes));
-  };
-
+  const minuteValues = steppedMinutes.includes(currentMinute) ? steppedMinutes : [...steppedMinutes, currentMinute].sort();
+  const commit = (hours: number, minutes: number) => { setInvalid(false); setTyping(null); onChange(toValue(hours, minutes)); };
   const commitTyped = () => {
     if (typing === null) return;
+    if (!typing.trim() && !required) { setTyping(null); setInvalid(false); onChange(""); return; }
     const parsed = parseTypedTime(typing);
-    if (!parsed) {
-      // An unreadable entry snaps back rather than clearing: a schedule always
-      // has a time, so there is nothing sensible to fall back to but the last
-      // good one.
-      setInvalid(true);
-      setTyping(null);
-      return;
-    }
-    const { hours, minutes } = parseTimeValue(parsed)!;
-    commit(hours, minutes);
+    if (!parsed) { setInvalid(true); setTyping(null); return; }
+    const time = parseTimeValue(parsed)!;
+    commit(time.hours, time.minutes);
   };
-
-  return (
-    <div className={`block ${className}`}>
-      {!hideLabel && (
-        <span className="mb-1.5 block text-[11px] font-black text-slate-600 dark:text-slate-300">
-          {label}
-          <span className="ms-1" style={{ color: accent }}>
-            {required ? "*" : `(${copy.optional})`}
-          </span>
-        </span>
-      )}
-      <div
-        ref={triggerRef}
-        className={`flex h-11 w-full items-center rounded-xl border bg-white transition focus-within:ring-2 dark:bg-[#161B22] ${invalid ? "border-red-400 focus-within:border-red-400 focus-within:ring-red-500/15" : "border-slate-200 hover:border-slate-300 focus-within:border-[var(--time-accent)] focus-within:ring-[color-mix(in_srgb,var(--time-accent)_20%,transparent)] dark:border-white/10"}`}
-        style={{ "--time-accent": accent } as React.CSSProperties}
-      >
-        <input
-          type="text"
-          value={displayed}
-          disabled={disabled}
-          onChange={(event) => {
-            setTyping(maskTyped(event.target.value));
-            setInvalid(false);
-          }}
-          onBlur={commitTyped}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            commitTyped();
-          }}
-          aria-label={label}
-          aria-invalid={invalid}
-          aria-describedby={invalid ? errorId : undefined}
-          placeholder="09:00 AM"
-          inputMode="numeric"
-          dir="ltr"
-          className="h-full min-w-0 flex-1 rounded-l-xl bg-transparent px-3 text-sm font-medium tabular-nums text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200"
-        />
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            updatePosition();
-            setIsOpen((open) => !open);
-          }}
-          aria-label={`${copy.open} ${label}`}
-          aria-haspopup="dialog"
-          aria-expanded={isOpen}
-          className="flex h-full w-10 shrink-0 items-center justify-center rounded-r-xl border-l border-slate-200 text-slate-400 transition hover:bg-slate-50 hover:text-[var(--time-accent)] disabled:cursor-not-allowed dark:border-white/10 dark:hover:bg-white/5"
-        >
-          <Clock3 className="h-4 w-4" />
-        </button>
-      </div>
-      {invalid && (
-        <span
-          id={errorId}
-          role="alert"
-          className="mt-1.5 block text-[10px] font-semibold leading-4 text-red-500"
-        >
-          {copy.invalid}
-        </span>
-      )}
-
-      {isOpen &&
-        position &&
-        createPortal(
-          <section
-            ref={pickerRef}
-            role="dialog"
-            aria-label={label}
-            className="theme-custom-scrollbar fixed z-[170] overflow-y-auto rounded-2xl border bg-white shadow-2xl    duration-150 dark:bg-[#1c222b]"
-            style={
-              {
-                ...position,
-                "--time-accent": accent,
-                // The panel carries the business's colour rather than the
-                // dashboard's: this picker edits their page, not our chrome.
-                borderColor: `color-mix(in srgb, ${accent} 24%, transparent)`,
-              } as React.CSSProperties
-            }
-            dir="ltr"
-          >
-            <div
-              className="grid grid-cols-3 gap-2 p-3"
-              style={{
-                background: `color-mix(in srgb, ${accent} 7%, transparent)`,
-              }}
-            >
-              <TimeColumn
-                accent={accent}
-                accentInk="#FFFFFF"
-                scrollbarClassName="theme-custom-scrollbar"
-                label={copy.hour}
-                selected={String(hour12).padStart(2, "0")}
-                values={Array.from({ length: 12 }, (_, index) =>
-                  String(index + 1).padStart(2, "0"),
-                )}
-                onSelect={(next) =>
-                  commit(
-                    (Number(next) % 12) + (period === "PM" ? 12 : 0),
-                    current.minutes,
-                  )
-                }
-              />
-              <TimeColumn
-                accent={accent}
-                accentInk="#FFFFFF"
-                scrollbarClassName="theme-custom-scrollbar"
-                label={copy.minute}
-                selected={String(current.minutes).padStart(2, "0")}
-                values={minuteValues}
-                onSelect={(next) => commit(current.hours, Number(next))}
-              />
-              <TimeColumn
-                accent={accent}
-                accentInk="#FFFFFF"
-                scrollbarClassName="theme-custom-scrollbar"
-                label="AM/PM"
-                selected={period}
-                values={["AM", "PM"]}
-                onSelect={(next) =>
-                  commit(
-                    (current.hours % 12) + (next === "PM" ? 12 : 0),
-                    current.minutes,
-                  )
-                }
-              />
-            </div>
-            <div
-              className="flex items-center justify-between border-t px-3 py-2"
-              style={{
-                borderColor: `color-mix(in srgb, ${accent} 16%, transparent)`,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  commit(now.getHours(), now.getMinutes());
-                }}
-                style={{ color: accent }}
-                className="rounded-lg px-2 py-1.5 text-[10px] font-bold transition hover:bg-[color-mix(in_srgb,var(--time-accent)_10%,transparent)]"
-              >
-                {copy.now}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
-              >
-                {copy.done}
-              </button>
-            </div>
-          </section>,
-          document.body,
-        )}
+  return <div className={`block ${className}`}>
+    {!hideLabel && <span className="mb-1.5 block text-[11px] font-semibold text-slate-600 dark:text-slate-300">{label}</span>}
+    <div ref={anchorRef} dir="ltr" className={`${SHARED_CONTROL_CLASS} ${pickerStyles.field} flex h-10 w-full items-center overflow-hidden`} aria-invalid={invalid}
+      onClick={() => { if (!disabled) { setIsOpen(true); inputRef.current?.focus(); } }}
+      style={{ "--time-accent": accent } as React.CSSProperties}>
+      <input ref={inputRef} type="text" maxLength={8} value={typing ?? toDisplay(value)} disabled={disabled} required={required}
+        onClick={() => setIsOpen(true)}
+        onChange={(event) => { setTyping(maskTyped(event.target.value)); setInvalid(false); }} onBlur={commitTyped}
+        onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitTyped(); } if (event.key === "ArrowDown") { event.preventDefault(); setIsOpen(true); } }}
+        aria-label={label} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} placeholder="--:--" inputMode="text" dir="ltr"
+        className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-medium tabular-nums outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-50" />
+      <button ref={buttonRef} type="button" disabled={disabled} onClick={() => { setIsOpen(true); inputRef.current?.focus(); }}
+        aria-label={`${copy.open} ${label}`} aria-haspopup="dialog" aria-expanded={isOpen}
+        className="flex h-full w-9 shrink-0 items-center justify-center bg-transparent text-slate-500 disabled:opacity-50">
+        <Clock3 className="size-4" aria-hidden />
+      </button>
     </div>
-  );
+    {invalid && <span id={errorId} role="alert" className="mt-1 block text-xs text-red-500">{copy.invalid}</span>}
+    <PickerPopup isOpen={isOpen && !disabled} onClose={close} anchorRef={anchorRef} title={label} closeLabel={copy.close} width={248} align="start" keepAnchorFocus hideHeader>
+      <div className="grid grid-cols-3 gap-2" dir="ltr">
+        <TimeColumn accent={accent} label={copy.hour} selected={String(hour12).padStart(2, "0")}
+          values={Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"))}
+          onSelect={next => commit(Number(next) % 12 + (period === "PM" ? 12 : 0), current.minutes)} />
+        <TimeColumn accent={accent} label={copy.minute} selected={currentMinute} values={minuteValues} onSelect={next => commit(current.hours, Number(next))} />
+        <TimeColumn accent={accent} label={locale === "en" ? "Period" : locale === "ar" ? "الفترة" : "بەشی ڕۆژ"} selected={period} values={["AM", "PM"]}
+          onSelect={next => commit(hour12 % 12 + (next === "PM" ? 12 : 0), current.minutes)} />
+      </div>
+      <div className={`${pickerStyles.compactActions} mt-3 flex items-center justify-between gap-2`}>
+        <button type="button" className={`${SHARED_SOFT_BUTTON_CLASS} px-3 py-2 text-xs font-semibold`}
+          onClick={() => { const now = new Date(); commit(now.getHours(), now.getMinutes()); }}>{copy.now}</button>
+        <button type="button" className={`${SHARED_SOFT_BUTTON_CLASS} px-3 py-2 text-xs font-semibold`} onClick={close}>{copy.done}</button>
+      </div>
+    </PickerPopup>
+  </div>;
 }

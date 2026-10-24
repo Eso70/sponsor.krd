@@ -21,7 +21,6 @@ export interface ErrorPageTheme {
     description?: string | null;
     phone?: string | null;
     whatsappEnabled?: boolean | null;
-    advertisingEnabled?: boolean;
     brandingRemoved?: boolean;
     linktrees?: Array<{ name: string; href: string }>;
   };
@@ -92,7 +91,6 @@ export function businessErrorTheme(
       description: theme.footerText ?? null,
       phone: theme.footerPhone ?? null,
       whatsappEnabled: theme.whatsappEnabled ?? null,
-      advertisingEnabled: theme.advertisingEnabled ?? false,
       brandingRemoved: theme.brandingRemoved ?? false,
       linktrees: theme.linktrees ?? [],
     },

@@ -1,0 +1,52 @@
+.card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: none;
+  border-radius: var(--picker-option-radius, 18px);
+  background: transparent;
+  color: var(--picker-text);
+  text-align: center;
+  transition: background-color 150ms ease;
+}
+.card:hover:not(:disabled) { background: var(--shared-control-hover, var(--picker-hover)); }
+.selected {
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 12%, var(--picker-soft));
+}
+.preview {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: transparent;
+}
+.caption {
+  display: block;
+  min-height: 26px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+  overflow-wrap: anywhere;
+}
+.indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--picker-muted);
+}
+.selected .indicator { color: var(--theme-primary, #64748b); }
+.card:disabled { cursor: not-allowed; }
+.card:disabled .preview { opacity: 0.45; }
+.card:disabled .caption { color: var(--picker-muted); }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }

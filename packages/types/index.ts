@@ -1,7 +1,6 @@
 ﻿export * from "./business.types";
 export * from "./linktree.types";
 export * from "./subdomain.types";
-export * from "./advertising.types";
 export * from "./analytics.types";
 export * from "./billing.types";
 export * from "./authorization.types";
@@ -11,3 +10,5 @@ export { NON_DESCRIPTIVE_PAGE_TEXT } from "./seo.types";
 export * from "./domain.types";
 
 export * from "./forms.types";
+export * from "./linktree-banner";
+export type * from "./analytics-sharing.types";

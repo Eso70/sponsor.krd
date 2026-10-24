@@ -1,7 +1,62 @@
 import { render, renderHook } from '@testing-library/react';
+import { memo } from 'react';
+import { renderToString } from 'react-dom/server';
 import { ThemeProvider, useTheme } from './ThemeProvider';
 
 describe('ThemeProvider', () => {
+  it('updates the cursor outline with the tenant color and restores the previous cursor on unmount', () => {
+    const root = document.documentElement;
+    root.style.setProperty('--app-default-cursor', 'url("/platform.svg"), default');
+    root.style.setProperty('--app-pointer-cursor', 'pointer');
+    root.style.setProperty('--app-cursor-accent', '#25F4EE');
+    const view = render(<ThemeProvider websiteColor="#8754df" documentTheme="business"><span>Content</span></ThemeProvider>);
+    expect(decodeURIComponent(root.style.getPropertyValue('--app-default-cursor'))).toContain('stroke="#8754df"');
+    view.rerender(<ThemeProvider websiteColor="#00b4cc" documentTheme="business"><span>Content</span></ThemeProvider>);
+    expect(decodeURIComponent(root.style.getPropertyValue('--app-default-cursor'))).toContain('stroke="#00b4cc"');
+    expect(decodeURIComponent(root.style.getPropertyValue('--app-pointer-cursor'))).toContain('stroke="#00b4cc"');
+    expect(root.style.getPropertyValue('--app-cursor-accent')).toBe('#00b4cc');
+    view.unmount();
+    expect(root.style.getPropertyValue('--app-default-cursor')).toBe('url("/platform.svg"), default');
+    expect(root.style.getPropertyValue('--app-pointer-cursor')).toBe('pointer');
+    expect(root.style.getPropertyValue('--app-cursor-accent')).toBe('#25F4EE');
+    root.style.removeProperty('--app-pointer-cursor');
+    root.style.removeProperty('--app-cursor-accent');
+    root.style.removeProperty('--app-default-cursor');
+  });
+
+  it.each([
+    { documentTheme: 'business' as const, color: '#8754df', expected: '#8754df' },
+    { documentTheme: 'theme-only' as const, color: '#00b4cc', expected: '#00b4cc' },
+    { documentTheme: 'business' as const, color: 'gradient:to-r:#ff0000:#0066ff', expected: 'linear-gradient(to right, #ff0000 0%, #0066ff 100%)' },
+  ])('renders the palette before hydration for $documentTheme / $color', ({ documentTheme, color, expected }) => {
+    const html = renderToString(
+      <ThemeProvider websiteColor={color} documentTheme={documentTheme}>
+        <section aria-busy="true"><button className="theme-fill">Create</button></section>
+      </ThemeProvider>,
+    );
+    const serverDocument = new DOMParser().parseFromString(html, 'text/html');
+    const scope = serverDocument.querySelector<HTMLElement>('[data-theme-scope]')!;
+    expect(scope.style.getPropertyValue('--theme-css')).toBe(expected);
+    expect(scope.style.display).toBe('contents');
+    expect(scope.querySelector('[aria-busy="true"] button')?.textContent).toBe('Create');
+    // Server rendering runs no effects: first paint must not depend on root mutations.
+    expect(document.documentElement.style.getPropertyValue('--theme-css')).toBe('');
+  });
+
+  it('does not notify palette consumers when only the surrounding appearance changes', () => {
+    const consume = vi.fn();
+    const Consumer = memo(function Consumer() {
+      consume(useTheme());
+      return null;
+    });
+    const { rerender } = render(<ThemeProvider websiteColor="#123456"><Consumer /></ThemeProvider>);
+    expect(consume).toHaveBeenCalledOnce();
+    rerender(<ThemeProvider websiteColor="#123456"><Consumer /></ThemeProvider>);
+    expect(consume).toHaveBeenCalledOnce();
+    rerender(<ThemeProvider websiteColor="#654321"><Consumer /></ThemeProvider>);
+    expect(consume).toHaveBeenCalledTimes(2);
+  });
+
   beforeEach(() => {
     // Clear any inline styles on documentElement before each test
     document.documentElement.style.cssText = '';

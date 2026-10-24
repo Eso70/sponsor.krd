@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import {
+  campaignReportedValue,
   formatConversionRate,
   formatCostPerConversion,
 } from "../campaign-metrics";
@@ -18,12 +19,15 @@ import type { TikTokCampaign } from "../types";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { campaignCopy } from "../campaign-copy";
 
+import { StatCard, type StatCardColor } from "@/components/shared/StatCard";
+import { StatCardGrid } from "@/components/shared/StatCardGrid";
+
 interface PerformanceMetric {
   label: string;
   value: string;
   detail: string;
   icon: LucideIcon;
-  iconClassName: string;
+  color: StatCardColor;
 }
 
 export function CampaignPerformanceOverview({
@@ -39,42 +43,42 @@ export function CampaignPerformanceOverview({
       value: campaign.impressions.toLocaleString(),
       detail: copy.list.impressions,
       icon: Eye,
-      iconClassName: "text-sky-500",
+      color: "blue",
     },
     {
       label: copy.list.clicks,
       value: campaign.clicks.toLocaleString(),
       detail: `${copy.list.clickRate} ${campaign.ctr.toFixed(2)}%`,
       icon: MousePointerClick,
-      iconClassName: "text-emerald-500",
+      color: "green",
     },
     {
       label: copy.list.conversions,
       value: campaign.conversions.toLocaleString(),
       detail: `${copy.detail.conversionRate} ${formatConversionRate(campaign)}`,
       icon: TrendingUp,
-      iconClassName: "text-violet-500",
+      color: "purple",
     },
     {
       label: copy.totalSpent,
       value: `$${campaign.totalSpent.toFixed(2)}`,
       detail: copy.totalSpent,
       icon: CircleDollarSign,
-      iconClassName: "text-amber-500",
+      color: "amber",
     },
     {
       label: copy.detail.costPerClick,
       value: `$${campaign.cpc.toFixed(3)}`,
       detail: copy.detail.costPerClick,
       icon: BadgeDollarSign,
-      iconClassName: "text-rose-500",
+      color: "pink",
     },
     {
       label: copy.costPerConversion,
       value: formatCostPerConversion(campaign),
       detail: copy.costPerConversion,
       icon: Zap,
-      iconClassName: "text-indigo-500",
+      color: "purple",
     },
   ];
 
@@ -89,41 +93,26 @@ export function CampaignPerformanceOverview({
             {copy.detail.performance}
           </h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {copy.detail.performanceDescription}
+            {copy.reportingUnavailable}
           </p>
         </div>
-        <span className="hidden text-[11px] font-medium text-slate-400 sm:block">
-          {copy.detail.liveMetrics}
-        </span>
+
       </div>
 
-      <div className="grid grid-cols-2 overflow-hidden border-y border-slate-200/70 sm:grid-cols-3 dark:border-white/10">
-        {metrics.map((metric, index) => {
-          const Icon = metric.icon;
-
-          return (
-            <div
-              key={metric.label}
-              className={`min-w-0 px-3 py-4 sm:px-5 sm:py-5 ${
-                index % 2 === 0 ? "border-r sm:border-r-0" : ""
-              } ${index % 3 !== 2 ? "sm:border-r" : ""} ${
-                index < 4 ? "border-b sm:border-b-0" : ""
-              } ${index < 3 ? "sm:border-b" : ""} border-slate-200/60 dark:border-white/7`}
-            >
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                <Icon className={`size-4 ${metric.iconClassName}`} />
-                <span className="truncate">{metric.label}</span>
-              </div>
-              <bdi className="mt-2 block truncate font-mono text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-                {metric.value}
-              </bdi>
-              <p className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">
-                {metric.detail}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+      <StatCardGrid columns={3}>
+        {metrics.map((metric) => (
+          <StatCard
+            key={metric.label}
+            icon={metric.icon}
+            color={metric.color}
+            label={metric.label}
+            value={campaignReportedValue(metric.value)}
+            subtitle={
+              metric.detail === metric.label ? undefined : String(campaignReportedValue(metric.detail))
+            }
+          />
+        ))}
+      </StatCardGrid>
     </section>
   );
 }

@@ -40,6 +40,9 @@ WHERE source.permission_key ~ '^business:linktrees:(read|create|update|delete|up
 ON CONFLICT (plan_configuration_id,permission_id) DO NOTHING;
 
 ALTER TABLE public.public_pages ADD COLUMN IF NOT EXISTS source_form_id uuid UNIQUE REFERENCES public.forms(id) ON DELETE CASCADE;
+-- Older deployments still have the retired service source until the retirement migration.
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='public_pages' AND column_name='source_advertising_page_id') THEN
 ALTER TABLE public.public_pages DROP CONSTRAINT public_pages_page_type_check;
 ALTER TABLE public.public_pages ADD CONSTRAINT public_pages_page_type_check CHECK(page_type IN ('linktree','advertising','route','form'));
 ALTER TABLE public.public_pages DROP CONSTRAINT public_pages_source_check;
@@ -49,6 +52,18 @@ ALTER TABLE public.public_pages ADD CONSTRAINT public_pages_source_check CHECK (
  (page_type='form' AND source_form_id IS NOT NULL AND source_linktree_id IS NULL AND source_advertising_page_id IS NULL) OR
  (page_type='route' AND source_form_id IS NULL AND source_linktree_id IS NULL AND source_advertising_page_id IS NULL)
 );
+
+ ELSE
+ ALTER TABLE public.public_pages DROP CONSTRAINT public_pages_page_type_check;
+ ALTER TABLE public.public_pages DROP CONSTRAINT public_pages_source_check;
+ ALTER TABLE public.public_pages ADD CONSTRAINT public_pages_page_type_check CHECK(page_type IN ('linktree','route','form'));
+ALTER TABLE public.public_pages ADD CONSTRAINT public_pages_source_check CHECK (
+ (page_type='linktree' AND source_linktree_id IS NOT NULL AND source_form_id IS NULL) OR
+ (page_type='form' AND source_form_id IS NOT NULL AND source_linktree_id IS NULL) OR
+ (page_type='route' AND source_form_id IS NULL AND source_linktree_id IS NULL)
+);
+ END IF;
+END $$;
 CREATE OR REPLACE FUNCTION public.sync_form_public_page() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE page_id uuid; item jsonb;
 BEGIN

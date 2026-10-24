@@ -9,7 +9,7 @@ import { PageHeader } from "./PageHeader";
  * re-implements locally to render its active tab's content (see
  * BusinessSettingsPage's `SettingsSection`). Centralized here so new tabbed
  * pages (e.g. the
- * advertising service tabs) share the exact same header icon/title sizing
+ * settings tabs) share the exact same header icon/title sizing
  * as the Linktrees and Settings pages instead of growing
  * their own header style.
  */

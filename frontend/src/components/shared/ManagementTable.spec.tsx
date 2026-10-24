@@ -49,16 +49,16 @@ function bodyRowCount() {
 }
 
 describe("ManagementTable pagination", () => {
-  it("pages a client-paged list twenty rows at a time", async () => {
+  it("pages a client-paged list fifteen rows at a time", async () => {
     const user = userEvent.setup();
     renderTable({ pagination: { mode: "client" } });
 
-    expect(bodyRowCount()).toBe(20);
+    expect(bodyRowCount()).toBe(15);
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /دواتر/ }));
 
-    expect(bodyRowCount()).toBe(5);
+    expect(bodyRowCount()).toBe(10);
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
   });
 
@@ -117,7 +117,7 @@ describe("ManagementTable pagination", () => {
 
     rerender(
       <ManagementTable<Row>
-        data={rows(20)}
+        data={rows(15)}
         columns={COLUMNS}
         getRowKey={(item) => item.id}
         pagination={{ mode: "client" }}
@@ -131,7 +131,7 @@ describe("ManagementTable pagination", () => {
       />,
     );
 
-    expect(bodyRowCount()).toBe(20);
+    expect(bodyRowCount()).toBe(15);
     expect(screen.queryByText("2 / 2")).not.toBeInTheDocument();
   });
 

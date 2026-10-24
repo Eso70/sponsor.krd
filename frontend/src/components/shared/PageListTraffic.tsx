@@ -1,16 +1,19 @@
 import { Eye, MousePointerClick } from "lucide-react";
 import { Tooltip } from "./Tooltip";
+import { SHARED_CONTROL_CLASS } from "./shared-control-styles";
 
 export function PageListTraffic({
   views,
   interactions,
   labels,
   compact = false,
+  centered = false,
 }: {
   views: number;
   interactions: number;
   labels: { views: string; interactions: string };
   compact?: boolean;
+  centered?: boolean;
 }) {
   return (
     <div
@@ -33,7 +36,7 @@ export function PageListTraffic({
             className={
               compact
                 ? "inline-flex items-center gap-1 cursor-default"
-                : "flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 transition-colors dark:border-white/10 dark:bg-white/5"
+                : `flex items-center ${centered ? "justify-center" : ""} ${SHARED_CONTROL_CLASS} min-w-0 gap-1.5 px-2 py-2 sm:py-2.5`
             }
           >
             <Icon

@@ -30,7 +30,8 @@ import {
   Radio,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { StatCard } from "@/components/shared/StatCard";
 import { ColorGradientModal } from "@/components/shared/ColorGradientModal";
@@ -65,6 +66,9 @@ import {
   SkeletonRetentionSettings,
 } from "./PlatformSettingsSkeletons";
 import { useSettingsText } from "./use-settings-text";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 import { arabicTikTokPixelCopy } from "@/features/analytics/tiktok-pixel-arabic-copy";
@@ -160,6 +164,8 @@ const tabs = [
 ];
 
 export function PlatformSettingsPage() {
+  const startGeneralRequest = useLatestRequest();
+  const [generalAvailable, setGeneralAvailable] = useState(false);
   const t = useSettingsText();
   const { locale } = usePlatformLocale();
   const tRef = useRef(t);
@@ -191,6 +197,7 @@ export function PlatformSettingsPage() {
   );
   const [assetUploadError, setAssetUploadError] =
     useState<InlineRequestErrorData | null>(null);
+  const [sessionsAvailable, setSessionsAvailable] = useState(false);
   const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [isSecurityLoading, setIsSecurityLoading] = useState(false);
   const [revokingSession, setRevokingSession] = useState<string | null>(null);
@@ -215,44 +222,30 @@ export function PlatformSettingsPage() {
     setAppUrl(settings.app_url || "");
   }, []);
 
+  const loadGeneralSettings = useCallback(async (rethrow = false) => {
+    const current = startGeneralRequest();
+    setIsGeneralLoading(true);
+    try {
+      const response = await fetch("/api/platform/settings", { credentials: "include", cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok || !payload.data) throw new Error("Unable to load settings");
+      if (!current()) return;
+      applySettings(payload.data as PlatformSettings);
+      setGeneralAvailable(true);
+    } catch (error) {
+      if (!current()) return;
+      setGeneralAvailable(false);
+      toast.error(tRef.current("Unable to load settings"));
+      if (rethrow) throw error;
+    } finally {
+      if (current()) setIsGeneralLoading(false);
+    }
+  }, [applySettings, startGeneralRequest]);
+
   useEffect(() => {
-    let cancelled = false;
-    const loadSettings = async () => {
-      try {
-        const response = await fetch("/api/platform/settings", {
-          credentials: "include",
-          cache: "no-store",
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            platformRequestError(
-              payload.message,
-              tRef.current("Unable to load settings"),
-              localeRef.current,
-            ),
-          );
-        }
-        if (!cancelled) applySettings(payload.data as PlatformSettings);
-      } catch (error) {
-        if (!cancelled) {
-          toast.error(
-            platformRequestError(
-              error instanceof Error ? error.message : null,
-              tRef.current("Unable to load settings"),
-              localeRef.current,
-            ),
-          );
-        }
-      } finally {
-        if (!cancelled) setIsGeneralLoading(false);
-      }
-    };
-    void loadSettings();
-    return () => {
-      cancelled = true;
-    };
-  }, [applySettings]);
+    const timer = window.setTimeout(() => void loadGeneralSettings(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadGeneralSettings]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -287,14 +280,17 @@ export function PlatformSettingsPage() {
     return payload;
   }, []);
 
-  const loadLoginSecurity = useCallback(async () => {
+  const loadLoginSecurity = useCallback(async (rethrow = false) => {
     setIsSecurityLoading(true);
     try {
       const payload = await request("/api/platform/settings/sessions", {
         method: "GET",
       });
-      setSessions(payload.data?.sessions || []);
+      if (!Array.isArray(payload.data?.sessions)) throw new Error("Invalid sessions response");
+      setSessionsAvailable(true);
+      setSessions(payload.data.sessions);
     } catch (error) {
+      setSessionsAvailable(false);
       toast.error(
         platformRequestError(
           error instanceof Error ? error.message : null,
@@ -302,12 +298,13 @@ export function PlatformSettingsPage() {
           localeRef.current,
         ),
       );
+      if (rethrow) throw error;
     } finally {
       setIsSecurityLoading(false);
     }
   }, [request]);
 
-  const loadRetention = useCallback(async () => {
+  const loadRetention = useCallback(async (rethrow = false) => {
     setIsRetentionLoading(true);
     try {
       const payload = await request("/api/platform/settings/data-retention", {
@@ -315,6 +312,7 @@ export function PlatformSettingsPage() {
       });
       setRetention(payload.data as RetentionStatus);
     } catch (error) {
+      setRetention(null);
       toast.error(
         platformRequestError(
           error instanceof Error ? error.message : null,
@@ -322,12 +320,13 @@ export function PlatformSettingsPage() {
           localeRef.current,
         ),
       );
+      if (rethrow) throw error;
     } finally {
       setIsRetentionLoading(false);
     }
   }, [request]);
 
-  const loadMedia = useCallback(async () => {
+  const loadMedia = useCallback(async (rethrow = false) => {
     setIsMediaLoading(true);
     try {
       const payload = await request("/api/platform/settings/media", {
@@ -335,6 +334,7 @@ export function PlatformSettingsPage() {
       });
       setMedia(payload.data as MediaStatus);
     } catch (error) {
+      setMedia(null);
       toast.error(
         platformRequestError(
           error instanceof Error ? error.message : null,
@@ -342,10 +342,22 @@ export function PlatformSettingsPage() {
           localeRef.current,
         ),
       );
+      if (rethrow) throw error;
     } finally {
       setIsMediaLoading(false);
     }
   }, [request]);
+
+  const refreshing = useRegisterDashboardRefresh("platform-settings", async () => {
+    const results = await Promise.allSettled([
+      loadGeneralSettings(true),
+      ...(tab === "security" ? [loadLoginSecurity(true)] : []),
+      ...(tab === "retention" ? [loadRetention(true)] : []),
+      ...(tab === "media" ? [loadMedia(true)] : []),
+    ]);
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+  });
 
   const changeTab = (nextTab: Tab) => {
     setTab(nextTab);
@@ -696,37 +708,38 @@ export function PlatformSettingsPage() {
 
   return (
     <div className="space-y-5" dir="ltr">
+      {!isGeneralLoading && !generalAvailable && <RequestErrorNotice message={t("Unable to load settings")} />}
       <StatCardGrid>
         <StatCard
-          loading={isGeneralLoading}
+          loading={isGeneralLoading || refreshing}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Globe}
-          label={t("ڕێکخستنە گشتییەکان")}
-          value="4"
+          label={t("Settings sections")}
+          value={tabs.length + 1}
           color="blue"
         />
         <StatCard
-          loading={isSecurityLoading && sessions.length === 0}
+          loading={isSecurityLoading || refreshing}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Lock}
-          label={t("چوونەژوورەوە و دانیشتنەکان")}
-          value="3"
+          label={t("Active sessions")}
+          value={sessionsAvailable ? sessions.length : "—"}
           color="green"
         />
         <StatCard
-          loading={isRetentionLoading && !retention}
+          loading={isRetentionLoading || refreshing}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Database}
           label={t("پاککردنەوەی خۆکار")}
-          value={t(retention?.policy.automatic_cleanup ? "چالاک" : "ناچالاک")}
+          value={retention ? t(retention.policy.automatic_cleanup ? "چالاک" : "ناچالاک") : "—"}
           color="purple"
         />
         <StatCard
-          loading={isMediaLoading && !media}
+          loading={isMediaLoading || refreshing}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={ImageIcon}
           label={t("فایلی میدیا")}
-          value={(media?.stats.asset_count || 0).toLocaleString("en-US")}
+          value={media ? media.stats.asset_count.toLocaleString("en-US") : "—"}
           color="slate"
         />
       </StatCardGrid>
@@ -779,13 +792,9 @@ export function PlatformSettingsPage() {
 
       {/* ─── General ─── */}
       {tab === "general" && (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-          <PageHeader
-            title={meta.title}
-            description={meta.description}
-            icon={meta.icon}
-          />
-          <div className="mt-2 border-t border-slate-100 pt-5 dark:border-white/5">
+        <PageManagementSection title={meta.title} description={meta.description} icon={<meta.icon className="size-5" />}>
+          <DashboardRefreshRegion loading={refreshing} label={platformLoadingCopy[locale].loading}>
+          <div className="min-w-0">
             {isGeneralLoading && (
               <div className="mb-4 rounded-xl bg-slate-50 px-4 py-3 text-center text-xs text-slate-500 dark:bg-white/5 dark:text-slate-300">
                 {t("Loading saved settings…")}
@@ -878,22 +887,18 @@ export function PlatformSettingsPage() {
                 label={t(isGeneralSaving ? "پاشەکەوت دەکرێت…" : "پاشەکەوتکردن")}
                 onClick={() => void saveGeneralSettings()}
                 disabled={
-                  isGeneralLoading || isGeneralSaving || !!uploadingAsset
+                  !generalAvailable || isGeneralLoading || isGeneralSaving || !!uploadingAsset
                 }
               />
             </div>
           </div>
-        </section>
+          </DashboardRefreshRegion>
+        </PageManagementSection>
       )}
 
       {/* ─── Login & Sessions ─── */}
       {tab === "security" && (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-          <PageHeader
-            title={meta.title}
-            description={meta.description}
-            icon={meta.icon}
-          />
+        <PageManagementSection title={meta.title} description={meta.description} icon={<meta.icon className="size-5" />}>
 
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4 dark:border-white/10 sm:p-5">
@@ -951,7 +956,7 @@ export function PlatformSettingsPage() {
                 </button>
               </div>
               <div className="space-y-3">
-                {isSecurityLoading && sessions.length === 0 ? (
+                {isSecurityLoading || refreshing ? (
                   <SkeletonSessionList
                     rows={3}
                     loadingLabel={
@@ -1018,29 +1023,24 @@ export function PlatformSettingsPage() {
               )}
             </div>
           </div>
-        </section>
+        </PageManagementSection>
       )}
 
       {/* ─── Data retention ─── */}
       {tab === "retention" && (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-          <PageHeader
-            title={meta.title}
-            description={meta.description}
-            icon={meta.icon}
-          />
-          <div className="mt-2 border-t border-slate-100 pt-5 dark:border-white/5">
-            {isRetentionLoading && !retention ? (
+        <PageManagementSection title={meta.title} description={meta.description} icon={<meta.icon className="size-5" />}>
+          <div className="min-w-0">
+            {isRetentionLoading || refreshing ? (
               <SkeletonRetentionSettings />
             ) : retention ? (
               <div className="space-y-6">
-                <div className="grid gap-3">
-                  <RetentionCount
+                <StatCardGrid columns={1}>
+                  <StatCard compact color="theme"
                     icon={Archive}
                     label={t("پەیوەندییە ئەرشیڤکراوەکان")}
                     value={retention.eligible.communications}
                   />
-                </div>
+                </StatCardGrid>
 
                 <div className="grid gap-5">
                   <RetentionDaysField
@@ -1141,44 +1141,39 @@ export function PlatformSettingsPage() {
               </button>
             )}
           </div>
-        </section>
+        </PageManagementSection>
       )}
 
       {/* ─── Media & uploads ─── */}
       {tab === "media" && (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-          <PageHeader
-            title={meta.title}
-            description={meta.description}
-            icon={meta.icon}
-          />
-          <div className="mt-2 border-t border-slate-100 pt-5 dark:border-white/5">
-            {isMediaLoading && !media ? (
+        <PageManagementSection title={meta.title} description={meta.description} icon={<meta.icon className="size-5" />}>
+          <div className="min-w-0">
+            {isMediaLoading || refreshing ? (
               <SkeletonMediaSettings />
             ) : media ? (
               <div className="space-y-6">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <RetentionCount
+                <StatCardGrid columns={4}>
+                  <StatCard compact color="theme"
                     icon={ImageIcon}
                     label={t("فایلی تۆمارکراو")}
                     value={media.stats.asset_count}
                   />
-                  <MediaSizeCard
+                  <StatCard compact color="theme"
                     icon={HardDrive}
                     label={t("بۆشایی بەکارهاتوو")}
-                    bytes={media.stats.stored_bytes}
+                    value={formatBytes(media.stats.stored_bytes)}
                   />
-                  <MediaSizeCard
+                  <StatCard compact color="theme"
                     icon={Archive}
                     label={t("بۆشایی پاشەکەوتکراو")}
-                    bytes={media.stats.saved_bytes}
+                    value={formatBytes(media.stats.saved_bytes)}
                   />
-                  <RetentionCount
+                  <StatCard compact color="theme"
                     icon={Trash2}
                     label={t("فایلی بەکارنەهاتوو")}
                     value={media.unused_assets}
                   />
-                </div>
+                </StatCardGrid>
 
                 <div>
                   <p className="mb-3 text-xs font-bold text-slate-700 dark:text-slate-200">
@@ -1328,7 +1323,7 @@ export function PlatformSettingsPage() {
               </button>
             )}
           </div>
-        </section>
+        </PageManagementSection>
       )}
 
       <ColorGradientModal
@@ -1380,33 +1375,6 @@ export function PlatformSettingsPage() {
 
 /* ─── Tab Forms ─── */
 
-function RetentionCount({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Database;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
-      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5">
-        <Icon
-          className="h-4 w-4"
-          style={{ color: "var(--sponsor-krd-accent)" }}
-        />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-[11px] text-slate-400">{label}</p>
-        <p className="mt-0.5 text-base font-bold tabular-nums text-slate-800 dark:text-white">
-          {value.toLocaleString("en-US")}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function RetentionDaysField({
   label,
   hint,
@@ -1455,33 +1423,6 @@ function formatBytes(value: number): string {
   if (value < 1024 * 1024 * 1024)
     return `${(value / 1024 / 1024).toFixed(1)} MB`;
   return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
-
-function MediaSizeCard({
-  icon: Icon,
-  label,
-  bytes,
-}: {
-  icon: typeof HardDrive;
-  label: string;
-  bytes: number;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-white/10">
-      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-slate-100 dark:bg-white/5">
-        <Icon
-          className="h-4 w-4"
-          style={{ color: "var(--sponsor-krd-accent)" }}
-        />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-[11px] text-slate-400">{label}</p>
-        <p className="mt-0.5 truncate text-base font-bold tabular-nums text-slate-800 dark:text-white">
-          {formatBytes(bytes)}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 function MediaNumberField({

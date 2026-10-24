@@ -20,31 +20,15 @@ describe("BusinessWorkspaceEntryPage", () => {
     render(<BusinessWorkspaceEntryPage />);
     expect(
       screen.getByRole("link", { name: "بە گوگڵ بەردەوام بە" }),
-    ).toHaveAttribute("href", "/api/auth/google/start?remember=1");
+    ).toHaveAttribute("href", "/api/auth/google/start");
     expect(
       screen.getByRole("textbox", { name: "ناونیشانی ئیمەیڵ" }),
     ).toBeVisible();
   });
 
-  it("keeps the remembered-device choice on by default", () => {
+  it("leaves device persistence to the backend without a checkbox or query flag", () => {
     render(<BusinessWorkspaceEntryPage />);
-
-    expect(
-      screen.getByRole("checkbox", {
-        name: /لەم ئامێرەدا چوونەژوورەوەم بپارێزە/,
-      }),
-    ).toBeChecked();
-
-    expect(
-      screen.getByRole("link", { name: "بە گوگڵ بەردەوام بە" }),
-    ).toHaveAttribute("href", "/api/auth/google/start?remember=1");
-
-    fireEvent.click(
-      screen.getByRole("checkbox", {
-        name: /لەم ئامێرەدا چوونەژوورەوەم بپارێزە/,
-      }),
-    );
-
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "بە گوگڵ بەردەوام بە" }),
     ).toHaveAttribute("href", "/api/auth/google/start");
@@ -133,7 +117,7 @@ describe("BusinessWorkspaceEntryPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "المتابعة باستخدام Google" }),
-    ).toHaveAttribute("href", "/api/auth/google/start?remember=1");
+    ).toHaveAttribute("href", "/api/auth/google/start");
     expect(
       screen.getByRole("textbox", { name: "عنوان البريد الإلكتروني" }),
     ).toBeInTheDocument();

@@ -355,7 +355,7 @@ export function BusinessGettingStarted({
                 ? "text-red-500"
                 : "text-slate-500 dark:text-slate-400"
             }`}
-            dir="rtl"
+            dir="ltr"
           >
             {fieldErrors.logo ||
               (hasLogo

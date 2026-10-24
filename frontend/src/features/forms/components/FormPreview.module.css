@@ -11,8 +11,16 @@
   --theme-css: var(--preview-accent-fill);
   --theme-ink: var(--preview-accent-ink);
   --checkbox-border: var(--preview-border);
+  --shared-control-surface: color-mix(in srgb, var(--preview-text) 4%, var(--preview-surface));
+  --shared-control-hover: color-mix(in srgb, var(--preview-text) 7%, var(--preview-surface));
+  --shared-control-text: var(--preview-text);
+  --shared-control-muted: var(--preview-muted);
+  --shared-control-radius: 16px;
+  --shared-control-error: #fff1f2;
+  --shared-control-error-text: #b91c1c;
   background: var(--preview-surface);
   color: var(--preview-text);
+  text-align: start;
   border-color: var(--preview-border) !important;
   color-scheme: light;
 }
@@ -23,18 +31,24 @@
   --preview-text: #e2e8f0;
   --preview-muted: #94a3b8;
   --preview-border: #475569;
+  --shared-control-error: color-mix(in srgb, #ef4444 12%, var(--preview-surface));
+  --shared-control-error-text: #fca5a5;
   color-scheme: dark;
 }
 
 /* Outrank broad dashboard !important selectors, including .dark [data-business-dashboard] inputs. */
 .surface[data-form-preview][data-appearance] :global(.modal-standard-input) {
-  background: var(--preview-field) !important;
-  color: var(--preview-text) !important;
-  border-color: var(--preview-border) !important;
+  background: var(--shared-control-surface) !important;
+  color: var(--shared-control-text) !important;
+  border-color: transparent !important;
+}
+
+.surface[data-form-preview][data-appearance] :global(.modal-standard-input-error) {
+  background: var(--shared-control-error) !important;
 }
 
 .surface[data-form-preview][data-appearance] input::placeholder {
-  color: var(--preview-muted) !important;
+  color: var(--shared-control-muted) !important;
   opacity: 1;
 }
 
@@ -43,15 +57,35 @@
   color-scheme: inherit;
 }
 
-.surface input[type="checkbox"],
-.surface input[type="radio"] {
-  appearance: auto;
-  -webkit-appearance: auto;
-}
-
 .surface[data-form-preview][data-appearance] :global(.theme-fill) {
   background: var(--preview-accent-fill) !important;
   color: var(--preview-accent-ink) !important;
+}
+.surface[data-form-preview][data-appearance] :global(.theme-fill),
+.surface[data-form-preview][data-appearance] :global(.theme-fill) :is(span, svg) {
+  color: #fff !important;
+}
+.productRow,
+.productTotal {
+  border-radius: var(--shared-control-radius);
+  background: color-mix(in srgb, var(--preview-text) 3%, var(--preview-surface));
+}
+.productSubtotal {
+  border-top: 1px solid color-mix(in srgb, var(--preview-text) 8%, transparent);
+}
+.productQuantity {
+  --shared-control-surface: color-mix(in srgb, var(--preview-text) 9%, var(--preview-surface));
+  --shared-control-hover: color-mix(in srgb, var(--preview-text) 12%, var(--preview-surface));
+}
+.productContent {
+  text-align: start;
+}
+.productContent[dir="rtl"] .productQuantity {
+  text-align: right;
+}
+.productTotal {
+  background: color-mix(in srgb, var(--preview-accent) 9%, var(--preview-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--preview-accent) 10%, transparent);
 }
 
 .logo {
@@ -154,6 +188,11 @@
   box-shadow: none;
   font-size: 16px;
 }
+
+/* The banner starts at the screen edge, behind the phone's status overlay. */
+.deviceSurface.surface {
+  padding-top: 0;
+}
 .publicSurface .cardBackground {
   clip-path: inset(0);
 }
@@ -239,14 +278,17 @@
 }
 @layer components {
   .publicSurface[data-form-preview] :global(.modal-standard-input),
-  .publicSurface button[aria-haspopup="listbox"] {
+  .publicSurface button[aria-haspopup="listbox"],
+  .publicSurface [data-date-field] {
     height: 54px !important;
     min-height: 54px;
     font-size: 16px !important;
-    border-radius: 0.875rem !important;
+    border-radius: var(--shared-control-radius) !important;
     padding-inline: 1rem !important;
   }
 }
+.publicSurface [data-date-field] { padding-inline: 0 !important; }
+.publicSurface [data-date-field] input { font-size: 16px; }
 .publicSurface input[type="radio"] {
   width: 20px;
   height: 20px;
@@ -255,7 +297,7 @@
 .publicSurface footer :is(button, a):global(.theme-fill),
 .publicSurface > [role="region"] > :global(.theme-fill) {
   min-height: 54px;
-  border-radius: 0.875rem;
+  border-radius: 16px;
   font-size: 16px;
   padding: 0.875rem 1.25rem;
 }
@@ -371,7 +413,8 @@
   }
   @layer components {
     .publicSurface[data-form-preview] :global(.modal-standard-input),
-    .publicSurface button[aria-haspopup="listbox"] {
+    .publicSurface button[aria-haspopup="listbox"],
+    .publicSurface [data-date-field] {
       height: 48px !important;
       min-height: 48px;
     }
@@ -383,9 +426,9 @@
   }
 }
 
-/* Amounts use standard digits and remain readable alongside RTL labels. */
+/* Numeric values keep the shared product font and their independent direction. */
 .numeric {
-  font-family: Arial, Helvetica, sans-serif !important;
+  font-family: inherit !important;
   font-variant-numeric: tabular-nums;
   unicode-bidi: isolate;
 }

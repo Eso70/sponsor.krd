@@ -246,7 +246,8 @@ async function handleRequest(
 ) {
   const response = await proxyRequest(request, context);
   // Also protect failures generated before any upstream response exists.
-  response.headers.set("Cache-Control", "no-store, private");
+  const publicIcon = request.method === "GET" && request.nextUrl.pathname === "/api/public/brand-icon" && (response.ok || response.status === 304);
+  response.headers.set("Cache-Control", publicIcon ? "public, max-age=300" : "no-store, private");
   return response;
 }
 

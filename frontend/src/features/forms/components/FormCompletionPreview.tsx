@@ -21,7 +21,8 @@ export function FormCompletionPreview({
   const Heading = publicPage ? "h1" : "h3";
   const hasAction = useFormPreviewActions(form, placeholders).length > 0;
   const description =
-    form.finalDescription || (hasAction ? labels.finalDefault : "");
+    form.finalDescription ||
+    (placeholders && !publicPage && hasAction ? labels.finalDefault : "");
   return (
     <div className="flex w-full flex-col items-center justify-center gap-3 text-center">
       <div className={styles.success}>

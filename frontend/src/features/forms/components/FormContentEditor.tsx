@@ -1,14 +1,13 @@
 "use client";
 import { useFormValidation } from "./FormValidationContext";
 import { useState } from "react";
-import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
-import { ImageIcon, Images } from "lucide-react";
+import { EditorBannerControls } from "@/components/shared/EditorBannerControls";
 import type { FormDraft } from "../types";
 import type { FormsCopy } from "../forms-copy";
 import type { FormEditorCopy } from "../form-editor-copy";
 import { FormEditorSection } from "./FormEditorSection";
 import { FormIntroductionEditor } from "./FormIntroductionEditor";
-import { FormImagePicker } from "./FormImagePicker";
+import { useFormImageCrop } from "./FormImageCropContext";
 import { formContentOrder } from "../form-content-order";
 import { FormPrivacyEditor } from "./FormPrivacyEditor";
 import { FormComponentsEditor } from "./FormComponentsEditor";
@@ -26,6 +25,7 @@ export function FormContentEditor({
 }) {
   const [open, setOpen] = useState<string | null>("questions");
   const validation = useFormValidation();
+  const requestCrop = useFormImageCrop();
   const activeSection = validation.selected
     ? validation.selected.section === "introduction"
       ? "introduction"
@@ -57,22 +57,13 @@ export function FormContentEditor({
         onEnabled={(bannerEnabled) => onChange({ bannerEnabled })}
         enabledLabel={labels.banner}
       >
-        <div role="tablist" aria-label={labels.banner} className="max-w-xs">
-          <SegmentedTabs
-            value={form.bannerMode ?? "image"}
-            tabs={[
-              { id: "image", label: labels.image, icon: ImageIcon },
-              { id: "carousel", label: labels.carousel, icon: Images },
-            ]}
-            onChange={(bannerMode) => onChange({ bannerMode })}
-            fullWidth
-            className="!rounded-xl !p-1 [&_button]:!h-8 [&_button]:!rounded-lg [&_button]:!text-xs"
-          />
-        </div>
-        <FormImagePicker
+        <EditorBannerControls
+          mode={form.bannerMode ?? "image"}
+          onModeChange={(bannerMode) => onChange({ bannerMode })}
+          validation={validation}
+          requestCrop={requestCrop}
           label={copy.upload}
           images={images}
-          multiple={form.bannerMode === "carousel"}
           onChange={(bannerImages) => onChange({ bannerImages, banner: "" })}
           copy={copy}
           variant="banner"

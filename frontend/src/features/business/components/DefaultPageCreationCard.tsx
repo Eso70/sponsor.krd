@@ -45,7 +45,7 @@ export function DefaultPageCreationCard() {
   };
 
   return (
-    <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+    <div className="mt-6 border-t border-slate-100 pt-5 dark:border-white/5">
       {loading ? (
         <div role="status" aria-label={t("loadingDefaultLinktree")}><Skeleton className="h-12 w-full" /></div>
       ) : failed ? (

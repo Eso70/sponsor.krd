@@ -25,7 +25,7 @@ export const SPONSOR_KRD_ORIGINAL_LOGO = "/images/brand/rise-original.svg";
 export const SPONSOR_KRD_APP_ICON = "/images/brand/rise.png";
 
 /** Original white-center Rise mark for browser tabs in every theme. */
-export const SPONSOR_KRD_FAVICON = "/images/brand/rise-favicon-white.png";
+export const SPONSOR_KRD_FAVICON = "/images/brand/rise.ico";
 
 export const SPONSOR_KRD_APPLE_ICON = "/images/brand/rise-apple.png";
 export const SPONSOR_KRD_APP_ICON_SMALL = "/images/brand/rise-icon-192.png";

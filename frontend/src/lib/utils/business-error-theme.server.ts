@@ -1,3 +1,5 @@
+import { brandIcons } from "@/lib/brand/tab-branding";
+import { requestBranding } from "@/lib/brand/request-branding.server";
 ﻿import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import {
@@ -86,12 +88,11 @@ export async function buildBusinessErrorMetadata(
 ): Promise<Metadata> {
   const theme = await fetchBusinessSubdomainThemeFromHeaders();
 
+  const branding = await requestBranding();
   return {
-    title: businessTabTitle(
-      theme.name,
-      fallbackTitle === "Not Found" ? "Not Found" : "Error",
-    ),
-    icons: theme.favicon ? { icon: theme.favicon } : undefined,
+    title: {absolute: businessTabTitle(theme.name || branding.name, fallbackTitle)},
+    icons: brandIcons(theme.favicon || branding.favicon, theme.logo || branding.logo, branding.platform),
+    robots: {index: false, follow: false},
   };
 }
 
@@ -100,11 +101,10 @@ export async function buildAuthenticatedBusinessErrorMetadata(
 ): Promise<Metadata> {
   const theme = await fetchAuthenticatedBusinessTheme();
 
+  const branding = await requestBranding();
   return {
-    title: businessTabTitle(
-      theme.name,
-      fallbackTitle === "Not Found" ? "Not Found" : "Error",
-    ),
-    icons: theme.favicon ? { icon: theme.favicon } : undefined,
+    title: {absolute: businessTabTitle(theme.name || branding.name, fallbackTitle)},
+    icons: brandIcons(theme.favicon || branding.favicon, theme.logo || branding.logo, branding.platform),
+    robots: {index: false, follow: false},
   };
 }

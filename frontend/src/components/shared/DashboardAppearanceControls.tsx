@@ -29,9 +29,7 @@ export function DashboardAppearanceControls({
   compact = false,
   labels,
 }: DashboardAppearanceControlsProps) {
-  const iconClass = compact
-    ? "h-4 w-4"
-    : "h-4 w-4 transition-transform group-hover:scale-110 sm:h-4 sm:w-4 md:h-5 md:w-5";
+  const iconClass = "size-4";
   return (
     <>
       {languageControl}

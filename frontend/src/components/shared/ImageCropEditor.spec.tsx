@@ -89,7 +89,7 @@ describe("shared image crop editor", () => {
     const canvas = screen.getByRole("img", {
       name: copy.hint,
     }) as HTMLCanvasElement;
-    expect(canvas.getContext("2d")!.stroke).toHaveBeenCalled();
+    await waitFor(() => expect(canvas.getContext("2d")!.stroke).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: copy.preview }));
     const viewer = await screen.findByRole("dialog", { name: copy.preview });
     expect(viewer).toBeInTheDocument();
@@ -202,6 +202,7 @@ describe("shared image crop editor", () => {
         { zoom: 1, x: 0, y: 0 },
         false,
         1440,
+        true,
       ),
     );
   });
@@ -232,6 +233,7 @@ describe("shared image crop editor", () => {
       { zoom: 1, x: 0, y: 0 },
       true,
       720,
+      true,
     );
   });
   it("cancel never exports or changes the source", () => {
@@ -261,6 +263,7 @@ describe("shared image crop editor", () => {
         { zoom: 0.5625, x: 0, y: 0 },
         true,
         720,
+        true,
       ),
     );
   });

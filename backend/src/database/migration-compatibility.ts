@@ -20,15 +20,6 @@ export const REQUIRED_TABLES = [
   'platform_data_retention_runs',
   'platform_media_settings',
   'uploaded_media_assets',
-  'advertising_pages',
-  'advertising_sections',
-  'advertising_package_categories',
-  'advertising_package_tiers',
-  'advertising_results',
-  'advertising_testimonials',
-  'advertising_faqs',
-  'advertising_payment_providers',
-  'advertising_page_versions',
   'public_page_tombstones',
   'root_public_slugs',
 ] as const;
@@ -45,13 +36,25 @@ export const REQUIRED_COLUMNS = [
   ['communication_conversations', 'encrypted_subject'],
   ['communication_conversations', 'sponsor_krd_key'],
   ['communication_messages', 'encrypted_body'],
-  ['linktrees', 'subtitle_color'],
-  ['linktrees', 'is_campaign_active'],
+  ['linktrees', 'headline'],
+  ['linktrees', 'slogan'],
+  ['linktrees', 'logo'],
+  ['linktrees', 'slogan_color'],
+  ['linktrees', 'is_pinned'],
+  ['forms', 'is_pinned'],
   ['linktrees', 'is_archived'],
   ['linktrees', 'archived_at'],
+  ['whatsapp_questions', 'video_url'],
 ] as const;
 
 const OBSOLETE_COLUMNS: ReadonlyArray<readonly [string, string]> = [];
+
+const LINKTREE_CONTENT_RENAMES = [
+  ['headline', 'name'],
+  ['slogan', 'subtitle'],
+  ['logo', 'image'],
+  ['slogan_color', 'subtitle_color'],
+] as const;
 
 const REQUIRED_INDEXES = [
   'idx_communication_conversations_sponsor_krd_key',
@@ -59,12 +62,13 @@ const REQUIRED_INDEXES = [
   'idx_uploaded_media_assets_created',
   'idx_public_page_tombstones_slug',
   'uq_businesses_one_platform_workspace',
-  'idx_linktrees_business_campaign_active',
-  'idx_linktrees_business_default_campaign',
   'idx_linktrees_business_archived',
 ] as const;
 
-export async function assertSupportedSchema(client: PoolClient): Promise<void> {
+export async function assertSupportedSchema(
+  client: PoolClient,
+  options: { beforeForwardMigrations?: boolean } = {},
+): Promise<void> {
   const tables = await client.query<{ table_name: string }>(
     `SELECT table_name
        FROM information_schema.tables
@@ -87,19 +91,59 @@ export async function assertSupportedSchema(client: PoolClient): Promise<void> {
           SELECT * FROM unnest($1::text[], $2::text[])
         )`,
     [
-      [...REQUIRED_COLUMNS, ...OBSOLETE_COLUMNS].map(([table]) => table),
-      [...REQUIRED_COLUMNS, ...OBSOLETE_COLUMNS].map(([, column]) => column),
+      [
+        ...REQUIRED_COLUMNS,
+        ...OBSOLETE_COLUMNS,
+        ...LINKTREE_CONTENT_RENAMES.map(([, legacy]) => ['linktrees', legacy]),
+      ].map(([table]) => table),
+      [
+        ...REQUIRED_COLUMNS,
+        ...OBSOLETE_COLUMNS,
+        ...LINKTREE_CONTENT_RENAMES.map(([, legacy]) => ['linktrees', legacy]),
+      ].map(([, column]) => column),
     ],
   );
   const foundColumns = new Set(
     columns.rows.map((row) => `${row.table_name}.${row.column_name}`),
   );
+  // Only the complete previous content schema is a supported upgrade source.
+  // Mixed/partial renames must still fail before any migration can mutate data.
+  const legacyContent =
+    options.beforeForwardMigrations === true &&
+    LINKTREE_CONTENT_RENAMES.every(
+      ([canonical, legacy]) =>
+        !foundColumns.has(`linktrees.${canonical}`) &&
+        foundColumns.has(`linktrees.${legacy}`),
+    );
   const missingColumns = REQUIRED_COLUMNS.filter(
-    ([table, column]) => !foundColumns.has(`${table}.${column}`),
+    ([table, column]) =>
+      !foundColumns.has(`${table}.${column}`) &&
+      !(
+        options.beforeForwardMigrations &&
+        column === 'is_pinned' &&
+        (table === 'linktrees' || table === 'forms')
+      ) &&
+      !(
+        options.beforeForwardMigrations &&
+        table === 'whatsapp_questions' &&
+        column === 'video_url'
+      ) &&
+      !(
+        legacyContent &&
+        table === 'linktrees' &&
+        LINKTREE_CONTENT_RENAMES.some(([canonical]) => canonical === column)
+      ),
   ).map(([table, column]) => `${table}.${column}`);
   const foundObsoleteColumns = OBSOLETE_COLUMNS.filter(([table, column]) =>
     foundColumns.has(`${table}.${column}`),
   ).map(([table, column]) => `${table}.${column}`);
+  if (!legacyContent) {
+    foundObsoleteColumns.push(
+      ...LINKTREE_CONTENT_RENAMES.filter(([, legacy]) =>
+        foundColumns.has(`linktrees.${legacy}`),
+      ).map(([, legacy]) => `linktrees.${legacy}`),
+    );
+  }
   const indexes = await client.query<{ indexname: string }>(
     `SELECT indexname
        FROM pg_indexes
@@ -114,8 +158,6 @@ export async function assertSupportedSchema(client: PoolClient): Promise<void> {
 
   const catalog = await client.query<{
     public_page_entitlement: boolean;
-    advertising_permissions: boolean;
-    advertising_entitlement: boolean;
     linktree_update_fields: boolean;
     platform_content_permissions: boolean;
     platform_workspace: boolean;
@@ -128,28 +170,12 @@ export async function assertSupportedSchema(client: PoolClient): Promise<void> {
            AND name = 'Public page limit'
            AND unit = 'pages'
       ) AS public_page_entitlement,
-      (
-        SELECT count(*) = 4
-          FROM auth_permissions
-         WHERE permission_key IN (
-                 'business:pages:advertising-access',
-                 'business:advertising:read',
-                 'business:advertising:update',
-                 'business:advertising:publish'
-               )
-           AND status = 'active'
-      ) AS advertising_permissions,
-      EXISTS (
-        SELECT 1
-          FROM billing_entitlements
-         WHERE entitlement_key = 'feature.advertising_page'
-      ) AS advertising_entitlement,
       EXISTS (
         SELECT 1
           FROM auth_permissions
          WHERE permission_key = 'business:linktrees:update'
            AND field_schema ?& ARRAY[
-             'status', 'subtitle_color', 'is_campaign_active', 'is_archived'
+             'status', '${legacyContent ? 'subtitle_color' : 'slogan_color'}', 'is_archived'
            ]
       ) AS linktree_update_fields,
       (
@@ -175,12 +201,6 @@ export async function assertSupportedSchema(client: PoolClient): Promise<void> {
   const missingCatalogEntries = [
     !catalogState?.public_page_entitlement
       ? 'limit.linktrees public-page definition'
-      : null,
-    !catalogState?.advertising_permissions
-      ? 'business:advertising:* permission set'
-      : null,
-    !catalogState?.advertising_entitlement
-      ? 'feature.advertising_page entitlement'
       : null,
     !catalogState?.linktree_update_fields
       ? 'business:linktrees:update field catalog'

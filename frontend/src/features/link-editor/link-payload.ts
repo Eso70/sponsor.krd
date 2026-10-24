@@ -55,14 +55,16 @@ export function normalizeSelectedSocialLinks(
 export function groupSocialLinksByPlatform(links: NormalizedSocialLink[]) {
   const urls: Record<string, string[]> = {};
   const metadata: Record<string, Array<{
+    display_order: number;
     display_name?: string;
     default_message?: string;
     metadata: Record<string, unknown>;
   }>> = {};
 
-  for (const link of links) {
+  for (const [display_order, link] of links.entries()) {
     (urls[link.platform] ||= []).push(link.url);
     (metadata[link.platform] ||= []).push({
+      display_order,
       display_name: link.displayName,
       default_message: link.defaultMessage,
       metadata: link.metadata,

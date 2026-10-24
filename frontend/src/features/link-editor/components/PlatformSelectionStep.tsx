@@ -1,12 +1,11 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { Check } from "lucide-react";
 import { SOCIAL_PLATFORMS } from "../modal-constants";
 import type { SocialLink } from "@/features/link-editor/types";
-import { PlatformBadge } from "@/lib/brand/PlatformVisuals";
-import { Tooltip } from "@/components/shared/Tooltip";
+import { LinktreePlatformButton } from "./LinktreePlatformButton";
 import { getEditorPlatformName, type EditorCopy } from "../editor-copy";
+import { EDITOR_CARD_CLASS } from "@/components/shared/editor-control-styles";
 
 interface PlatformSelectionStepProps {
   copy?: EditorCopy;
@@ -15,69 +14,6 @@ interface PlatformSelectionStepProps {
   touched?: boolean;
   onTogglePlatform: (platformId: string) => void;
 }
-
-// Memoized platform button component
-const PlatformButton = memo(
-  function PlatformButton({
-    platform,
-    isSelected,
-    onToggle,
-    copy,
-  }: {
-    platform: (typeof SOCIAL_PLATFORMS)[0];
-    isSelected: boolean;
-    onToggle: () => void;
-    copy?: EditorCopy;
-  }) {
-    const platformName = copy ? getEditorPlatformName(platform.id, copy) : platform.name;
-    return (
-      <Tooltip
-        content={
-          isSelected ? `${copy?.removePlatform ?? "لابردنی"} ${platformName}` : `${copy?.selectPlatform ?? "دیاریکردنی"} ${platformName}`
-        }
-        side="top"
-      >
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-pressed={isSelected}
-          className={`relative flex w-full flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer ${
-            isSelected
-              ? "theme-soft scale-[1.02] shadow-sm ring-2 ring-[color:var(--theme-primary)]/15"
-              : "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
-          }`}
-        >
-          {isSelected && (
-            <span
-              className="theme-fill absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[var(--theme-ink)]"
-            >
-              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-            </span>
-          )}
-          {/* Fixed box so every platform tile is the same size, whether the brand is
-            a glyph on a fill or a full-color mark that fills the chip itself. */}
-          <PlatformBadge
-            platform={platform.id}
-            className="h-12 w-12 rounded-lg"
-            iconClassName="h-6 w-6"
-          />
-          <span className="text-xs font-medium text-gray-900">
-            {platformName}
-          </span>
-        </button>
-      </Tooltip>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.isSelected === nextProps.isSelected &&
-      prevProps.platform.id === nextProps.platform.id &&
-      prevProps.copy === nextProps.copy
-    );
-  },
-);
-
-PlatformButton.displayName = "PlatformButton";
 
 export const PlatformSelectionStep = memo(function PlatformSelectionStep({
   copy,
@@ -99,19 +35,19 @@ export const PlatformSelectionStep = memo(function PlatformSelectionStep({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <p className="text-xs sm:text-sm text-gray-600 text-center">
+      <p className="text-xs text-slate-500 dark:text-slate-400">
         {copy?.selectPlatformsTitle ?? "پلاتفۆڕمەکان هەڵبژێرە"}
       </p>
       {selectedPlatformOptions.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-          <p className="mb-2 text-xs font-semibold text-slate-600">
+        <div className={`${EDITOR_CARD_CLASS} p-3`}>
+          <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
             {selectedPlatformOptions.length} {copy?.selectedCount ?? "پلاتفۆڕم هەڵبژێردراوە"}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {selectedPlatformOptions.map((platform) => (
               <span
                 key={platform.id}
-                className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600"
+                className="rounded-xl bg-[var(--shared-control-surface)] px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300"
               >
                 {copy ? getEditorPlatformName(platform.id, copy) : platform.name}
               </span>
@@ -119,9 +55,9 @@ export const PlatformSelectionStep = memo(function PlatformSelectionStep({
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {SOCIAL_PLATFORMS.map((platform) => (
-          <PlatformButton
+          <LinktreePlatformButton
             copy={copy}
             key={platform.id}
             platform={platform}

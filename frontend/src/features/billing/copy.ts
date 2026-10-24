@@ -1,7 +1,7 @@
 export const subscriptionCopy = {
   en: {
     title: "Plans & subscription",
-    description: "Compare access, usage limits and billing periods.",
+    comingSoon: "Coming soon",
     monthly: "Monthly",
     yearly: "Yearly",
     month: "month",
@@ -14,7 +14,7 @@ export const subscriptionCopy = {
     templates: "Templates",
     tiktok: "TikTok Pixel & Events API",
     branding: "Remove Sponsor.krd branding",
-    advertising: "Advertising page",
+    
     included: "Included",
     excluded: "Not included",
     renews: "Period ends",
@@ -34,7 +34,7 @@ export const subscriptionCopy = {
   },
   ckb: {
     title: "پلان و بەشداربوون",
-    description: "مۆڵەت، سنووری بەکارهێنان و ماوەی بەشداربوون بەراورد بکە.",
+    comingSoon: "بەم زووانە",
     monthly: "مانگانە",
     yearly: "ساڵانە",
     month: "مانگ",
@@ -47,7 +47,7 @@ export const subscriptionCopy = {
     templates: "قاڵبەکان",
     tiktok: "پیکسەلی تیکتۆک و Events API",
     branding: "لابردنی نیشانەی Sponsor.krd",
-    advertising: "پەڕەی ڕیکلام",
+    
     included: "بەردەستە",
     excluded: "بەردەست نییە",
     renews: "کۆتایی ماوە",
@@ -67,7 +67,7 @@ export const subscriptionCopy = {
   },
   ar: {
     title: "الخطط والاشتراك",
-    description: "قارن الصلاحيات وحدود الاستخدام وفترات الفوترة.",
+    comingSoon: "قريبًا",
     monthly: "شهري",
     yearly: "سنوي",
     month: "شهر",
@@ -80,7 +80,7 @@ export const subscriptionCopy = {
     templates: "القوالب",
     tiktok: "بكسل تيك توك وواجهة الأحداث",
     branding: "إزالة علامة Sponsor.krd",
-    advertising: "صفحة الإعلانات",
+    
     included: "متاح",
     excluded: "غير متاح",
     renews: "نهاية الفترة",

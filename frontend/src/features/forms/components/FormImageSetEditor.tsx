@@ -46,9 +46,6 @@ export function FormImageSetEditor({
       <FormEditorInput
         label={copy.headline}
         value={block.title}
-        placeholder={
-          testimonial ? labels.customerTestimonials : labels.productOfferings
-        }
         maxLength={30}
         showCount
         onChange={(title) => onChange({ title })}
@@ -56,11 +53,6 @@ export function FormImageSetEditor({
       <FormEditorInput
         label={copy.descriptionLabel}
         value={block.text}
-        placeholder={
-          testimonial
-            ? labels.testimonialsDescriptionHint
-            : labels.productsDescriptionHint
-        }
         maxLength={50}
         showCount
         multiline
@@ -191,11 +183,6 @@ export function FormImageSetEditor({
                     : labels.productHeadline
                 }
                 value={active.title}
-                placeholder={
-                  testimonial
-                    ? labels.testimonialHeadlineHint
-                    : labels.productHeadlineHint
-                }
                 maxLength={30}
                 showCount
                 onChange={(title) => update({ title })}
@@ -207,11 +194,6 @@ export function FormImageSetEditor({
                     : labels.productDescription
                 }
                 value={active.description}
-                placeholder={
-                  testimonial
-                    ? labels.testimonialTextHint
-                    : labels.productBenefitsHint
-                }
                 maxLength={100}
                 showCount
                 multiline

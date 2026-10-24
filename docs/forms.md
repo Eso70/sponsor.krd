@@ -1,6 +1,66 @@
 # Forms
 
+## Quantity pricing
+
+Products optionally support standard volume price breaks: each row has a minimum
+quantity and a unit price. The highest qualifying minimum sets the price of every
+unit, without stacking or repeating bundles. For example, base 8,000 IQD, 2+ at
+7,500 IQD and 3+ at 7,000 IQD give totals of 8,000, 15,000 and 21,000. Omitting the
+3+ row keeps the 7,500 rate, so three cost 22,500. Below the first break the base
+price applies. Existing products without breaks retain standard pricing.
+
+Up to 10 breaks are allowed per product, with strictly increasing positive
+quantities (up to 100,000, three decimal places), non-increasing unit prices
+(up to 10,000,000, two decimal places), and no duplicate thresholds. Equal rates
+and zero prices are valid. Incomplete/invalid tiers cannot be saved. Fractional
+quantities retain existing support; currencies remain IQD, USD and EUR.
+
+Business and Platform use FormProductPriceBreaksEditor and the same preview/public
+renderer. Price-break rules are visible only in the editor; previews and public
+forms omit the offer list. Effective unit price, original price and savings still
+update with quantity in all three languages. The optional section does not add independent
+coupon, bundle or stacking rules. Definitions and response snapshots remain in
+the existing JSON documents; no database migration is required.
+
+`@linktree/types/form-product-pricing.cjs` owns validation and integer-minor-unit
+calculation for both applications, with a typed declaration alongside it. The
+backend loads the published owner-scoped definition and accepts quantities only;
+client prices are never trusted. Response rows save effective/base unit prices,
+applied threshold and discount. Historical responses are never repriced; detailed
+response views and CSV exports use those snapshots, including removed products.
+
 ## Scope and implementation plan
+
+The question Required/Optional toggle reuses the shared soft button surface and
+rounded corners. Required uses the shared pressed-state tenant tint; Optional
+uses the neutral surface. Both retain the same compact size and accessible
+pressed-state behavior in Business and Platform editors.
+
+Colored form action buttons use white text and icons in the shared renderer,
+including embedded editor previews, device previews, templates and public forms.
+Their saved solid or gradient background colors remain unchanged; preview size
+does not select a different foreground color.
+
+Product editor name, unit and price inputs use the shared inset control fill to
+remain distinguishable from their softly shaded product card in both themes.
+
+Product prices use the shared Rabar font through FormMoney with isolated Latin
+digits and currency codes. Preview/public product rows separate the unit price,
+quantity and subtotal. Unit price and quantity share one row below the product
+name; quantity has no visible caption, retains its accessible name and uses a
+slightly stronger neutral fill. The estimated total uses a softly accented summary with
+a stronger amount. Saved response details use the same amount hierarchy and
+preserve the submitted price snapshot. Rows wrap on narrow screens and support
+both text directions without changing calculation or currency precision.
+
+FormPreviewSurface owns the language direction and start-aligned text in every
+presentation. Dashboard/modal LTR chrome rules exclude its complete subtree,
+so Kurdish/Arabic editor and template previews match public RTL forms. Explicit
+LTR phone, date and money controls retain their direction inside those forms.
+Product-selection text and saved product answers also declare their language
+direction independently of dashboard chrome. Kurdish/Arabic names, units and
+labels align to the right, including quantity placeholders; numeric entry and
+currency amounts retain isolated LTR notation.
 
 Custom and personal questions share one ordered editor list and drag group in
 both layouts and dashboards. The existing pointer/touch handle, held/target
@@ -23,7 +83,7 @@ Turn the shared Form/Card editor into an owner-scoped publishing and response se
 5. Record accepted submissions and first-party conversions in one database transaction. Expose owner-only response history and real summary statistics.
 6. Verify lifecycle, revision conflicts, tenant isolation, uploads, retries, analytics boundaries and both dashboard configurations. Update legal disclosures and deployment documentation.
 
-Form collection grids and tables show text, status, URLs, traffic and actions without image thumbnails or an image column, including their mobile cards and loading placeholders. Both dashboards share these components; form media remains available in the editor and public renderer.
+Form collection grids show the first enabled saved banner edge-to-edge, with a centered logo overlapping its bottom edge and centered details underneath. Desktop and mobile tables omit banners and retain their compact text presentation. The owner-scoped collection query projects only the first enabled banner image, using the legacy single banner when no carousel image exists. Missing, disabled or failed images use the shared PageListBanner placeholder. Business and Platform dashboards share the same views and matching loading placeholders; full form definitions are still fetched only for editing.
 
 ## Ownership and URLs
 
@@ -222,7 +282,7 @@ Unit and Unit price use the same shared EditorField label spacing so their input
 
 ## Form loading states
 
-Crop code and image decoding have local Suspense/canvas placeholders shaped like the crop workspace, with real localized aspect, blur, reset/zoom, preview and dimension labels. Cancellation stays available while the module loads, including the drawer footer portal. Fullscreen media imports the shared viewer directly, so opening an image does not show a module-loading placeholder or replace the form with a route skeleton. Lazy loading must never bubble to the homepage route fallback. The root loading boundary detects public form URLs, and business/platform route fallbacks recognize the forms workspace. Collection and analytics skeletons keep the correct six metric labels and matching table headers; editor placeholders retain title, Content/Final tabs and section labels. Unknown authored content is represented by placeholders rather than invented field names or zero data. Shared skeleton animation keeps theme and reduced-motion behavior.
+Crop code and image decoding have local Suspense/canvas placeholders shaped like the crop workspace, with real localized aspect, blur, reset/zoom, preview and dimension labels. Cancellation stays available while the module loads, including the drawer footer portal. Fullscreen media imports the shared viewer directly, so opening an image does not show a module-loading placeholder or replace the form with a route skeleton. Lazy loading stays within the relevant form boundary. Public form routes own their loading skeleton, and business/platform route fallbacks recognize the forms workspace. There is no global homepage loading fallback. Collection and analytics skeletons keep the correct six metric labels and matching table headers; editor placeholders retain title, Content/Final tabs and section labels. Unknown authored content is represented by placeholders rather than invented field names or zero data. Shared skeleton animation keeps theme and reduced-motion behavior.
 
 ## Public mobile viewport and amounts
 
@@ -254,3 +314,21 @@ preview completion never emits a submission-success toast, and aborted requests
 and cancelled exports never emit failure/success notifications. Icon-only media
 and export-cancel controls now reuse the tooltip, alongside existing toolbar,
 collection, analytics, preview-navigation and crop controls.
+
+
+## Selected analytics deletion
+
+Forms and Linktrees reuse PageSelection controls, contextual actions, confirmation,
+and bounded per-page deletion requests in both dashboards. Form selection persists
+across collection pagination and resets on scope, query, archive or delete-permission
+changes. Select all reads only matching IDs from the authenticated `/selection`
+endpoint using the exact same escaped search/archive predicate as the list.
+`DELETE /api/forms/:id/analytics` and its Platform equivalent require the form-delete
+capability, resolve the owner server-side and lock the owned form before clearing
+its first-party tracking through UnifiedAnalyticsService. A never-tracked form is
+a successful no-op. Definitions, public links, answers, contacts and submission
+counts remain intact; the existing response-deletion workflow is separate.
+The analytics-event foreign key on submissions uses ON DELETE SET NULL, preserving
+response records. Both list and summary reload after success or partial failure.
+These endpoints require deploying the backend with the frontend; no migration or
+production data rewrite is needed.

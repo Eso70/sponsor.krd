@@ -13,6 +13,10 @@ import {
   Unlink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
@@ -85,9 +89,7 @@ export function PlatformTikTokAdAccountTab() {
     return () => window.clearTimeout(timer);
   }, [saveAccount, t]);
 
-  // Load account from storage
-  useEffect(() => {
-    const loadFromStorage = () => {
+  const loadFromStorage = useCallback(() => {
       try {
         const stored = localStorage.getItem(localStorageKey);
         if (stored) {
@@ -99,9 +101,12 @@ export function PlatformTikTokAdAccountTab() {
       } catch {
         setAccount(null);
       }
-    };
+  }, [localStorageKey]);
+  const { locale } = usePlatformLocale();
+  const refreshing = useRegisterDashboardRefresh("platform-tiktok-ads", loadFromStorage);
 
-    loadFromStorage();
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(loadFromStorage);
 
     const handleUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<TikTokAdAccount | null>;
@@ -113,8 +118,11 @@ export function PlatformTikTokAdAccountTab() {
     };
 
     window.addEventListener(eventName, handleUpdated);
-    return () => window.removeEventListener(eventName, handleUpdated);
-  }, [eventName, localStorageKey]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(eventName, handleUpdated);
+    };
+  }, [eventName, loadFromStorage]);
 
   const handleCopyAdvertiserId = () => {
     if (!account?.advertiserId) return;
@@ -175,7 +183,8 @@ export function PlatformTikTokAdAccountTab() {
   const isConnected = account && account.status === "connected";
 
   return (
-    <DashboardSurface>
+    <DashboardRefreshRegion loading={refreshing} label={platformLoadingCopy[locale].loading}>
+      <DashboardSurface>
       {/* Consistent Page Header matching other tabs */}
       <PageHeader
         icon={Megaphone}
@@ -381,5 +390,6 @@ export function PlatformTikTokAdAccountTab() {
         tone="danger"
       />
     </DashboardSurface>
+      </DashboardRefreshRegion>
   );
 }

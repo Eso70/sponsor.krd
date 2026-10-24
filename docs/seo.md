@@ -10,35 +10,58 @@ A small public availability lookup runs before streaming, providing real 404
 and 503 responses and permanent identifier redirects. It intentionally adds a
 bounded database lookup to preserve HTTP correctness.
 
+Public cache keys are shared by page edits, destination edits and approved page
+mutations. Approved updates/deletions purge old/current identifiers only after
+the database transaction commits. Both business and root-page namespaces are
+cleared, including owners without a subdomain. Failures are logged.
+
 Only configured root and single-label tenant domains are accepted. External
 forwarded-host/subdomain claims do not determine public ownership. Internal
-subdomain headers require the existing proxy secret. Unknown/custom domains
-fail closed until a verified-domain registry is implemented. Canonicals use
+subdomain headers require the existing proxy secret. Verified custom domains use
+the existing registry and selected-host policy; unknown domains fail closed.
+The unselected business hostname returns 404 rather than duplicate content. Canonicals use
 the configured root/app protocol and port, never an arbitrary incoming host.
 `www` redirects to root and identifier aliases redirect to the page's slug.
 
-Search and sharing are fully automatic; neither dashboard exposes a separate
-SEO section. `automaticPageSeo` derives bounded titles from the page name and
+Search and sharing default to automatic behavior. Both dashboards reuse the
+Linktree drawer's optional Search & page details section. `automaticPageSeo`
+uses explicit versioned SEO settings first, then bounded titles from the page name and
 descriptions from distinct, meaningful subtitle/description text. It normalizes
 whitespace, excludes generic contact prompts, and shortens long text at word
 boundaries where possible. Sharing previews and generated images use the same
 content resolver. No external AI service or fabricated business information is
 used.
 
-Indexing requires a page name plus a meaningful subtitle or description.
+Indexing requires a page name plus a meaningful subtitle/description or a
+recognized, visible category other than Other. An explicit versioned noindex
+choice vetoes eligibility, without changing public availability.
 Starter prompts alone never qualify, including when used as a subtitle. The
 same rule governs public robots metadata and backend sitemap SQL; publication,
 archive, and tenant ownership checks still gate public access. Public pages
 allow following links automatically. This is a technical eligibility policy,
 not a ranking score or an indexing guarantee.
 
-Retired `template_config.seo` overrides are ignored on existing pages and
-removed by backend normalization on reads/saves. Existing explicit noindex
-choices therefore no longer override content eligibility. No database rewrite
-or migration is required. Deploy frontend and backend together.
+Retired unversioned `template_config.seo` overrides remain ignored and removed
+by backend normalization. New settings use `{version: 1}` and are sanitized by
+`packages/types/linktree-seo.cjs` on reads, validated on protected writes, and
+stored inside the existing JSONB configuration. No database rewrite or migration
+is required. Deploy frontend and backend together. Existing pages are not
+automatically assigned categories or business facts.
+
+The shared catalog has 16 stable category IDs and optional compatible business
+types, with English, Kurdish and Arabic labels. Category selection appears after
+Headline. Optional details use the existing editor controls; menu, booking,
+website and contact destinations remain ordinary existing Links. One opening
+hours schedule may cover multiple selected weekdays; split schedules are not
+represented. Social preview images use the existing upload/crop pipeline and
+must belong to the page's business, including approval-executed edits. Canonical
+hostnames are never editable SEO fields.
+Authored business details remain editable after changing/clearing a category;
+changing classification does not silently erase content or hide an incomplete
+schedule. Time values must be actual HH:mm strings, never coerced arrays/numbers.
 
 HTML, Open Graph, structured data, and renderer language use the same content
-inference: dominant Latin text is English, Arabic-script text containing Sorani
+preference when explicitly selected, otherwise content inference: dominant Latin text is English, Arabic-script text containing Sorani
 markers is Kurdish, and other Arabic-script text is Arabic. Text without a
 recognized writing system defaults to Kurdish. This is a deterministic
 heuristic; very short, ambiguous or mixed-language content may be classified
@@ -46,8 +69,12 @@ imperfectly. Saved content is preserved; no translated names or fabricated
 hreflang alternates are emitted.
 
 Public pages output full metadata and safe WebPage JSON-LD describing visible
-content. No local-business subtype, address, opening hours, rating or geographic
-claim is invented. Sponsor.krd Organization data belongs only to root homepage.
+content. Categorized pages add Organization/Person mainEntity; personal profiles
+use ProfilePage. Other/custom categories stay WebPage without an assumed entity.
+LocalBusiness subtypes require both supplied street and city.
+Optional address, opening hours, cuisine, telephone and social URLs are emitted
+only from actual supplied data. Category/details render visibly in every template.
+No rating or geographic claim is invented. Sponsor.krd Organization data belongs only to root homepage.
 JSON-LD escapes script terminators and uses the existing CSP nonce.
 
 ## Discovery and sharing
@@ -69,11 +96,19 @@ queries remain one-based under the global request-boundary validator.
   50,000-entry limit. Responses are not globally cached.
 - `/linktree/<slug>/share-image` produces a 1200×630 PNG from actual page name
   and subtitle. It performs no arbitrary remote image fetches and caches the
-  returned image for five minutes by its full host/path URL.
+  returned image for five minutes by its full host/path URL. Generated image
+  metadata includes a page revision query to refresh previews after edits.
+  Long titles use a smaller font. Rendering completes before response headers;
+  font/renderer failures are logged and return a noncached 503 instead of an
+  interrupted image stream. Failed font loads can retry. Custom social images
+  retain their real dimensions rather than declaring generated PNG dimensions.
 - The generated `public/fonts/KurdishFont-share.ttf` retains Rabar glyphs,
   metadata, and shaping rules with extension lookups flattened for the image
   renderer. `scripts/prepare-share-font.py` reproduces it with FontTools;
   ordinary browser fonts are unchanged. Runtime servers need no Python.
+  ShareImageText keeps Latin runs intact and lays out Arabic words in reading
+  order for the bundled renderer. This artwork workaround is not a full Unicode
+  bidi implementation; explicit page language and browser direction remain native.
 - Template destination links and footer links are actual anchors. Normal
   clicks preserve tracking and WhatsApp dialogs; modifier clicks and navigation
   without JavaScript retain the destination. Images retain dimensions/alt text.
@@ -98,6 +133,11 @@ Run `node frontend/scripts/seo-smoke.mjs` from the repository root. It starts a
 disposable fixture API and a separate Next dev preview on ports 4313/4312,
 uses `.next/seo-smoke` output, and stops only its own processes. The owner's
 normal development server and database are untouched.
+For an isolated production build use `SEO_VERIFY=1` with the frontend build;
+output goes to `.next/seo-verify`. Backend verification uses
+`tsc -p tsconfig.build.json --outDir dist-seo-verify --incremental false`.
+`tsconfig.seo-verify.json` checks frontend sources without mutable dev-generated
+route files. These directories are disposable verification output, not deployment artifacts.
 
 The HTTP suite verifies two tenants with identical slugs, crawler/ordinary user
 agents, raw HTML identity/H1/metadata/JSON-LD, real anchors, robots, sitemaps,
@@ -183,3 +223,31 @@ containers cannot clip the explanation or policy links. Browser tab titles use
 the form name; tab icons use the uploaded introduction logo, then the current
 owner's public business logo, then the shared placeholder. Shared list dropdowns
 use compact neutral selection/hover states with reduced-motion support.
+
+## Max plan and basic SEO
+
+Linktree Search & page details, classification, custom metadata, social images,
+manual language and business details are Max-only. The Business drawer reads
+its live subscription manifest; the internal Platform workspace retains advanced
+controls. Protected create/update operations check the active subscription window
+server-side before accepting changed versioned SEO, including execution of previously approved field changes. An unchanged or omitted SEO
+object does not prevent ordinary page edits or erase saved settings.
+
+All plans retain automatic titles/descriptions, canonical URLs, ordinary sharing
+images, content-derived language, basic WebPage metadata and content-based sitemap
+eligibility. Public business reads apply live plan access after reading the cached
+source body, so expiry/downgrade disables customizations immediately and upgrading
+restores them. Stored advanced data is never deleted on plan changes. A saved
+noindex exclusion remains respected on every plan. Sitemap category-based
+eligibility requires live Max access and matches the effective public metadata.
+No schema migration or destructive data rewrite is required.
+
+Sitemap eligibility SQL uses the current persisted Linktree headline/slogan columns, while API projections keep their existing name/subtitle compatibility aliases.
+
+The profile header shows the business category and location as compact icon facts.
+Extended business facts (services, cuisine, service area and opening hours) are
+available in a native Business details disclosure below the primary contact links.
+It is collapsed initially to prioritize destinations, with ordinary details/summary
+interaction and the same factual content available to users and crawlers.
+
+Browser tab/title and favicon routing follow the complete [tab branding audit](tab-branding.md). Public titles stay content-led, private routes use localized section-first owner titles, and icon generation never fetches arbitrary remote images.

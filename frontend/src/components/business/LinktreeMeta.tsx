@@ -46,7 +46,6 @@ export interface LinktreeMetaBadgesProps {
     | "whatsapp_modal_enabled"
   > & {
     id?: string;
-    is_campaign_active?: boolean;
     is_archived?: boolean;
   };
   /**
@@ -56,82 +55,8 @@ export interface LinktreeMetaBadgesProps {
   showAgeBadge?: boolean;
   showTemplate?: boolean;
   className?: string;
-  onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
-  hideCampaignBadge?: boolean;
   listCopy?: Partial<LinktreeListCopy>;
 }
-
-export interface LinktreeCampaignButtonProps {
-  id?: string;
-  isActive?: boolean;
-  onToggle?: (id: string, isCampaignActive: boolean) => void;
-  className?: string;
-  listCopy?: Partial<LinktreeListCopy>;
-}
-
-export const LinktreeCampaignButton = memo(function LinktreeCampaignButton({
-  id,
-  isActive = false,
-  onToggle,
-  className = "",
-  listCopy,
-}: LinktreeCampaignButtonProps) {
-  const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
-  if (!onToggle && !isActive) return null;
-
-  const tooltipText = isActive
-    ? onToggle
-      ? labels.campaignDisable
-      : labels.campaignActive
-    : labels.campaignInactive;
-
-  const pillContent = (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9.5px] font-medium leading-none transition-all duration-200 select-none ${
-        isActive
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700/50 dark:bg-emerald-950/40 dark:text-emerald-300"
-          : "border-slate-200 bg-white/90 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-gray-400"
-      } ${
-        onToggle
-          ? isActive
-            ? "cursor-pointer hover:bg-emerald-100/80 dark:hover:bg-emerald-900/50"
-            : "cursor-pointer hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-gray-200"
-          : "cursor-default"
-      } ${className}`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-          isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-gray-600"
-        }`}
-      />
-      <span>{isActive ? labels.active : labels.campaign}</span>
-    </span>
-  );
-
-  if (!onToggle || !id) {
-    return (
-      <Tooltip content={tooltipText} side="top">
-        {pillContent}
-      </Tooltip>
-    );
-  }
-
-  return (
-    <Tooltip content={tooltipText} side="top">
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(id, !isActive);
-        }}
-        className="cursor-pointer"
-        aria-label={listCopy ? tooltipText : isActive ? "Campaign active" : "Campaign inactive"}
-      >
-        {pillContent}
-      </button>
-    </Tooltip>
-  );
-});
 
 export interface PageListTrafficLabels {
   column: string;
@@ -155,8 +80,6 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
   showAgeBadge = false,
   showTemplate = false,
   className = "",
-  onToggleCampaign,
-  hideCampaignBadge = false,
   listCopy,
 }: LinktreeMetaBadgesProps) {
   const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
@@ -164,7 +87,6 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
   const templateName = showTemplate ? getTemplateName(item.template_key) : null;
   const isInactive = item.status === "inactive";
   const hasWhatsappModal = item.whatsapp_modal_enabled === true;
-  const isCampaignActive = !!item.is_campaign_active;
   const isArchived = !!item.is_archived;
 
   if (
@@ -173,8 +95,7 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
     !templateName &&
     !isInactive &&
     !hasWhatsappModal &&
-    !isArchived &&
-    (hideCampaignBadge || (!isCampaignActive && !onToggleCampaign))
+    !isArchived
   )
     return null;
 
@@ -237,15 +158,6 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
         </Tooltip>
       )}
 
-      {/* Campaign toggle badge rendered at the end, not first */}
-      {!hideCampaignBadge && !isArchived && (
-        <LinktreeCampaignButton
-          id={item.id}
-          isActive={isCampaignActive}
-          onToggle={onToggleCampaign}
-          listCopy={listCopy}
-        />
-      )}
     </div>
   );
 });
@@ -264,11 +176,11 @@ export const LinktreeMetaField = memo(function LinktreeMetaField({
 }: LinktreeMetaFieldProps) {
   return (
     <div className={`min-w-0 ${className}`}>
-      <span className="block text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+      <span className="mb-1 block text-[10px] font-medium text-gray-400">
         {label}
       </span>
       <Tooltip content={value} side="top">
-        <span className="block truncate text-[11px] text-gray-700 dark:text-gray-300">
+        <span className="block truncate text-[11px] font-medium text-gray-700 dark:text-gray-300">
           {value}
         </span>
       </Tooltip>

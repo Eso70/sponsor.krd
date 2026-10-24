@@ -7,6 +7,7 @@ import {
   getPlatformColors,
 } from "@/components/public/LinktreeButtons";
 import { platformBorder, platformTextStyle } from "@/lib/brand/platform-brands";
+import { readableInk } from "@/lib/utils/parse-website-color";
 import {
   GpsLocationDisplay,
   splitGpsLinks,
@@ -23,7 +24,6 @@ import {
   STANDARD_TEMPLATE_HEADER_CLASSES,
   TemplateActionButton,
   TemplateActionButtonList,
-  TemplateFooter,
   TemplateHeader,
   TemplateLinkLabel,
   TemplateViewportLayout,
@@ -152,7 +152,10 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
             {linksWithColors.map(({ link, colors }) => {
               const customColor = link.metadata?.custom_color as
                 string | undefined;
-              const labelStyle = platformTextStyle(link.platform, customColor);
+              const labelStyle = {
+                ...platformTextStyle(link.platform, customColor),
+                ...(customColor?.trim() ? { color: readableInk(customColor) } : {}),
+              };
               const edge = platformBorder(link.platform, customColor);
               return (
                 <TemplateActionButton
@@ -169,7 +172,7 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
                       link.default_message,
                     )
                   }
-                  className={`group relative overflow-hidden rounded-2xl text-center backdrop-blur-sm shadow-lg transition-all duration-200 active:scale-[0.98] hover:shadow-xl border border-white/10 ${STANDARD_TEMPLATE_BUTTON_SIZE_CLASS}`}
+                  className={`group relative flex items-center justify-center overflow-hidden rounded-2xl text-center backdrop-blur-sm shadow-lg transition-shadow duration-200 hover:shadow-xl motion-reduce:transition-none border border-white/10 ${STANDARD_TEMPLATE_BUTTON_SIZE_CLASS}`}
                   initial={false}
                   animate={false}
                   whileHover={undefined}
@@ -182,19 +185,20 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
                   }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="relative z-10 flex items-center justify-center gap-3">
+                  <div className="relative z-10 grid w-full min-w-0 grid-cols-[1.25rem_minmax(0,1fr)_1.25rem] items-center gap-3">
                     <div className="flex h-5 w-5 shrink-0 items-center justify-center">
                       {getPlatformIcon(
                         link.platform,
-                        "h-5 w-5 text-white",
+                        "h-5 w-5 text-current",
                         (link.metadata as Record<string, string>)?.custom_icon,
+                        customColor,
                       )}
                     </div>
                     <TemplateLinkLabel
                       link={link}
-                      className="min-w-0 text-left"
+                      className="min-w-0 text-center"
                       titleClassName="block truncate text-sm font-semibold leading-tight sm:text-base"
-                      detailsClassName="mt-0.5 flex min-w-0 items-baseline gap-1 leading-tight"
+                      detailsClassName="mt-0.5 flex min-w-0 items-baseline justify-center gap-1 leading-tight"
                       platformClassName="min-w-0 truncate font-sans text-xs opacity-70"
                     />
                   </div>
@@ -210,16 +214,6 @@ export const SpotlightTemplate = memo(function SpotlightTemplate({
             onOpen={onLinkClick}
           />
         </>
-      }
-      footer={
-        <TemplateFooter
-          footerText={linktree.footer_text}
-          footerPhone={linktree.footer_phone}
-          footerButtonColor={linktree.template_config?.footer_button_color}
-          footerHidden={linktree.footer_hidden ?? false}
-          textColor={textColor}
-          textSecondaryColor={textSecondaryColor}
-        />
       }
     />
   );

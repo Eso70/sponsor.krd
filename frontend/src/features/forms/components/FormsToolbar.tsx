@@ -1,9 +1,11 @@
+import type { ReactNode } from "react";
 import { ManagementToolbar } from "@/components/shared/ManagementToolbar";
 import type { FormsCopy } from "../forms-copy";
 
 export type FormsFilter = "active" | "archived";
 export function FormsToolbar({
   copy,
+  selectionActions,
   busy = false,
   canCreate = true,
   filter,
@@ -11,13 +13,14 @@ export function FormsToolbar({
   query,
   onSearch,
   onClear,
-  onRefresh,
   onCreate,
   viewMode,
   onViewModeChange,
   isSearchModalOpen,
+  accentMode = "tenant",
 }: {
   copy: FormsCopy;
+  selectionActions?: ReactNode;
   busy?: boolean;
   canCreate?: boolean;
   filter: FormsFilter;
@@ -25,14 +28,15 @@ export function FormsToolbar({
   query: string;
   onSearch: () => void;
   onClear: () => void;
-  onRefresh: () => void;
   onCreate: () => void;
   viewMode: "grid" | "table";
   onViewModeChange: (mode: "grid" | "table") => void;
   isSearchModalOpen: boolean;
+  accentMode?: "tenant" | "platform";
 }) {
   return (
     <ManagementToolbar
+      accentMode={accentMode}
       labels={{
         clearSearch: copy.clearSearch,
         searchTooltip: `${copy.search} (Ctrl+K)`,
@@ -44,11 +48,10 @@ export function FormsToolbar({
         archived: copy.archived,
         gridView: copy.gridView,
         tableView: copy.tableView,
-        refreshPages: copy.refresh,
-        refresh: copy.refresh,
         createTooltip: copy.create,
         create: copy.create,
       }}
+      leadingAction={selectionActions}
       searchQuery={query}
       isSearchModalOpen={isSearchModalOpen}
       viewMode={viewMode}
@@ -56,8 +59,6 @@ export function FormsToolbar({
       onSearchAction={query.trim() ? onClear : onSearch}
       archiveFilter={filter}
       onArchiveFilterChange={onFilter}
-      onRefresh={onRefresh}
-      isRefreshing={busy}
       createDisabled={busy || !canCreate}
       onCreate={onCreate}
     />

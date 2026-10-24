@@ -7,6 +7,7 @@ interface CheckboxFieldProps {
   onChange: (checked: boolean) => void;
   label: string;
   description?: string;
+  hideLabel?: boolean;
   disabled?: boolean;
   compact?: boolean;
   bare?: boolean;
@@ -21,6 +22,7 @@ export function CheckboxField({
   onChange,
   label,
   description,
+  hideLabel = false,
   disabled = false,
   compact = false,
   bare = false,
@@ -30,7 +32,7 @@ export function CheckboxField({
 }: CheckboxFieldProps) {
   return (
     <label
-      className={`group flex cursor-pointer items-center gap-3 transition ${bare ? "" : `rounded-xl border ${compact ? "p-2.5" : "p-3.5"} ${checked ? "theme-soft" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.02] dark:hover:bg-white/5"}`} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+      className={`group flex cursor-pointer items-center gap-3 transition ${bare ? "" : `rounded-xl border ${compact ? "p-2.5" : "p-3.5"} border-transparent bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.03] dark:hover:bg-white/5`} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
     >
       <input
         type="checkbox"
@@ -43,16 +45,20 @@ export function CheckboxField({
       />
       <span
         aria-hidden="true"
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 ${checked ? "theme-fill border-transparent text-[var(--theme-ink)]" : colorMode === "inherit" ? "bg-transparent text-transparent" : "border-slate-300 bg-white text-transparent dark:border-white/20 dark:bg-[#161B22]"}`}
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 ${checked ? "theme-fill border-transparent text-white" : colorMode === "inherit" ? "bg-transparent text-transparent" : "border-slate-300 bg-white text-transparent dark:border-white/20 dark:bg-[#161B22]"}`}
         style={
           colorMode === "inherit" && !checked
             ? { borderColor: "var(--checkbox-border, currentColor)" }
             : undefined
         }
       >
-        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+        <Check
+          className="h-3.5 w-3.5"
+          style={checked ? { color: "#ffffff" } : undefined}
+          strokeWidth={3}
+        />
       </span>
-      <span className="min-w-0">
+      <span className={hideLabel ? "sr-only" : "min-w-0"}>
         <span
           className={`block text-xs font-bold ${colorMode === "inherit" ? "text-inherit" : "text-slate-700 dark:text-slate-200"}`}
         >

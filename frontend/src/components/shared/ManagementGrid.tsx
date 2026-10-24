@@ -7,6 +7,7 @@ import {
   type ManagementTablePagination,
 } from "@/components/shared/ManagementTable";
 import type { TablePaginationCopy } from "@/components/shared/TablePagination";
+import { ManagementGridLayout } from "./ManagementGridLayout";
 
 interface ManagementGridProps<T> {
   data: T[];
@@ -34,36 +35,21 @@ export function ManagementGrid<T>({
   desktopColumns = 3,
   className = "",
 }: ManagementGridProps<T>) {
-  const { visibleData, footer } = useManagementPagination(data, pagination, paginationCopy);
-
-  const cellBorders = (index: number) => {
-    const total = visibleData.length;
-    const lastTwoRowStart = total - (total % 2 || 2);
-    const lastThreeRowStart = total - (total % 3 || 3);
-    const mobile = index < total - 1 ? "border-b" : "border-b-0";
-    const twoColumns = `${index % 2 === 0 ? "lg:border-r" : "lg:border-r-0"} ${index < lastTwoRowStart ? "lg:border-b" : "lg:border-b-0"}`;
-    const threeColumns =
-      desktopColumns === 3
-        ? `${index % 3 === 2 ? "xl:border-r-0" : "xl:border-r"} ${index < lastThreeRowStart ? "xl:border-b" : "xl:border-b-0"}`
-        : "";
-    return `${mobile} ${twoColumns} ${threeColumns}`;
-  };
+  const { visibleData, footer } = useManagementPagination(
+    data,
+    pagination,
+    paginationCopy,
+  );
 
   return (
-    <div className={className} dir="ltr">
-      <div
-        className={`grid grid-cols-1 lg:grid-cols-2 ${desktopColumns === 3 ? "xl:grid-cols-3" : ""}`}
-      >
-        {visibleData.map((item, index) => (
-          <div
-            key={getItemKey(item)}
-            className={`min-w-0 border-slate-100 dark:border-white/5 ${cellBorders(index)}`}
-          >
-            {renderItem(item)}
-          </div>
-        ))}
-      </div>
-      {footer}
-    </div>
+    <ManagementGridLayout
+      className={className}
+      desktopColumns={desktopColumns}
+      footer={footer}
+      items={visibleData.map((item) => ({
+        key: getItemKey(item),
+        content: renderItem(item),
+      }))}
+    />
   );
 }

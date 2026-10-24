@@ -1,8 +1,13 @@
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
+import { assertLinktreeSeoPlan } from '../common/linktree-seo';
+import { normalizeLinktreeContent } from '../linktrees/linktree-content';
+import type { UpdateLinktreeDto } from '../linktrees/dto/update-linktree.dto';
 import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -14,6 +19,14 @@ import { PERMISSION_BY_KEY, type PermissionKey } from './capabilities';
 import { AuthorizationService } from './authorization.service';
 import { SecretCryptoService } from './secret-crypto.service';
 import { StorageService } from '../storage/storage.service';
+import {
+  LINKTREE_BANNER_KEY,
+  readLinktreeBanner,
+} from '@linktree/types/linktree-banner.cjs';
+import { assertLinktreeBannerOwnership } from '../common/linktree-banner';
+import { publicLinktreeCacheKeys } from '../common/root-public-cache';
+import { RedisService } from '../redis/redis.service';
+import { describeError } from '../common/describe-error';
 
 const SECRET_FIELDS = new Set([
   'events_token',
@@ -25,11 +38,13 @@ const SECRET_FIELDS = new Set([
 
 @Injectable()
 export class ApprovalService {
+  private readonly logger = new Logger(ApprovalService.name);
   constructor(
     private readonly database: DatabaseService,
     private readonly authorization: AuthorizationService,
     private readonly crypto: SecretCryptoService,
     private readonly storage: StorageService,
+    private readonly redis: RedisService,
   ) {}
 
   async create(input: {
@@ -198,6 +213,7 @@ export class ApprovalService {
           businessId: row.business_id,
           cleanup: row.requested_changes,
           claim: null,
+          cacheKeys: [] as string[],
         };
       }
 
@@ -232,6 +248,8 @@ export class ApprovalService {
       }
 
       let cleanup: unknown = null;
+      let previousTemplateConfig: unknown;
+      let cacheKeys: string[] = [];
       if (row.permission_key === 'business:profile:update') {
         const previous = await client.query(
           `SELECT logo,favicon,default_avatar FROM business_branding
@@ -245,12 +263,28 @@ export class ApprovalService {
           row.permission_key,
         )
       ) {
-        const previous = await client.query(
-          `SELECT image,template_config FROM linktrees
-           WHERE id=$1::uuid AND business_id=$2::uuid`,
+        const previous = await client.query<{
+          image: string | null;
+          template_config: unknown;
+          uid: string;
+          seo_name: string | null;
+          subdomain: string | null;
+        }>(
+          `SELECT lt.logo AS image,lt.template_config,lt.uid,lt.seo_name,b.subdomain
+           FROM linktrees lt JOIN businesses b ON b.id=lt.business_id
+           WHERE lt.id=$1::uuid AND lt.business_id=$2::uuid`,
           [row.resource_id, row.business_id],
         );
         cleanup = previous.rows[0];
+        const page = previous.rows[0];
+        previousTemplateConfig = page?.template_config;
+        if (page)
+          cacheKeys = publicLinktreeCacheKeys(
+            page.subdomain,
+            page.uid,
+            page.seo_name,
+            this.optionalString(changes.seo_name),
+          );
       }
 
       await this.executeApprovedMutation(client, {
@@ -258,6 +292,7 @@ export class ApprovalService {
         permission: row.permission_key,
         resourceId: row.resource_id,
         changes,
+        previousTemplateConfig,
       });
       await client.query(
         `UPDATE permission_approval_requests
@@ -288,8 +323,17 @@ export class ApprovalService {
         businessId: row.business_id,
         cleanup,
         claim: changes,
+        cacheKeys,
       };
     });
+    // Purge only after the transaction commits, before cleanup can fail.
+    try {
+      await Promise.all(result.cacheKeys.map((key) => this.redis.del(key)));
+    } catch (error) {
+      this.logger.warn(
+        `Failed to clear approved public page cache: ${describeError(error)}`,
+      );
+    }
     if (result.claim) {
       await this.storage.claimBusinessAssets(result.businessId, result.claim);
     }
@@ -304,6 +348,7 @@ export class ApprovalService {
       permission: PermissionKey;
       resourceId: string | null;
       changes: Record<string, unknown>;
+      previousTemplateConfig?: unknown;
     },
   ): Promise<void> {
     if (input.permission === 'business:profile:update') {
@@ -349,8 +394,8 @@ export class ApprovalService {
       await client.query(
         `INSERT INTO business_defaults
           (business_id,footer_text,footer_phone,template_key,background_color,
-           footer_hidden,whatsapp_enabled)
-         VALUES ($1::uuid,$2,$3,$4,$5,$6,$7)
+           footer_hidden,whatsapp_enabled,background_pattern)
+         VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$14)
          ON CONFLICT (business_id) DO UPDATE SET
            footer_text=CASE WHEN $8 THEN EXCLUDED.footer_text ELSE business_defaults.footer_text END,
            footer_phone=CASE WHEN $9 THEN EXCLUDED.footer_phone ELSE business_defaults.footer_phone END,
@@ -358,6 +403,7 @@ export class ApprovalService {
            background_color=CASE WHEN $11 THEN EXCLUDED.background_color ELSE business_defaults.background_color END,
            footer_hidden=CASE WHEN $12 THEN EXCLUDED.footer_hidden ELSE business_defaults.footer_hidden END,
            whatsapp_enabled=CASE WHEN $13 THEN EXCLUDED.whatsapp_enabled ELSE business_defaults.whatsapp_enabled END,
+           background_pattern=CASE WHEN $15 THEN EXCLUDED.background_pattern ELSE business_defaults.background_pattern END,
            updated_at=NOW()`,
         [
           input.businessId,
@@ -373,6 +419,8 @@ export class ApprovalService {
           Object.hasOwn(input.changes, 'default_background_color'),
           Object.hasOwn(input.changes, 'default_footer_hidden'),
           Object.hasOwn(input.changes, 'default_whatsapp_enabled'),
+          resolveNewPagePattern(input.changes.default_background_pattern),
+          Object.hasOwn(input.changes, 'default_background_pattern'),
         ],
       );
       return;
@@ -542,24 +590,65 @@ export class ApprovalService {
       return;
     }
     if (input.permission === 'business:linktrees:update' && input.resourceId) {
+      const normalizedContent = normalizeLinktreeContent(
+        input.changes as UpdateLinktreeDto,
+      );
       const columns: Record<string, string> = {
-        name: 'name',
-        subtitle: 'subtitle',
+        headline: 'headline',
+        slogan: 'slogan',
+        slogan_color: 'slogan_color',
+        logo: 'logo',
+        description: 'description',
+        name: 'headline',
+        subtitle: 'slogan',
+        subtitle_color: 'slogan_color',
         seo_name: 'seo_name',
-        image: 'image',
+        image: 'logo',
         background_color: 'background_color',
         footer_text: 'footer_text',
         footer_phone: 'footer_phone',
         footer_hidden: 'footer_hidden',
       };
       const assignments: string[] = [];
+      const assignedColumns = new Set<string>();
       const parameters: unknown[] = [input.resourceId, input.businessId];
       for (const [field, column] of Object.entries(columns)) {
-        if (!Object.hasOwn(input.changes, field)) continue;
-        parameters.push(input.changes[field]);
+        if (!Object.hasOwn(input.changes, field) || assignedColumns.has(column))
+          continue;
+        assignedColumns.add(column);
+        parameters.push(
+          column === 'headline' ? normalizedContent.name : input.changes[field],
+        );
         assignments.push(`${column}=$${parameters.length}`);
       }
       if (Object.hasOwn(input.changes, 'template_config')) {
+        const submittedConfig = input.changes.template_config;
+        if (
+          submittedConfig &&
+          typeof submittedConfig === 'object' &&
+          !Array.isArray(submittedConfig)
+        ) {
+          const config = submittedConfig as Record<string, unknown>;
+          if (config[LINKTREE_BANNER_KEY] !== undefined) {
+            config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
+              config[LINKTREE_BANNER_KEY],
+            );
+          }
+          await assertLinktreeBannerOwnership(
+            this.storage,
+            input.businessId,
+            config,
+          );
+          const previous = input.previousTemplateConfig;
+          await assertLinktreeSeoPlan(
+            client,
+            input.businessId,
+            config,
+            previous && typeof previous === 'object' && !Array.isArray(previous)
+              ? (previous as Record<string, unknown>)
+              : undefined,
+          );
+        }
         parameters.push(JSON.stringify(input.changes.template_config || {}));
         assignments.push(`template_config=$${parameters.length}::jsonb`);
         const config = input.changes.template_config;

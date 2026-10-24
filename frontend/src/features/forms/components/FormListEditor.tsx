@@ -36,7 +36,6 @@ export function FormListEditor({
       <FormEditorInput
         label={copy.headline}
         value={block.title}
-        placeholder={faq ? labels.faq : labels.stepsHeadlineHint}
         maxLength={30}
         showCount
         onChange={(title) => onChange({ title })}

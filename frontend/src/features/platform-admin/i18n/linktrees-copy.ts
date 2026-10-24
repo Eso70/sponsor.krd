@@ -4,7 +4,7 @@ type PlatformLinktreesCopy = Record<
   "description" | "searchEmpty" | "searchEmptyDescription" | "empty" |
   "emptyDescription" | "loadFailed" | "editLoadFailed" | "updated" |
   "created" | "saveFailed" | "archived" | "restored" |
-  "campaignEnabled" | "campaignDisabled" | "statusEnabled" |
+  "statusEnabled" |
   "statusDisabled" | "statusFailed" | "clearSuccess" | "clearFailed" |
   "clearTitle" | "clearConfirm" | "clearing" | "cancel" | "close" |
   "clearQuestion" | "deleteTitle" | "deleteQuestion" |
@@ -16,7 +16,7 @@ type PlatformLinktreesCopy = Record<
 
 export const platformLinktreesCopy: Record<PlatformLocale, PlatformLinktreesCopy> = {
   en: {
-    description: "Create and manage the platform's public Linktree pages at sponsor.krd/linktree/name.", searchEmpty: "No results for your search", searchEmptyDescription: "Try another term or clear the search.", empty: "No platform Linktrees yet", emptyDescription: "Create the first Linktree on the main domain.", loadFailed: "Could not load Linktree pages", editLoadFailed: "Could not load the Linktree page", updated: "Linktree updated", created: "Linktree created", saveFailed: "Could not save the Linktree", archived: "Page archived", restored: "Page restored from archive", campaignEnabled: "Page enabled for campaign", campaignDisabled: "Campaign disabled for page", statusEnabled: "Page enabled", statusDisabled: "Page disabled", statusFailed: "Could not change page status", clearSuccess: "All Linktree analytics cleared", clearFailed: "Could not clear all analytics", clearTitle: "Clear all analytics", clearConfirm: "Yes, clear all", clearing: "Clearing...", cancel: "Cancel", close: "Close", clearQuestion: "Are you sure you want to clear all views and clicks for Linktree pages? This cannot be undone.", deleteTitle: "Delete Linktree", deleteQuestion: "Are you sure you want to delete", thisPage: "this page", deleteConsequence: "Its public link will be permanently removed.", deleteSuccess: "Linktree deleted", deleteFailed: "Could not delete Linktree", confirmDelete: "Delete", deleting: "Deleting...", editorLoading: "Loading Linktree editor", editorInfoLoading: "Loading Linktree details", analyticsLoading: "Loading page analytics", analyticsDataLoading: "Loading page analytics data",
+    description: "Create and manage the platform's public Linktree pages at sponsor.krd/linktree/name.", searchEmpty: "No results for your search", searchEmptyDescription: "Try another term or clear the search.", empty: "No platform Linktrees yet", emptyDescription: "Create the first Linktree on the main domain.", loadFailed: "Could not load Linktree pages", editLoadFailed: "Could not load the Linktree page", updated: "Linktree updated", created: "Linktree created", saveFailed: "Could not save the Linktree", archived: "Page archived", restored: "Page restored from archive", statusEnabled: "Page enabled", statusDisabled: "Page disabled", statusFailed: "Could not change page status", clearSuccess: "All Linktree analytics cleared", clearFailed: "Could not clear all analytics", clearTitle: "Clear all analytics", clearConfirm: "Yes, clear all", clearing: "Clearing...", cancel: "Cancel", close: "Close", clearQuestion: "Are you sure you want to clear all views and clicks for Linktree pages? This cannot be undone.", deleteTitle: "Delete Linktree", deleteQuestion: "Are you sure you want to delete", thisPage: "this page", deleteConsequence: "Its public link will be permanently removed.", deleteSuccess: "Linktree deleted", deleteFailed: "Could not delete Linktree", confirmDelete: "Delete", deleting: "Deleting...", editorLoading: "Loading Linktree editor", editorInfoLoading: "Loading Linktree details", analyticsLoading: "Loading page analytics", analyticsDataLoading: "Loading page analytics data",
   },
   ckb: {
     description: "پەڕە گشتییەکانی پلاتفۆرم دروست و بەڕێوە ببە لە sponsor.krd/linktree/name.",
@@ -29,7 +29,7 @@ export const platformLinktreesCopy: Record<PlatformLocale, PlatformLinktreesCopy
     updated: "پەڕەی لینکتری نوێ کرایەوە", created: "پەڕەی لینکتری دروست کرا",
     saveFailed: "پاشەکەوتکردنی پەڕەی لینکتری سەرکەوتوو نەبوو",
     archived: "پەڕەکە ئەرشیفکرا", restored: "پەڕەکە لە ئەرشیف گەڕێندرایەوە",
-    campaignEnabled: "پەڕەکە بۆ کەمپین چالاککرا", campaignDisabled: "پەڕەکە لە کەمپین لابرا",
+    
     statusEnabled: "پەڕەکە چالاککرایەوە", statusDisabled: "پەڕەکە ناچالاککرا",
     statusFailed: "گۆڕینی دۆخی پەڕە سەرکەوتوو نەبوو",
     clearSuccess: "هەموو ئامارەکانی لینکتری پاککرانەوە",
@@ -51,7 +51,7 @@ export const platformLinktreesCopy: Record<PlatformLocale, PlatformLinktreesCopy
     loadFailed: "تعذّر تحميل صفحات الروابط", editLoadFailed: "تعذّر تحميل صفحة الروابط",
     updated: "تم تحديث صفحة الروابط", created: "تم إنشاء صفحة الروابط",
     saveFailed: "تعذّر حفظ صفحة الروابط", archived: "تمت أرشفة الصفحة", restored: "تمت استعادة الصفحة من الأرشيف",
-    campaignEnabled: "تم تفعيل الصفحة للحملة", campaignDisabled: "تم إيقاف الحملة على الصفحة",
+    
     statusEnabled: "تم تفعيل الصفحة", statusDisabled: "تم إيقاف الصفحة", statusFailed: "تعذّر تغيير حالة الصفحة",
     clearSuccess: "تم مسح جميع إحصاءات صفحات الروابط", clearFailed: "تعذّر مسح جميع الإحصاءات",
     clearTitle: "مسح جميع الإحصاءات", clearConfirm: "نعم، امسح الكل",

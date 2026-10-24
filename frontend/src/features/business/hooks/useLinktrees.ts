@@ -1,15 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { sortLinktreesForDashboard } from "@/features/link-editor/linktree-list-order";
+export { sortLinktreesForDashboard } from "@/features/link-editor/linktree-list-order";
 import type { BusinessLinktreeSummary as Linktree } from "@linktree/types";
-
-/**
- * The business default page is pinned to the top of the dashboard list. Legacy
- * rows are only identifiable by the reserved `id` uid, so both markers count.
- */
-function isDefaultLinktree(item: Linktree): boolean {
-  return item.is_default === true || item.uid === "id";
-}
 
 /**
  * The backend demotes the previous default whenever another page is saved as
@@ -24,27 +19,13 @@ function withSingleDefault(items: Linktree[], defaultId: string): Linktree[] {
   );
 }
 
-export function sortLinktreesForDashboard(items: Linktree[]): Linktree[] {
-  return [...items].sort((a, b) => {
-    const aIsDefault = isDefaultLinktree(a);
-    const bIsDefault = isDefaultLinktree(b);
-    if (aIsDefault !== bIsDefault) return aIsDefault ? -1 : 1;
-
-    const aIsCampaign = !!a.is_campaign_active;
-    const bIsCampaign = !!b.is_campaign_active;
-    if (aIsCampaign !== bIsCampaign) return aIsCampaign ? -1 : 1;
-
-    const dateA = Date.parse(a.created_at) || 0;
-    const dateB = Date.parse(b.created_at) || 0;
-    return dateB - dateA;
-  });
-}
-
 export function useLinktrees(initialLinktrees: Linktree[]) {
+  const startRequest = useLatestRequest();
   const [linktrees, setLinktrees] = useState<Linktree[]>(() =>
     sortLinktreesForDashboard(initialLinktrees),
   );
   const [isLoading, setIsLoading] = useState(initialLinktrees.length === 0);
+  const [unavailable, setUnavailable] = useState(false);
 
   const reload = useCallback(
     async (
@@ -52,6 +33,7 @@ export function useLinktrees(initialLinktrees: Linktree[]) {
       bypassCache = false,
       rethrow = false,
     ) => {
+      const current = startRequest();
       if (showLoading) setIsLoading(true);
 
       try {
@@ -67,15 +49,19 @@ export function useLinktrees(initialLinktrees: Linktree[]) {
           (value): value is Linktree[] => Array.isArray(value),
         );
 
+        if (!current()) return;
         setLinktrees(sortLinktreesForDashboard(result || []));
+        setUnavailable(false);
       } catch (error) {
+        if (!current()) return;
         console.error("Error fetching linktrees:", error);
+        setUnavailable(true);
         if (rethrow) throw error;
       } finally {
-        setIsLoading(false);
+        if (current()) setIsLoading(false);
       }
     },
-    [],
+    [startRequest],
   );
 
   useEffect(() => {
@@ -122,6 +108,7 @@ export function useLinktrees(initialLinktrees: Linktree[]) {
   );
 
   return {
+    unavailable,
     linktrees,
     isLoading,
     reload,

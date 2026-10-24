@@ -1,4 +1,6 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
+
 
 import { BarChart3, Pause, Play, Radio, Trash2 } from "lucide-react";
 
@@ -11,7 +13,7 @@ import {
 } from "@/components/shared/ManagementTable";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { OBJECTIVE_LABELS } from "../campaign-objectives";
-import { formatCostPerConversion } from "../campaign-metrics";
+import { campaignReportedValue, formatCostPerConversion } from "../campaign-metrics";
 import type { TikTokCampaign } from "../types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
 import { CampaignVideoPreview } from "./CampaignVideoPreview";
@@ -143,25 +145,25 @@ function CampaignRow(props: CampaignActionProps) {
           ${campaign.dailyBudget.toFixed(2)} / {labels.perDay}
         </p>
         <p className="mt-1 font-mono text-[11px] text-slate-500">
-          ${campaign.totalSpent.toFixed(2)} {labels.spentSuffix}
+          {campaignReportedValue(`$${campaign.totalSpent.toFixed(2)}`)} {labels.spentSuffix}
         </p>
       </td>
       <td className="px-3 py-3">
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
           <span className="text-slate-500">
-            {labels.impressions} {campaign.impressions.toLocaleString()}
+            {labels.impressions} {campaignReportedValue(campaign.impressions.toLocaleString())}
           </span>
           <span className="text-slate-500">
-            {labels.clicks} {campaign.clicks.toLocaleString()}
+            {labels.clicks} {campaignReportedValue(campaign.clicks.toLocaleString())}
           </span>
           <span className="font-semibold text-emerald-600 dark:text-emerald-300">
-            {labels.clickRate} {campaign.ctr}%
+            {labels.clickRate} {campaignReportedValue(`${campaign.ctr}%`)}
           </span>
           <span className="text-slate-500">
-            {labels.conversions} {campaign.conversions.toLocaleString()}
+            {labels.conversions} {campaignReportedValue(campaign.conversions.toLocaleString())}
           </span>
           <span className="font-semibold text-violet-600 dark:text-violet-300">
-            {labels.costPerConversion} {formatCostPerConversion(campaign)}
+            {labels.costPerConversion} {campaignReportedValue(formatCostPerConversion(campaign))}
           </span>
         </div>
       </td>
@@ -202,8 +204,8 @@ function CampaignMobileCard(props: CampaignActionProps) {
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
           <p className="font-mono text-[11px] text-slate-500">
-            {campaign.conversions.toLocaleString()} {labels.conversions} ·{" "}
-            {formatCostPerConversion(campaign)} {labels.costPerConversion}
+            {campaignReportedValue(campaign.conversions.toLocaleString())} {labels.conversions} ·{" "}
+            {campaignReportedValue(formatCostPerConversion(campaign))} {labels.costPerConversion}
           </p>
           <CampaignActions {...props} />
         </div>
@@ -228,7 +230,7 @@ export function TikTokCampaignsTable({
       noDataLabel={copy.noCampaigns}
       columns={getColumns(copy.list)}
       getRowKey={(campaign) => campaign.id}
-      pagination={{ mode: "client", pageSize: 10 }}
+      pagination={{ mode: "client", pageSize: PAGE_MANAGEMENT_PAGE_SIZE }}
       paginationCopy={copy.list.pagination}
       minWidth="min-w-[980px]"
       empty={{

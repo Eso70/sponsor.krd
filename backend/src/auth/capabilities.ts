@@ -32,11 +32,16 @@ const DEFAULT_FIELDS = {
   default_footer_phone: 'Default footer phone',
   default_template: 'Default template',
   default_background_color: 'Default background color',
+  default_background_pattern: 'Default background pattern',
   default_footer_hidden: 'Hide footer by default',
   default_whatsapp_enabled: 'Enable WhatsApp modal by default',
 } as const;
 
 const LINKTREE_FIELDS = {
+  headline: 'Headline',
+  slogan: 'Slogan',
+  slogan_color: 'Slogan color',
+  logo: 'Logo',
   name: 'Page name',
   subtitle: 'Page subtitle',
   subtitle_color: 'Subtitle color',
@@ -50,7 +55,7 @@ const LINKTREE_FIELDS = {
   footer_hidden: 'Footer visibility',
   whatsapp_modal: 'WhatsApp modal',
   status: 'Page status',
-  is_campaign_active: 'Campaign active status',
+  isPinned: 'Pin page',
   is_archived: 'Archive status',
 } as const;
 
@@ -201,15 +206,7 @@ const ALL_PERMISSION_DEFINITIONS = [
     riskLevel: 'standard',
     displayOrder: 14,
   }),
-  permission({
-    key: 'business:pages:advertising-access',
-    category: 'Business navigation',
-    resource: 'business.pages',
-    action: 'advertising-access',
-    description: 'Open the advertising page',
-    riskLevel: 'standard',
-    displayOrder: 20,
-  }),
+
   permission({
     key: 'business:settings:profile-access',
     category: 'Business navigation',
@@ -468,36 +465,7 @@ const ALL_PERMISSION_DEFINITIONS = [
     riskLevel: 'sensitive',
     displayOrder: 240,
   }),
-  permission({
-    key: 'business:advertising:read',
-    category: 'Advertising',
-    resource: 'business.advertising',
-    action: 'read',
-    description: 'View the advertising service page',
-    riskLevel: 'standard',
-    displayOrder: 246,
-    requiredEntitlement: 'feature.advertising_page',
-  }),
-  permission({
-    key: 'business:advertising:update',
-    category: 'Advertising',
-    resource: 'business.advertising',
-    action: 'update',
-    description: 'Edit the advertising service page',
-    riskLevel: 'sensitive',
-    displayOrder: 247,
-    requiredEntitlement: 'feature.advertising_page',
-  }),
-  permission({
-    key: 'business:advertising:publish',
-    category: 'Advertising',
-    resource: 'business.advertising',
-    action: 'publish',
-    description: 'Publish or unpublish the advertising service page',
-    riskLevel: 'sensitive',
-    displayOrder: 248,
-    requiredEntitlement: 'feature.advertising_page',
-  }),
+
   permission({
     key: 'business:links:read',
     category: 'Links',
@@ -1149,7 +1117,7 @@ export const Capability = {
   BusinessPagesTemplatesAccess: 'business:pages:templates-access',
   BusinessPagesProfileAccess: 'business:pages:profile-access',
   BusinessPagesSettingsAccess: 'business:pages:settings-access',
-  BusinessPagesAdvertisingAccess: 'business:pages:advertising-access',
+
   BusinessSettingsProfileAccess: 'business:settings:profile-access',
   BusinessSettingsDefaultsAccess: 'business:settings:defaults-access',
   BusinessSettingsSecurityAccess: 'business:settings:security-access',
@@ -1175,9 +1143,7 @@ export const Capability = {
   BusinessLinktreesUpdate: 'business:linktrees:update',
   BusinessLinktreesDelete: 'business:linktrees:delete',
   BusinessLinktreesUpload: 'business:linktrees:upload',
-  BusinessAdvertisingRead: 'business:advertising:read',
-  BusinessAdvertisingUpdate: 'business:advertising:update',
-  BusinessAdvertisingPublish: 'business:advertising:publish',
+
   BusinessLinksRead: 'business:links:read',
   BusinessLinksCreate: 'business:links:create',
   BusinessLinksUpdate: 'business:links:update',

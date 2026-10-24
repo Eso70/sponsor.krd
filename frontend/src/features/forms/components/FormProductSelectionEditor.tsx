@@ -14,7 +14,9 @@ import {
   validProductPrice,
   type ProductSelection,
 } from "../product-selection";
+import { FormProductPriceBreaksEditor } from "./FormProductPriceBreaksEditor";
 import { FormEditorInput } from "./FormEditorInput";
+import { SHARED_INSET_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 export function FormProductSelectionEditor({
   question,
   language,
@@ -27,6 +29,7 @@ export function FormProductSelectionEditor({
   onChange: (patch: Partial<FormQuestion>) => void;
 }) {
   const config = question.productSelection ?? { currency: "IQD", items: [] };
+  const productInputClass = `${FORM_QUESTION_INPUT_CLASS} ${SHARED_INSET_CONTROL_CLASS}`;
   const update = (patch: Partial<ProductSelection>) =>
     onChange({ productSelection: { ...config, ...patch } });
   const patchItem = (
@@ -56,7 +59,7 @@ export function FormProductSelectionEditor({
       {config.items.map((item, index) => (
         <div
           key={item.id}
-          className="space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/[0.02]"
+          className="space-y-3 rounded-2xl bg-slate-500/[0.04] p-3 sm:p-4 dark:bg-white/[0.03]"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
@@ -75,19 +78,17 @@ export function FormProductSelectionEditor({
             </IconActionButton>
           </div>
           <FormEditorInput
-            inputClassName={FORM_QUESTION_INPUT_CLASS}
+            inputClassName={productInputClass}
             label={copy.name}
             value={item.name}
-            placeholder={copy.name}
             maxLength={100}
             onChange={(name) => patchItem(item.id, { name })}
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormEditorInput
-              inputClassName={FORM_QUESTION_INPUT_CLASS}
+              inputClassName={productInputClass}
               label={copy.unit}
               value={item.unit}
-              placeholder={copy.unitHint}
               maxLength={30}
               onChange={(unit) => patchItem(item.id, { unit })}
             />
@@ -113,11 +114,12 @@ export function FormProductSelectionEditor({
                 onValueChange={(unitPrice) => patchItem(item.id, { unitPrice })}
                 className={modalInputClass(
                   item.unitPrice !== null && !validProductPrice(item.unitPrice),
-                  FORM_QUESTION_INPUT_CLASS,
+                  productInputClass,
                 )}
               />
             </EditorField>
           </div>
+          <FormProductPriceBreaksEditor item={item} copy={copy} onChange={(priceBreaks) => patchItem(item.id, { priceBreaks })} />
         </div>
       ))}
       <button
@@ -131,7 +133,7 @@ export function FormProductSelectionEditor({
             ],
           })
         }
-        className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-white/10"
+        className={`${SHARED_SOFT_BUTTON_CLASS} flex items-center gap-2 px-3 py-2 text-xs font-semibold disabled:opacity-50`}
       >
         <Plus className="size-3.5" />
         {copy.add}

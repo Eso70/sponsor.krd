@@ -5,7 +5,6 @@ import { FormEditorInput } from "./FormEditorInput";
 export function FormActionUrlInput({
   label,
   value,
-  placeholder,
   onChange,
   previewLabel,
   validationField,
@@ -13,7 +12,6 @@ export function FormActionUrlInput({
   validationField?: string;
   label: string;
   value: string;
-  placeholder: string;
   onChange: (url: string) => void;
   previewLabel: string;
 }) {
@@ -30,7 +28,6 @@ export function FormActionUrlInput({
       validationField={validationField}
       label={label}
       value={value}
-      placeholder={placeholder}
       onChange={onChange}
       maxLength={2048}
       inputAction={

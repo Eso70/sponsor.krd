@@ -1,3 +1,7 @@
+import {
+  FORM_REPORT_TABLE_FRAME_CLASS,
+  FORM_REPORT_TABLE_ROW_CLASS,
+} from "../form-report-styles";
 import { ManagementTable } from "@/components/shared/ManagementTable";
 import { Inbox } from "lucide-react";
 import type { FormAnalytics } from "../types";
@@ -23,6 +27,7 @@ export function FormSourcePerformance({
       </div>
       <ManagementTable
         compact
+        className={FORM_REPORT_TABLE_FRAME_CLASS}
         minWidth="min-w-[420px]"
         data={rows}
         empty={{ icon: Inbox, title: copy.noInsights }}
@@ -34,9 +39,9 @@ export function FormSourcePerformance({
           { key: "rate", header: copy.rate },
         ]}
         renderRow={(row) => (
-          <tr className="border-b border-slate-100 dark:border-white/5">
+          <tr className={FORM_REPORT_TABLE_ROW_CLASS}>
             <td className="px-3 py-2 text-xs wrap-anywhere">
-              {row.label || copy.unknownSource}
+              <bdi dir="auto">{row.label || copy.unknownSource}</bdi>
             </td>
             <td className="px-3 py-2 text-xs">{row.starts}</td>
             <td className="px-3 py-2 text-xs">{row.responses}</td>
@@ -46,7 +51,7 @@ export function FormSourcePerformance({
           </tr>
         )}
         renderCard={(row) => (
-          <div className="rounded-xl border border-slate-200/70 p-3 dark:border-white/10">
+          <div className="space-y-3 rounded-2xl border border-slate-200/70 p-4 dark:border-white/10">
             <p className="text-xs font-semibold wrap-anywhere">
               {row.label || copy.unknownSource}
             </p>

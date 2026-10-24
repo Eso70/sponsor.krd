@@ -180,9 +180,9 @@ export function CreateCampaignModal({
         status: "review",
         video: {
           title: form.videoCode.trim(),
-          duration: "00:20",
-          format: "9:16",
-          resolution: "1080 × 1920",
+          duration: "—",
+        format: null,
+          resolution: "—",
           tone: "cyan",
         },
         dailyBudget: form.dailyBudget,

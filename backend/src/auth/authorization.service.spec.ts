@@ -54,20 +54,13 @@ describe('AuthorizationService business policy engine', () => {
   it.each(['basic', 'pro', 'ultra', 'max'])(
     'enforces feature ceilings for %s despite inherited grants',
     async (plan) => {
-      const keys = [
-        'business:forms:read',
-        'business:pages:advertising-access',
-        'business:advertising:read',
-        'business:advertising:update',
-        'business:advertising:publish',
-      ];
+      const keys = ['business:forms:read'];
       const base = policy();
       jest
         .spyOn(service as never, 'getBusinessPolicy' as never)
         .mockResolvedValue(
           policy({
             subscription: { ...base.subscription, plan_code: plan },
-            entitlements: { 'feature.advertising_page': true },
             permissions: Object.fromEntries(
               keys.map((key) => [
                 key,
@@ -85,9 +78,7 @@ describe('AuthorizationService business policy engine', () => {
         );
       const manifest = await service.getEffectiveAccess(businessId);
       for (const key of keys) {
-        const allowed = key.includes(':forms:')
-          ? plan === 'max'
-          : plan === 'ultra' || plan === 'max';
+        const allowed = plan === 'max';
         expect((await service.authorize(request(key))).outcome).toBe(
           allowed ? 'allow' : 'deny',
         );
@@ -197,6 +188,35 @@ describe('AuthorizationService business policy engine', () => {
     expect(decision.outcome).toBe('allow');
     expect(decision.source).toBe('plan');
   });
+
+  it.each(['deny', 'approval'] as const)(
+    'preserves a legacy headline %s rule for canonical requests',
+    async (mode) => {
+      jest
+        .spyOn(service as never, 'getBusinessPolicy' as never)
+        .mockResolvedValue(
+          policy({
+            permissions: {
+              'business:linktrees:update': {
+                key: 'business:linktrees:update',
+                accessMode: 'direct',
+                fieldModes: { name: mode },
+                resourceScope: { type: 'all' },
+                conditions: {},
+                source: 'plan',
+              },
+            },
+          }) as never,
+        );
+      const decision = await service.authorize(
+        request('business:linktrees:update', { changedFields: ['headline'] }),
+      );
+      expect(decision.outcome).toBe(mode);
+      expect(decision.reasonCode).toBe(
+        mode === 'deny' ? 'FIELD_DENIED' : 'APPROVAL_REQUIRED',
+      );
+    },
+  );
 
   it('rejects the whole mutation when one changed field is denied', async () => {
     jest

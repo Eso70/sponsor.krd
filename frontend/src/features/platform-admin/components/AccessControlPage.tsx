@@ -1,6 +1,7 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 
-import { MotionSpinner } from "@/components/motion/MotionPrimitives";
+
 
 import {
   useCallback,
@@ -15,17 +16,22 @@ import {
   KeyRound,
   Layers3,
   Plus,
-  RefreshCw,
   Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PageManagementActions } from "@/components/shared/PageManagementActions";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
 import { SearchModal } from "@/components/shared/SearchModal";
 import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
 import { TablePagination } from "@/components/shared/TablePagination";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { StatCard } from "@/components/shared/StatCard";
 import { DetailViewModal } from "@/components/shared/DetailViewModal";
 import type { Overview, Permission, Tab } from "./access-control/types";
@@ -54,6 +60,8 @@ export function AccessControlPage() {
     { id: "permissions" as const, label: copy.tabs.permissions, icon: KeyRound },
     { id: "simulator" as const, label: copy.tabs.simulator, icon: FlaskConical },
   ];
+  const startRequest = useLatestRequest();
+  const [loadFailed, setLoadFailed] = useState(false);
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
@@ -66,8 +74,9 @@ export function AccessControlPage() {
   const [selectedPermission, setSelectedPermission] =
     useState<Permission | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (rethrow = false) => {
     setLoading(true);
+    const current = startRequest();
     try {
       const response = await fetch(
         `/api/platform/access-control?refresh=${reload}`,
@@ -77,15 +86,23 @@ export function AccessControlPage() {
       if (!response.ok) {
         throw new Error(platformRequestError(result.message, copyRef.current.loadFailed, locale));
       }
+      if (!result.data?.summary) throw new Error("Invalid dashboard summary");
+      if (!current()) return;
+      setLoadFailed(false);
       setData(result.data);
     } catch (error) {
+      if (!current()) return;
+      setLoadFailed(true);
       toast.error(
         platformRequestError(error instanceof Error ? error.message : null, copyRef.current.loadFailed, locale),
       );
+      if (rethrow) throw error;
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [reload, locale]);
+  }, [reload, locale, startRequest]);
+
+  useRegisterDashboardRefresh("access-control", () => load(true));
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -101,12 +118,12 @@ export function AccessControlPage() {
     });
   }, [data, deferredSearch, locale]);
 
-  const pageSize = 10;
+  const pageSize = PAGE_MANAGEMENT_PAGE_SIZE;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const items = filtered.slice((page - 1) * pageSize, page * pageSize);
   const title = copy.title[tab];
   const description = copy.description[tab];
-  const icon =
+  const SectionIcon =
     tab === "profiles"
       ? Layers3
       : tab === "permissions"
@@ -115,21 +132,22 @@ export function AccessControlPage() {
 
   return (
     <div className="space-y-5" dir="ltr">
+      {loadFailed && <RequestErrorNotice message={copy.loadFailed} />}
       <StatCardGrid columns={2}>
         <StatCard
-          loading={loading && !data}
+          loading={loading}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={KeyRound}
           label={copy.businessPermissions}
-          value={data?.summary.permissions || 0}
+          value={loadFailed ? "—" : data?.summary.permissions ?? "—"}
           color="green"
         />
         <StatCard
-          loading={loading && !data}
+          loading={loading}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Layers3}
           label={copy.permissionProfiles}
-          value={data?.summary.profiles || 0}
+          value={loadFailed ? "—" : data?.summary.profiles ?? "—"}
           color="blue"
         />
       </StatCardGrid>
@@ -145,48 +163,19 @@ export function AccessControlPage() {
         accent="var(--sponsor-krd-accent)"
       />
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c222b] sm:p-6">
-        <PageHeader
+      <PageManagementSection
           title={title}
           description={description}
-          icon={icon}
-          action={
-            <>
-              <button
-                type="button"
-                onClick={() => setReload((value) => value + 1)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/10"
-                aria-label={copy.refresh}
-              >
-                <MotionSpinner active={loading}><RefreshCw
-                  className="h-4 w-4"
-                 /></MotionSpinner>
-              </button>
-              {tab === "profiles" && (
-                <button
-                  type="button"
-                  onClick={() => setCreateProfileOpen(true)}
-                  className="sa-gradient sa-gradient-hover flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-bold shadow-md"
-                >
-                  <Plus className="h-4 w-4" />
-                  {copy.newProfile}
-                </button>
-              )}
-              {tab === "permissions" && (
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(true)}
-                  className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:text-slate-300"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {copy.search}
-                </button>
-              )}
-            </>
+          icon={<SectionIcon className="size-5" />}
+          toolbar={
+            <PageManagementActions>
+              {tab === "permissions" && <SettingsActionButton label={copy.search} icon={SlidersHorizontal} variant="soft" onClick={() => setSearchOpen(true)} />}
+              {tab === "profiles" && <SettingsActionButton label={copy.newProfile} icon={Plus} onClick={() => setCreateProfileOpen(true)} />}
+            </PageManagementActions>
           }
-        />
+      >
 
-        <div className="border-t border-slate-100 pt-5 dark:border-white/5">
+          <DashboardRefreshRegion loading={loading} label={platformLoadingCopy[locale].loading}>
           {tab === "profiles" && data ? (
             <PermissionProfiles
               permissions={data.permissions}
@@ -209,6 +198,8 @@ export function AccessControlPage() {
             />
           )}
 
+          </DashboardRefreshRegion>
+
           {tab === "permissions" && (
             <TablePagination
               page={page}
@@ -219,8 +210,7 @@ export function AccessControlPage() {
               copy={{ of: copy.of, previous: copy.previous, next: copy.next }}
             />
           )}
-        </div>
-      </section>
+      </PageManagementSection>
 
       <SearchModal
         isOpen={searchOpen}

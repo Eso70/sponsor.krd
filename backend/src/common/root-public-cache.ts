@@ -27,3 +27,25 @@ export function rootPublicLinktreeCacheKeys(
     ),
   ].map((value) => `cache:platform-linktree:${value}`);
 }
+
+/** All public read namespaces for an owner-verified page, including old slugs. */
+export function publicLinktreeCacheKeys(
+  subdomain: string | null | undefined,
+  ...identifiers: Array<string | null | undefined>
+): string[] {
+  const ids = [
+    ...new Set(
+      identifiers
+        .map((value) => value?.trim())
+        .filter((value): value is string => !!value),
+    ),
+  ];
+  const sub = subdomain?.toLowerCase();
+  return [
+    ...rootPublicLinktreeCacheKeys(...ids),
+    ...ids.flatMap((id) => [
+      `cache:linktree:uid:${id}`,
+      ...(sub ? [`cache:linktree:uid:${id}:sub:${sub}`] : []),
+    ]),
+  ];
+}

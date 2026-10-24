@@ -7,46 +7,17 @@ import {
   isAnalyticsBotUserAgent,
 } from './unified-analytics.service';
 
-/**
- * The event name the outbox records for a browser-dispatched event.
- *
- * TikTok collapses a browser event and a server event into one only when the
- * event *name* and the event id both match. Our own mapping can legitimately
- * reach a different name than the page did — a service click is `Contact` in
- * the page and `ClickButton` here — so when the pixel already fired, the name
- * it used has to win or the conversion is counted twice.
- */
-describe('deduplication pairing', () => {
-  function outboxEventName(input: {
-    browserDispatched?: boolean;
-    browserEventName?: string;
-    derived: string;
-  }): string {
-    return (input.browserDispatched && input.browserEventName) || input.derived;
-  }
-
-  it('reports the name the browser already fired', () => {
+describe('authoritative event naming', () => {
+  it('reads the registered action event instead of trusting a browser sale claim', () => {
+    const service = buildService() as unknown as {
+      tiktokEvent: (event: string, action: { tiktok_event: string }) => string;
+    };
     expect(
-      outboxEventName({
-        browserDispatched: true,
-        browserEventName: 'Contact',
-        derived: 'ClickButton',
-      }),
+      service.tiktokEvent('whatsapp_click', { tiktok_event: 'Contact' }),
     ).toBe('Contact');
-  });
-
-  it('falls back to our own mapping when no pixel fired', () => {
     expect(
-      outboxEventName({
-        browserDispatched: false,
-        browserEventName: 'Contact',
-        derived: 'ClickButton',
-      }),
-    ).toBe('ClickButton');
-  });
-
-  it('ignores a claimed name that arrives without a dispatch', () => {
-    expect(outboxEventName({ derived: 'Lead' })).toBe('Lead');
+      service.tiktokEvent('service_click', { tiktok_event: 'Contact' }),
+    ).toBe('Contact');
   });
 });
 
@@ -61,6 +32,25 @@ describe('deduplication pairing', () => {
  * page's own. See docs/tracking.md.
  */
 describe('forwardsToTikTok', () => {
+  it('does not promote custom activity into a registered contact conversion', () => {
+    expect(
+      forwardsToTikTok({
+        pageType: 'linktree',
+        eventName: 'custom',
+        hasAction: true,
+      }),
+    ).toBe(false);
+  });
+  it('keeps registered media engagement out of conversion delivery', () => {
+    expect(
+      forwardsToTikTok({
+        pageType: 'linktree',
+        eventName: 'action_open',
+        hasAction: true,
+        engagementOnly: true,
+      }),
+    ).toBe(false);
+  });
   it('forwards public form views and accepted submissions, but not starts', () => {
     expect(
       forwardsToTikTok({
@@ -107,16 +97,6 @@ describe('forwardsToTikTok', () => {
       }),
     ).toBe(true);
   });
-  it('does not forward an advertising public page', () => {
-    expect(
-      forwardsToTikTok({
-        pageType: 'advertising',
-        eventName: 'whatsapp_click',
-        hasAction: true,
-      }),
-    ).toBe(false);
-  });
-
   it('does not forward a fixed public route', () => {
     expect(
       forwardsToTikTok({
@@ -153,7 +133,7 @@ describe('forwardsToTikTok', () => {
     }
   });
 
-  it('still forwards an engagement-named event that is a registered action', () => {
+  it('keeps registered engagement internal', () => {
     // The browser fires the pixel whenever the key resolves to a registered
     // action, so dropping the server half here would break the pair.
     expect(
@@ -162,10 +142,10 @@ describe('forwardsToTikTok', () => {
         eventName: 'action_open',
         hasAction: true,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('keeps forwarding a share, which is also what a vcard download infers', () => {
+  it('does not forward unregistered shares', () => {
     // Sharing is a conversion, so `share` must stay out of the engagement set.
     expect(
       forwardsToTikTok({
@@ -173,7 +153,7 @@ describe('forwardsToTikTok', () => {
         eventName: 'share',
         hasAction: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('forwards a server-recorded lead that has no action row', () => {
@@ -182,8 +162,9 @@ describe('forwardsToTikTok', () => {
     expect(
       forwardsToTikTok({
         pageType: 'linktree',
-        eventName: 'form_submit',
+        eventName: 'lead_created',
         hasAction: false,
+        serverConfirmed: true,
       }),
     ).toBe(true);
   });
@@ -375,6 +356,7 @@ describe('getSummary uniques', () => {
     const database = {
       query: jest
         .fn()
+        .mockResolvedValue({ rows: [] })
         .mockResolvedValueOnce({
           rows: [
             {

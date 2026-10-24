@@ -9,12 +9,13 @@ export function PageListImage({
   name: string;
   variant?: "grid" | "table" | "mobile";
 }) {
+  if (!src?.trim()) return null;
   return (
     <div
       className={`relative shrink-0 overflow-hidden rounded-full border-gray-200 ${variant === "grid" ? "size-10 border-2 shadow-sm sm:size-14" : variant === "mobile" ? "size-16 border" : "mx-auto size-8 border sm:size-10"}`}
     >
       <Image
-        src={src || "/images/DefaultAvatar.png"}
+        src={src}
         alt={name}
         fill
         className="object-cover"

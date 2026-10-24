@@ -97,7 +97,7 @@ export interface TikTokCampaign {
   video: {
     title: string;
     duration: string;
-    format: "9:16" | "1:1" | "16:9";
+    format: "9:16" | "1:1" | "16:9" | null;
     resolution: string;
     tone: "cyan" | "violet" | "orange" | "rose";
   };

@@ -48,7 +48,6 @@ export class GoogleBusinessAuthController {
   @HttpCode(HttpStatus.FOUND)
   async startSignin(
     @Subdomain() subdomain: string,
-    @Query('remember') remember: string | undefined,
     @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
   ) {
@@ -60,7 +59,7 @@ export class GoogleBusinessAuthController {
       300,
     );
     return response.redirect(
-      await this.onboarding.beginGoogleSignin(subdomain, remember === '1'),
+      await this.onboarding.beginGoogleSignin(subdomain),
       HttpStatus.FOUND,
     );
   }
@@ -96,7 +95,6 @@ export class GoogleBusinessAuthController {
       subdomain,
       ipAddress: requestIp(request),
       userAgent: request.headers['user-agent'] || '',
-      rememberDevice: Boolean(body.rememberDevice),
     });
     response.setCookie('business_session', session.sessionToken, {
       httpOnly: true,
@@ -184,7 +182,6 @@ export class PlatformGoogleAuthController {
   @HttpCode(HttpStatus.FOUND)
   async start(
     @Subdomain() subdomain: string,
-    @Query('remember') remember: string | undefined,
     @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
   ) {
@@ -200,7 +197,7 @@ export class PlatformGoogleAuthController {
       300,
     );
     return response.redirect(
-      await this.onboarding.beginPlatformAdminSignin(remember === '1'),
+      await this.onboarding.beginPlatformAdminSignin(),
       HttpStatus.FOUND,
     );
   }
@@ -235,7 +232,6 @@ export class PlatformGoogleAuthController {
       code: body.code,
       ipAddress: requestIp(request),
       userAgent: request.headers['user-agent'] || '',
-      rememberDevice: Boolean(body.rememberDevice),
     });
     response.setCookie('platform_admin_session', session.sessionToken, {
       httpOnly: true,

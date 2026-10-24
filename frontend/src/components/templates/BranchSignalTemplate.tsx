@@ -24,7 +24,6 @@ import type { TemplateComponentProps, TemplateTheme } from "./types";
 import {
   TemplateActionButton,
   TemplateActionButtonList,
-  TemplateFooter,
   TemplateHeader,
   TemplateLinkLabel,
   TemplateViewportLayout,
@@ -386,20 +385,6 @@ export const BranchSignalTemplate = memo(function BranchSignalTemplate({
             );
           })}
         </TemplateActionButtonList>
-      }
-      footer={
-        <TemplateFooter
-          footerText={linktree.footer_text}
-          footerPhone={linktree.footer_phone}
-          footerButtonColor={linktree.template_config?.footer_button_color}
-          footerHidden={linktree.footer_hidden ?? false}
-          textColor={textColor}
-          textSecondaryColor={textSecondaryColor}
-          className="w-full px-4 pb-7 pt-10"
-          innerClassName="mx-auto w-full max-w-sm text-center"
-          sponsorTextClassName="text-[10px] font-semibold uppercase tracking-[0.16em]"
-          nameButtonClassName="mt-2 inline-flex min-h-9 items-center justify-center rounded-full border px-5 py-2 text-xs font-bold transition hover:-translate-y-0.5"
-        />
       }
     />
   );

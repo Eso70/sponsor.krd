@@ -37,6 +37,7 @@ describe('form management authorization boundaries', () => {
       ]);
       for (const [operation, capability] of [
         ['list', read],
+        ['selectionIds', read],
         ['get', read],
         ['stats', read],
         ['titleAvailability', read],
@@ -44,11 +45,14 @@ describe('form management authorization boundaries', () => {
         ['getAnalytics', read],
         ['create', create],
         ['duplicate', create],
+        ['duplicateOptions', create],
         ['update', update],
         ['status', update],
         ['archive', update],
+        ['pin', update],
         ['remove', remove],
         ['deleteSubmissions', remove],
+        ['clearAnalytics', remove],
       ] as const) {
         const handler: unknown = Object.getOwnPropertyDescriptor(
           controller.prototype,
@@ -157,6 +161,45 @@ describe('form management authorization boundaries', () => {
       'form-id',
     );
     expect(service.deleteSubmissions).toHaveBeenLastCalledWith(
+      'platform-owner',
+      'form-id',
+    );
+  });
+  it('scopes selection and analytics-only deletion to each authenticated owner', async () => {
+    const service = {
+      selectionIds: jest.fn().mockResolvedValue(['form-id']),
+      clearAnalytics: jest.fn().mockResolvedValue(undefined),
+      platformOwner: jest.fn().mockResolvedValue('platform-owner'),
+    } as unknown as FormsService;
+    const query = Object.assign(new FormsListDto(), {
+      q: 'contact',
+      filter: 'archived',
+    });
+    const storage = {} as StorageService;
+    const business = new BusinessFormsController(service, storage);
+    const platform = new PlatformFormsController(service, storage);
+    await business.selectionIds({ id: 'business-owner' } as SessionUser, query);
+    expect(service.selectionIds).toHaveBeenLastCalledWith(
+      'business-owner',
+      'contact',
+      true,
+    );
+    await platform.selectionIds(query);
+    expect(service.selectionIds).toHaveBeenLastCalledWith(
+      'platform-owner',
+      'contact',
+      true,
+    );
+    await business.clearAnalytics(
+      { id: 'business-owner' } as SessionUser,
+      'form-id',
+    );
+    expect(service.clearAnalytics).toHaveBeenLastCalledWith(
+      'business-owner',
+      'form-id',
+    );
+    await platform.clearAnalytics('form-id');
+    expect(service.clearAnalytics).toHaveBeenLastCalledWith(
       'platform-owner',
       'form-id',
     );

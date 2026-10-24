@@ -5,7 +5,6 @@ Business custom domains map to the existing tenant through the shared DomainsMod
 they do not create separate deployments. See [Custom domains](custom-domains.md)
 for ownership verification, selected-host public/dashboard routing, certificate permissions and lifecycle.
 
-
 Business identity uses invite-only Google OAuth authorization-code flow. One
 fixed root-domain callback verifies PKCE, state, nonce, token signature,
 issuer, audience, expiry, and verified email. Approved owners begin sign-in on
@@ -18,48 +17,6 @@ remain in PostgreSQL. Platform-administrator authentication stays separate.
 
 Large feature entry points remain orchestration layers; cohesive behavior must
 live behind domain modules rather than expanding those entry points further.
-
-- Repository classes provide the initial persistence seam for the high-change
-  analytics-read, business-administration, and billing domains.
-  They own reusable query projections and tenant-scoped lookup SQL; application
-  services retain validation, authorization-aware workflows, cache/storage
-  coordination, and transaction orchestration. Mutation SQL that participates
-  in an existing service transaction remains with that transaction until it can
-  be moved as one cohesive repository operation.
-- All presentation shared by business and platform surfaces has one
-  implementation with thin surface adapters. Platform-admin-only actions are
-  introduced through explicit permission or capability configuration; they do
-  not justify forking the surrounding shared component, workflow, or state.
-- `PlatformContentWorkspaceService` is the single resolver for the internal
-  owner of all Sponsor.krd root-domain content. Feature names must not create a
-  second platform workspace convention.
-- `BusinessDashboard` owns page composition. Analytics-summary retrieval,
-  normalization, lifecycle, and reset behavior are owned by
-  `useBusinessAnalyticsTotals`. Dashboard access/profile refresh calls are
-  owned by the business feature API rather than embedded transport parsing.
-- Both public advertising routes read through
-  `features/advertising/public-page-data.server.ts`. It owns subdomain
-  resolution, the public fetches, and the branding/footer props the two
-  components share. Each fetch carries its own failure handling: the business
-  record and the advertising config gate the page, while the Linktree list is
-  footer navigation that degrades to empty rather than
-  taking a published page down.
-- `lib/api/request.ts` is the neutral frontend JSON transport boundary.
-  Feature API modules own endpoint paths and transport types; feature hooks own
-  cancellation and local request state. Components do not define another
-  response-envelope parser.
-- Root-domain Linktrees reuse their existing domain rather than introducing a
-  second page model. One non-customer
-  `businesses.account_type='platform'` workspace owns their content,
-  public-page, action, analytics, and media rows.
-  `PlatformContentWorkspaceService` is the only resolver for that owner;
-  platform-admin controllers never accept an owner identifier from the browser.
-  Customer-facing business queries exclude this workspace explicitly.
-- The same internal workspace owns the platform TikTok Pixel group and every
-  platform public-page analytics identity. Customer and platform groups share
-  encrypted persistence and delivery code but are selected strictly by the
-  `public_pages.business_id` owner; they are never combined. Fixed marketing
-  routes use `page_type='route'` identities and a positive route allowlist.
 
 New persistence projections, renderer sections, and dashboard data lifecycles
 must extend these seams instead of adding another parallel implementation to
@@ -220,8 +177,7 @@ NestJS modules own their HTTP controllers and application services
   platform plan cards share one renderer; see [subscriptions](subscriptions.md).
 - `platform-admin`: platform business administration and platform settings.
 - `linktrees` and `links`: tenant-owned linktree behavior.
-- `campaign-revenue`: tenant-scoped Linktree revenue records shared by the
-  business and platform controllers.
+
 - `analytics`: ingestion, rollups, reporting, and the TikTok delivery
   outbox.
 - `communications`: announcements, notifications, and conversations.
@@ -354,3 +310,14 @@ application features. New code must preserve the boundaries above.
 Forms use one shared frontend management/editor/public renderer and `FormsModule` for owner-scoped business logic. PostgreSQL persists definitions and responses; existing storage manages raster assets; Redis limits public requests. Shared analytics records conversions transactionally. See [Forms](forms.md).
 
 Published public forms and Linktrees share owner-scoped marketing tracking. Public form submissions and their analytics/outbox record commit atomically, and the browser echoes the accepted request ID as `SubmitForm`. Form answers remain separate from marketing; dashboards, previews and other public surfaces remain excluded. See [tracking](tracking.md).
+
+## Read-only analytics sharing
+
+AnalyticsSharingModule owns share-link management and viewer access. Thin
+Business/Platform Forms/Linktree controllers apply the existing page read and
+update capabilities and resolve ownership server-side. One service stores grants
+in PostgreSQL, uses short-lived Redis viewer sessions, and reuses unified
+analytics readers with an explicit aggregate response projection. Form shares
+can explicitly include responses via the existing owner-scoped FormsService,
+with pagination and the same live grant/session checks. The shared
+frontend action/drawer and report components serve all four management contexts.

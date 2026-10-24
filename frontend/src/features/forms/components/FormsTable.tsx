@@ -1,3 +1,6 @@
+import { PageSelectionCheckbox, usePageSelection } from "@/components/shared/PageSelection";
+import { PageListMobileCard } from "@/components/shared/PageListMobileCard";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 import { PageListUrl } from "@/components/shared/PageListUrl";
 import { PageListTraffic } from "@/components/shared/PageListTraffic";
 import { formatDate, getAbsoluteUrl } from "@/lib/utils/linktree-utils";
@@ -5,7 +8,7 @@ import { FormCollectionBadges } from "./FormCollectionBadges";
 import { ClipboardList } from "lucide-react";
 import {
   ManagementTable,
-  MANAGEMENT_TABLE_CARD_CLASS,
+  PAGE_LIST_ACTION_COLUMN_WIDTH,
   MANAGEMENT_TABLE_ROW_CLASS,
 } from "@/components/shared/ManagementTable";
 import { FormRowActions, type FormActions } from "./FormRowActions";
@@ -29,17 +32,21 @@ export function FormsTable({
   filtered: boolean;
   archived: boolean;
 }) {
+  const selection = usePageSelection();
   return (
     <ManagementTable
       data={forms}
       getRowKey={(form) => form.id}
-      pagination={pagination ?? { mode: "client", pageSize: 20 }}
+      pagination={
+        pagination ?? { mode: "client", pageSize: PAGE_MANAGEMENT_PAGE_SIZE }
+      }
       paginationCopy={{
         of: locale === "en" ? "of" : locale === "ar" ? "من" : "لە",
         previous: copy.back,
         next: copy.next,
       }}
       columns={[
+        ...(selection ? [{ key: "selection", header: <span className="sr-only">{selection.selectLabel}</span>, width: "w-12" }] : []),
         { key: "name", header: copy.name, width: "w-32 sm:w-40" },
         {
           key: "description",
@@ -61,7 +68,11 @@ export function FormsTable({
           width: "w-28",
           hideBelow: "xl",
         },
-        { key: "actions", header: copy.actions, width: "w-44" },
+        {
+          key: "actions",
+          header: copy.actions,
+          width: PAGE_LIST_ACTION_COLUMN_WIDTH,
+        },
       ]}
       empty={{
         icon: ClipboardList,
@@ -81,6 +92,7 @@ export function FormsTable({
           className={MANAGEMENT_TABLE_ROW_CLASS}
           style={{ contentVisibility: "auto", containIntrinsicSize: "80px" }}
         >
+          {selection && <td className="px-2 py-3"><PageSelectionCheckbox id={form.id} name={form.name} /></td>}
           <td className="px-2 py-3 sm:px-3">
             <span
               className="mb-1 block wrap-break-word text-xs font-semibold text-gray-900 sm:text-sm"
@@ -91,12 +103,14 @@ export function FormsTable({
             <FormCollectionBadges form={form} copy={copy} />
           </td>
           <td className="hidden px-2 py-3 md:table-cell sm:px-3">
-            <p
-              className="line-clamp-2 wrap-break-word text-xs text-gray-600"
-              dir="auto"
-            >
-              {form.description?.trim() || "—"}
-            </p>
+            {form.description?.trim() && (
+              <p
+                className="line-clamp-2 wrap-break-word text-xs text-gray-600"
+                dir="auto"
+              >
+                {form.description?.trim()}
+              </p>
+            )}
           </td>
           <td className="px-2 py-3 sm:px-3">
             {form.slug && (
@@ -116,7 +130,7 @@ export function FormsTable({
             />
           </td>
           <td className="hidden px-2 py-3 text-xs text-gray-600 xl:table-cell sm:px-3">
-            {form.createdAt ? formatDate(form.createdAt) : "—"}
+            {form.createdAt ? formatDate(form.createdAt) : null}
           </td>
           <td className="hidden px-2 py-3 text-xs text-gray-600 xl:table-cell sm:px-3">
             {formatDate(form.updatedAt)}
@@ -127,37 +141,15 @@ export function FormsTable({
         </tr>
       )}
       renderCard={(form) => (
-        <div className={MANAGEMENT_TABLE_CARD_CLASS}>
-          <div className="min-w-0 flex-1 space-y-2">
-            <span
-              className="block wrap-break-word text-base font-semibold text-gray-900"
-              dir="auto"
-            >
-              {form.name}
-            </span>
-            <FormCollectionBadges form={form} copy={copy} />
-            <p className="line-clamp-2 text-xs text-gray-600" dir="auto">
-              {form.description?.trim() || "—"}
-            </p>
-            {form.slug && (
-              <PageListUrl
-                url={getAbsoluteUrl(form.slug, "/form")}
-                displayUrl={`/form/${form.slug}`}
-                labels={copy}
-              />
-            )}
-            <PageListTraffic
-              views={form.views ?? 0}
-              interactions={form.interactions ?? 0}
-              labels={copy}
-              compact
-            />
-            <p className="text-xs text-gray-500">
-              {copy.updated}: {formatDate(form.updatedAt)}
-            </p>
-            <FormRowActions form={form} copy={copy} actions={actions} />
-          </div>
-        </div>
+        <PageListMobileCard title={form.name}
+          selection={<PageSelectionCheckbox id={form.id} name={form.name} />}
+          badges={<FormCollectionBadges form={form} copy={copy} />}
+          description={form.description?.trim() ? <p className="line-clamp-2 text-xs text-gray-600 [overflow-wrap:anywhere]" dir="auto">{form.description.trim()}</p> : undefined}
+          actions={<FormRowActions form={form} copy={copy} actions={actions} />}
+        >
+          {form.slug && <PageListUrl url={getAbsoluteUrl(form.slug, "/form")} displayUrl={`/form/${form.slug}`} labels={copy} />}
+          <PageListTraffic views={form.views ?? 0} interactions={form.interactions ?? 0} labels={copy} compact />
+        </PageListMobileCard>
       )}
     />
   );

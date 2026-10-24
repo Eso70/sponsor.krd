@@ -5,6 +5,8 @@ import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocale
 import type { PlatformLocale } from "@/features/platform-admin/i18n/locale";
 
 const KURDISH_TEXT: Record<string, string> = {
+  "Settings sections": "بەشەکانی ڕێکخستن",
+  "Active sessions": "دانیشتنە چالاکەکان",
   "Loading saved settings…": "ڕێکخستنە پاشەکەوتکراوەکان بار دەکرێن…",
   "Advertiser ID:": "ناسنامەی ڕیکلامدەر:",
   "Business Center ID:": "ناسنامەی Business Center:",
@@ -35,6 +37,8 @@ const KURDISH_TEXT: Record<string, string> = {
 };
 
 export const ARABIC_TEXT: Record<string, string> = {
+  "Settings sections": "أقسام الإعدادات",
+  "Active sessions": "الجلسات النشطة",
   "Advertiser ID:": "معرّف المعلن:",
   "Business Center ID:": "معرّف مركز الأعمال:",
   "Direct API Token": "رمز API مباشر",

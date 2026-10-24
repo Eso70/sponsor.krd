@@ -1,8 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import { Globe2, X } from "lucide-react";
+import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { sidebarSelectionColor } from "./dashboard-sidebar-theme";
+import styles from "./dashboard-sidebar.module.css";
+import chrome from "./dashboard-chrome.module.css";
+import { DashboardSidebarAction } from "./DashboardSidebarAction";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 export interface DashboardSidebarItem {
@@ -28,6 +34,8 @@ interface DashboardSidebarProps {
   closeLabel?: string;
   closeTooltip?: string;
   footer?: ReactNode;
+  websiteLabel?: string;
+  accentColor?: string | null;
 }
 
 export function DashboardSidebar({
@@ -42,26 +50,49 @@ export function DashboardSidebar({
   closeLabel = "Close sidebar",
   closeTooltip = "داخستن",
   footer,
+  websiteLabel = "Website",
+  accentColor,
 }: DashboardSidebarProps) {
+  const sidebarRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  useModalKeyboard({
+    isOpen: isMobile && mobileOpen,
+    dialogRef: sidebarRef,
+    initialFocusRef: closeRef,
+    onEscape: onCloseMobile,
+    enterEnabled: false,
+  });
+  const themeStyle = useMemo(() => {
+    return {
+      "--sidebar-primary": sidebarSelectionColor(accentColor),
+      "--sidebar-ink": "#ffffff",
+    } as CSSProperties;
+  }, [accentColor]);
   return (
     <>
-      {mobileOpen ? (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition-all duration-300 md:hidden"
-          onClick={onCloseMobile}
-          aria-label={closeLabel}
-        />
-      ) : null}
+      <button
+        type="button"
+        className={`${styles.backdrop} fixed inset-0 z-40 bg-black/45 backdrop-blur-sm md:hidden`}
+        data-open={mobileOpen}
+        aria-hidden={!mobileOpen}
+        tabIndex={-1}
+        onClick={onCloseMobile}
+        aria-label={closeLabel}
+      />
 
       <aside
+        ref={sidebarRef}
+        inert={isMobile && !mobileOpen}
+        data-open={mobileOpen}
         data-dashboard-sidebar
-        className={`fixed bottom-0 left-0 top-0 z-50 flex flex-col overflow-hidden border-r border-slate-200 bg-white transition-[transform,width] duration-300 ease-out will-change-transform dark:border-white/10 dark:bg-[#161B22] md:sticky md:top-0 md:h-screen md:translate-x-0 md:will-change-auto ${
+        style={themeStyle}
+        className={`${styles.sidebar} fixed left-0 top-0 z-50 flex flex-col border-r border-slate-200 bg-white will-change-transform dark:border-white/10 dark:bg-[#161B22] md:sticky md:top-0 md:translate-x-0 md:will-change-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "w-64 md:w-20" : "w-64 md:w-72"}`}
       >
         <div
-          className={`flex items-center justify-between border-b border-slate-100 p-5 dark:border-white/5 ${collapsed ? "md:justify-center" : ""}`}
+          className={`${chrome.headerRow} flex shrink-0 items-center justify-between border-b border-slate-200 px-5 dark:border-white/10 ${collapsed ? "md:justify-center" : ""}`}
         >
           <div
             className={`flex items-center ${collapsed ? "md:justify-center md:gap-0" : "gap-3"}`}
@@ -92,6 +123,7 @@ export function DashboardSidebar({
           <Tooltip content={closeTooltip} side="left">
             <button
               type="button"
+              ref={closeRef}
               onClick={onCloseMobile}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-[background-color,color,transform] duration-200 hover:bg-slate-50 hover:text-slate-600 active:scale-95 dark:hover:bg-white/5 dark:hover:text-gray-300 md:hidden cursor-pointer"
               aria-label={closeLabel}
@@ -101,47 +133,41 @@ export function DashboardSidebar({
           </Tooltip>
         </div>
 
-        <nav className="custom-scrollbar flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-          {items.map((item) =>
-            item.hidden ? null : (
-              <Tooltip
+        <nav
+          className={`${styles.navigation} flex flex-1 flex-col gap-1.5 p-3`}
+        >
+          {items
+            .filter((item) => !item.hidden)
+            .map((item) => (
+              <DashboardSidebarAction
                 key={item.id}
-                content={item.disabled ? item.disabledReason || item.label : item.label}
-                side="right"
-                disabled={!collapsed}
-              >
-                <button
-                  type="button"
-                  disabled={item.disabled}
-                  onClick={() => {
-                    item.onClick();
-                    onCloseMobile();
-                  }}
-                  className={`w-full flex cursor-pointer items-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
-                    collapsed ? "md:justify-center md:gap-0 md:px-0" : "gap-3"
-                  } ${
-                    item.active
-                      ? "theme-fill text-[var(--theme-ink)] shadow-sm"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
-                  }`}
-                  aria-disabled={item.disabled || undefined}
-                  aria-current={item.active ? "page" : undefined}
-                >
-                  <span className="shrink-0" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span
-                    className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "overflow-hidden md:pointer-events-none md:w-0 md:opacity-0" : "opacity-100"}`}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              </Tooltip>
-            ),
-          )}
+                collapsed={collapsed}
+                label={item.label}
+                icon={item.icon}
+                active={item.active}
+                disabled={item.disabled}
+                disabledReason={item.disabled ? item.disabledReason : undefined}
+                onClick={() => {
+                  item.onClick();
+                  onCloseMobile();
+                }}
+              />
+            ))}
         </nav>
 
-        {footer}
+        <div
+          data-dashboard-sidebar-footer
+          className={`${styles.footer} shrink-0 border-t border-slate-200 p-3 dark:border-white/10`}
+        >
+          {footer}
+          <DashboardSidebarAction
+            collapsed={collapsed}
+            label={websiteLabel}
+            icon={<Globe2 className="size-4 text-sky-600 dark:text-sky-400" />}
+            href="/"
+            onClick={onCloseMobile}
+          />
+        </div>
       </aside>
     </>
   );

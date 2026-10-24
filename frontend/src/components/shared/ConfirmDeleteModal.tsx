@@ -2,11 +2,14 @@
 
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 
-import { memo, useId, useRef } from "react";
+import { memo, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, Loader2, Trash2, X } from "lucide-react";
+import { ChartNoAxesCombined, CheckCircle2, Loader2, Trash2, X } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import { useDocumentScrollLock } from "@/hooks/useDocumentScrollLock";
+import { useIsMounted } from "@/hooks/useIsMounted";
+import styles from "./soft-modal.module.css";
 
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -20,7 +23,7 @@ interface ConfirmDeleteModalProps {
   closeLabel?: string;
   isDeleting?: boolean;
   zIndexClassName?: string;
-  tone?: "danger" | "accent";
+  tone?: "danger" | "accent" | "warning";
 }
 
 export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
@@ -38,11 +41,16 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
   tone = "danger",
 }: ConfirmDeleteModalProps) {
   const titleId = useId();
+  const messageId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirming = useRef(false);
+  const mounted = useIsMounted();
+  const [pending, setPending] = useState(false);
+  const busy = isDeleting || pending;
   const handleConfirm = async () => {
     if (isDeleting || confirming.current) return;
     confirming.current = true;
+    setPending(true);
     try {
       await onConfirm();
       onClose();
@@ -50,29 +58,31 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
       console.error("Delete error:", error);
     } finally {
       confirming.current = false;
+      setPending(false);
     }
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && !isDeleting) onClose();
+    if (e.target === e.currentTarget && !busy) onClose();
   };
 
   useModalKeyboard({
-    isOpen,
+    isOpen: isOpen && mounted,
     onEscape: () => {
-      if (!isDeleting) onClose();
+      if (!busy) onClose();
     },
     onEnter: handleConfirm,
-    enterEnabled: !isDeleting,
-    escapeEnabled: !isDeleting,
+    enterEnabled: !busy,
+    escapeEnabled: !busy,
     dialogRef,
   });
+  useDocumentScrollLock(isOpen && mounted);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
     <div
-      className={`modal-ltr fixed inset-0 ${zIndexClassName} flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm`}
+      className={`modal-ltr ${styles.overlay} ${zIndexClassName}`}
       onClick={handleBackdropClick}
       dir="ltr"
     >
@@ -81,61 +91,52 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={messageId}
+        aria-busy={busy}
         tabIndex={-1}
-        className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl
-          bg-white dark:bg-[#161B22]
-          border border-slate-200 dark:border-white/10
-        "
+        className={`${styles.panel} max-w-md`}
       >
-        <div className="p-5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+        <div className={styles.header}>
           <h3
             id={titleId}
-            className="text-lg font-bold text-slate-850 dark:text-gray-100 font-kurdish"
+            className="min-w-0 flex-1 text-base font-semibold text-slate-800 dark:text-gray-100 font-kurdish"
           >
             {title}
           </h3>
           <Tooltip content={closeLabel} side="bottom">
             <button
+              type="button"
               onClick={onClose}
-              disabled={isDeleting}
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-655 dark:hover:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer disabled:opacity-50"
+              disabled={busy}
+              className={`${styles.control} size-9`}
               aria-label={closeLabel}
             >
-              <X className="h-5 w-5" />
+              <X aria-hidden className="size-4" />
             </button>
           </Tooltip>
         </div>
 
-        <div className="p-5 flex flex-col gap-4">
-          <div className="text-sm sm:text-base text-slate-600 dark:text-gray-350 leading-relaxed text-left font-kurdish">
+        <div className="min-h-0 overflow-y-auto p-5 flex flex-col gap-4">
+          <div id={messageId} className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed text-left font-kurdish break-words">
             {message}
           </div>
 
           <div className="flex gap-3 mt-2">
             <button
+              type="button"
               onClick={onClose}
-              disabled={isDeleting}
-              className="flex-1 px-4 py-2.5 text-sm rounded-xl transition-all border cursor-pointer text-center font-kurdish
-                border-slate-200 dark:border-white/10
-                text-slate-600 dark:text-gray-300
-                hover:bg-slate-50 dark:hover:bg-white/5
-                disabled:opacity-50 disabled:cursor-not-allowed
-              "
+              disabled={busy}
+              className={`${styles.control} min-w-0 flex-1 px-4 py-2.5 text-sm text-center font-kurdish`}
             >
               {cancelLabel}
             </button>
             <button
+              type="button"
               onClick={handleConfirm}
-              disabled={isDeleting}
-              className={`
-                flex-1 px-4 py-3 text-sm font-semibold transition-all rounded-xl cursor-pointer font-kurdish shadow-sm backdrop-blur-md
-                active:scale-[0.99]
-                disabled:opacity-50 disabled:cursor-not-allowed
-                flex items-center justify-center gap-2
-                ${tone === "accent" ? "sa-gradient sa-gradient-hover shadow-[color-mix(in_srgb,var(--sponsor-krd-accent)_18%,transparent)]" : "bg-red-500/18 text-red-600 shadow-red-500/10 hover:bg-red-500/28 hover:text-red-700 hover:shadow-md hover:shadow-red-500/15 dark:bg-red-500/16 dark:text-red-200 dark:hover:bg-red-500/26 dark:hover:text-red-100"}
-              `}
+              disabled={busy}
+              className={`${styles.control} ${tone === "accent" ? styles.primary : tone === "warning" ? styles.warning : styles.danger} min-w-0 flex-1 gap-2 px-4 py-2.5 text-sm font-semibold font-kurdish`}
             >
-              {isDeleting ? (
+              {busy ? (
                 <>
                   <MotionSpinner>
                     <Loader2 className="h-5 w-5 " />
@@ -146,6 +147,8 @@ export const ConfirmDeleteModal = memo(function ConfirmDeleteModal({
                 <>
                   {tone === "accent" ? (
                     <CheckCircle2 className="h-5 w-5" />
+                  ) : tone === "warning" ? (
+                    <ChartNoAxesCombined className="h-5 w-5" />
                   ) : (
                     <Trash2 className="h-5 w-5" />
                   )}

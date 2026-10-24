@@ -10,7 +10,7 @@ export function SettingsField({
   htmlFor?: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label
         htmlFor={htmlFor}
         className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300"

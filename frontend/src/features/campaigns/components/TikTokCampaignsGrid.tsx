@@ -1,4 +1,6 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
+
 
 import { BarChart3, Pause, Play, Trash2 } from "lucide-react";
 
@@ -6,7 +8,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { OBJECTIVE_LABELS } from "../campaign-objectives";
-import { formatCostPerConversion } from "../campaign-metrics";
+import { campaignReportedValue, formatCostPerConversion } from "../campaign-metrics";
 import type { TikTokCampaign } from "../types";
 import { CampaignStatusBadge } from "./CampaignStatusBadge";
 import { CampaignVideoPreview } from "./CampaignVideoPreview";
@@ -46,7 +48,7 @@ export function TikTokCampaignsGrid({
       data={campaigns}
       getItemKey={(campaign) => campaign.id}
       desktopColumns={2}
-      pagination={{ mode: "client", pageSize: 8 }}
+      pagination={{ mode: "client", pageSize: PAGE_MANAGEMENT_PAGE_SIZE }}
       paginationCopy={labels.pagination}
       renderItem={(campaign) => (
         <article className="group flex h-full min-w-0 flex-col bg-transparent transition-colors duration-300 hover:bg-slate-50/50 dark:hover:bg-white/[0.025]">
@@ -74,7 +76,7 @@ export function TikTokCampaignsGrid({
                   {labels.impressions}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {campaign.impressions.toLocaleString()}
+                  {campaignReportedValue(campaign.impressions.toLocaleString())}
                 </dd>
               </div>
               <div className="border-b border-r border-slate-200/45 p-2.5 dark:border-white/5">
@@ -82,7 +84,7 @@ export function TikTokCampaignsGrid({
                   {labels.clicks}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {campaign.clicks.toLocaleString()}
+                  {campaignReportedValue(campaign.clicks.toLocaleString())}
                 </dd>
               </div>
               <div className="border-b border-slate-200/45 p-2.5 dark:border-white/5">
@@ -90,7 +92,7 @@ export function TikTokCampaignsGrid({
                   {labels.clickRate}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-300">
-                  {campaign.ctr}%
+                  {campaignReportedValue(`${campaign.ctr}%`)}
                 </dd>
               </div>
               <div className="border-r border-slate-200/45 p-2.5 dark:border-white/5">
@@ -98,7 +100,7 @@ export function TikTokCampaignsGrid({
                   {labels.spent}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                  ${campaign.totalSpent.toFixed(0)}
+                  {campaignReportedValue(`$${campaign.totalSpent.toFixed(0)}`)}
                 </dd>
               </div>
               <div className="border-r border-slate-200/45 p-2.5 dark:border-white/5">
@@ -106,7 +108,7 @@ export function TikTokCampaignsGrid({
                   {labels.conversions}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {campaign.conversions.toLocaleString()}
+                  {campaignReportedValue(campaign.conversions.toLocaleString())}
                 </dd>
               </div>
               <div className="p-2.5">
@@ -114,7 +116,7 @@ export function TikTokCampaignsGrid({
                   {labels.costPerConversion}
                 </dt>
                 <dd className="mt-1 font-mono text-xs font-bold text-violet-600 dark:text-violet-300">
-                  {formatCostPerConversion(campaign)}
+                  {campaignReportedValue(formatCostPerConversion(campaign))}
                 </dd>
               </div>
             </dl>
@@ -129,7 +131,7 @@ export function TikTokCampaignsGrid({
               <div className="pl-3">
                 <p className="text-slate-400">{labels.costPerConversion}</p>
                 <p className="mt-0.5 font-mono font-bold text-slate-700 dark:text-slate-200">
-                  {formatCostPerConversion(campaign)}
+                  {campaignReportedValue(formatCostPerConversion(campaign))}
                 </p>
               </div>
             </div>

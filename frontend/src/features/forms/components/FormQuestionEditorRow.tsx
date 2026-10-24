@@ -143,7 +143,6 @@ export function FormQuestionEditorRow({
               onChange={(label) =>
                 update(question.id, { label, labelKey: undefined })
               }
-              placeholder={labels.questionHint}
             />
             {(question.type === "short" ||
               question.type === "choice" ||
@@ -152,7 +151,6 @@ export function FormQuestionEditorRow({
                 label={copy.descriptionLabel}
                 hint={labels.optional}
                 value={question.description ?? ""}
-                placeholder={labels.questionDescriptionHint}
                 onChange={(description) => update(question.id, { description })}
                 maxLength={210}
               />

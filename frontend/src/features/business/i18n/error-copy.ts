@@ -28,10 +28,9 @@ const ENGLISH_ERRORS: Record<BusinessErrorKind, { title: string; description: st
 const BUSINESS_ERROR_CONTROLS = {
   ckb: {
     errorCode: "کۆدی هەڵە", retry: "هەوڵ بدەوە", home: "پەڕەی سەرەکی",
-    linktrees: "لینکترییەکان", advertise: "ڕیکلام", contact: "پەیوەندی", logoLabel: "لۆگۆ",
+    linktrees: "لینکترییەکان", contact: "پەیوەندی", logoLabel: "لۆگۆ",
     footer: {
-      home: "سەرەکی", advertise: "ڕیکلام", videoPage: "پەڕەی ڤیدیۆ",
-      pages: "پەڕەکان", publicPages: "پەڕە گشتییەکان", contact: "پەیوەندی",
+      home: "سەرەکی", pages: "پەڕەکان", publicPages: "پەڕە گشتییەکان", contact: "پەیوەندی",
       officialSite: "ماڵپەڕی فەرمییە.", rightsReserved: "هەموو مافەکان پارێزراون.",
       poweredBy: "بە هێزی", logoLabel: "لۆگۆ",
     },
@@ -39,10 +38,9 @@ const BUSINESS_ERROR_CONTROLS = {
   },
   ar: {
     errorCode: "رمز الخطأ", retry: "حاول مجددًا", home: "الصفحة الرئيسية",
-    linktrees: "صفحات لينكتري", advertise: "الإعلانات", contact: "تواصل معنا", logoLabel: "الشعار",
+    linktrees: "صفحات لينكتري", contact: "تواصل معنا", logoLabel: "الشعار",
     footer: {
-      home: "الرئيسية", advertise: "الإعلانات", videoPage: "صفحة الفيديو",
-      pages: "الصفحات", publicPages: "الصفحات العامة", contact: "التواصل",
+      home: "الرئيسية", pages: "الصفحات", publicPages: "الصفحات العامة", contact: "التواصل",
       officialSite: "هو الموقع الرسمي.", rightsReserved: "جميع الحقوق محفوظة.",
       poweredBy: "بواسطة", logoLabel: "الشعار",
     },
@@ -50,10 +48,9 @@ const BUSINESS_ERROR_CONTROLS = {
   },
   en: {
     errorCode: "Error code", retry: "Try again", home: "Home page",
-    linktrees: "Linktrees", advertise: "Advertising", contact: "Contact", logoLabel: "Logo",
+    linktrees: "Linktrees", contact: "Contact", logoLabel: "Logo",
     footer: {
-      home: "Home", advertise: "Advertising", videoPage: "Video page",
-      pages: "Pages", publicPages: "Public pages", contact: "Contact",
+      home: "Home", pages: "Pages", publicPages: "Public pages", contact: "Contact",
       officialSite: "is the official website.", rightsReserved: "All rights reserved.",
       poweredBy: "Powered by", logoLabel: "Logo",
     },

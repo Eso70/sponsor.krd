@@ -165,6 +165,21 @@ describe("native image cropping", () => {
       toBlob.mockRestore();
     }
   });
+  it("uses only PNG when the owner upload endpoint does not accept WebP", async () => {
+    const context = { clearRect: vi.fn(), save: vi.fn(), restore: vi.fn(), drawImage: vi.fn() };
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    const large = new Blob([new Uint8Array(5 * 1024 * 1024 + 1)], { type: "image/png" });
+    const encode = vi.spyOn(HTMLCanvasElement.prototype, "toBlob")
+      .mockImplementationOnce((callback) => callback(large))
+      .mockImplementationOnce((callback) => callback(new Blob(["small"], { type: "image/png" })));
+    try {
+      const file = await exportImageCrop({ naturalWidth: 2000, naturalHeight: 2000 } as HTMLImageElement, 1, INITIAL_CROP, false, 1440, false);
+      expect(file).toMatchObject({ type: "image/png", name: "crop.png", size: 5 });
+      expect(encode).toHaveBeenCalledTimes(2);
+      expect(encode.mock.calls.map((call) => call[1])).toEqual(["image/png", "image/png"]);
+    } finally { getContext.mockRestore(); encode.mockRestore(); }
+  });
+
   it("keeps transparent output within the upload limit when WebP encoding falls back to PNG", async () => {
     const context = {
       clearRect: vi.fn(),

@@ -268,6 +268,32 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/analytics-share/")) {
+    const shareLocale = request.nextUrl.searchParams.get("lang");
+    requestHeaders.set(
+      "x-share-locale",
+      shareLocale === "ar" || shareLocale === "ckb" ? shareLocale : "en",
+    );
+    const response = withCsp(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      csp,
+    );
+    response.headers.set("Cache-Control", "no-store, private");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
+
+  // Retired URLs must return an HTTP 404 before a dynamic route can stream.
+  if (/^\/(?:advertising|business\/advertising)(?:\/|$)/.test(pathname)) {
+    return rewriteNotFound(
+      request,
+      subdomain ? "/__public-not-found" : "/__root-not-found",
+      requestHeaders,
+      csp,
+    );
+  }
+
   if (subdomain && isPlatformAdminPath(pathname)) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
   }
@@ -440,8 +466,7 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/business") ||
     pathname.startsWith("/api") ||
-    (subdomain && pathname === "/") ||
-    pathname.startsWith("/advertising")
+    (subdomain && pathname === "/")
   ) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }

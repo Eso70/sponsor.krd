@@ -13,7 +13,6 @@ export {
   type TemplateActionButtonProps,
   type TemplateActionButtonListProps,
 } from "./TemplateActionButton";
-export { TemplateFooter, type TemplateFooterProps } from "./TemplateFooter";
 export {
   TemplateViewportLayout,
   type TemplateViewportLayoutProps,

@@ -1,3 +1,4 @@
+import { PagePinDto } from '../common/page-pin.dto';
 import {
   Body,
   Controller,
@@ -20,6 +21,7 @@ import { StorageService } from '../storage/storage.service';
 import { FormsListDto, FormResponsesDto, FormTitleDto } from './forms-list.dto';
 import { FormsService } from './forms.service';
 import { uploadFormImage } from './form-upload';
+import { DuplicateFormDto } from './dto/duplicate-form.dto';
 @Controller('api/platform/forms')
 @UseGuards(PlatformAdminGuard, AuthorizationGuard)
 export class PlatformFormsController {
@@ -35,6 +37,18 @@ export class PlatformFormsController {
       data: await this.forms.list(
         await this.forms.platformOwner(),
         Number(query.page),
+        query.q,
+        query.filter === 'archived',
+      ),
+    };
+  }
+  @Get('selection')
+  @RequireCapabilities(Capability.PlatformFormsRead)
+  async selectionIds(@Query() query: FormsListDto) {
+    return {
+      success: true,
+      data: await this.forms.selectionIds(
+        await this.forms.platformOwner(),
         query.q,
         query.filter === 'archived',
       ),
@@ -99,6 +113,19 @@ export class PlatformFormsController {
       ),
     };
   }
+  @Patch(':id/pin')
+  @RequireCapabilities(Capability.PlatformFormsUpdate)
+  async pin(@Param('id', ParseUUIDPipe) id: string, @Body() body: PagePinDto) {
+    return {
+      success: true,
+      data: await this.forms.pin(
+        await this.forms.platformOwner(),
+        id,
+        body.isPinned,
+      ),
+    };
+  }
+
   @Patch(':id/archive')
   @RequireCapabilities(Capability.PlatformFormsUpdate)
   async archive(
@@ -116,10 +143,32 @@ export class PlatformFormsController {
   }
   @Post(':id/duplicate')
   @RequireCapabilities(Capability.PlatformFormsCreate)
-  async duplicate(@Param('id', ParseUUIDPipe) id: string) {
+  async duplicate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() input?: DuplicateFormDto,
+  ) {
     return {
       success: true,
-      data: await this.forms.duplicate(await this.forms.platformOwner(), id),
+      data: await this.forms.duplicate(
+        await this.forms.platformOwner(),
+        id,
+        input,
+      ),
+    };
+  }
+  @Get(':id/duplicate-options')
+  @RequireCapabilities(Capability.PlatformFormsCreate)
+  async duplicateOptions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('slug') slug?: string,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.duplicateOptions(
+        await this.forms.platformOwner(),
+        id,
+        slug,
+      ),
     };
   }
   @Delete(':id')
@@ -135,6 +184,12 @@ export class PlatformFormsController {
       success: true,
       data: await this.forms.getAnalytics(await this.forms.platformOwner(), id),
     };
+  }
+  @Delete(':id/analytics')
+  @RequireCapabilities(Capability.PlatformFormsDelete)
+  async clearAnalytics(@Param('id', ParseUUIDPipe) id: string) {
+    await this.forms.clearAnalytics(await this.forms.platformOwner(), id);
+    return { success: true };
   }
   @Delete(':id/submissions')
   @RequireCapabilities(Capability.PlatformFormsDelete)

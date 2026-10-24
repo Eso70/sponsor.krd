@@ -1,0 +1,19 @@
+.message {
+  position: absolute;
+  inset-inline: 12px;
+  bottom: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--shared-control-error-text, #dc2626);
+  pointer-events: none;
+}
+@layer base {
+  .withMessage {
+    height: 54px !important;
+    padding-top: 6px !important;
+    padding-bottom: 22px !important;
+  }
+}

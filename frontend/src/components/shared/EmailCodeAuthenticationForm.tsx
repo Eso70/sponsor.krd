@@ -4,6 +4,10 @@ import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api/request";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
+import {
+  AUTHENTICATION_CODE_INPUT_CLASS,
+  AUTHENTICATION_SUBMIT_BUTTON_CLASS,
+} from "./authentication-control-styles";
 
 type EmailChallenge = {
   challengeId: string;
@@ -19,12 +23,22 @@ type EmailVerification = {
 interface EmailCodeAuthenticationFormProps {
   requestEndpoint: string;
   verifyEndpoint: string;
-  rememberDevice?: boolean;
   emailPlaceholder?: string;
   actionLabel?: string;
   codeTitle?: string;
   verifyActionLabel?: string;
-  copy?: Partial<Record<"changeEmail" | "codeSent" | "loginCode" | "resend" | "resendIn" | "emailAddress" | "error", string>>;
+  copy?: Partial<
+    Record<
+      | "changeEmail"
+      | "codeSent"
+      | "loginCode"
+      | "resend"
+      | "resendIn"
+      | "emailAddress"
+      | "error",
+      string
+    >
+  >;
 }
 
 function errorMessage(error: unknown): string {
@@ -36,7 +50,6 @@ function errorMessage(error: unknown): string {
 export function EmailCodeAuthenticationForm({
   requestEndpoint,
   verifyEndpoint,
-  rememberDevice = false,
   emailPlaceholder = "Enter your email",
   actionLabel = "Continue with email",
   codeTitle = "Enter your login code",
@@ -86,7 +99,7 @@ export function EmailCodeAuthenticationForm({
     try {
       const result = await apiRequest<EmailVerification>(verifyEndpoint, {
         method: "POST",
-        json: { challengeId: challenge.challengeId, code, rememberDevice },
+        json: { challengeId: challenge.challengeId, code },
       });
       window.location.assign(result.redirectUrl);
     } catch (cause) {
@@ -116,7 +129,8 @@ export function EmailCodeAuthenticationForm({
             {codeTitle}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            {copy?.codeSent?.replace("{email}", email) ?? `We sent a 6-digit code to ${email}. It expires in 10 minutes.`}
+            {copy?.codeSent?.replace("{email}", email) ??
+              `We sent a 6-digit code to ${email}. It expires in 10 minutes.`}
           </p>
         </div>
         <input
@@ -131,7 +145,7 @@ export function EmailCodeAuthenticationForm({
           onChange={(event) =>
             setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
           }
-          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-lg font-black tracking-[0.45em] text-slate-900 outline-none transition focus:border-[var(--sponsor-krd-accent)] focus:ring-2 focus:ring-[var(--sponsor-krd-accent)]/20 dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+          className={AUTHENTICATION_CODE_INPUT_CLASS}
         />
         {error ? (
           <p
@@ -144,7 +158,7 @@ export function EmailCodeAuthenticationForm({
         <button
           type="submit"
           disabled={busy || code.length !== 6}
-          className="theme-fill flex h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-bold text-[var(--theme-ink)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+          className={AUTHENTICATION_SUBMIT_BUTTON_CLASS}
         >
           {busy ? (
             <MotionSpinner>
@@ -160,7 +174,10 @@ export function EmailCodeAuthenticationForm({
           onClick={() => void requestCode()}
           className="w-full text-center text-xs font-semibold text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:text-white"
         >
-          {resendIn > 0 ? copy?.resendIn?.replace("{seconds}", String(resendIn)) ?? `Send again in ${resendIn}s` : copy?.resend ?? "Send code again"}
+          {resendIn > 0
+            ? (copy?.resendIn?.replace("{seconds}", String(resendIn)) ??
+              `Send again in ${resendIn}s`)
+            : (copy?.resend ?? "Send code again")}
         </button>
       </form>
     );

@@ -9,7 +9,7 @@ import { DeviceViewport } from "@/components/shared/DeviceViewport";
  * How wide the hardware is drawn.
  *
  * `fill` takes the width of whatever lays it out — what the showcase and the
- * advertising steps do. `responsive` steps the frame up with the screen: a
+ * other public previews do. `responsive` steps the frame up with the screen: a
  * phone shows it near full width, a tablet a little larger, a desktop larger
  * still. The page inside is unaffected either way; it is always a real
  * `DEVICE_VIEWPORT_WIDTH` viewport, only the hardware around it changes size.
@@ -21,7 +21,7 @@ const SIZE_CLASSES = {
 
 export type PhoneMockupSize = keyof typeof SIZE_CLASSES;
 
-interface PhoneMockupProps {
+export interface PhoneMockupProps {
   children?: ReactNode;
   ariaLabel: string;
   name?: string;

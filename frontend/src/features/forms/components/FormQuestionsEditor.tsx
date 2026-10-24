@@ -133,7 +133,6 @@ export function FormQuestionsEditor({
           label={copy.purpose}
           value={form.purpose}
           onChange={(purpose) => onChange({ purpose })}
-          placeholder={labels.purposeHint}
           maxLength={500}
         />
       )}
@@ -190,7 +189,6 @@ export function FormQuestionsEditor({
             <FormEditorInput
               label={copy.questionLabel}
               value={form.personalCardTitle ?? ""}
-              placeholder={labels.personalCardHint}
               maxLength={70}
               showCount
               onChange={(personalCardTitle) => onChange({ personalCardTitle })}
@@ -198,7 +196,6 @@ export function FormQuestionsEditor({
             <FormEditorInput
               label={copy.descriptionLabel}
               value={form.personalCardDescription ?? ""}
-              placeholder={labels.descriptionHint}
               multiline
               maxLength={210}
               hint={labels.optional}

@@ -1,4 +1,4 @@
-import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import {
   LinktreesManagementPage,
   type LinktreesManagementCopy,
@@ -13,17 +13,11 @@ export type BusinessLinktreesPageProps = LinktreesManagementPageProps;
 export function BusinessLinktreesPage(props: BusinessLinktreesPageProps) {
   const t = useTranslations("Linktrees");
   const { locale } = useBusinessLocale();
-  useRegisterBusinessDashboardRefresh("linktrees", () => props.onRefresh(true));
+  useRegisterDashboardRefresh("linktrees", () => props.onRefresh(true));
   const copy: LinktreesManagementCopy = {
     title: t("title"),
     description: t("description"),
     limitReached: t("limitReached"),
-    totalPages: t("totalPages"),
-    totalViews: t("totalViews"),
-    uniqueViews: t("uniqueViews"),
-    totalClicks: t("totalClicks"),
-    clickRate: t("clickRate"),
-    conversions: t("conversions"),
     analytics: t("analytics"),
     noArchived: t("noArchived"),
     archivedDescription: t("archivedDescription"),
@@ -41,18 +35,15 @@ export function BusinessLinktreesPage(props: BusinessLinktreesPageProps) {
     refresh: t("refresh"),
     createTooltip: t("createTooltip"),
     create: t("create"),
-    clearAnalytics: t("clearAnalytics"),
-    noAnalytics: t("noAnalytics"),
   };
   return (
     <LinktreesManagementPage
       {...props}
+      locale={locale}
       emptyTitle={props.emptyTitle ?? t("noPages")}
       emptyDescription={props.emptyDescription ?? t("noPagesDescription")}
       copy={{ ...copy, ...props.copy }}
       listCopy={businessMessages[locale].LinktreeList}
-      profitCopy={businessMessages[locale].CampaignProfit}
-      calendarLocale={locale}
       trafficLabels={{
         column: businessMessages[locale].LinktreeList.traffic,
         views: businessMessages[locale].LinktreeList.views,

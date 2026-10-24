@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
-import { Fragment, memo, type CSSProperties, type ReactNode } from "react";
-import { usePublicLinktreeCopy } from "@/features/business/i18n/public-linktree";
+import { Fragment, memo, useState, type CSSProperties, type ReactNode } from "react";
+import { usePublicLinktreeCopy, usePublicLinktreeLocale } from "@/features/business/i18n/public-linktree";
+import { imageMediaCopy } from "@/components/shared/image-media-copy";
+import { FullscreenImageViewer } from "@/components/shared/FullscreenImageViewer";
+import { PublicLinktreeBusinessSummary } from "@/components/public/PublicLinktreeBusinessSummary";
+import { useTemplateMedia } from "./TemplateMediaContext";
 
 const DEFAULT_AVATAR = "/images/DefaultAvatar.png";
 
@@ -143,6 +147,10 @@ export const TemplateHeader = memo(function TemplateHeader({
   children,
 }: TemplateHeaderProps) {
   const copy = usePublicLinktreeCopy();
+  const locale = usePublicLinktreeLocale();
+  const mediaCopy = imageMediaCopy(locale);
+  const { hasBanner, onAction, seo } = useTemplateMedia();
+  const [logoOpen, setLogoOpen] = useState(false);
   const imageSrc = image || DEFAULT_AVATAR;
   const trimmedSubtitle = subtitle?.trim() || "";
   const descriptionText = description?.trim();
@@ -160,7 +168,7 @@ export const TemplateHeader = memo(function TemplateHeader({
   const avatarNode = (
     <Wrap className={avatarOuterClassName} style={avatarOuterStyle}>
       {avatarGlow}
-      <div className={avatarWrapperClassName} style={avatarWrapperStyle}>
+      <div className={`${avatarWrapperClassName} relative`} style={avatarWrapperStyle}>
         <Image
           src={imageSrc}
           alt={name || "Profile"}
@@ -177,6 +185,9 @@ export const TemplateHeader = memo(function TemplateHeader({
             }
           }}
         />
+        {image && <button type="button" data-image-preview-trigger aria-label={`${mediaCopy.preview}: ${mediaCopy.logo}`}
+          onClick={() => { setLogoOpen(true); onAction?.("image-open", -1); }}
+          className="absolute inset-0 z-10 cursor-zoom-in rounded-[inherit] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4" />}
       </div>
     </Wrap>
   );
@@ -209,6 +220,7 @@ export const TemplateHeader = memo(function TemplateHeader({
         descriptionNode
       )}
 
+      <PublicLinktreeBusinessSummary seo={seo} locale={locale} color={textSecondaryColor} />
       {children}
     </Wrap>
   );
@@ -216,9 +228,12 @@ export const TemplateHeader = memo(function TemplateHeader({
   return (
     <Wrapper className={className} data-template-avatar-header>
       <Wrap className={contentWrapperClassName} style={contentWrapperStyle}>
-        {avatarNode}
+        {hasBanner ? <div data-template-banner-logo className="relative z-20 flex justify-center"
+          style={{ marginTop: -(Number.parseInt(avatarSizes, 10) || 112) / 2 }}>{avatarNode}</div> : avatarNode}
         {textNode}
       </Wrap>
+      {logoOpen && <FullscreenImageViewer images={[imageSrc]} title={mediaCopy.logo}
+        labels={{ close: mediaCopy.close, previous: mediaCopy.back, next: mediaCopy.next, zoomIn: mediaCopy.zoomIn, zoomOut: mediaCopy.zoomOut }} onClose={() => setLogoOpen(false)} />}
     </Wrapper>
   );
 });

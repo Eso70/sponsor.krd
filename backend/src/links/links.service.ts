@@ -6,6 +6,7 @@
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { describeError } from '../common/describe-error';
+import { publicLinktreeCacheKeys } from '../common/root-public-cache';
 import { RedisService } from '../redis/redis.service';
 import { CreateLinkDto } from './dto/create-link.dto';
 import { UpdateLinkDto } from './dto/update-link.dto';
@@ -53,23 +54,11 @@ export class LinksService {
       );
       const row = res.rows[0];
       if (row?.uid) {
-        const sub = row.subdomain?.toLowerCase();
-        const keys = [
-          `cache:linktree:uid:${row.uid}`,
-          `cache:linktree:uid:id`,
-          `cache:platform-linktree:${row.uid}`,
-        ];
-        if (row.seo_name) {
-          keys.push(`cache:linktree:uid:${row.seo_name}`);
-          keys.push(`cache:platform-linktree:${row.seo_name}`);
-        }
-        if (sub) {
-          keys.push(`cache:linktree:uid:${row.uid}:sub:${sub}`);
-          keys.push(`cache:linktree:uid:id:sub:${sub}`);
-          if (row.seo_name) {
-            keys.push(`cache:linktree:uid:${row.seo_name}:sub:${sub}`);
-          }
-        }
+        const keys = publicLinktreeCacheKeys(
+          row.subdomain,
+          row.uid,
+          row.seo_name,
+        );
         await Promise.all(keys.map((k) => this.redisService.del(k)));
       }
     } catch (error) {

@@ -6,7 +6,7 @@ const KURDISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:pages:templates-access": "دەستگەیشتن بە پەڕەی قاڵبەکان",
   "business:pages:profile-access": "دەستگەیشتن بە پەڕەی پڕۆفایلی بزنس",
   "business:pages:settings-access": "دەستگەیشتن بە پەڕەی ڕێکخستنەکانی بزنس",
-  "business:pages:advertising-access": "دەستگەیشتن بە پەڕەی ڕیکلامی بزنس",
+  
   "business:settings:profile-access": "کردنەوەی بەشی ڕێکخستنەکانی پڕۆفایل",
   "business:settings:defaults-access":
     "کردنەوەی بەشی ڕێکخستنە بنەڕەتییەکانی پەڕە",
@@ -36,10 +36,9 @@ const KURDISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:linktrees:update": "نوێکردنەوەی خانە تۆمارکراوەکانی لینکترێ",
   "business:linktrees:delete": "سڕینەوەی لینکترێ",
   "business:linktrees:upload": "بارکردنی وێنە و فایلەکانی لینکترێ",
-  "business:advertising:read": "بینینی پەڕەی خزمەتگوزاریی ڕیکلام",
-  "business:advertising:update": "دەستکاریکردنی پەڕەی خزمەتگوزاریی ڕیکلام",
-  "business:advertising:publish":
-    "بڵاوکردنەوە یان لابردنی پەڕەی خزمەتگوزاریی ڕیکلام",
+  
+  
+  
   "business:links:read": "بینینی لینکەکان",
   "business:links:create": "دروستکردنی لینکی نوێ",
   "business:links:update": "نوێکردنەوەی خانە تۆمارکراوەکانی لینک",
@@ -60,7 +59,7 @@ const ARABIC_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:pages:templates-access": "الوصول إلى صفحة القوالب",
   "business:pages:profile-access": "الوصول إلى صفحة ملف النشاط التجاري",
   "business:pages:settings-access": "الوصول إلى إعدادات النشاط التجاري",
-  "business:pages:advertising-access": "الوصول إلى صفحة إعلانات النشاط التجاري",
+  
   "business:settings:profile-access": "فتح قسم إعدادات الملف الشخصي",
   "business:settings:defaults-access": "فتح قسم إعدادات الصفحة الافتراضية",
   "business:settings:security-access": "فتح قسم أمان الحساب",
@@ -87,9 +86,9 @@ const ARABIC_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:linktrees:update": "تحديث حقول صفحة الروابط المسجّلة",
   "business:linktrees:delete": "حذف صفحة الروابط",
   "business:linktrees:upload": "رفع صور وملفات صفحة الروابط",
-  "business:advertising:read": "عرض صفحة خدمة الإعلانات",
-  "business:advertising:update": "تعديل صفحة خدمة الإعلانات",
-  "business:advertising:publish": "نشر صفحة خدمة الإعلانات أو إلغاء نشرها",
+  
+  
+  
   "business:links:read": "عرض الروابط",
   "business:links:create": "إنشاء رابط جديد",
   "business:links:update": "تحديث حقول الرابط المسجّلة",
@@ -110,7 +109,7 @@ const ENGLISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:pages:templates-access": "Access the templates page",
   "business:pages:profile-access": "Access the business profile page",
   "business:pages:settings-access": "Access business settings",
-  "business:pages:advertising-access": "Access the business advertising page",
+  
   "business:settings:profile-access": "Open profile settings",
   "business:settings:defaults-access": "Open default page settings",
   "business:settings:security-access": "Open account security settings",
@@ -136,10 +135,9 @@ const ENGLISH_PERMISSION_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "business:linktrees:update": "Update registered Linktree fields",
   "business:linktrees:delete": "Delete a Linktree",
   "business:linktrees:upload": "Upload Linktree images and files",
-  "business:advertising:read": "View the advertising service page",
-  "business:advertising:update": "Edit the advertising service page",
-  "business:advertising:publish":
-    "Publish or unpublish the advertising service page",
+  
+  
+  
   "business:links:read": "View links",
   "business:links:create": "Create a link",
   "business:links:update": "Update registered link fields",
@@ -189,7 +187,7 @@ const PERMISSION_CATEGORIES: Record<
     ar: "التحكم بالوصول",
     en: "Access control",
   },
-  Advertising: { ckb: "ڕیکلام", ar: "الإعلانات", en: "Advertising" },
+  
   Analytics: { ckb: "ئامار", ar: "التحليلات", en: "Analytics" },
   Billing: { ckb: "پارەدان", ar: "الفوترة", en: "Billing" },
   "Business account": {

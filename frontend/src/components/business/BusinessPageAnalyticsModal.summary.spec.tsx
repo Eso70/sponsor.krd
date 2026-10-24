@@ -1,15 +1,29 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BusinessPageAnalyticsModal } from "@/components/business/BusinessPageAnalyticsModal";
+import { PageAnalyticsDrawer } from "@/features/analytics/components/PageAnalyticsDrawer";
 import { businessMessages } from "@/features/business/i18n/messages";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-describe("BusinessPageAnalyticsModal summary mode", () => {
+describe("PageAnalyticsDrawer summary mode", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it.each(["business", "platform-linktree"] as const)("keeps data and shared header controls when language changes on %s", async dataSource => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ data: { total_views: 23, unique_views: 12, total_clicks: 8, unique_clicks: 3, conversions: 0, conversion_value: 0 } }) }));
+    vi.stubGlobal("fetch", fetchMock);
+    const props = { isOpen: true, onClose: vi.fn(), pageId: "page", pageName: "Example", summaryOnly: true, dataSource, headerControls: <button>Appearance controls</button> };
+    const { rerender } = render(<PageAnalyticsDrawer {...props} locale="en" />);
+    await screen.findByText("12");
+    const requests = fetchMock.mock.calls.length;
+    rerender(<PageAnalyticsDrawer {...props} locale="ar" />);
+    expect(screen.getByRole("button", { name: "Appearance controls" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "تحديث" })).toBeVisible();
+    expect(screen.getByText("12")).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(requests);
   });
 
   it("uses Arabic Business copy without changing the shared Platform default", async () => {
@@ -34,7 +48,7 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
     );
 
     render(
-      <BusinessPageAnalyticsModal
+      <PageAnalyticsDrawer
         isOpen
         onClose={vi.fn()}
         pageId="business-page-id"
@@ -74,7 +88,7 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(
-      <BusinessPageAnalyticsModal
+      <PageAnalyticsDrawer
         isOpen
         onClose={vi.fn()}
         pageId="platform-page-id"
@@ -182,7 +196,7 @@ describe("BusinessPageAnalyticsModal summary mode", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(
-      <BusinessPageAnalyticsModal
+      <PageAnalyticsDrawer
         isOpen
         onClose={vi.fn()}
         pageId="platform-page-id"

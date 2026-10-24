@@ -14,6 +14,37 @@ import {
 const image = "data:image/png;base64,YQ==";
 describe("Shared form preview audit", () => {
   for (const layout of ["form", "card"] as const) {
+    it.each(["en", "ckb", "ar"] as const)(
+      `${layout} keeps %s sample copy in the editor preview only`,
+      (language) => {
+        const form = { ...createForm(language), layout, name: "Internal name" };
+        const original = structuredClone(form);
+        const hint = formEditorCopy(language).descriptionHint;
+        const view = render(<FormPreview form={form} placeholders />);
+        expect(screen.getByText(hint)).toBeInTheDocument();
+        view.rerender(
+          <FormPreview form={form} placeholders presentation="public" />,
+        );
+        expect(screen.queryByText(hint)).not.toBeInTheDocument();
+        expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+        expect(form).toEqual(original);
+      },
+    );
+    it(`${layout} keeps final-page sample guidance out of the public page`, () => {
+      const form = {
+        ...createForm("en"),
+        layout,
+        actionsEnabled: true,
+        actions: [{ id: "website", type: "website" as const, text: "Website", url: "https://example.com" }],
+      };
+      const hint = formEditorCopy("en").finalDefault;
+      const view = render(<FormPreview form={form} placeholders finalPage />);
+      expect(screen.getByText(hint)).toBeInTheDocument();
+      view.rerender(<FormPreview form={form} placeholders finalPage presentation="public" />);
+      expect(screen.queryByText(hint)).not.toBeInTheDocument();
+      view.rerender(<FormPreview form={{ ...form, finalDescription: "We received your request." }} finalPage presentation="public" />);
+      expect(screen.getByText("We received your request.")).toBeInTheDocument();
+    });
     it(`${layout} keeps the internal name out of the public introduction`, () => {
       const form = {
         ...createForm("en"),

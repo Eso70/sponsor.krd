@@ -1,4 +1,4 @@
-import { isProductConfigured, validProductPrice } from "./product-selection";
+import { isProductConfigured, validProductPrice, validProductPriceBreaks } from "./product-selection";
 import { formDraftName, isFormUrl, validateForm } from "./forms-model";
 import { isFormImage } from "./form-media";
 import { isConditionalAnswers } from "./conditional-csv";
@@ -122,7 +122,7 @@ export function formEditorIssues(
           !question.productSelection.items.every(isProductConfigured))) ||
         question.productSelection?.items.some(
           (item) =>
-            item.unitPrice !== null && !validProductPrice(item.unitPrice),
+            (item.unitPrice !== null && !validProductPrice(item.unitPrice)) || !validProductPriceBreaks(item.unitPrice, item.priceBreaks),
         ))
     )
       issues.push({

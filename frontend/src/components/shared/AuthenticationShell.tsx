@@ -1,7 +1,10 @@
-import { ArrowLeft } from "lucide-react";
+import { AuthenticationHeader } from "./AuthenticationHeader";
+import type { AuthenticationLocalePreference } from "./authentication-header-copy";
 import { AuthenticationPreviewPanel } from "@/components/shared/AuthenticationPreviewPanel";
-import { ThemeToggleButton } from "@/components/shared/ThemeToggleButton";
-import { parseWebsiteColor, readableInk } from "@/lib/utils/parse-website-color";
+import {
+  parseWebsiteColor,
+  readableInk,
+} from "@/lib/utils/parse-website-color";
 import {
   BUSINESS_LOGO_PLACEHOLDER,
   SPONSOR_KRD_LOGO,
@@ -21,6 +24,7 @@ interface AuthenticationShellProps {
   backLabel?: string;
   themeCopy?: { label: string; light: string; dark: string };
   language?: string;
+  localePreference?: AuthenticationLocalePreference;
 }
 
 export function AuthenticationShell({
@@ -37,9 +41,8 @@ export function AuthenticationShell({
   backLabel,
   themeCopy,
   language,
+  localePreference,
 }: AuthenticationShellProps) {
-  const controlClass =
-    "inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-500 shadow-sm backdrop-blur transition hover:text-slate-900 dark:border-white/10 dark:bg-[#171a20]/90 dark:text-slate-400 dark:hover:text-white";
   const accent = accentColor ? parseWebsiteColor(accentColor) : null;
   const themeStyle = accent
     ? ({
@@ -79,25 +82,30 @@ export function AuthenticationShell({
   return (
     <main
       lang={language}
+      dir="ltr"
       data-sponsor-krd-theme={accent || businessTenant ? undefined : true}
-      className={`${accent ? "custom-scrollbar theme-custom-scrollbar" : ""} relative h-screen overflow-hidden bg-[#f7f8fa] text-slate-900 transition-colors dark:bg-[#0d0f12] dark:text-white`}
+      className={`${accent ? "custom-scrollbar theme-custom-scrollbar" : ""} relative flex min-h-dvh min-w-0 flex-col bg-[#f7f8fa] text-slate-900 transition-colors dark:bg-[#0d0f12] dark:text-white`}
       style={themeStyle}
     >
-      <a
-        href={backHref}
-        className={`${controlClass} absolute left-5 top-5 z-20 sm:left-8 sm:top-8`}
-        aria-label={backLabel ?? "Back"}
+      <AuthenticationHeader
+        backHref={backHref}
+        backLabel={backLabel}
+        themeCopy={themeCopy}
+        language={language}
+        headerAction={headerAction}
+        localePreference={
+          localePreference ?? (businessTenant ? "business" : "public")
+        }
+      />
+      <div
+        className="grid min-h-dvh min-w-0 flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
+        dir="ltr"
       >
-        <ArrowLeft className="h-4.5 w-4.5" />
-      </a>
-      <div className="absolute right-5 top-5 z-20 flex items-center gap-2 sm:right-8 sm:top-8">
-        {headerAction}
-        <ThemeToggleButton copy={themeCopy} />
-      </div>
-      <div className="grid h-full w-full lg:grid-cols-[minmax(0,1fr)_1.4fr]">
-        <section className="flex h-full flex-col px-5 py-5 sm:px-8 sm:py-8 lg:px-10 xl:px-14">
-          <div className="flex flex-1 items-center justify-center py-2 lg:py-4">
-            <div className={`w-full ${wide ? "max-w-4xl" : "max-w-lg"}`}>
+        <section className="flex min-w-0 flex-col justify-center px-5 pb-10 pt-20 sm:px-8 lg:px-10 lg:py-20">
+          <div className="flex min-w-0 items-center justify-center">
+            <div
+              className={`min-w-0 w-full ${wide ? "max-w-4xl" : "max-w-lg"}`}
+            >
               {children}
             </div>
           </div>

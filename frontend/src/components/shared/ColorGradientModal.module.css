@@ -1,3 +1,44 @@
+.panel .group {
+  display: flex;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+}
+.group button {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--picker-control-radius);
+  font-size: 12px;
+}
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel label {
+  color: var(--picker-text);
+}
+.panel [data-picker-channels] {
+  background: var(--picker-soft) !important;
+  border-color: transparent !important;
+}
+.panel input[data-picker-field] {
+  border-color: transparent !important;
+  background: var(--picker-soft) !important;
+  color: var(--picker-text) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.panel .sample {
+  border-color: transparent;
+}
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  padding: 10px 12px;
+}
+
 .sample {
   background: var(--picker-color) !important;
   background-repeat: no-repeat !important;
@@ -22,8 +63,8 @@
   height: auto;
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: 6px;
-  border: 1px solid rgb(148 163 184 / 35%);
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--picker-text) 12%, transparent);
   background: var(--picker-color) !important;
   box-shadow: none !important;
   transition: filter 0.15s ease;
@@ -39,7 +80,7 @@
   filter: brightness(0.92);
 }
 .swatch[aria-pressed="true"] {
-  border-color: currentColor;
+  border-color: color-mix(in srgb, var(--picker-text) 20%, transparent);
 }
 
 .popup {
@@ -57,7 +98,7 @@
 }
 .popup .directions button {
   height: 32px;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 @container (max-width: 340px) {

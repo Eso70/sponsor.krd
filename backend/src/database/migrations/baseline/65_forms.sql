@@ -1,4 +1,5 @@
 CREATE TABLE public.forms (
+  is_pinned boolean NOT NULL DEFAULT false,
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
   slug varchar(80) NOT NULL,
@@ -32,3 +33,5 @@ CREATE TABLE public.form_submissions (
 CREATE INDEX form_submissions_form_created_idx ON public.form_submissions(form_id,created_at DESC,id);
 
 CREATE INDEX form_submissions_analytics_idx ON public.form_submissions(analytics_event_id) WHERE analytics_event_id IS NOT NULL;
+
+CREATE INDEX idx_forms_business_pinned ON public.forms (business_id, is_archived, is_pinned DESC, updated_at DESC, id);

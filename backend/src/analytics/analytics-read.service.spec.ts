@@ -2,6 +2,41 @@ import { DatabaseService } from '../database/database.service';
 import { AnalyticsReadService } from './analytics-read.service';
 
 describe('AnalyticsReadService', () => {
+  it('counts one accepted conversion across multiple Pixel destinations while retaining delivery counts', async () => {
+    const query = jest.fn((_sql: string, _values?: unknown[]) =>
+      Promise.resolve({
+        rows: [
+          {
+            connections: '2',
+            browser_events: '2',
+            queued_events: '2',
+            delivered: '2',
+            retrying: '0',
+            failed: '0',
+            internal_conversions: '1',
+            conversion_deliveries: '1',
+            last_delivered_at: null,
+          },
+        ],
+      }),
+    );
+    const service = new AnalyticsReadService({
+      query,
+    } as unknown as DatabaseService);
+    const owner = '373f02f3-0b8b-4e93-ad0b-5f16a640daf4';
+    const health = await service.getTikTokHealth(owner, {});
+    const [sql, values] = query.mock.calls[0];
+    expect(sql).toContain('COUNT(DISTINCT outbox.analytics_event_id) FILTER');
+    expect(sql).toContain(
+      "COUNT(outbox.id) FILTER (WHERE outbox.status = 'delivered')",
+    );
+    expect(values?.[0]).toBe(owner);
+    expect(health.delivered).toBe(2);
+    expect(health.reconciliation).toEqual({
+      internalConversions: 1,
+      serverAcceptedConversions: 1,
+    });
+  });
   it('keeps clicked historical and unattributed actions visible in button analytics', async () => {
     let capturedSql = '';
     const query = jest.fn((sql: string) => {
@@ -53,7 +88,9 @@ describe('AnalyticsReadService', () => {
     expect(capturedSql).toContain('unique_totals AS');
     expect(capturedSql).toContain('COUNT(DISTINCT event.visitor_id)');
     expect(capturedSql).toContain('event.is_bot = false');
-    expect(capturedSql).toContain('COUNT(*)::bigint AS total_clicks');
+    expect(capturedSql).toContain(
+      'COUNT(*) FILTER (WHERE event.event_name = ANY($6::varchar[]))::bigint AS total_clicks',
+    );
     expect(capturedSql).toContain(
       'GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0))',
     );

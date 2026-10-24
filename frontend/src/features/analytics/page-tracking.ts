@@ -70,6 +70,8 @@ export interface PageTrackerOptions {
 }
 
 export interface TrackActionOptions {
+  /** Hand off a final engagement snapshot before navigation/backgrounding. */
+  immediate?: boolean;
   label?: string;
   destination?: string;
   properties?: Record<string, unknown>;
@@ -207,6 +209,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
   const recent = new Map<string, number>();
   const reportedOnce = new Set<string>();
   let viewSent = false;
+  const pageViewId = createRuntimeId();
 
   const hasPixel = () => options.analytics.pixelIds.length > 0;
 
@@ -284,6 +287,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         contentType: input.actionKey,
         destination: input.destination,
         ...input.properties,
+        pageViewId,
       },
     });
     recordTikTokDebug({
@@ -326,7 +330,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
     trackView() {
       if (viewSent) return;
       viewSent = true;
-      const eventId = createRuntimeId();
+      const eventId = pageViewId;
       if (hasPixel()) {
         trackTikTokEvent(
           "ViewContent",
@@ -352,6 +356,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         browserEventName: hasPixel() ? "ViewContent" : undefined,
         properties: {
           contentId: options.pageId,
+          pageViewId,
           contentName: options.pageName,
           contentType: options.contentType,
           description: options.description,
@@ -366,7 +371,8 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         if (reportedOnce.has(key)) return;
         reportedOnce.add(key);
       }
-      if (isRepeat(`${eventName}:${key}`)) return;
+      const repeatKey = eventName === "whatsapp_click" && typeof input.properties?.whatsappQuestionId === "string" ? `${eventName}:${key}:${input.properties.whatsappQuestionId.slice(0, 200)}` : `${eventName}:${key}`;
+      if (isRepeat(repeatKey)) return;
 
       return send({
         eventName,
@@ -413,7 +419,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         if (reportedOnce.has(onceKey)) return;
         reportedOnce.add(onceKey);
       }
-      if (isRepeat(`${eventName}:${actionKey}`)) return;
+      if (!(input.immediate && input.properties?.measurement === "active_time") && isRepeat(`${eventName}:${actionKey}`)) return;
 
       send({
         eventName,
@@ -423,7 +429,7 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
         properties: input.properties,
         // No `action`, so no pixel: engagement is ours to measure, not TikTok's
         // to optimise on.
-        immediate: IMMEDIATE_EVENTS.has(eventName),
+        immediate: input.immediate || IMMEDIATE_EVENTS.has(eventName),
       });
     },
 

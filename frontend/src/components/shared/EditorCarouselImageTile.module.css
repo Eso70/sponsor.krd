@@ -1,0 +1,23 @@
+.image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.tile[data-reorder-held="true"] > .image::after {
+  opacity: 1;
+  border: 2px solid var(--theme-primary, #64748b);
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 8%, transparent);
+}
+.tile[data-reorder-target="true"] > .image::after {
+  opacity: 1;
+  border: 3px solid var(--theme-primary, #64748b);
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 18%, transparent);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 65%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .image::after { transition: none; }
+}

@@ -1,4 +1,5 @@
-﻿import { FormsModule } from './forms/forms.module';
+﻿import { AnalyticsSharingModule } from './analytics-sharing/analytics-sharing.module';
+import { FormsModule } from './forms/forms.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 import { CustomerSubscriptionsModule } from './billing/customer-subscriptions.module';
@@ -15,14 +16,14 @@ import { PlatformAdminModule } from './platform-admin/platform-admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CommunicationModule } from './communications/communication.module';
-import { AdvertisingModule } from './advertising/advertising.module';
+
 import { ObservabilityModule } from './observability/observability.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
-import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.module';
 
 @Module({
   imports: [
     FormsModule,
+    AnalyticsSharingModule,
     ConfigModule,
     DatabaseModule,
     RedisModule,
@@ -32,14 +33,13 @@ import { CampaignRevenueModule } from './campaign-revenue/campaign-revenue.modul
     DomainsModule,
     AnalyticsModule,
     LinktreesModule,
-    AdvertisingModule,
+
     LinksModule,
     PublicModule,
     CustomerSubscriptionsModule,
     StorageModule,
     PlatformAdminModule,
     OnboardingModule,
-    CampaignRevenueModule,
   ],
   controllers: [AppController],
   providers: [AppService],

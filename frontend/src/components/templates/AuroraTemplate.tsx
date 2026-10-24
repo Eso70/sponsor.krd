@@ -26,7 +26,6 @@ import {
   STANDARD_TEMPLATE_HEADER_CLASSES,
   TemplateActionButton,
   TemplateActionButtonList,
-  TemplateFooter,
   TemplateHeader,
   TemplateLinkLabel,
   TemplateViewportLayout,
@@ -199,16 +198,6 @@ export const AuroraTemplate = memo(function AuroraTemplate({
             onOpen={onLinkClick}
           />
         </>
-      }
-      footer={
-        <TemplateFooter
-          footerText={linktree.footer_text}
-          footerPhone={linktree.footer_phone}
-          footerButtonColor={linktree.template_config?.footer_button_color}
-          footerHidden={linktree.footer_hidden ?? false}
-          textColor={textColor}
-          textSecondaryColor={textSecondaryColor}
-        />
       }
     />
   );

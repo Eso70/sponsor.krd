@@ -1,9 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Ban, Plus, RefreshCw } from "lucide-react";
+import { Ban, Plus } from "lucide-react";
 import type { BlockedSubdomains } from "@linktree/types";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { DashboardSurface } from "@/components/shared/DashboardSurface";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { PageManagementActions } from "@/components/shared/PageManagementActions";
 import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
 import {
   blockSubdomain,
@@ -45,6 +48,11 @@ export function BlockedSubdomainsSettings() {
     void load(controller.signal);
     return () => controller.abort();
   }, [load]);
+  const refreshing = useRegisterDashboardRefresh("blocked-subdomains", async () => {
+    try { setData(await getBlockedSubdomains()); setError(null); }
+    catch (error) { setError("load"); throw error; }
+  });
+
   async function add(name: string) {
     if (busy) return;
     setOperation({ type: "add" });
@@ -74,38 +82,17 @@ export function BlockedSubdomainsSettings() {
     }
   }
   return (
-    <DashboardSurface>
-      <PageHeader
+    <PageManagementSection
         title={copy.title}
         description={copy.description}
-        icon={Ban}
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setOperation({ type: "refresh" });
-                setSaved(false);
-                void load().finally(() => setOperation(null));
-              }}
-              className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${operation?.type === "refresh" ? "animate-spin" : ""}`}
-              />
-              {copy.refresh}
-            </button>
-            <SettingsActionButton
-              label={copy.addNew}
-              icon={Plus}
-              disabled={busy || !data}
-              onClick={() => setAdding(true)}
-            />
-          </div>
+        icon={<Ban className="size-5" />}
+        toolbar={
+          <PageManagementActions>
+            <SettingsActionButton label={copy.addNew} icon={Plus} disabled={busy || refreshing || !data} onClick={() => setAdding(true)} />
+          </PageManagementActions>
         }
-      />
-      <div className="mt-2 space-y-4 border-t border-slate-100 pt-5 dark:border-white/5">
+    >
+      <div className="space-y-4">
         {error ? (
           <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
             {error === "load" ? copy.loadError : copy.saveError}
@@ -118,6 +105,7 @@ export function BlockedSubdomainsSettings() {
             {copy.updated}
           </p>
         ) : null}
+        <DashboardRefreshRegion loading={refreshing} label={platformLoadingCopy[locale].loading}>
         <BlockedSubdomainsTable
           data={data}
           locale={locale}
@@ -126,6 +114,7 @@ export function BlockedSubdomainsSettings() {
           removing={operation?.type === "remove" ? operation.name : null}
           onDelete={(name) => void remove(name)}
         />
+        </DashboardRefreshRegion>
       </div>
       {adding && (
         <AddBlockedSubdomainModal
@@ -135,6 +124,6 @@ export function BlockedSubdomainsSettings() {
           onAdd={add}
         />
       )}
-    </DashboardSurface>
+    </PageManagementSection>
   );
 }

@@ -1,3 +1,4 @@
+import { requestBranding } from "@/lib/brand/request-branding.server";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { TikTokPixelBaseCode } from "@/components/analytics/TikTokPixelBaseCode";
@@ -8,7 +9,8 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const payload = await fetchPublicForm(slug);
-  return buildFormMetadata(payload.form, payload.origin, payload.businessLogo);
+  const branding = await requestBranding();
+  return buildFormMetadata(payload.form, payload.origin, payload.businessLogo || branding.logo, branding.favicon);
 }
 export default async function Page({ params }: Props) {
   const { slug } = await params;

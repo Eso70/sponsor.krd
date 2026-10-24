@@ -22,9 +22,14 @@ describe("shared delete confirmation focus", () => {
         onConfirm={confirm}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    const removeButton = screen.getByRole("button", { name: "Remove" });
+    fireEvent.click(removeButton);
+    fireEvent.click(removeButton);
     expect(confirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
+    for (const button of screen.getAllByRole("button")) expect(button).toBeDisabled();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(close).not.toHaveBeenCalled();
     await act(async () => {
       finish();
     });

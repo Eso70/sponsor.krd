@@ -1,13 +1,17 @@
 "use client";
+import { clearSelectedAnalytics } from "@/features/shared/clear-selected-analytics";
 
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DrawerPresence } from "@/components/shared/DrawerPresence";
+import { LinktreeEditorDrawer } from "@/features/link-editor/components/LinktreeEditorDrawer";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { LinktreeListItem } from "@linktree/types";
 
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { LinktreeSearchModal } from "@/components/shared/LinktreeSearchModal";
-import { PlatformLinktreeAnalyticsSkeleton, PlatformLinktreeEditorSkeleton } from "@/features/platform-admin/components/PlatformLinktreesModalSkeletons";
+import { PlatformLinktreeAnalyticsSkeleton } from "@/features/platform-admin/components/PlatformLinktreesModalSkeletons";
 import type {
   EditLinkData,
   LinktreeEditorSubmitData,
@@ -22,27 +26,10 @@ import { sharedArabicLinktreeCopy } from "@/features/link-editor/shared-arabic-c
 import { arabicEditorCopy, englishEditorCopy } from "@/features/link-editor/editor-copy";
 import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
 
-const LinktreeEditorModal = dynamic(
+const AnalyticsDrawer = dynamic(
   () =>
-    import("@/features/link-editor/components/ReusableLinktreeEditorModal").then(
-      (module) => ({ default: module.ReusableLinktreeEditorModal }),
-    ),
-  {
-    ssr: false,
-    loading: () => <PlatformLinktreeEditorSkeleton />,
-  },
-);
-const DuplicateLinktreeModal = dynamic(
-  () =>
-    import("@/features/link-editor/components/ReusableDuplicateLinktreeModal").then(
-      (module) => ({ default: module.ReusableDuplicateLinktreeModal }),
-    ),
-  { ssr: false },
-);
-const AnalyticsModal = dynamic(
-  () =>
-    import("@/features/analytics/components/PageAnalyticsModal").then(
-      (module) => ({ default: module.PageAnalyticsModal }),
+    import("@/features/analytics/components/PageAnalyticsDrawer").then(
+      (module) => ({ default: module.PageAnalyticsDrawer }),
     ),
   {
     ssr: false,
@@ -50,14 +37,7 @@ const AnalyticsModal = dynamic(
   },
 );
 
-interface AnalyticsTotals {
-  total_views: number;
-  unique_views: number;
-  total_clicks: number;
-  unique_clicks: number;
-  conversions: number;
-  conversion_value: number;
-}
+import { readAnalyticsTotals, EMPTY_ANALYTICS_TOTALS, type AnalyticsTotals } from "@/features/analytics/analytics-totals";
 
 type PlatformLinktreeContext = {
   branding: {
@@ -72,6 +52,7 @@ type PlatformLinktreeContext = {
     default_footer_phone?: string | null;
     default_template?: string | null;
     default_background_color?: string | null;
+    default_background_pattern?: string | null;
     default_footer_hidden?: boolean;
     default_whatsapp_enabled?: boolean;
     default_avatar?: string | null;
@@ -79,16 +60,7 @@ type PlatformLinktreeContext = {
   publicPathPrefix: string;
 };
 
-const EMPTY_TOTALS: AnalyticsTotals = {
-  total_views: 0,
-  unique_views: 0,
-  total_clicks: 0,
-  unique_clicks: 0,
-  conversions: 0,
-  conversion_value: 0,
-};
-
-export function PlatformLinktreesPage() {
+export function PlatformLinktreesPage({ headerControls }: { headerControls?: ReactNode }) {
   const { locale } = usePlatformLocale();
   const copy = platformLinktreesCopy[locale];
   const copyRef = useRef(copy);
@@ -98,7 +70,10 @@ export function PlatformLinktreesPage() {
   const apiBase = "/api/platform/linktrees";
   const [context, setContext] = useState<PlatformLinktreeContext | null>(null);
   const [items, setItems] = useState<LinktreeListItem[]>([]);
-  const [totals, setTotals] = useState<AnalyticsTotals>(EMPTY_TOTALS);
+  const [totals, setTotals] = useState<AnalyticsTotals>(EMPTY_ANALYTICS_TOTALS);
+  const [pagesUnavailable, setPagesUnavailable] = useState(false);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsUnavailable, setAnalyticsUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
@@ -107,13 +82,10 @@ export function PlatformLinktreesPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editData, setEditData] = useState<EditLinkData | null>(null);
   const [loadingEdit, setLoadingEdit] = useState(false);
-  const [duplicateTarget, setDuplicateTarget] =
-    useState<LinktreeListItem | null>(null);
   const [analyticsPageId, setAnalyticsPageId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<LinktreeListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [clearAllAnalyticsOpen, setClearAllAnalyticsOpen] = useState(false);
-  const [clearingAllAnalytics, setClearingAllAnalytics] = useState(false);
+  const [clearingSelectedAnalytics, setClearingSelectedAnalytics] = useState(false);
 
   const apiEndpoints = useMemo(
     () => ({
@@ -124,62 +96,51 @@ export function PlatformLinktreesPage() {
     [apiBase],
   );
 
+  const loadRequest = useRef(0);
+  const invalidateLoad = useCallback(() => { loadRequest.current++; }, []);
   const load = useCallback(
-    async (refresh = false) => {
+    async (refresh = false, rethrow = false) => {
+      let refreshFailed = false;
+      const request = ++loadRequest.current;
       if (refresh) setRefreshing(true);
       else setLoading(true);
+      setAnalyticsLoading(true);
+      const summaryRequest = apiRequest<unknown>(`${apiBase}/analytics/summary`)
+        .then((data) => { if (request !== loadRequest.current) return; setTotals(readAnalyticsTotals(data)); setAnalyticsUnavailable(false); })
+        .catch((error: unknown) => { if (request !== loadRequest.current) return; refreshFailed = true; console.error("Platform Linktree summary failed:", error); setAnalyticsUnavailable(true); })
+        .finally(() => { if (request === loadRequest.current) setAnalyticsLoading(false); });
       try {
-        const contextUrl = `${apiBase}/context`;
-        const [nextContext, nextItems, nextTotals] = await Promise.all([
-          apiRequest<PlatformLinktreeContext>(contextUrl),
+        const [nextContext, nextItems] = await Promise.all([
+          apiRequest<PlatformLinktreeContext>(`${apiBase}/context`),
           apiRequest<LinktreeListItem[]>(apiBase),
-          apiRequest<AnalyticsTotals>(`${apiBase}/analytics/summary`),
         ]);
+        if (request !== loadRequest.current) return;
         setContext(nextContext);
         setItems(nextItems);
-        setTotals(
-          nextTotals ??
-            nextItems.reduce<AnalyticsTotals>(
-              (sum, item) => ({
-                ...sum,
-                total_views:
-                  sum.total_views + (item.analytics?.unique_views ?? 0),
-                unique_views:
-                  sum.unique_views + (item.analytics?.unique_views ?? 0),
-                total_clicks:
-                  sum.total_clicks + (item.analytics?.total_clicks ?? 0),
-                unique_clicks:
-                  sum.unique_clicks + (item.analytics?.unique_clicks ?? 0),
-              }),
-              { ...EMPTY_TOTALS },
-            ),
-        );
+        setPagesUnavailable(false);
       } catch (error) {
+        if (request !== loadRequest.current) return;
+        refreshFailed = true;
         console.error("Platform Linktrees load failed:", error);
+        setPagesUnavailable(true);
         toast.error(copyRef.current.loadFailed);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (request === loadRequest.current) setLoading(false);
+        await summaryRequest;
+        if (request === loadRequest.current) setRefreshing(false);
       }
+      if (rethrow && refreshFailed) throw new Error("Could not refresh Linktrees");
     },
     [apiBase],
   );
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [load]);
+  useRegisterDashboardRefresh("linktrees", () => load(true, true));
 
   useEffect(() => {
-    // Match the business dashboard: warm the shared editor bundle before the
-    // first click. Its loading fallback still uses the same body portal when a
-    // slower device opens it before preloading finishes.
-    import(
-      "@/features/link-editor/components/ReusableLinktreeEditorModal"
-    ).catch(() => {
-      // Preloading is an optional optimization; the dynamic import retries.
-    });
-  }, []);
+    const timeout = window.setTimeout(() => void load(), 0);
+    return () => { window.clearTimeout(timeout); invalidateLoad(); };
+  }, [load, invalidateLoad]);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -209,22 +170,34 @@ export function PlatformLinktreesPage() {
   }, [items, query]);
   const analyticsPage =
     items.find((item) => item.id === analyticsPageId) ?? null;
-  const hasAnalyticsData =
-    totals.total_views > 0 || totals.total_clicks > 0 || totals.conversions > 0;
 
+
+  const editRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => editRequest.current?.abort(), []);
+  const closeEditor = () => {
+    editRequest.current?.abort();
+    setEditorOpen(false);
+    setLoadingEdit(false);
+    setEditData(null);
+  };
   const openEdit = useCallback(
     async (id: string) => {
+      editRequest.current?.abort();
+      const controller = new AbortController();
+      editRequest.current = controller;
       setEditorOpen(true);
       setLoadingEdit(true);
       setEditData(null);
       try {
-        setEditData(await apiRequest<EditLinkData>(`${apiBase}/${id}/edit`));
+        const data = await apiRequest<EditLinkData>(`${apiBase}/${id}/edit`, { signal: controller.signal });
+        if (!controller.signal.aborted) setEditData(data);
       } catch (error) {
+        if (controller.signal.aborted) return;
         setEditorOpen(false);
         console.error("Platform Linktree edit load failed:", error);
         toast.error(copyRef.current.editLoadFailed);
       } finally {
-        setLoadingEdit(false);
+        if (!controller.signal.aborted) setLoadingEdit(false);
       }
     },
     [apiBase],
@@ -250,31 +223,23 @@ export function PlatformLinktreesPage() {
     [apiBase, load],
   );
 
-  const updateBoolean = useCallback(
+  const handleToggleArchive = useCallback(
     async (
       id: string,
-      field: "is_campaign_active" | "is_archived",
       value: boolean,
-      endpoint: "campaign-status" | "archive",
     ) => {
       setItems((current) =>
         current.map((item) =>
-          item.id === id ? { ...item, [field]: value } : item,
+          item.id === id ? { ...item, is_archived: value } : item,
         ),
       );
       try {
-        await apiRequest(`${apiBase}/${id}/${endpoint}`, {
+        await apiRequest(`${apiBase}/${id}/archive`, {
           method: "PATCH",
-          json: { [field]: value },
+          json: { is_archived: value },
         });
         toast.success(
-          field === "is_archived"
-            ? value
-              ? copyRef.current.archived
-              : copyRef.current.restored
-            : value
-              ? copyRef.current.campaignEnabled
-              : copyRef.current.campaignDisabled,
+          value ? copyRef.current.archived : copyRef.current.restored,
         );
       } catch (error) {
         await load(true);
@@ -305,68 +270,66 @@ export function PlatformLinktreesPage() {
     [apiBase, load],
   );
 
-  const clearAllAnalytics = useCallback(async () => {
-    if (clearingAllAnalytics || !hasAnalyticsData) return;
-    setClearingAllAnalytics(true);
-    try {
-      await apiRequest(`${apiBase}/analytics`, { method: "DELETE" });
-      await load(true);
-      setClearAllAnalyticsOpen(false);
-      toast.success(copyRef.current.clearSuccess);
-    } catch (error) {
-      console.error("Platform Linktree analytics clear failed:", error);
-      toast.error(copyRef.current.clearFailed);
-      throw error;
-    } finally {
-      setClearingAllAnalytics(false);
+  const clearSelected = useCallback(async (ids: readonly string[]) => {
+    if (clearingSelectedAnalytics || !ids.length) return;
+    setClearingSelectedAnalytics(true);
+    try { await clearSelectedAnalytics(apiBase, ids); }
+    finally {
+      try { await load(true, true); }
+      finally { setClearingSelectedAnalytics(false); }
     }
-  }, [apiBase, clearingAllAnalytics, hasAnalyticsData, load]);
+  }, [apiBase, clearingSelectedAnalytics, load]);
 
+  const editingLinktree = editData ? items.find(item => item.id === editData.linktree.id) : undefined;
   return (
     <ThemeProvider websiteColor={context?.branding.accentColor || null}>
       <LinktreesManagementPage
+        headerControls={headerControls}
         linktrees={filtered}
         linktreeCount={items.length}
         isLoading={loading}
         totalViews={totals.total_views}
         uniqueViews={totals.unique_views}
         totalClicks={totals.total_clicks}
-        conversions={totals.conversions}
+        uniqueClicks={totals.unique_clicks}
+        contactActions={totals.contact_actions}
+        analyticsLoading={analyticsLoading}
+        analyticsUnavailable={analyticsUnavailable}
+        pagesUnavailable={pagesUnavailable}
+        locale={locale}
         isRefreshing={refreshing}
-        isClearingAnalytics={clearingAllAnalytics}
-        hasAnalyticsData={hasAnalyticsData}
+        isClearingAnalytics={clearingSelectedAnalytics}
         searchQuery={query}
         isSearchModalOpen={isSearchModalOpen}
         viewMode={view}
-        onClearAnalytics={() => setClearAllAnalyticsOpen(true)}
+        onClearAnalytics={clearSelected}
         onRefresh={load}
         onSearchAction={() =>
           query.trim() ? setQuery("") : setIsSearchModalOpen(true)
         }
         onViewModeChange={setView}
         onCreate={() => {
+          editRequest.current?.abort();
+          setLoadingEdit(false);
           setEditData(null);
           setEditorOpen(true);
         }}
         onEdit={(id) => void openEdit(id)}
-        onDuplicate={setDuplicateTarget}
+        
         onDelete={(id) =>
           setDeleting(items.find((item) => item.id === id) ?? null)
         }
         onViewAnalytics={(id) => setAnalyticsPageId(id)}
-        onToggleCampaign={(id, value) =>
-          updateBoolean(id, "is_campaign_active", value, "campaign-status")
-        }
-        onToggleArchive={(id, value) =>
-          updateBoolean(id, "is_archived", value, "archive")
-        }
-        onToggleStatus={handleToggleStatus}
+        pinApiBase={apiBase}
+        onPinnedChange={(id, pinned) => setItems((current) => current.map((item) => item.id === id ? { ...item, is_pinned: pinned } : item))}
+        onToggleArchive={handleToggleArchive}
+        
         accentMode="platform"
         copy={arabic ? sharedArabicLinktreeCopy.management : english ? englishBusinessMessages.Linktrees : undefined}
         listCopy={arabic ? { ...sharedArabicLinktreeCopy.list, defaultPageHint: "الصفحة الافتراضية للمنصة" } : english ? { ...englishBusinessMessages.LinktreeList, defaultPageHint: "Default platform page" } : undefined}
         trafficLabels={arabic ? { column: sharedArabicLinktreeCopy.list.traffic, views: sharedArabicLinktreeCopy.list.views, interactions: sharedArabicLinktreeCopy.list.interactions } : english ? { column: englishBusinessMessages.LinktreeList.traffic, views: englishBusinessMessages.LinktreeList.views, interactions: englishBusinessMessages.LinktreeList.interactions } : undefined}
-        profitCopy={arabic ? sharedArabicLinktreeCopy.campaignProfit : english ? englishBusinessMessages.CampaignProfit : undefined}
-        calendarLocale={locale}
+        
+        
         description={copy.description}
         publicPathPrefix={context?.publicPathPrefix || "/linktree"}
         emptyTitle={
@@ -381,15 +344,15 @@ export function PlatformLinktreesPage() {
         }
       />
 
-      {editorOpen ? (
-        <LinktreeEditorModal
+      <DrawerPresence>{editorOpen ? (
+        <LinktreeEditorDrawer
+          locale={locale}
           isOpen
-          onClose={() => {
-            setEditorOpen(false);
-            setEditData(null);
-          }}
+          onClose={closeEditor}
+          headerControls={headerControls}
           onSubmit={save}
           editData={editData}
+          management={editingLinktree ? { item: editingLinktree, onToggleStatus: handleToggleStatus, onToggleArchive: handleToggleArchive, onDuplicated: () => { void load(true); } } : undefined}
           isLoadingEditData={loadingEdit}
           businessDefaults={{
             ...context?.defaults,
@@ -404,14 +367,16 @@ export function PlatformLinktreesPage() {
           copy={arabic ? arabicEditorCopy : english ? englishEditorCopy : undefined}
           colorCopy={english ? englishBusinessMessages.SettingsColorPicker : undefined}
         />
-      ) : null}
+      ) : null}</DrawerPresence>
 
-      {analyticsPage ? (
-        <AnalyticsModal
+      <DrawerPresence>{analyticsPage ? (
+        <AnalyticsDrawer
+            headerControls={headerControls}
           isOpen
           onClose={() => setAnalyticsPageId(null)}
           pageId={analyticsPage.id}
           pageName={analyticsPage.name}
+            locale={locale}
           pageKind="linktree"
           canClearAnalytics
           summaryOnly={false}
@@ -420,24 +385,7 @@ export function PlatformLinktreesPage() {
           platformTheme
           copy={arabic ? sharedArabicLinktreeCopy.analytics : english ? englishBusinessMessages.PageAnalytics : undefined}
         />
-      ) : null}
-
-      <ConfirmDeleteModal
-        isOpen={clearAllAnalyticsOpen}
-        onClose={() => {
-          if (!clearingAllAnalytics) setClearAllAnalyticsOpen(false);
-        }}
-        onConfirm={clearAllAnalytics}
-        title={copy.clearTitle}
-        confirmLabel={copy.clearConfirm}
-        loadingLabel={copy.clearing}
-        cancelLabel={copy.cancel}
-        closeLabel={copy.close}
-        isDeleting={clearingAllAnalytics}
-        message={
-          <p>{copy.clearQuestion}</p>
-        }
-      />
+      ) : null}</DrawerPresence>
 
       <ConfirmDeleteModal
         isOpen={Boolean(deleting)}
@@ -482,17 +430,6 @@ export function PlatformLinktreesPage() {
         copy={arabic ? { ...sharedArabicLinktreeCopy.search, prompt: "ابحث عن صفحات المنصة" } : english ? { ...englishBusinessMessages.LinktreeSearch, prompt: "Search platform pages" } : undefined}
       />
 
-      {duplicateTarget ? (
-        <DuplicateLinktreeModal
-          isOpen
-          onClose={() => setDuplicateTarget(null)}
-          targetLinktree={duplicateTarget}
-          apiBase={apiBase}
-          onSuccess={() => void load(true)}
-          platformTheme
-          copy={arabic ? sharedArabicLinktreeCopy.duplicate : english ? englishBusinessMessages.DuplicateLinktree : undefined}
-        />
-      ) : null}
     </ThemeProvider>
   );
 }

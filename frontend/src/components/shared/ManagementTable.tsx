@@ -1,5 +1,8 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 
+
+import styles from "./management-collection.module.css";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -58,7 +61,7 @@ export type ManagementTablePagination =
    * itself. Used by management lists that fetch the whole
    * collection in one request.
    */
-  | { mode: "client"; pageSize?: number }
+  | { mode: "client"; pageSize?: number; resetKey?: string | number }
   /**
    * The server pages, and the screen owns the page number. Used by the
    * platform administrator's paginated management lists.
@@ -73,7 +76,9 @@ export type ManagementTablePagination =
     };
 
 /** Rows shown per page when a client-paged table does not say otherwise. */
-export const MANAGEMENT_TABLE_PAGE_SIZE = 20;
+export const MANAGEMENT_TABLE_PAGE_SIZE = PAGE_MANAGEMENT_PAGE_SIZE;
+/** Room for shared page analytics, sharing, editing, deletion and pin actions. */
+export const PAGE_LIST_ACTION_COLUMN_WIDTH = "w-56";
 
 export interface ManagementTableEmptyState {
   icon: LucideIcon;
@@ -98,6 +103,7 @@ export interface ManagementTableProps<T> {
   minWidth?: string;
   pagination?: ManagementTablePagination;
   skeletonRows?: number;
+  skeletonLeadingCell?: "avatar" | "checkbox" | "text";
   loadingLabel?: string;
   noDataLabel?: string;
   paginationCopy?: Partial<TablePaginationCopy>;
@@ -115,7 +121,11 @@ export function useManagementPagination<T>(
   pagination?: ManagementTablePagination,
   paginationCopy?: Partial<TablePaginationCopy>,
 ) {
-  const [clientPage, setClientPage] = useState(1);
+  const resetKey =
+    pagination?.mode === "client" ? pagination.resetKey : undefined;
+  const [clientState, setClientState] = useState({ page: 1, resetKey });
+  const clientPage = clientState.resetKey === resetKey ? clientState.page : 1;
+  const setClientPage = (page: number) => setClientState({ page, resetKey });
   const clientPageSize =
     pagination?.mode === "client"
       ? pagination.pageSize || MANAGEMENT_TABLE_PAGE_SIZE
@@ -168,6 +178,7 @@ export function ManagementTable<T>({
   minWidth = "min-w-[600px]",
   pagination,
   skeletonRows = 6,
+  skeletonLeadingCell = "avatar",
   loadingLabel,
   noDataLabel = "هیچ داتایەک نەدۆزرایەوە",
   paginationCopy,
@@ -186,6 +197,7 @@ export function ManagementTable<T>({
       <div className={`w-full ${className}`} dir="ltr">
         <SkeletonTable
           rows={skeletonRows}
+          leadingCell={skeletonLeadingCell}
           columns={columnCount}
           loadingLabel={loadingLabel}
         />
@@ -208,12 +220,12 @@ export function ManagementTable<T>({
 
   return (
     <div
-      className={`w-full ${compact ? "[&_tbody_td]:px-3 [&_tbody_td]:py-2" : ""} ${className}`}
+      className={`min-w-0 w-full max-w-full ${compact ? "[&_tbody_td]:px-3 [&_tbody_td]:py-2" : ""} ${className}`}
       dir="ltr"
     >
       {/* Mobile cards */}
       <div
-        className={`md:hidden divide-y divide-slate-100 border-t border-b border-slate-200/80 dark:divide-white/5 dark:border-white/10 ${compact ? "[&>div>div]:p-3 [&>div>div]:gap-2" : ""}`}
+        className={`${styles.frame} ${styles.mobile} md:hidden divide-y divide-slate-100 dark:divide-white/5 ${compact ? "[&>div>div]:p-3 [&>div>div]:gap-2" : ""}`}
       >
         {visibleData.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-600 dark:text-gray-400">
@@ -227,14 +239,14 @@ export function ManagementTable<T>({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden w-full overflow-x-auto md:block">
-        <table className={`w-full table-fixed border-collapse ${minWidth}`}>
+      <div className={`${styles.frame} ${styles.scroll} hidden w-full md:block`}>
+        <table className={`management-collection-table w-full table-fixed border-collapse ${minWidth}`}>
           <thead>
-            <tr className="border-b border-slate-200/80 bg-slate-50/50 dark:border-white/10 dark:bg-white/5">
+            <tr className={styles.header}>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-3 ${compact ? "py-2" : "py-3"} text-left text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 ${
+                  className={`px-3 ${compact ? "py-2" : "py-3"} break-words text-left text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 ${
                     column.hideBelow ? HIDE_BELOW_CLASSES[column.hideBelow] : ""
                   } ${column.width || ""} ${column.className || ""}`}
                 >
@@ -243,7 +255,7 @@ export function ManagementTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+          <tbody className={`${styles.body} divide-y divide-slate-100 dark:divide-white/5`}>
             {visibleData.length === 0 ? (
               <tr>
                 <td
@@ -271,11 +283,11 @@ export function ManagementTable<T>({
 
 /** The `<tr>` classes every row body shares. */
 export const MANAGEMENT_TABLE_ROW_CLASS =
-  "border-b border-slate-100 transition-colors duration-200 transform-gpu hover:bg-slate-50/50 dark:border-white/5 dark:hover:bg-white/5";
+  "border-b border-slate-100 transition-colors duration-150 motion-reduce:transition-none hover:bg-slate-50/50 dark:border-white/5 dark:hover:bg-white/5";
 
 /** The card wrapper classes every mobile card body shares. */
 export const MANAGEMENT_TABLE_CARD_CLASS =
-  "flex gap-4 p-4 transition-colors duration-200 transform-gpu hover:bg-slate-50/50 dark:hover:bg-white/5";
+  "flex gap-4 p-4 transition-colors duration-150 motion-reduce:transition-none hover:bg-slate-50/50 dark:hover:bg-white/5";
 
 /** Maps a column's breakpoint to the class its matching `<td>` must carry. */
 export function hideBelowClass(breakpoint?: ManagementTableBreakpoint) {

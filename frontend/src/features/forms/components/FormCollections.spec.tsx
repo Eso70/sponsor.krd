@@ -7,7 +7,7 @@ import { formsCopy } from "../forms-copy";
 
 describe("shared form collection presentation", () => {
   it.each(["grid", "table"] as const)(
-    "%s displays traffic, metadata and public links without images",
+    "%s preserves traffic, metadata, public links and its existing image treatment",
     (variant) => {
       const copy = formsCopy("en");
       const form = {
@@ -33,14 +33,22 @@ describe("shared form collection presentation", () => {
           actions={{
             onAnalytics: vi.fn(),
             onEdit: vi.fn(),
-            onArchive: vi.fn(),
             onDelete: vi.fn(),
             onOpen: vi.fn(),
           }}
         />,
       );
-      expect(screen.queryByRole("img")).not.toBeInTheDocument();
-      expect(screen.queryByRole("columnheader", { name: copy.image })).not.toBeInTheDocument();
+      if (variant === "grid") {
+        expect(screen.getByRole("img", { name: form.name })).toHaveAttribute(
+          "src",
+          form.logo,
+        );
+      } else {
+        expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      }
+      expect(
+        screen.queryByRole("columnheader", { name: copy.image }),
+      ).not.toBeInTheDocument();
       expect(screen.getAllByText(form.description).length).toBeGreaterThan(0);
       expect(screen.getAllByText("42").length).toBeGreaterThan(0);
       expect(screen.getAllByText("12").length).toBeGreaterThan(0);

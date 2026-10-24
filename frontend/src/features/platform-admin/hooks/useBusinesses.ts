@@ -1,4 +1,6 @@
 "use client";
+import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
+
 
 import { useCallback, useEffect, useState } from "react";
 import type { PlatformBusiness as Business } from "@linktree/types";
@@ -7,11 +9,13 @@ import {
   type BusinessPagination,
   type BusinessSummary,
 } from "@/features/platform-admin/api/businesses";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
 import { isApiRequestError } from "@/lib/api/request";
 
 export type { BusinessPagination, BusinessSummary };
 
 export function useBusinesses(onUnauthorized: () => void) {
+  const startRequest = useLatestRequest();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -23,10 +27,11 @@ export function useBusinesses(onUnauthorized: () => void) {
   const [search, setSearchValue] = useState("");
   const [pagination, setPagination] = useState<BusinessPagination>({
     page: 1,
-    limit: 20,
+    limit: PAGE_MANAGEMENT_PAGE_SIZE,
     total: 0,
     totalPages: 1,
   });
+  const [summaryUnavailable, setSummaryUnavailable] = useState(true);
   const [summary, setSummary] = useState<BusinessSummary>({
     total: 0,
     active: 0,
@@ -37,18 +42,29 @@ export function useBusinesses(onUnauthorized: () => void) {
   });
 
   const reload = useCallback(async () => {
+    const current = startRequest();
+    setIsRefreshing(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_MANAGEMENT_PAGE_SIZE) });
       if (search.trim()) params.set("search", search.trim());
       const payload = await getBusinesses(params);
+      if (!current()) return;
+      if (payload.pagination && page > Math.max(1, payload.pagination.totalPages)) {
+        setPage(Math.max(1, payload.pagination.totalPages));
+        return;
+      }
       setBusinesses(payload.items ?? []);
       if (payload.pagination) setPagination(payload.pagination);
-      if (payload.summary) setSummary(payload.summary);
+      if (!payload.summary) throw new Error("Missing business summary");
+      setSummary(payload.summary);
+      setSummaryUnavailable(false);
       setError(null);
       setBadGateway(false);
       setServiceUnavailable(false);
       setGatewayTimeout(false);
     } catch (cause) {
+      if (!current()) return;
+      setSummaryUnavailable(true);
       if (isApiRequestError(cause, 401)) {
         onUnauthorized();
         return;
@@ -89,9 +105,9 @@ export function useBusinesses(onUnauthorized: () => void) {
         cause instanceof Error ? cause.message : "Failed to fetch businesses",
       );
     } finally {
-      setIsLoading(false);
+      if (current()) { setIsLoading(false); setIsRefreshing(false); }
     }
-  }, [onUnauthorized, page, search]);
+  }, [onUnauthorized, page, search, startRequest]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -100,15 +116,7 @@ export function useBusinesses(onUnauthorized: () => void) {
     return () => window.cancelAnimationFrame(frame);
   }, [reload]);
 
-  const refresh = useCallback(async () => {
-    setIsRefreshing(true);
-    setError(null);
-    try {
-      await reload();
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [reload]);
+  const refresh = useCallback(async () => { await reload(); }, [reload]);
 
   const removeBusiness = useCallback((id: string) => {
     setBusinesses((current) =>
@@ -138,6 +146,7 @@ export function useBusinesses(onUnauthorized: () => void) {
     setSearch,
     pagination,
     summary,
+    summaryUnavailable,
     setOperationError: setError,
   };
 }

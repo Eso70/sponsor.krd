@@ -170,7 +170,7 @@ export function ErrorPage(props: ErrorPageProps) {
 
     if (isBusiness) {
       root.style.setProperty("--business-website-color", theme.accentColor);
-      applyBusinessTabBranding(theme.favicon, theme.name);
+      applyBusinessTabBranding(theme.favicon, theme.name, theme.logo);
     }
   }, [isBusiness, theme]);
 
@@ -180,9 +180,6 @@ export function ErrorPage(props: ErrorPageProps) {
 
   const navigationItems = isBusiness
     ? [
-        ...(footer?.advertisingEnabled
-          ? [{ label: copy?.advertise ?? "ڕیکلام", href: "/advertising" }]
-          : []),
       ]
     : [];
 
@@ -225,7 +222,6 @@ export function ErrorPage(props: ErrorPageProps) {
             }
             phone={footer?.phone ?? null}
             whatsappEnabled={footer?.whatsappEnabled ?? null}
-            advertisingEnabled={footer?.advertisingEnabled ?? false}
             brandingRemoved={footer?.brandingRemoved ?? false}
             linktrees={footer?.linktrees ?? []}
             homeHref={homeHref}

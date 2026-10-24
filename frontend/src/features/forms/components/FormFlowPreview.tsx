@@ -29,6 +29,7 @@ export function FormFlowPreview({
   placeholders = false,
   scrollable = false,
   presentation = "preview",
+  viewport = "embedded",
 }: FormPreviewProps) {
   const copy = formsCopy(language);
   const labels = formEditorCopy(language);
@@ -52,12 +53,13 @@ export function FormFlowPreview({
   return (
     <FormPreviewSurface
       presentation={presentation}
+      viewport={viewport}
       language={language}
       appearance={appearance}
       color={color}
       scrollable={scrollable}
       navigation={
-        !onSubmit && (
+        !onSubmit && viewport !== "device" && (
           <FormPreviewNavigation
             currentIndex={currentIndex}
             pageCount={2}
@@ -74,7 +76,7 @@ export function FormFlowPreview({
             ? `min-h-0 flex-1 overflow-y-auto overscroll-contain ${showFinal ? "flex flex-col" : ""}`
             : showFinal
               ? "flex flex-1 flex-col"
-              : presentation === "public"
+              : presentation === "public" || viewport === "device"
                 ? "flex-1"
                 : ""
         }

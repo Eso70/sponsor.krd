@@ -1,0 +1,16 @@
+.viewport {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+}
+.footer {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+.content {
+  max-width: 448px;
+  margin-inline: auto;
+  text-align: center;
+}
+.footer [data-page-legal-links] { padding-block: 2px; }

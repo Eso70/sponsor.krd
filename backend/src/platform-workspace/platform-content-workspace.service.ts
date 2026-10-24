@@ -23,6 +23,7 @@ export type PlatformLinktreeDefaults = {
   default_footer_phone: string | null;
   default_template: string | null;
   default_background_color: string | null;
+  default_background_pattern?: string | null;
   default_footer_hidden: boolean;
   default_whatsapp_enabled: boolean;
   default_avatar: string | null;
@@ -67,7 +68,9 @@ export class PlatformContentWorkspaceService {
       name: row?.name?.trim() || 'Sponsor.krd',
       logo,
       avatar: logo,
-      favicon: sponsorKrdFaviconForLogo(logo),
+      favicon: row?.favicon
+        ? normalizeSponsorKrdAsset(row.favicon)
+        : sponsorKrdFaviconForLogo(logo),
       accentColor: normalizeSponsorKrdAccent(row?.accent_color),
     };
   }
@@ -78,7 +81,7 @@ export class PlatformContentWorkspaceService {
       `SELECT defaults.footer_text AS default_footer_text,
               defaults.footer_phone AS default_footer_phone,
               defaults.template_key AS default_template,
-              defaults.background_color AS default_background_color,
+              defaults.background_color AS default_background_color, defaults.background_pattern AS default_background_pattern,
               COALESCE(defaults.footer_hidden, false) AS default_footer_hidden,
               COALESCE(defaults.whatsapp_enabled, false) AS default_whatsapp_enabled,
               branding.default_avatar

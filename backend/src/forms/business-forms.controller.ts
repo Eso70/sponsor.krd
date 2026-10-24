@@ -1,3 +1,4 @@
+import { PagePinDto } from '../common/page-pin.dto';
 import {
   Body,
   Controller,
@@ -22,6 +23,7 @@ import { StorageService } from '../storage/storage.service';
 import { FormsListDto, FormResponsesDto, FormTitleDto } from './forms-list.dto';
 import { FormsService } from './forms.service';
 import { uploadFormImage } from './form-upload';
+import { DuplicateFormDto } from './dto/duplicate-form.dto';
 @Controller('api/forms')
 @UseGuards(BusinessGuard, AuthorizationGuard)
 export class BusinessFormsController {
@@ -37,6 +39,21 @@ export class BusinessFormsController {
       data: await this.forms.list(
         user.id,
         Number(query.page),
+        query.q,
+        query.filter === 'archived',
+      ),
+    };
+  }
+  @Get('selection')
+  @RequireCapabilities(Capability.BusinessFormsRead)
+  async selectionIds(
+    @CurrentUser() user: SessionUser,
+    @Query() query: FormsListDto,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.selectionIds(
+        user.id,
         query.q,
         query.filter === 'archived',
       ),
@@ -96,6 +113,19 @@ export class BusinessFormsController {
       data: await this.forms.status(user.id, id, status),
     };
   }
+  @Patch(':id/pin')
+  @RequireCapabilities(Capability.BusinessFormsUpdate)
+  async pin(
+    @CurrentUser() user: SessionUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: PagePinDto,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.pin(user.id, id, body.isPinned),
+    };
+  }
+
   @Patch(':id/archive')
   @RequireCapabilities(Capability.BusinessFormsUpdate)
   async archive(
@@ -113,8 +143,24 @@ export class BusinessFormsController {
   async duplicate(
     @CurrentUser() user: SessionUser,
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() input?: DuplicateFormDto,
   ) {
-    return { success: true, data: await this.forms.duplicate(user.id, id) };
+    return {
+      success: true,
+      data: await this.forms.duplicate(user.id, id, input),
+    };
+  }
+  @Get(':id/duplicate-options')
+  @RequireCapabilities(Capability.BusinessFormsCreate)
+  async duplicateOptions(
+    @CurrentUser() user: SessionUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('slug') slug?: string,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.duplicateOptions(user.id, id, slug),
+    };
   }
   @Delete(':id')
   @RequireCapabilities(Capability.BusinessFormsDelete)
@@ -132,6 +178,15 @@ export class BusinessFormsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return { success: true, data: await this.forms.getAnalytics(user.id, id) };
+  }
+  @Delete(':id/analytics')
+  @RequireCapabilities(Capability.BusinessFormsDelete)
+  async clearAnalytics(
+    @CurrentUser() user: SessionUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.forms.clearAnalytics(user.id, id);
+    return { success: true };
   }
   @Delete(':id/submissions')
   @RequireCapabilities(Capability.BusinessFormsDelete)

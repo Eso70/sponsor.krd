@@ -22,7 +22,7 @@ export default function BusinessWorkspaceEntryPage() {
   useEffect(() => {
     void loadBusinessSubdomainTheme().then((loadedTheme) => {
       setTheme(loadedTheme);
-      applyBusinessTabBranding(loadedTheme.favicon, loadedTheme.name);
+      applyBusinessTabBranding(loadedTheme.favicon, loadedTheme.name, loadedTheme.logo);
     });
   }, []);
 
@@ -38,15 +38,20 @@ export default function BusinessWorkspaceEntryPage() {
       businessTenant
       language={locale}
       backLabel={copy.back}
-      themeCopy={{ label: copy.theme, light: copy.lightTheme, dark: copy.darkTheme }}
-      headerAction={<BusinessPreAuthLanguageToggle locale={locale} onChange={changeLocale} />}
+      themeCopy={{
+        label: copy.theme,
+        light: copy.lightTheme,
+        dark: copy.darkTheme,
+      }}
+      headerAction={
+        <BusinessPreAuthLanguageToggle
+          locale={locale}
+          onChange={changeLocale}
+        />
+      }
     >
-      <AuthenticationCard
-        title={copy.entryTitle}
-        description={copy.entryHint}
-      >
+      <AuthenticationCard title={copy.entryTitle} description={copy.entryHint}>
         <AuthenticationMethods
-          rememberDevice
           googleHref="/api/auth/google/start"
           requestEndpoint="/api/auth/email/request"
           verifyEndpoint="/api/auth/email/verify"

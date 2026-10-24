@@ -2,7 +2,7 @@ import type { BusinessLocale } from "./messages";
 
 export const businessPublicCopy = {
   ckb: {
-    nav: { pages: "لینکترییەکان", advertising: "ڕیکلام", contact: "پەیوەندی" },
+    nav: { pages: "لینکترییەکان",  contact: "پەیوەندی" },
     navbar: {
       navigation: "گەشتکردنی سەرەکی",
       theme: "گۆڕینی دۆخی ڕەنگ",
@@ -27,8 +27,6 @@ export const businessPublicCopy = {
     },
     footer: {
       home: "سەرەکی",
-      advertise: "ڕیکلام",
-      videoPage: "ڤیدیۆی ڕێنمایی",
       pages: "پەڕەکان",
       publicPages: "پەیجە بڵاوکراوەکان",
       contact: "پەیوەندی",
@@ -38,23 +36,12 @@ export const businessPublicCopy = {
       logoLabel: "لۆگۆ",
     },
     switchLanguage: "گۆڕینی زمان بۆ عەرەبی",
-    advertising: {
-      loading: "پەڕەی ڕیکلام بار دەکرێت",
-      journey: "قۆناغەکانی سپۆنسەر",
-      results: "ئەنجامەکان",
-      prices: "نرخەکان",
-      testimonials: "ڕای کڕیاران",
-      questions: "پرسیارەکان",
-      tutorial: "ڤیدیۆی فێرکاری",
-      message: "نامە بنێرە",
-      whatsappMessage: "سڵاو، دەمەوێت داواکاری ڕیکلامی تیکتۆک بکەم",
-      back: "گەڕانەوە بۆ پەڕەی ڕیکلام",
-    },
+    
   },
   ar: {
     nav: {
       pages: "صفحات الروابط",
-      advertising: "الإعلانات",
+      
       contact: "تواصل معنا",
     },
     navbar: {
@@ -76,8 +63,6 @@ export const businessPublicCopy = {
     previewLinks: { whatsapp: "واتساب", viber: "فايبر", phone: "رقم الهاتف" },
     footer: {
       home: "الرئيسية",
-      advertise: "الإعلانات",
-      videoPage: "فيديو الدليل",
       pages: "الصفحات",
       publicPages: "الصفحات المنشورة",
       contact: "التواصل",
@@ -87,21 +72,10 @@ export const businessPublicCopy = {
       logoLabel: "الشعار",
     },
     switchLanguage: "التبديل إلى الإنجليزية",
-    advertising: {
-      loading: "جارٍ تحميل صفحة الإعلانات",
-      journey: "خطوات الإعلان المموّل",
-      results: "النتائج",
-      prices: "الأسعار",
-      testimonials: "آراء العملاء",
-      questions: "الأسئلة",
-      tutorial: "فيديو الدليل",
-      message: "راسلنا",
-      whatsappMessage: "مرحبًا، أود طلب إعلان على تيك توك",
-      back: "العودة إلى صفحة الإعلانات",
-    },
+    
   },
   en: {
-    nav: { pages: "Linktrees", advertising: "Advertising", contact: "Contact" },
+    nav: { pages: "Linktrees",  contact: "Contact" },
     navbar: {
       navigation: "Main navigation",
       theme: "Toggle theme",
@@ -126,8 +100,6 @@ export const businessPublicCopy = {
     },
     footer: {
       home: "Home",
-      advertise: "Advertising",
-      videoPage: "Video guide",
       pages: "Pages",
       publicPages: "Published pages",
       contact: "Contact",
@@ -137,17 +109,6 @@ export const businessPublicCopy = {
       logoLabel: "Logo",
     },
     switchLanguage: "Switch to Kurdish",
-    advertising: {
-      loading: "Loading advertising page",
-      journey: "Sponsorship steps",
-      results: "Results",
-      prices: "Prices",
-      testimonials: "Customer reviews",
-      questions: "Questions",
-      tutorial: "Video guide",
-      message: "Message us",
-      whatsappMessage: "Hello, I'd like to request a TikTok advertisement",
-      back: "Back to advertising page",
-    },
+    
   },
 } as const satisfies Record<BusinessLocale, Record<string, unknown>>;

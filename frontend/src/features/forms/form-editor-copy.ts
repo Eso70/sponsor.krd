@@ -357,7 +357,7 @@ const labels = {
     "وێنەی بانەر بۆ ناساندنی فۆڕمەکەت هەڵبژێرە",
     "اختر صورة غلاف للتعريف بالنموذج",
   ],
-  enterAnswer: ["Enter your answer", "وەڵامەکەت بنووسە", "أدخل إجابتك"],
+  enterAnswer: ["Answer", "وەڵام", "الإجابة"],
 } satisfies Record<string, readonly [string, string, string]>;
 export type FormEditorCopy = { [K in keyof typeof labels]: string } & {
   productSelection: ReturnType<typeof productSelectionCopy>;

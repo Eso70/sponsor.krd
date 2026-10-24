@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
 import { StorageService } from '../storage/storage.service';
-import { AdvertisingService } from '../advertising/advertising.service';
 import { BusinessAdministrationService } from './business-administration.service';
 
 describe('BusinessAdministrationService', () => {
@@ -92,15 +91,7 @@ describe('BusinessAdministrationService', () => {
     const database = { query } as unknown as DatabaseService;
     const redis = {} as unknown as RedisService;
     const storage = {} as unknown as StorageService;
-    const advertising = {
-      invalidatePublicCacheForBusiness: () => Promise.resolve(),
-    } as unknown as AdvertisingService;
-    return new BusinessAdministrationService(
-      database,
-      redis,
-      storage,
-      advertising,
-    );
+    return new BusinessAdministrationService(database, redis, storage);
   }
 
   /**
@@ -258,15 +249,7 @@ describe('BusinessAdministrationService', () => {
       claimBusinessAssets: jest.fn().mockResolvedValue(undefined),
       deleteUnreferencedFromValues: jest.fn().mockResolvedValue(0),
     } as unknown as StorageService;
-    const advertising = {
-      invalidatePublicCacheForBusiness: jest.fn().mockResolvedValue(undefined),
-    } as unknown as AdvertisingService;
-    const service = new BusinessAdministrationService(
-      database,
-      redis,
-      storage,
-      advertising,
-    );
+    const service = new BusinessAdministrationService(database, redis, storage);
 
     await service.importBusinessLinktrees('business-1', {
       format: 'sponsor-krd-linktrees',
@@ -338,15 +321,7 @@ describe('BusinessAdministrationService', () => {
       restoreUploadedAsset: jest.fn().mockResolvedValue(undefined),
       claimBusinessAssets: jest.fn().mockResolvedValue(undefined),
     } as unknown as StorageService;
-    const advertising = {
-      invalidatePublicCacheForBusiness: jest.fn().mockResolvedValue(undefined),
-    } as unknown as AdvertisingService;
-    const service = new BusinessAdministrationService(
-      database,
-      redis,
-      storage,
-      advertising,
-    );
+    const service = new BusinessAdministrationService(database, redis, storage);
 
     const result = await service.importBusiness({
       format: 'sponsor-krd-business',
@@ -448,7 +423,6 @@ describe('BusinessAdministrationService', () => {
       database,
       {} as RedisService,
       {} as StorageService,
-      {} as AdvertisingService,
     );
 
     await expect(

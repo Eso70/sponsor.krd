@@ -1,8 +1,18 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import type { StatCardVariant } from "@/components/shared/StatCard";
-import { MotionPulse } from "@/components/motion/MotionPrimitives";
+import { PageManagementSection } from "./PageManagementSection";
+import { ManagementGridLayout } from "./ManagementGridLayout";
+import { ManagementCard } from "./ManagementCard";
+import { PhoneMockup } from "./PhoneMockup";
+import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
+import collectionStyles from "./management-collection.module.css";
+import { StatCardFrame } from "./StatCardFrame";
+import { StatCardGrid, type StatCardGridColumns } from "./StatCardGrid";
+import type { StatCardColor } from "./stat-card-styles";
+import { Skeleton } from "./SkeletonBlock";
+export { Skeleton } from "./SkeletonBlock";
+import { DashboardSidebarSkeleton } from "./DashboardSidebarSkeleton";
+import { DashboardHeaderSkeleton } from "./DashboardHeaderSkeleton";
 import {
   MANAGEMENT_MODAL_BACKDROP_CLASS,
   MANAGEMENT_MODAL_FOOTER_CLASS,
@@ -22,28 +32,6 @@ import {
  * is how the pulse, the palette and the reduced-motion behaviour stay the same
  * everywhere.
  */
-
-/** Shared surface. Theme-aware, and still legible against a dark panel. */
-const SURFACE = "bg-slate-200/70 dark:bg-white/10";
-
-export function Skeleton({
-  className = "",
-  rounded = "rounded-xl",
-  style,
-}: {
-  className?: string;
-  rounded?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <MotionPulse
-      aria-hidden="true"
-      data-skeleton
-      className={`block ${SURFACE} ${rounded} ${className}`}
-      style={style}
-    />
-  );
-}
 
 /**
  * Lines of text. The last one is short, the way a real paragraph ends, so a
@@ -109,9 +97,11 @@ export function SkeletonTable({
   columns = 5,
   className = "",
   loadingLabel = "Loading table",
+  leadingCell = "avatar",
 }: {
   rows?: number;
   columns?: number;
+  leadingCell?: "avatar" | "checkbox" | "text";
   className?: string;
   loadingLabel?: string;
 }) {
@@ -123,25 +113,24 @@ export function SkeletonTable({
       aria-label={loadingLabel}
       dir="ltr"
     >
-      <div className="divide-y divide-slate-100 border-y border-slate-200/80 dark:divide-white/5 dark:border-white/10 md:hidden">
+      <div className={`${collectionStyles.frame} divide-y divide-slate-100 dark:divide-white/5 md:hidden`}>
         {Array.from({ length: Math.min(rows, 4) }).map((_, index) => (
-          <div key={index} data-skeleton-mobile-row className="flex gap-4 p-4">
-            <Skeleton className="size-12 shrink-0" rounded="rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-1/2" rounded="rounded-md" />
-              <Skeleton className="h-3 w-4/5" rounded="rounded-md" />
-              <div className="flex gap-2 pt-1">
-                <Skeleton className="h-7 flex-1" rounded="rounded-lg" />
-                <Skeleton className="h-7 flex-1" rounded="rounded-lg" />
-                <Skeleton className="size-7" rounded="rounded-lg" />
-              </div>
+          <div key={index} data-skeleton-mobile-row className="space-y-3 p-4">
+            <div className="flex items-center gap-3">
+              {leadingCell === "checkbox" && <Skeleton className="size-5 shrink-0" rounded="rounded-md" />}
+              <Skeleton className="h-4 w-3/4" rounded="rounded-md" />
+            </div>
+            <Skeleton className="h-3 w-1/2" rounded="rounded-md" />
+            <Skeleton className="h-3 w-full" rounded="rounded-md" />
+            <div className="flex gap-2 border-t border-slate-100 pt-2 dark:border-white/5">
+              {Array.from({ length: 4 }).map((_, action) => <Skeleton key={action} className="size-8" rounded="rounded-lg" />)}
             </div>
           </div>
         ))}
       </div>
-      <div className="hidden w-full overflow-hidden md:block">
+      <div className={`${collectionStyles.frame} hidden w-full md:block`}>
         <div
-          className="grid gap-3 border-b border-slate-200/80 bg-slate-50/50 px-3 py-3 dark:border-white/10 dark:bg-white/5"
+          className={`${collectionStyles.header} grid gap-3 px-3 py-3`}
           style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         >
           {Array.from({ length: columns }).map((_, index) => (
@@ -160,12 +149,11 @@ export function SkeletonTable({
             >
               {Array.from({ length: columns }).map((_, columnIndex) => (
                 <div key={columnIndex} className="flex items-center gap-2">
-                  {columnIndex === 0 ? (
-                    <Skeleton
-                      className="size-9 shrink-0"
-                      rounded="rounded-full"
-                    />
-                  ) : null}
+                  {columnIndex === 0 && leadingCell !== "text" && (
+                    <Skeleton className={leadingCell === "checkbox" ? "size-5 shrink-0" : "size-9 shrink-0"}
+                      rounded={leadingCell === "checkbox" ? "rounded-md" : "rounded-full"} />
+                  )}
+                  {!(columnIndex === 0 && leadingCell === "checkbox") && (
                   <Skeleton
                     className={
                       columnIndex === columns - 1 ? "h-8 w-20" : "h-3 flex-1"
@@ -174,6 +162,7 @@ export function SkeletonTable({
                       columnIndex === columns - 1 ? "rounded-lg" : "rounded-md"
                     }
                   />
+                  )}
                 </div>
               ))}
             </div>
@@ -250,11 +239,11 @@ export function SkeletonManagementPage({
       role="status"
       aria-label="Loading management page"
     >
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <StatCardGrid columns={3}>
         {Array.from({ length: statCount }).map((_, index) => (
           <SkeletonStatCard key={index} />
         ))}
-      </div>
+      </StatCardGrid>
       <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025] sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -280,52 +269,32 @@ export function SkeletonManagementPage({
   );
 }
 
-/** Template catalog frame: metrics, category tabs, header, and phone previews. */
-export function SkeletonTemplatePage({
-  loadingLabel = "Loading templates",
-}: { loadingLabel?: string } = {}) {
-  return (
-    <div
-      className="min-h-[60vh] space-y-5"
-      role="status"
-      aria-label={loadingLabel}
-    >
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <SkeletonStatCard key={index} />
-        ))}
-      </div>
-      <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025] sm:p-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <Skeleton className="size-11 shrink-0" rounded="rounded-xl" />
-            <div className="min-w-0 flex-1">
-              <Skeleton className="mb-2 h-6 w-44" rounded="rounded-md" />
-              <Skeleton className="h-3 w-80 max-w-full" rounded="rounded-md" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-44" />
-          </div>
-        </div>
-        <div className="grid gap-4 border-t border-slate-100 pt-6 dark:border-white/5 lg:grid-cols-2 2xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex min-h-[552px] items-center justify-center sm:min-h-[680px]"
-            >
-              <Skeleton
-                className="h-[552px] w-[260px] max-w-full border-8 border-slate-300 sm:h-[680px] sm:w-[320px] sm:border-[10px] dark:border-slate-700"
-                rounded="rounded-[2.5rem] sm:rounded-[3rem]"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+/** Template catalogue loading reuses its real section, grid, cards and phones. */
+export function SkeletonTemplatePage({ loadingLabel = "Loading templates", previewCount = 3 }: { loadingLabel?: string; previewCount?: number } = {}) {
+  return <div className="w-full min-w-0 space-y-4 pb-8 sm:space-y-6 sm:pb-10" role="status" aria-label={loadingLabel} aria-busy="true">
+    <div aria-hidden="true">
+      <StatCardGrid columns={3}>
+        {(["blue", "green", "purple"] as const).map((color) => <SkeletonStatCard key={color} color={color} />)}
+      </StatCardGrid>
     </div>
-  );
+    <SegmentedTabsFrame aria-hidden="true" fullWidth>
+      <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
+      <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
+    </SegmentedTabsFrame>
+    <PageManagementSection loading title="" toolbar={<Skeleton className="h-10 w-full" rounded="rounded-2xl" />}>
+      <div aria-hidden="true">
+        <ManagementGridLayout desktopColumns={3} items={Array.from({ length: previewCount }, (_, index) => ({
+          key: String(index),
+          content: <ManagementCard intrinsicHeight={730}>
+            <div className="relative flex w-full justify-center">
+              <PhoneMockup ariaLabel="" size="responsive" active={false} />
+            </div>
+          </ManagementCard>,
+        }))} />
+      </div>
+    </PageManagementSection>
+  </div>;
 }
-
 /** Public Linktree frame: identity, copy, action links, and footer. */
 export function SkeletonPublicLinktreePage({
   loadingLabel = "Loading Linktree page",
@@ -385,11 +354,13 @@ export type SkeletonDashboardBody = "analytics" | "table" | "form";
  * it does after the dashboard has loaded.
  */
 export function SkeletonDashboardShell({
-  navigationItems = 8,
+  navigationItems,
+  sidebarCollapsed = false,
   platformAdminTheme = false,
   children,
 }: {
   navigationItems?: number;
+  sidebarCollapsed?: boolean;
   platformAdminTheme?: boolean;
   children?: React.ReactNode;
 } = {}) {
@@ -400,61 +371,13 @@ export function SkeletonDashboardShell({
       data-sponsor-krd-theme={platformAdminTheme ? true : undefined}
       data-platform-admin-theme={platformAdminTheme ? true : undefined}
     >
-      <aside
-        aria-hidden="true"
-        className="hidden h-screen w-72 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-white/10 dark:bg-[#161B22] md:flex"
-      >
-        <div className="flex items-center gap-3 border-b border-slate-100 p-5 dark:border-white/5">
-          <Skeleton className="h-12 w-12 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <Skeleton className="mb-2 h-4 w-24" rounded="rounded-md" />
-            <Skeleton className="h-3 w-32" rounded="rounded-md" />
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-1 overflow-hidden p-4">
-          {Array.from({ length: navigationItems }).map((_, index) => (
-            <div
-              key={index}
-              className="flex h-11 items-center gap-3 rounded-xl px-4"
-            >
-              <Skeleton className="h-4 w-4 shrink-0" rounded="rounded-md" />
-              <Skeleton
-                className={index % 3 === 0 ? "h-3 w-36" : "h-3 w-28"}
-                rounded="rounded-md"
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="border-t border-slate-200 p-4 dark:border-white/10">
-          <div className="flex h-11 items-center gap-3 px-4">
-            <Skeleton className="h-4 w-4 shrink-0" rounded="rounded-md" />
-            <Skeleton className="h-3 w-24" rounded="rounded-md" />
-          </div>
-        </div>
-      </aside>
-
+      <DashboardSidebarSkeleton
+        navigationItems={navigationItems}
+        platformAdminTheme={platformAdminTheme}
+        collapsed={sidebarCollapsed}
+      />
       <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
-        <header
-          aria-hidden="true"
-          className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#161B22]/80"
-        >
-          <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <Skeleton className="h-10 w-10 shrink-0 sm:h-11 sm:w-11" />
-              <Skeleton
-                className="h-5 w-32 max-w-[40vw] sm:w-48"
-                rounded="rounded-md"
-              />
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Skeleton className="h-10 w-10 sm:h-11 sm:w-11" />
-              <Skeleton className="h-10 w-10 sm:h-11 sm:w-11" />
-              <Skeleton className="hidden h-10 w-10 sm:block sm:h-11 sm:w-11" />
-            </div>
-          </div>
-        </header>
+        <DashboardHeaderSkeleton />
 
         <main className="min-h-0 flex-1 overflow-hidden">
           <div className="mx-auto h-full max-w-7xl overflow-hidden px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
@@ -492,13 +415,11 @@ export function SkeletonDashboardPage({
       aria-label={loadingLabel}
     >
       {statCount > 0 && (
-        <div
-          className={`grid gap-4 ${statCount > 4 ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-4"}`}
-        >
+        <StatCardGrid columns={4}>
           {Array.from({ length: statCount }).map((_, index) => (
             <SkeletonStatCard key={index} />
           ))}
-        </div>
+        </StatCardGrid>
       )}
       {tabCount > 0 && (
         <div className="flex gap-2 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-white/[0.025]">
@@ -621,127 +542,87 @@ export function SkeletonModal({
   );
 }
 
-/** A row of stat tiles, sized like `StatCard`. */
+/** The same responsive grid and card shell used by loaded statistics. */
 export function SkeletonStatCards({
   count = 2,
+  columns = (count === 6
+    ? 3
+    : Math.min(6, Math.max(1, count))) as StatCardGridColumns,
   className = "",
   compact = false,
-  variant = "standard",
   loadingLabel = "بارکردن",
 }: {
   count?: number;
+  columns?: StatCardGridColumns;
   className?: string;
   compact?: boolean;
-  variant?: StatCardVariant;
   loadingLabel?: string;
 }) {
   return (
-    <div
-      className={`grid gap-3 sm:gap-4 ${count > 2 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"} ${className}`}
+    <StatCardGrid
+      columns={columns}
+      className={className}
       role="status"
+      aria-busy="true"
       aria-label={loadingLabel}
     >
       {Array.from({ length: count }).map((_, index) => (
-        <SkeletonStatCard compact={compact} key={index} variant={variant} />
+        <SkeletonStatCard compact={compact} key={index} />
       ))}
-    </div>
+    </StatCardGrid>
   );
 }
 
-/** Matches every visual presentation exposed by the shared StatCard. */
+/** Every pending slot shares the resolved card's spacing and responsive sizing. */
 export function SkeletonStatCard({
-  label,
-  className = "",
+  className,
+  color = "slate",
   compact = false,
-  variant = "standard",
+  showIcon = true,
+  showDetail = false,
+  showAction = false,
 }: {
-  label?: string;
   className?: string;
+  color?: StatCardColor;
   compact?: boolean;
-  variant?: StatCardVariant;
+  showIcon?: boolean;
+  showDetail?: boolean;
+  showAction?: boolean;
 }) {
-  if (variant === "funnel") {
-    return (
-      <div
-        aria-hidden="true"
-        className={`flex min-h-40 flex-col justify-between rounded-3xl border border-slate-200 p-5 dark:border-white/10 ${className}`}
-      >
-        <Skeleton className="h-11 w-11" rounded="rounded-2xl" />
-        <div className="mt-5">
-          <Skeleton className="mb-3 h-7 w-2/5" rounded="rounded-md" />
-          <Skeleton className="mb-2 h-4 w-1/2" rounded="rounded-md" />
-          <SkeletonText lines={2} />
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "live") {
-    return (
-      <div
-        aria-hidden="true"
-        className={`flex items-center gap-4 rounded-xl border border-emerald-200 p-5 dark:border-emerald-500/20 ${className}`}
-      >
-        <Skeleton className="h-3 w-3 shrink-0" rounded="rounded-full" />
-        <div className="min-w-0 flex-1">
-          <Skeleton className="mb-2 h-7 w-20" rounded="rounded-md" />
-          <Skeleton className="h-3 w-48 max-w-full" rounded="rounded-md" />
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "comparison") {
-    return (
-      <div aria-hidden="true" className={`p-5 text-center ${className}`}>
-        <Skeleton className="mx-auto mb-3 h-7 w-20" rounded="rounded-md" />
-        <Skeleton
-          className="mx-auto h-3 w-28 max-w-full"
-          rounded="rounded-md"
-        />
-      </div>
-    );
-  }
-
-  if (variant === "story") {
-    return (
-      <div
-        aria-hidden="true"
-        className={`flex min-w-36 flex-col items-center rounded-2xl border border-white/60 bg-white/70 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-slate-800/30 ${className}`}
-      >
-        <Skeleton className="mb-3 h-7 w-20" rounded="rounded-md" />
-        <Skeleton className="h-3 w-16" rounded="rounded-md" />
-      </div>
-    );
-  }
-
   return (
-    <div
-      aria-hidden="true"
-      className={`${compact ? "h-[76px] rounded-xl p-3" : "rounded-2xl p-4 sm:p-5 md:p-6"} border border-slate-200 dark:border-white/10 ${className}`}
-    >
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Skeleton
-          className={
-            compact ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0 sm:h-12 sm:w-12"
-          }
-          rounded={compact ? "rounded-lg" : "rounded-xl"}
-        />
-        <div className="min-w-0 flex-1">
+    <StatCardFrame
+      className={className}
+      color={color}
+      compact={compact}
+      loading
+      action={
+        showAction ? (
+          <Skeleton className="size-7" rounded="rounded-lg" />
+        ) : undefined
+      }
+      icon={
+        showIcon ? (
           <Skeleton
-            className={`${compact ? "h-4 w-1/2" : "h-6 w-2/3"} mb-2`}
+            className={compact ? "size-4" : "size-4 sm:size-5 md:size-6"}
             rounded="rounded-md"
           />
-          {label ? (
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              {label}
-            </p>
-          ) : (
-            <Skeleton className="h-3 w-1/2" rounded="rounded-md" />
-          )}
+        ) : undefined
+      }
+      value={
+        <Skeleton className="h-[1.25em] w-2/3 max-w-32" rounded="rounded-md" />
+      }
+      caption={
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Skeleton
+            className="h-[1.25em] w-1/2 max-w-28"
+            rounded="rounded-md"
+          />
+          {showDetail ? (
+            <Skeleton className="h-[1em] w-1/3 max-w-20" rounded="rounded-md" />
+          ) : null}
         </div>
-      </div>
-    </div>
+      }
+    />
   );
 }
 
@@ -776,222 +657,5 @@ export function SkeletonList({
         </div>
       ))}
     </div>
-  );
-}
-
-/**
- * Public homepage shell used while tenant and public-page data resolve on the
- * server. It composes the shared primitives so loading motion and theming stay
- * consistent with dashboard and modal loading states.
- */
-export function SkeletonPublicLandingPage({
-  variant = "platform",
-  loadingLabel = "Loading homepage",
-}: {
-  variant?: "platform" | "business";
-  loadingLabel?: string;
-}) {
-  return (
-    <main
-      className="min-h-screen overflow-hidden bg-[#f8f9fa] text-slate-900 dark:bg-[#0b0d0e] dark:text-white"
-      role="status"
-      aria-busy="true"
-      aria-label={loadingLabel}
-    >
-      <span className="sr-only">{loadingLabel}</span>
-
-      <div className="h-[60px] w-full border-b border-transparent bg-transparent">
-        <div className="mx-auto flex h-[60px] w-full max-w-[75rem] items-center justify-between px-5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-[30px] shrink-0" rounded="rounded-lg" />
-            <Skeleton className="h-4 w-20" rounded="rounded-md" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Skeleton
-              className="hidden h-4 w-16 md:block"
-              rounded="rounded-md"
-            />
-            <Skeleton
-              className="hidden h-4 w-16 md:block"
-              rounded="rounded-md"
-            />
-            <Skeleton className="size-9" rounded="rounded-lg" />
-          </div>
-        </div>
-      </div>
-
-      <section className="px-5 pb-20 pt-20 sm:px-8 sm:pt-28">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-4xl text-center">
-            <Skeleton
-              className="mx-auto h-10 w-[min(42rem,92%)] sm:h-16"
-              rounded="rounded-2xl"
-            />
-            <Skeleton
-              className="mx-auto mt-4 h-10 w-[min(32rem,76%)] sm:h-14"
-              rounded="rounded-2xl"
-            />
-            <div className="mx-auto mt-8 max-w-2xl">
-              <SkeletonText lines={2} />
-            </div>
-            {variant === "platform" && (
-              <div className="mt-8 flex justify-center gap-3">
-                <Skeleton className="h-12 w-36" rounded="rounded-full" />
-                <Skeleton className="h-12 w-36" rounded="rounded-full" />
-              </div>
-            )}
-          </div>
-
-          {variant === "business" && (
-            <div className="mx-auto mt-16 flex max-w-5xl items-end justify-center gap-4 overflow-hidden">
-              {[0, 1, 2].map((phone) => (
-                <Skeleton
-                  key={phone}
-                  className="h-72 w-40 shrink-0 sm:h-96 sm:w-52"
-                  rounded="rounded-[2rem]"
-                />
-              ))}
-            </div>
-          )}
-
-          {variant === "platform" && (
-            <div className="mx-auto mt-20 max-w-6xl rounded-[2rem] border border-black/5 bg-white/55 p-4 shadow-2xl shadow-black/5 dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
-              <div className="flex gap-2 border-b border-black/5 pb-4 dark:border-white/10">
-                <Skeleton className="h-9 w-24" rounded="rounded-lg" />
-                <Skeleton className="h-9 w-28" rounded="rounded-lg" />
-                <Skeleton
-                  className="hidden h-9 w-24 sm:block"
-                  rounded="rounded-lg"
-                />
-              </div>
-              <div className="mt-5 grid h-64 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-4 sm:h-80 sm:gap-6">
-                <div className="space-y-3 rounded-2xl border border-black/5 p-4 dark:border-white/10">
-                  <Skeleton className="h-5 w-2/3" rounded="rounded-md" />
-                  <SkeletonText lines={4} />
-                  <Skeleton className="mt-6 h-10 w-full" rounded="rounded-xl" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Skeleton
-                      key={index}
-                      className="h-full w-full"
-                      rounded="rounded-2xl"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {variant === "platform" && (
-            <div className="mx-auto mt-16 flex max-w-4xl items-center justify-center gap-8 overflow-hidden sm:gap-14">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton
-                  key={index}
-                  className="h-8 w-24 shrink-0"
-                  rounded="rounded-lg"
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {variant === "platform" && (
-        <section className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8">
-          <div className="mx-auto max-w-5xl text-center">
-            <Skeleton
-              className="mx-auto h-12 w-64 max-w-full sm:h-14"
-              rounded="rounded-xl"
-            />
-            <div className="mx-auto mt-8 max-w-3xl">
-              <SkeletonText lines={3} />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {variant === "business" ? (
-        <section className="px-5 py-24 sm:px-8">
-          <div className="mx-auto max-w-6xl">
-            <Skeleton
-              className="mx-auto h-12 w-72 max-w-full"
-              rounded="rounded-xl"
-            />
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {[0, 1, 2].map((card) => (
-                <Skeleton
-                  key={card}
-                  className="h-64 w-full"
-                  rounded="rounded-2xl"
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : (
-        <>
-          {[3, 3, 6, 4, 6, 3].map((cards, section) => (
-            <section
-              key={section}
-              className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8"
-            >
-              <div className="mx-auto max-w-6xl">
-                <Skeleton
-                  className="mx-auto h-9 w-72 max-w-full"
-                  rounded="rounded-xl"
-                />
-                <div className="mx-auto mt-5 max-w-2xl">
-                  <SkeletonText lines={2} />
-                </div>
-                <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {Array.from({ length: cards }).map((_, card) => (
-                    <div
-                      key={card}
-                      className="rounded-2xl border border-black/5 p-6 dark:border-white/10"
-                    >
-                      <Skeleton className="mb-6 size-11" rounded="rounded-xl" />
-                      <Skeleton
-                        className="mb-3 h-5 w-2/3"
-                        rounded="rounded-md"
-                      />
-                      <SkeletonText lines={3} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          ))}
-          <section className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8">
-            <div className="mx-auto max-w-4xl space-y-4">
-              <Skeleton
-                className="mx-auto mb-10 h-9 w-64"
-                rounded="rounded-xl"
-              />
-              {Array.from({ length: 6 }).map((_, index) => (
-                <Skeleton
-                  key={index}
-                  className="h-16 w-full"
-                  rounded="rounded-2xl"
-                />
-              ))}
-            </div>
-          </section>
-          <section className="border-t border-black/5 px-5 py-24 dark:border-white/10 sm:px-8">
-            <div className="mx-auto max-w-4xl rounded-[2rem] border border-black/5 p-10 text-center dark:border-white/10">
-              <Skeleton className="mx-auto h-10 w-3/4" rounded="rounded-xl" />
-              <Skeleton
-                className="mx-auto mt-5 h-4 w-1/2"
-                rounded="rounded-md"
-              />
-              <Skeleton
-                className="mx-auto mt-8 h-12 w-40"
-                rounded="rounded-full"
-              />
-            </div>
-          </section>
-        </>
-      )}
-    </main>
   );
 }

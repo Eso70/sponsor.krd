@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { PoolClient } from 'pg';
-import { AdvertisingService } from '../advertising/advertising.service';
+
 import { describeError } from '../common/describe-error';
 import { DatabaseService } from '../database/database.service';
 import { PUBLIC_PLANS_CACHE_KEY } from '../common/public-catalog-cache';
@@ -90,7 +90,6 @@ export class BillingManagementService {
     // Required, not optional: an unresolved provider here would turn the
     // plan-change cache invalidation into a silent no-op, which is the failure
     // this dependency exists to prevent.
-    private readonly advertising: AdvertisingService,
   ) {}
 
   async getOverview(query: BillingOverviewQueryDto) {
@@ -1590,14 +1589,6 @@ export class BillingManagementService {
       this.redis.del(`entitlements:business:${businessId}`),
       this.redis.del(`authorization:business-policy:${businessId}`),
       this.redis.del(`templates:v3:business:${businessId}`),
-      // The published advertising payload is cached by subdomain and the
-      // entitlement lives inside the query that cache short-circuits, so a
-      // downgrade would otherwise keep serving a paid public page until the
-      // TTL lapsed. Failure here must not fail the plan change: a stale cache
-      // costs minutes, a rolled-back downgrade costs the operator their edit.
-      this.advertising
-        .invalidatePublicCacheForBusiness(businessId)
-        .catch(() => undefined),
     ]);
   }
 }

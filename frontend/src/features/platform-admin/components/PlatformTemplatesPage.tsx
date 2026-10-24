@@ -7,5 +7,5 @@ import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocale
 
 export function PlatformTemplatesPage() {
   const { locale } = usePlatformLocale();
-  return <TemplatesPage copy={locale === "ar" ? arabicTemplatesPageCopy : locale === "en" ? englishBusinessMessages.TemplatesPage : undefined} />;
+  return <TemplatesPage platformTheme locale={locale} copy={locale === "ar" ? arabicTemplatesPageCopy : locale === "en" ? englishBusinessMessages.TemplatesPage : undefined} />;
 }

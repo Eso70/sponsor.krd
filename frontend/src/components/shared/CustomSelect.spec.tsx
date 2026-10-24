@@ -199,3 +199,44 @@ it("navigates non-search menus and dismisses the menu before its parent editor",
   fireEvent.keyDown(trigger, { key: "Escape" });
   expect(close).toHaveBeenCalledOnce();
 });
+
+it("jumps by typed prefix, cycles matching letters and skips disabled options", () => {
+  const change = vi.fn();
+  render(<CustomSelect label="Language" value="en" onChange={change} options={[
+    {value: "en", label: "English"}, {value: "disabled", label: "Farsi", disabled: true},
+    {value: "fi", label: "Finnish"}, {value: "fr", label: "French"},
+  ]} />);
+  const trigger = screen.getByRole("button", {name: "English"});
+  trigger.focus();
+  fireEvent.keyDown(trigger, {key: "f"});
+  expect(screen.getByRole("option", {name: "Finnish"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!, {key: "f"});
+  expect(screen.getByRole("option", {name: "French"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!, {key: "f"});
+  expect(screen.getByRole("option", {name: "Finnish"})).toHaveFocus();
+  expect(change).not.toHaveBeenCalled();
+  fireEvent.keyDown(document.activeElement!, {key: "Escape"});
+  fireEvent.keyDown(trigger, {key: "f"});
+  fireEvent.keyDown(document.activeElement!, {key: "r"});
+  expect(screen.getByRole("option", {name: "French"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!, {key: "z"});
+  expect(screen.getByRole("option", {name: "French"})).toHaveFocus();
+  fireEvent.click(document.activeElement!);
+  expect(change).toHaveBeenCalledWith("fr");
+});
+
+it("normalizes accented labels and resets typed prefixes after a pause", () => {
+  const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+  render(<CustomSelect label="Language" value="en" onChange={vi.fn()} options={[
+    {value: "en", label: "English"}, {value: "es", label: "Español"}, {value: "et", label: "Éesti"},
+  ]} />);
+  fireEvent.keyDown(screen.getByRole("button", {name: "English"}), {key: "e"});
+  fireEvent.keyDown(document.activeElement!, {key: "e"});
+  expect(screen.getByRole("option", {name: "Español"})).toHaveFocus();
+  clock.mockReturnValue(2000);
+  fireEvent.keyDown(document.activeElement!, {key: "e"});
+  expect(screen.getByRole("option", {name: "English"})).toHaveFocus();
+  fireEvent.keyDown(document.activeElement!, {key: "Escape"});
+  fireEvent.keyDown(screen.getByRole("button", {name: "English"}), {key: "ArrowDown"});
+  expect(screen.getByRole("option", {name: "English"})).toHaveFocus();
+});

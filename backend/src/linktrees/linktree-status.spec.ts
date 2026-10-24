@@ -37,7 +37,6 @@ describe('LinktreesService.toggleStatus', () => {
           uid: 'page-1',
           seo_name: 'page-1',
           status: 'inactive',
-          is_campaign_active: false,
           is_default: false,
           template_config: {},
           template_key: 'spectrum',
@@ -59,15 +58,10 @@ describe('LinktreesService.toggleStatus', () => {
     const result = await service.toggleStatus('lt-1', 'biz-1', 'inactive');
 
     expect(result.status).toBe('inactive');
-    expect(result.is_campaign_active).toBe(false);
 
     // Verify the query contains the explicit casts
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining('SET status = $1::varchar'),
-      ['inactive', 'lt-1', 'biz-1'],
-    );
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("CASE WHEN $1::varchar = 'inactive'"),
       ['inactive', 'lt-1', 'biz-1'],
     );
 
@@ -101,7 +95,6 @@ describe('LinktreesService.toggleStatus', () => {
           uid: 'default-page',
           seo_name: 'default-page',
           status: 'active',
-          is_campaign_active: false,
           is_default: true,
           template_config: {},
           template_key: 'spectrum',
@@ -130,37 +123,5 @@ describe('LinktreesService.toggleStatus', () => {
     await expect(
       service.toggleStatus('non-existent', 'biz-1', 'inactive'),
     ).rejects.toThrow(NotFoundException);
-  });
-
-  it('toggles campaign status within the authenticated business and clears the public cache', async () => {
-    const { service, query, redis } = buildService();
-
-    query.mockResolvedValueOnce({
-      rows: [
-        {
-          id: 'lt-1',
-          name: 'Campaign Page',
-          uid: 'campaign-page',
-          seo_name: 'campaign-page',
-          status: 'active',
-          is_campaign_active: true,
-          is_default: false,
-          template_config: {},
-          template_key: 'spectrum',
-          whatsapp_modal_enabled: false,
-        },
-      ],
-    });
-    query.mockResolvedValueOnce({ rows: [] });
-    query.mockResolvedValueOnce({ rows: [{ subdomain: 'mybiz' }] });
-
-    const result = await service.toggleCampaignActive('lt-1', 'biz-1', true);
-
-    expect(result.is_campaign_active).toBe(true);
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining('WHERE id = $2 AND business_id = $3'),
-      [true, 'lt-1', 'biz-1'],
-    );
-    expect(redis.del).toHaveBeenCalled();
   });
 });

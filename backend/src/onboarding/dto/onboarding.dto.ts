@@ -40,6 +40,7 @@ export class VerifyEmailCodeDto {
   @Matches(/^\d{6}$/)
   code: string;
 
+  /** Compatibility for cached clients; the server controls sign-in persistence. */
   @IsOptional()
   @IsBoolean()
   rememberDevice?: boolean;

@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api/request";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
+import { platformLoadingCopy } from "@/features/platform-admin/i18n/loading-copy";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePlatformCopy } from "@/features/platform-admin/i18n/copy";
 import {
@@ -20,6 +24,7 @@ export function SignupApplicationsPanel({
   reloadToken?: number;
 }) {
   const copy = usePlatformCopy();
+  const { locale } = usePlatformLocale();
   const [items, setItems] = useState<SignupApplication[]>([]);
   const [plans, setPlans] = useState<SignupPlan[]>([]);
   const [busy, setBusy] = useState("");
@@ -55,6 +60,8 @@ export function SignupApplicationsPanel({
     return () => window.cancelAnimationFrame(frame);
   }, [load, reloadToken]);
 
+  const refreshing = useRegisterDashboardRefresh("signup-applications", load);
+
   async function review(
     item: SignupApplication,
     action: "request_changes" | "reject" | "approve",
@@ -89,7 +96,7 @@ export function SignupApplicationsPanel({
   }
 
   return (
-    <div>
+    <DashboardRefreshRegion loading={refreshing} label={platformLoadingCopy[locale].loading}>
       <div className="space-y-3">
         {items.length === 0 ? (
           <EmptyState
@@ -121,6 +128,6 @@ export function SignupApplicationsPanel({
           </div>
         )}
       </div>
-    </div>
+    </DashboardRefreshRegion>
   );
 }

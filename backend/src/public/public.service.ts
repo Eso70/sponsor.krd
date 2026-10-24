@@ -1,5 +1,14 @@
+import {
+  readLinktreeSeo,
+  readPlanLinktreeSeo,
+} from '@linktree/types/linktree-seo.cjs';
 import { featurePlanSql } from '../billing/feature-plan-policy';
+import {
+  readLinktreeBanner,
+  LINKTREE_BANNER_KEY,
+} from '@linktree/types/linktree-banner.cjs';
 import { indexableFormSql, indexableLinktreeSql } from '../common/page-seo';
+import { normalizeLinktreeSeoConfig } from '../common/linktree-seo';
 import {
   Injectable,
   NotFoundException,
@@ -73,7 +82,12 @@ type PublicLinktreeRow = {
   business_default_avatar: string | null;
 };
 
-type MappedPublicLinktree = PublicLinktree;
+type MappedPublicLinktree = PublicLinktree & {
+  headline: string;
+  slogan: string | null;
+  slogan_color: string | null;
+  logo: string | null;
+};
 
 /**
  * What the two-hour Redis copy holds.
@@ -104,6 +118,7 @@ type PublicLinkRow = {
 type MappedPublicLink = LinktreeLink;
 
 type WhatsappQuestionRow = {
+  video_url?: string | null;
   id: string;
   text: string;
   message: string | null;
@@ -139,7 +154,6 @@ type PublicBusinessRow = {
   template_key: string | null;
   background_color: string | null;
   whatsapp_enabled: boolean | null;
-  advertising_enabled: boolean;
   branding_removed: boolean;
 };
 
@@ -225,7 +239,7 @@ export class PublicService {
          FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
         WHERE lt.business_id = $1::uuid AND a.status = 'active'
           AND lt.status = 'active' AND NOT COALESCE(lt.is_archived, false)
-          AND ${indexableLinktreeSql()}
+          AND ${indexableLinktreeSql('lt', `(a.account_type = 'platform' OR ${featurePlanSql('linktree-seo', 'a')})`)}
           AND (a.account_type = 'business' OR EXISTS (
             SELECT 1 FROM root_public_slugs r WHERE r.linktree_id = lt.id
               AND r.business_id = a.id AND r.page_type = 'linktree'
@@ -259,11 +273,7 @@ export class PublicService {
     routeKey: string,
     subdomain?: string,
   ): Promise<PublicRouteTracking> {
-    const businessRoutes = new Set([
-      'home',
-      'advertising',
-      'advertising-video-code',
-    ]);
+    const businessRoutes = new Set(['home']);
     const platformRoutes = new Set(['home', 'join', 'join-application']);
     const isBusiness = Boolean(subdomain && subdomain !== 'www');
     if (!(isBusiness ? businessRoutes : platformRoutes).has(routeKey)) {
@@ -289,33 +299,11 @@ export class PublicService {
       name: string;
       page_type: string;
     }>(
-      routeKey === 'advertising'
-        ? `SELECT page.id::text, page.name, page.page_type
-             FROM public_pages page
-             JOIN advertising_pages advertising
-               ON advertising.id = page.source_advertising_page_id
-             JOIN businesses business ON business.id = page.business_id
-            WHERE page.business_id = $1::uuid
-              AND page.page_type = 'advertising'
-              AND page.status = 'published'
-              AND advertising.status = 'published'
-              AND ${entitledSql(ENTITLEMENT.advertisingPage)}`
-        : `SELECT page.id::text, page.name, page.page_type
-             FROM public_pages page
-             JOIN businesses business ON business.id = page.business_id
-            WHERE page.business_id = $1::uuid
-              AND page.page_type = 'route'
-              AND page.slug = $2
-              AND page.status = 'published'
-              AND (
-                $2 <> 'advertising-video-code'
-                OR EXISTS (
-                  SELECT 1 FROM advertising_pages advertising
-                   WHERE advertising.business_id = business.id
-                     AND advertising.status = 'published'
-                ) AND ${entitledSql(ENTITLEMENT.advertisingPage)}
-              )`,
-      routeKey === 'advertising' ? [ownerId] : [ownerId, routeKey],
+      `SELECT page.id::text, page.name, page.page_type
+         FROM public_pages page JOIN businesses business ON business.id = page.business_id
+        WHERE page.business_id = $1::uuid AND page.page_type = 'route'
+          AND page.slug = $2 AND page.status = 'published'`,
+      [ownerId, routeKey],
     );
     const row = page.rows[0];
     if (!row) throw new NotFoundException('Not Found');
@@ -325,7 +313,7 @@ export class PublicService {
       pageName: row.name,
       contentType:
         row.page_type === 'route' ? `route:${routeKey}` : row.page_type,
-      // Fixed and advertising routes collect first-party analytics only.
+      // Fixed routes collect first-party analytics only.
       // Never expose business Pixel destinations to these surfaces.
       analytics: { ...analytics, pixelIds: [] },
     };
@@ -346,7 +334,12 @@ export class PublicService {
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
     config.verification_badge = config.verification_badge === true;
-    delete config.seo;
+    if (config[LINKTREE_BANNER_KEY] !== undefined) {
+      config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
+        config[LINKTREE_BANNER_KEY],
+      );
+    }
+    normalizeLinktreeSeoConfig(config);
     config.whatsapp_modal = config.whatsapp_modal || {};
 
     // A background image is painted into public page CSS, so anything that is
@@ -362,7 +355,7 @@ export class PublicService {
     row: PublicLinktreeRow,
   ): Promise<MappedPublicLinktree> {
     const qRes = await this.databaseService.query<WhatsappQuestionRow>(
-      `SELECT id, question_text AS text, message FROM whatsapp_questions
+      `SELECT id, question_text AS text, message, video_url FROM whatsapp_questions
        WHERE linktree_id = $1
        ORDER BY display_order ASC`,
       [row.id],
@@ -390,11 +383,16 @@ export class PublicService {
         id: q.id,
         text: q.text,
         message: q.message,
+        videoUrl: q.video_url ?? undefined,
       })),
     };
 
     return {
       ...row,
+      headline: row.name,
+      slogan: row.subtitle,
+      slogan_color: row.subtitle_color,
+      logo: row.image,
       template_config: config,
     };
   }
@@ -434,26 +432,44 @@ export class PublicService {
         | 'description'
       >
     >(
-      `SELECT lt.id, lt.name, lt.uid, lt.seo_name, lt.image, lt.subtitle, lt.description
+      `SELECT lt.id, lt.headline AS name, lt.uid, lt.seo_name, lt.logo AS image, lt.slogan AS subtitle, lt.description
        FROM linktrees lt
        INNER JOIN businesses a ON lt.business_id = a.id
        WHERE lt.status = 'active' AND a.subdomain = $1
          AND a.account_type = 'business'
-       ORDER BY lt.name`,
+       ORDER BY lt.headline`,
       [subdomain],
     );
 
     return linktreesRes.rows || [];
   }
 
+  /** Resolve paid metadata against live access, outside the cached source body. */
+  private async applySeoPlan(page: PublicLinktree): Promise<PublicLinktree> {
+    if (!readLinktreeSeo(page.template_config?.seo)) return page;
+    const access = await this.databaseService.query<{ allowed: boolean }>(
+      `SELECT (a.account_type='platform' OR ${featurePlanSql('linktree-seo', 'a')}) AS allowed
+       FROM linktrees lt JOIN businesses a ON a.id=lt.business_id WHERE lt.id=$1`,
+      [page.id],
+    );
+    const config = { ...page.template_config };
+    const seo = readPlanLinktreeSeo(
+      config.seo,
+      access.rows[0]?.allowed === true,
+    );
+    if (seo) config.seo = seo;
+    else delete config.seo;
+    return { ...page, template_config: config };
+  }
+
   private publicLinktreeSelect(enforceBusinessEntitlement = true) {
     const templateKey = enforceBusinessEntitlement
       ? allowedTemplateKeySql('lt.template_key', 'a')
       : 'lt.template_key';
-    return `SELECT lt.id, lt.name, lt.subtitle, lt.subtitle_color, lt.description, lt.seo_name, lt.uid, lt.image, lt.background_color,
+    return `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
                    ${templateKey} AS template_key,
-                   lt.template_config, lt.whatsapp_modal_enabled,
-                   lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_campaign_active, lt.is_archived, lt.archived_at, lt.is_default,
+                   lt.template_config, lt.whatsapp_modal_enabled, lt.updated_at,
+                   lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_archived, lt.archived_at, lt.is_default,
                    b.logo AS business_logo, b.favicon AS business_favicon,
                    b.website_color AS business_website_color, b.default_avatar AS business_default_avatar
             FROM linktrees lt
@@ -483,6 +499,7 @@ export class PublicService {
       if (live.rows.length) {
         return {
           ...cachedData,
+          linktree: await this.applySeoPlan(cachedData.linktree),
           analytics: await this.pageAnalytics.forSource(
             'linktree',
             cachedData.linktree.id,
@@ -559,7 +576,7 @@ export class PublicService {
       { linktree: payload.linktree, links: payload.links },
       7200,
     );
-    return payload;
+    return { ...payload, linktree: await this.applySeoPlan(payload.linktree) };
   }
 
   /** Resolve a SponsorKrd-owned page only on the root-domain public route. */
@@ -688,21 +705,6 @@ export class PublicService {
          d.background_color, d.whatsapp_enabled,
          -- No pixel ids here. The subdomain landing page is not one of the two
          -- surfaces allowed to load a business's pixel; see docs/tracking.md.
-         -- Whether this business currently has a live advertising page, so the
-         -- public shell can decide whether to link to /advertising at all
-         -- rather than offering a link that 404s.
-         (
-           ${entitledSql(ENTITLEMENT.advertisingPage, 'a')}
-           AND EXISTS (
-             SELECT 1
-               FROM public.advertising_pages advertising
-               JOIN public.advertising_page_versions advertising_version
-                 ON advertising_version.advertising_page_id = advertising.id
-                AND advertising_version.published = true
-              WHERE advertising.business_id = a.id
-                AND advertising.status = 'published'
-           )
-         ) AS advertising_enabled,
          -- Ultra pays to drop the "Powered by Sponsor.krd" badge. Read live, so a
          -- downgrade puts it back rather than leaving the paid state stuck on.
          ${entitledSql(ENTITLEMENT.removeBranding, 'a')} AS branding_removed

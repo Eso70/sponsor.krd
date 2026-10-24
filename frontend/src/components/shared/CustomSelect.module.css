@@ -10,23 +10,37 @@
 }
 
 .menuShell {
-  border-color: var(--select-border, #e2e8f0) !important;
+  border-radius: 20px !important;
   outline: none !important;
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-inset-ring-shadow: 0 0 #0000 !important;
 }
-:global(.dark) .menuShell {
-  border-color: var(--select-border, rgb(255 255 255 / 10%)) !important;
+/* Keep the edge indistinguishable from its surface in either appearance.
+   This outranks the shared popup's neutral border and inherited menu styles. */
+.menuShell[data-picker-surface][data-appearance] {
+  border-color: transparent !important;
 }
 
-/* Neutral list states keep dense forms readable in either appearance. */
+
+.listMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menuShell:not(.gridShell):not(.pickerShell) {
+  padding: 6px;
+}
+
+/* Hover stays neutral; selection carries the inherited tenant accent. */
 .option {
+  border-radius: 16px;
   transition:
     background-color 140ms ease,
     color 140ms ease;
 }
 .option:not(.gridOption)[aria-selected="false"]:not(:disabled):hover,
-.option:not(.gridOption):not(:disabled):focus-visible {
+.option:not(.gridOption)[aria-selected="false"]:not(:disabled):focus-visible {
   background-color: color-mix(
     in srgb,
     var(--select-text, var(--select-option-text)) 7%,
@@ -38,9 +52,12 @@
   color: var(--select-text, var(--select-option-text)) !important;
   background: color-mix(
     in srgb,
-    var(--select-text, var(--select-option-text)) 10%,
+    var(--theme-primary, #64748b) 12%,
     transparent
   ) !important;
+}
+.selectedOption svg {
+  color: var(--theme-primary, #64748b);
 }
 .menuShell:not(.gridShell) {
   animation: list-open 140ms ease-out;
@@ -85,7 +102,7 @@
   gap: 10px;
   padding: 10px 6px;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 16px;
   background-color: #f8fafc;
   text-align: center;
   font-size: 11px;
@@ -151,46 +168,92 @@
 }
 
 .searchRow {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  position: relative;
   padding: 4px;
-  background: #fff;
+  background: inherit;
 }
-:global(.dark) .searchRow {
-  background: #1c222b;
+.menuToolbar {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  background: inherit;
+}
+.pickerShell {
+  border-radius: 16px;
+  padding: 0 8px 8px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 10%) !important;
+}
+.pickerShell .menuToolbar {
+  top: 0;
+  margin-inline: -8px;
+  padding-bottom: 8px;
 }
 .searchInput {
   width: 100%;
-  height: 34px;
+  height: 40px;
   border: 1px solid #e2e8f0;
-  border-color: #e2e8f0 !important;
+  border-color: transparent !important;
   outline: none !important;
   box-shadow: none !important;
   background-image: none !important;
-  border-radius: 8px;
-  padding: 0 10px;
+  border-radius: 14px;
+  padding: 0 12px 0 36px;
   font-size: 12px;
   background: transparent;
   color: inherit;
 }
-:global(.dark) .searchInput {
-  border-color: rgb(255 255 255 / 10%) !important;
+.menuShell .searchInput:global(.shared-control) {
+  border-radius: 9999px !important;
 }
-.isolatedMenu,
-.isolatedMenu .searchRow {
+.searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  cursor: pointer;
+  background-color: var(--shared-control-muted, #94a3b8);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 4 8 8M12 4l-8 8' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:global(.dark) .searchInput {
+  border-color: transparent !important;
+}
+.isolatedMenu {
   background: var(--select-surface) !important;
   color: var(--select-text) !important;
-  border-color: var(--select-border) !important;
+  border-color: var(--select-neutral-border) !important;
   color-scheme: var(--select-color-scheme);
+}
+
+/* Only options scroll: the search field never overlays moving rows. */
+.searchableShell {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+.searchableShell .menuToolbar {
+  position: static;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+  background: transparent;
+}
+.searchableShell .searchRow {
+  background: transparent !important;
+}
+.searchableShell .listMenu {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.searchableShell .option {
+  flex-shrink: 0;
 }
 .isolatedMenu .option[aria-selected="false"] {
   color: var(--select-text) !important;
 }
 .isolatedMenu .searchInput {
-  background: var(--select-surface) !important;
+  background: color-mix(in srgb, var(--select-text) 7%, var(--select-surface)) !important;
   color: var(--select-text) !important;
-  border-color: var(--select-border) !important;
+  border-color: transparent !important;
 }
 
 @layer components {

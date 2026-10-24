@@ -1,7 +1,10 @@
 "use client";
 
 import { ArrowUpRight, Crown, LifeBuoy } from "lucide-react";
+import { sidebarPlanButtonClassName } from "@/components/shared/dashboard-sidebar-styles";
+import styles from "@/components/shared/dashboard-sidebar.module.css";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { DashboardSidebarAction } from "@/components/shared/DashboardSidebarAction";
 import { useTranslations } from "next-intl";
 
 interface BusinessSidebarFooterProps {
@@ -21,78 +24,56 @@ export function BusinessSidebarFooter({
 }: BusinessSidebarFooterProps) {
   const t = useTranslations("Sidebar");
   const displayPlanName = planName?.trim() || t("planFallback");
-  const canUpgrade = Boolean(planCode && planCode.trim().toLowerCase() !== "max");
-
+  const canUpgrade = Boolean(
+    planCode && planCode.trim().toLowerCase() !== "max",
+  );
+  const planLabel = `${t("currentPlan")}: ${displayPlanName}`;
   return (
-    <div
-      className="shrink-0 border-t border-slate-200 p-3 dark:border-white/10"
-      aria-label={t("planAndSupport")}
-    >
-      <div
-        className={`rounded-2xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.035] ${collapsed ? "md:flex md:flex-col md:items-center md:gap-2 md:border-transparent md:bg-transparent md:p-0 md:dark:bg-transparent" : "p-3"}`}
+    <div className="space-y-1" aria-label={t("planAndSupport")}>
+      <Tooltip
+        content={canUpgrade ? `${planLabel} · ${t("upgrade")}` : planLabel}
+        side="right"
+        disabled={!collapsed}
       >
-        <Tooltip content={t("currentPlan") + ": " + displayPlanName} side="right" disabled={!collapsed}>
-          <button
-            type="button"
-            onClick={onUpgrade}
-            aria-label={t("currentPlan") + ": " + displayPlanName}
-            className={`flex w-full cursor-pointer items-center rounded-xl text-start transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-white/5 ${collapsed ? "md:justify-center" : "gap-3"}`}
-          >
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-              style={{
-                background:
-                  "color-mix(in srgb, var(--theme-primary, #64748b) 14%, transparent)",
-                color: "var(--theme-primary, #64748b)",
-              }}
-            >
-              <Crown className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div
-              className={`min-w-0 flex-1 transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
-            >
-              <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                {t("currentPlan")}
-              </p>
-              <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">
-                {displayPlanName}
-              </p>
-            </div>
-          </button>
-        </Tooltip>
-
-        {canUpgrade && (
-          <Tooltip content={t("upgrade")} side="right" disabled={!collapsed}>
-            <button
-              type="button"
-              onClick={onUpgrade}
-              className={`theme-fill mt-3 flex w-full shrink-0 items-center rounded-xl border border-transparent px-3 py-2.5 text-sm font-semibold text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer ${collapsed ? "md:mt-0 md:justify-center md:px-0" : "gap-3"}`}
-            >
-              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span
-                className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
-              >
-                {t("upgrade")}
-              </span>
-            </button>
-          </Tooltip>
-        )}
-      </div>
-
-      <Tooltip content={t("support")} side="right" disabled={!collapsed}>
         <button
           type="button"
-          onClick={onSupport}
-          className={`mt-2 flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-slate-100 cursor-pointer ${collapsed ? "md:justify-center md:px-0" : "gap-3"}`}
+          onClick={onUpgrade}
+          aria-label={planLabel}
+          aria-haspopup="dialog"
+          className={sidebarPlanButtonClassName(collapsed)}
         >
-          <LifeBuoy className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span
-            className={`whitespace-nowrap transition-all duration-300 ${collapsed ? "md:hidden" : "opacity-100"}`}
-          >
-            {t("support")}
+          <span className={styles.icon} aria-hidden="true">
+            <Crown
+              aria-hidden="true"
+              className={`${styles.planIcon} size-4 shrink-0`}
+            />
           </span>
+          <div className={`min-w-0 flex-1 ${collapsed ? "md:hidden" : ""}`}>
+            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+              {t("currentPlan")}
+            </p>
+            <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {displayPlanName}
+            </p>
+          </div>
+          {canUpgrade ? (
+            <span
+              className={`${styles.accent} inline-flex min-w-0 max-w-[55%] shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold ${collapsed ? "md:hidden" : ""}`}
+            >
+              <span className="truncate">{t("upgrade")}</span>
+              <ArrowUpRight className="size-3 shrink-0" aria-hidden="true" />
+            </span>
+          ) : null}
         </button>
       </Tooltip>
+      <DashboardSidebarAction
+        collapsed={collapsed}
+        label={t("support")}
+        icon={
+          <LifeBuoy className="size-4 text-emerald-600 dark:text-emerald-400" />
+        }
+        onClick={onSupport}
+      />
     </div>
   );
 }

@@ -1,0 +1,25 @@
+.glow {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.glow::before {
+  content: "";
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  left: -16px;
+  top: -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-cursor-accent, #25f4ee) 13%, transparent), color-mix(in srgb, var(--app-cursor-accent, #25f4ee) 5%, transparent) 40%, transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce), (any-pointer: none) {
+  .glow { display: none; }
+}

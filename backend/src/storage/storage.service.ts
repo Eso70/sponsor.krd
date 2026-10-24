@@ -298,7 +298,8 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     await this.database.query(
       `UPDATE uploaded_media_assets
        SET owner_business_id=$1, scope='business'
-       WHERE public_url=ANY($2::text[])`,
+       WHERE public_url=ANY($2::text[])
+         AND (owner_business_id IS NULL OR owner_business_id=$1)`,
       [businessId, urls],
     );
   }
@@ -349,7 +350,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
          SELECT 1 FROM platform_admins admin WHERE $1 IN (admin.logo,admin.avatar,admin.favicon)
          UNION ALL SELECT 1 FROM business_branding branding WHERE $1 IN (branding.logo,branding.favicon,branding.default_avatar)
          UNION ALL SELECT 1 FROM forms form WHERE form.definition::text LIKE '%'||$1||'%'
-         UNION ALL SELECT 1 FROM linktrees tree WHERE tree.image=$1 OR tree.template_config::text LIKE '%'||$1||'%'
+         UNION ALL SELECT 1 FROM linktrees tree WHERE tree.logo=$1 OR tree.template_config::text LIKE '%'||$1||'%'
          UNION ALL SELECT 1 FROM business_profile_change_requests request WHERE request.status='pending' AND request.changes::text LIKE '%'||$1||'%'
          UNION ALL SELECT 1 FROM permission_approval_requests approval WHERE approval.status='pending' AND approval.requested_changes::text LIKE '%'||$1||'%'
        ) referenced`,
@@ -508,7 +509,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     return `NOT EXISTS (SELECT 1 FROM platform_admins admin WHERE ${alias}.public_url IN (admin.logo,admin.avatar,admin.favicon))
       AND NOT EXISTS (SELECT 1 FROM business_branding branding WHERE ${alias}.public_url IN (branding.logo,branding.favicon,branding.default_avatar))
       AND NOT EXISTS (SELECT 1 FROM forms form WHERE form.definition::text LIKE '%'||${alias}.public_url||'%')
-      AND NOT EXISTS (SELECT 1 FROM linktrees tree WHERE tree.image=${alias}.public_url OR tree.template_config::text LIKE '%'||${alias}.public_url||'%')
+      AND NOT EXISTS (SELECT 1 FROM linktrees tree WHERE tree.logo=${alias}.public_url OR tree.template_config::text LIKE '%'||${alias}.public_url||'%')
       AND NOT EXISTS (SELECT 1 FROM business_profile_change_requests request WHERE request.status='pending' AND request.changes::text LIKE '%'||${alias}.public_url||'%')
       AND NOT EXISTS (SELECT 1 FROM permission_approval_requests approval WHERE approval.status='pending' AND approval.requested_changes::text LIKE '%'||${alias}.public_url||'%')`;
   }

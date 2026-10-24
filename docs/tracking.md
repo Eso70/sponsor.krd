@@ -12,11 +12,10 @@ It must not be mounted or forwarded from:
 - platform administration or authentication;
 - business dashboards or authentication;
 - a business subdomain landing page;
-- the public advertising page or video-code guide.
 
 Fixed public routes may collect first-party analytics through
 `PublicRouteTracking`, but that component must never mount `TikTokPixel` and
-the backend must never create TikTok outbox rows for `route` or `advertising`
+the backend must never create TikTok outbox rows for `route`
 page types.
 
 The structural placement test in
@@ -46,6 +45,17 @@ The tracker:
 Analytics failures must never break public navigation or rendering.
 
 ## Registered actions
+
+Linktree banner changes and banner/logo image opens use `page:banner-change` and
+`page:image-open`. The media action migration registers them for existing and
+future Linktree pages with `metadata.engagement_only=true`. They report through
+`trackEngagement` and never dispatch a browser Pixel. Server forwarding checks
+that metadata too, preventing media engagement from becoming Events API
+conversions even though each event resolves to a registered action. Drawer
+previews have no media tracker callback.
+Carousel autoplay is presentation only and never reports `page:banner-change`.
+Manual arrows and horizontal touch swipes continue reporting that registered
+engagement action through the same shared callback.
 
 Every reportable public action has a `public_page_actions` row. The row binds:
 
@@ -138,8 +148,77 @@ milestones. They remain available to Sponsor.krd analytics.
 Any request to add TikTok tracking to a surface outside the Linktree/form allowlist is an architecture
 and privacy-policy change, not a component-level implementation detail.
 
+## Linktree insights and outcome integrity
+
+Business and Platform Linktree insights use one `PageAnalyticsDrawer`, backed by
+their existing owner-scoped endpoints. The centered analytics modal and its
+compatibility wrappers are removed. Loading uses that same drawer shell. Requests
+are cancelled when superseded or closed; failures remain visible with Refresh.
+
+Contact actions mean outbound WhatsApp/call/email intent, including registered
+Contact actions. They do not prove a message was sent, a booking was accepted or
+a purchase completed. Those outcomes require a trusted server integration.
+The public event endpoint rejects visitor-claimed lead/submission/payment outcomes
+on Linktrees. It ignores visitor-supplied revenue. Amount and explicit currency
+are retained only for a trusted completed-order transaction; currencies are
+reported separately. Unmeasured outcomes/revenue display a dash, not a fake zero.
+
+Action reports include conversion events outside the click-event set, with click
+counts filtered independently. Retained contact events are classified at read
+time even when older ingestion did not set their conversion flag. Existing
+additive rollups remain available for history after raw-event retention; exact
+visitors, contact details, sources and device breakdowns use retained events.
+This read correction does not rewrite history or replay marketing deliveries.
+
+Active-time snapshots use the shared page tracker and remain first-party only.
+They use a per-view ID, report cumulative foreground/focused seconds every 15
+seconds and on background/exit, and stop accumulating after 60 seconds without
+interaction. Snapshots are durably queued and final reports use the existing
+beacon handoff. The report takes MAX per view, then averages measured visits;
+15 active seconds qualifies an engaged visit. Hidden/idle time is excluded.
+No old duration is invented, and previews never start these measurements. All
+storage uses existing event JSONB columns; no migration or data reset is needed.
+
+TikTok event names are authoritative registered-action values on both channels;
+an untrusted browser event-name claim cannot promote a contact to a purchase.
+Views retain ViewContent. Engagement and unregistered actions never create an
+outbox item. Event IDs, destination ownership/entitlement, bot filtering,
+encrypted tokens and the existing retry worker remain shared. Contact events
+omit monetary parameters. Test Events must be verified against the real owner
+Pixel/token after deployment; local checks do not establish production delivery.
+
+Date filters use calendar dates: Today, Yesterday & today, the last seven dates
+including today, All time, or an inclusive custom range. They never claim that
+two calendar days represent a rolling 24-hour interval.
+
 ## Persisted forms
+
+### Linktree WhatsApp question attribution
+
+The shared tracker attaches a saved question ID to the registered WhatsApp contact
+action. Different questions remain distinct even when they share message text;
+rapid repeated taps on the same question are deduplicated. The server resolves
+the label from the page-owned saved configuration and rejects unknown IDs and
+visitor-supplied labels. Message bodies and video URLs are not question analytics
+properties, and question destinations have query strings removed before storage.
+Chooser opens and dismissals are first-party engagement events only, validated
+against a page-owned WhatsApp action. Selection closes do not count as dismissals.
+
+The report includes current questions with zero selections, retained historical
+questions, selection counts, unique visitors, selection share, last selection time
+and link breakdowns within the selected dates. These measurements start when the
+updated public tracker is deployed; no past selections are invented. They measure
+contact intent, not delivery or confirmed sales. Existing JSONB event storage is
+reused with no migration or reset. Analytics controls use the shared dashboard
+theme/language controls; engagement, confirmed outcomes and question details are
+collapsed by default and retain expansion when the language changes.
 
 Public `/form/<slug>` pages use the shared first-party tracker for views, starts and final actions. Accepted submissions call `UnifiedAnalyticsService` atomically with response storage and link the analytics event for attribution. Actions are registered through the form public-page trigger. Published forms resolve owner-scoped Pixel IDs through `PublicPageAnalyticsService`, including the platform workspace. Both SSR base code and the browser Pixel are restricted to public routes. Accepted submissions enqueue `SubmitForm` in the same transaction as response storage; the browser fires `trackServerConversion` only after success with the submission request ID. Retry receipts do not create another server event. The generic analytics endpoint rejects claimed form conversions. Starts remain internal engagement. The form outbound allowlist accepts page views, transaction-backed submissions and registered final button clicks; it does not emit checkout, purchase or registration events, trust visitor-supplied conversion names, or invent monetary value/currency for leads. The shared attribution reader carries bounded `ttclid` and `_ttp` alongside server IP/user agent and a hashed visitor identity; no response values enter marketing delivery. Active owner entitlement, encrypted destination tokens, bot filtering, outbox batching and retry/dead-letter handling are reused. Verify a real published URL with TikTok Pixel Helper and Events Manager Test Events after deployment; a Pixel ID enables browser delivery, and each destination needs its own valid Events API token for server delivery. See [Forms](forms.md).
 
 Implementation references: [TikTok Events API](https://ads.tiktok.com/resources/help/article/events-api?lang=en), [standard events](https://ads.tiktok.com/resources/help/article/standard-events-parameters?lang=en), and [deduplication](https://ads.tiktok.com/resources/help/article/event-deduplication?lang=en). Use matching event names and IDs on both channels; do not infer registration or purchase events from a lead submission.
+
+TikTok health reconciliation counts distinct analytics event IDs accepted by at
+least one destination. Sending one conversion to two Pixels is one accepted
+conversion, while delivery/queue/failure counters still count destination rows.
+These are Events API acknowledgements, not an estimate of attributed Ads Manager
+conversions. No history rewrite or migration is needed for this read-query fix.

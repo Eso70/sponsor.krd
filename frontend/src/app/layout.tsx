@@ -1,12 +1,11 @@
+import { CursorGlow } from "@/components/shared/CursorGlow";
 import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
 import { cookies, headers } from "next/headers";
-import { extractSubdomain } from "@/lib/subdomain-utils";
-import {
-  BUSINESS_FAVICON_PLACEHOLDER,
-  SPONSOR_KRD_APPLE_ICON,
-  SPONSOR_KRD_FAVICON,
-} from "@/lib/brand/brand-assets";
+import { createCursorVariables } from "@/lib/utils/default-cursor";
+import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
+import { requestBranding } from "@/lib/brand/request-branding.server";
+import { brandIcons } from "@/lib/brand/tab-branding";
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import { AppToaster } from "@/components/shared/AppToaster";
 import { GlobalInputLimits } from "@/components/shared/GlobalInputLimits";
@@ -22,6 +21,7 @@ import { resolveLinktreeHost } from "@/lib/public/linktree-host";
 import { fetchPublicLinktree } from "@/lib/public/public-page.server";
 import { fetchPublicForm } from "@/features/forms/public-form.server";
 import { automaticPageSeo } from "@/lib/public/page-seo";
+import { rootPublicCopy } from "@/features/public-site/root-public-copy";
 import {
   ROOT_PUBLIC_LOCALE_COOKIE,
   parseRootPublicLocale,
@@ -36,27 +36,15 @@ const sponsorKrdThemeStyle = createSponsorKrdThemeVariables() as CSSProperties;
 const baseMetadata: Metadata = {
   metadataBase: new URL(getAppBaseUrl()),
   title: "Sponsor.krd",
-  description:
-    "Sponsor.krd connects communities with networking opportunities tailored for growth and support.",
+  description: rootPublicCopy.en.metadataDescription,
   formatDetection: {
     telephone: false,
   },
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const host = (await headers()).get("host") || "";
-  const tenant = extractSubdomain(
-    host,
-    undefined,
-    process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
-  );
-  return {
-    ...baseMetadata,
-    icons: {
-      icon: tenant ? BUSINESS_FAVICON_PLACEHOLDER : SPONSOR_KRD_FAVICON,
-      apple: tenant ? BUSINESS_FAVICON_PLACEHOLDER : SPONSOR_KRD_APPLE_ICON,
-    },
-  };
+  const branding = await requestBranding();
+  return { ...baseMetadata, metadataBase: new URL(branding.origin), description: branding.platform ? baseMetadata.description : undefined, title: branding.name, icons: brandIcons(branding.favicon, branding.logo, branding.platform) };
 }
 
 export const viewport: Viewport = {
@@ -73,6 +61,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const branding = await requestBranding();
+  const cursorVariables = createCursorVariables(parseWebsiteColor(branding.accentColor).primary);
   const cookieStore = await cookies();
   const initialTheme = cookieStore.get(APP_THEME_COOKIE)?.value;
   const requestHeaders = await headers();
@@ -106,9 +96,10 @@ export default async function RootLayout({
   return (
     <html
       className={initialTheme === "dark" ? "dark" : undefined}
+      data-app-theme={initialTheme === "dark" || initialTheme === "light" ? initialTheme : undefined}
       lang={language}
-      dir="ltr"
-      style={sponsorKrdThemeStyle}
+      dir={linktree && language !== "en" ? "rtl" : "ltr"}
+      style={{ ...sponsorKrdThemeStyle, ...cursorVariables } as CSSProperties}
       suppressHydrationWarning
     >
       <head>
@@ -143,6 +134,7 @@ export default async function RootLayout({
               {children}
             </div>
           </div>
+          <CursorGlow />
           <AppToaster />
           <PublicRouteTracking />
         </AppMotionProvider>

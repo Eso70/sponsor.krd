@@ -141,6 +141,7 @@ export class AuthController {
         default_footer_phone: business.default_footer_phone || null,
         default_template: business.default_template || null,
         default_background_color: business.default_background_color || null,
+        default_background_pattern: business.default_background_pattern || null,
         default_footer_hidden: business.default_footer_hidden ?? false,
         default_whatsapp_enabled: business.default_whatsapp_enabled ?? false,
         onboarding_required: !business.onboarding_completed_at,
@@ -285,6 +286,9 @@ export class AuthController {
         default_template: defaultsAllowed
           ? business.default_template || null
           : null,
+        default_background_pattern: defaultsAllowed
+          ? business.default_background_pattern || null
+          : null,
         default_background_color: defaultsAllowed
           ? business.default_background_color || null
           : null,
@@ -330,6 +334,7 @@ export class AuthController {
         'default_footer_phone',
         'default_template',
         'default_background_color',
+        'default_background_pattern',
         'default_footer_hidden',
         'default_whatsapp_enabled',
       ]) {
@@ -574,6 +579,7 @@ export class AuthController {
           'default_footer_phone',
           'default_template',
           'default_background_color',
+          'default_background_pattern',
           'default_footer_hidden',
           'default_whatsapp_enabled',
         ].includes(key),

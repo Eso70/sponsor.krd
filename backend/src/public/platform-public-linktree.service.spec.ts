@@ -35,7 +35,16 @@ describe('PublicService platform Linktree', () => {
           rows: [{ account_type: 'platform', linktree_id: 'page-id' }],
         })
         .mockResolvedValueOnce({ rows: [row] })
-        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'question-video',
+              text: 'Order',
+              message: 'Hello',
+              video_url: 'https://youtu.be/abc',
+            },
+          ],
+        })
         .mockResolvedValueOnce({ rows: [{ widget_config: {} }] })
         .mockResolvedValueOnce({ rows: [] }),
     } as unknown as DatabaseService;
@@ -74,6 +83,18 @@ describe('PublicService platform Linktree', () => {
     );
     expect(result.analytics.pixelIds).toEqual(['PLATFORM_PIXEL']);
     expect(result.linktree.business_logo).toBe('/logo.png');
+    expect(result.linktree.template_config.whatsapp_modal).toEqual(
+      expect.objectContaining({
+        questions: [
+          {
+            id: 'question-video',
+            text: 'Order',
+            message: 'Hello',
+            videoUrl: 'https://youtu.be/abc',
+          },
+        ],
+      }),
+    );
     expect(redis.set).toHaveBeenCalledWith(
       'cache:platform-linktree:campaign',
       expect.any(Object),

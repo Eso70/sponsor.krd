@@ -44,6 +44,27 @@ describe("business route protection", () => {
   });
 
   afterEach(() => vi.restoreAllMocks());
+  it("keeps shared analytics private and allows registered tenant domains", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+    const path = "/analytics-share/11111111-1111-4111-8111-111111111111";
+    const root = await proxy(
+      new NextRequest(`http://localhost:3011${path}`, {
+        headers: { host: "localhost:3011" },
+      }),
+    );
+    expect(root.status).toBe(200);
+    expect(root.headers.get("cache-control")).toContain("no-store");
+    expect(root.headers.get("x-robots-tag")).toContain("noindex");
+    expect(root.headers.get("referrer-policy")).toBe("no-referrer");
+    const tenant = await proxy(request(path));
+    expect(tenant.status).toBe(200);
+    expect(tenant.headers.get("cache-control")).toContain("no-store");
+    expect(tenant.headers.get("x-middleware-request-x-subdomain")).toBe("acme");
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(null, { status: 404 }),
+    );
+    expect((await proxy(request(path))).status).toBe(404);
+  });
 
   it.each(["/business", "/business/pages", "/business/settings"])(
     "conceals unauthenticated route %s with a 404",
@@ -57,6 +78,16 @@ describe("business route protection", () => {
         "/__public-not-found",
       );
       expect(response.headers.get("location")).toBeNull();
+    },
+  );
+
+  it.each(["/advertising", "/advertising/video-code", "/business/advertising"])(
+    "returns a real 404 for retired service path %s",
+    async (path) => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+      const response = await proxy(request(path, "session"));
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-robots-tag")).toContain("noindex");
     },
   );
 

@@ -1,11 +1,11 @@
 import { isGpsInputValid } from "../modal-utils";
 import { normalizeTelegramLink } from "../telegram-link";
+import { normalizeQuestionVideoUrl } from "@linktree/types/whatsapp-question.cjs";
 
 /**
- * Product ceiling for a page name. The column holds 255, but a name longer
- * than this stops fitting the card and the public header.
+ * Match the headline column so editing legacy production content never truncates it.
  */
-export const LINKTREE_NAME_MAX_LENGTH = 100;
+export const LINKTREE_NAME_MAX_LENGTH = 255;
 
 /** `chk_lt_seo_name` and `chk_lt_name` both require two characters. */
 const LINKTREE_MIN_LENGTH = 2;
@@ -62,14 +62,16 @@ export function validateSlug(slug: string): string | undefined {
 export function validateWhatsappQuestion(question: {
   text: string;
   message: string;
-}): { text?: string; message?: string } | undefined {
+  videoUrl?: string;
+}): { text?: string; message?: string; videoUrl?: string } | undefined {
   const text = question.text.trim();
   const message = question.message.trim();
 
   // An untouched row is not an error; it is simply not a question yet.
-  if (!text && !message) return undefined;
+  if (!text && !message && !question.videoUrl?.trim()) return undefined;
   if (!text) return { text: "تکایە دەقی پرسیار بنووسە" };
   if (!message) return { message: "تکایە پەیامەکە بنووسە" };
+  if (question.videoUrl?.trim() && !normalizeQuestionVideoUrl(question.videoUrl)) return { videoUrl: "بەستەرێکی دروستی ڤیدیۆ بنووسە" };
   return undefined;
 }
 

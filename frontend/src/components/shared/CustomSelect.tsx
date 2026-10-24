@@ -8,11 +8,17 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type RefObject,
 } from "react";
+import { anchoredPopupPosition } from "@/lib/utils/anchored-popup-position";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, type LucideIcon } from "lucide-react";
+import { Check, ChevronDown, Search, type LucideIcon } from "lucide-react";
 import styles from "./CustomSelect.module.css";
 import { useModalKeyboard } from "@/hooks/useModalKeyboard";
+import surfaceStyles from "./picker-popup-surface.module.css";
+import { pickerAppearance } from "@/lib/utils/picker-appearance";
+import { PickerPopupHeader } from "./PickerPopupHeader";
+import { SHARED_CONTROL_CLASS, SHARED_INSET_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import {
   isWebsiteColor,
   parseWebsiteColor,
@@ -57,6 +63,10 @@ interface CustomSelectProps<T extends string> {
   minMenuWidth?: number;
   /** Icon cards for content pickers, retaining the shared portal/dismissal behavior. */
   menuLayout?: "list" | "grid";
+  /** Keeps nested menus inside their owning popup's dismissal boundary. */
+  portalContainerRef?: RefObject<HTMLElement | null>;
+  menuTitle?: string;
+  closeLabel?: string;
 }
 
 export function CustomSelect<T extends string>({
@@ -81,6 +91,9 @@ export function CustomSelect<T extends string>({
   maxMenuHeight = 176,
   minMenuWidth = 0,
   menuLayout = "list",
+  portalContainerRef,
+  menuTitle,
+  closeLabel = "Close",
   required = false,
   showRequirement = false,
   accent,
@@ -98,8 +111,11 @@ export function CustomSelect<T extends string>({
   const [portalThemeStyle, setPortalThemeStyle] = useState<CSSProperties>();
   const [portalDark, setPortalDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const firstOptionRef = useRef<HTMLButtonElement>(null);
+  const [initialFocusValue, setInitialFocusValue] = useState<T | null>(null);
+  const typeahead = useRef({ text: "", time: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const selected =
@@ -118,6 +134,24 @@ export function CustomSelect<T extends string>({
         )
       : options;
 
+  function findTypedOption(key: string, reset = false) {
+    const now = Date.now();
+    const previous = !reset && now - typeahead.current.time < 700 ? typeahead.current.text : "";
+    const text = previous + normalizeSearch(key);
+    typeahead.current = { text, time: now };
+    const repeated = [...text].every((letter) => letter === text[0]);
+    const prefix = repeated ? text[0] : text;
+    const enabled = displayedOptions.filter((option) => !option.disabled);
+    const focusedValue = menuRef.current?.ownerDocument.activeElement?.getAttribute("data-option-value");
+    const currentIndex = enabled.findIndex((option) => option.value === focusedValue);
+    const start = previous && repeated ? currentIndex + 1 : 0;
+    for (let offset = 0; offset < enabled.length; offset++) {
+      const option = enabled[(start + offset) % enabled.length];
+      if (normalizeSearch(option.label).startsWith(prefix)) return option;
+    }
+    return undefined;
+  }
+
   const accentStyle = (() => {
     if (!accent) return undefined;
     if (!isWebsiteColor(accent)) {
@@ -135,17 +169,14 @@ export function CustomSelect<T extends string>({
   const updateMenuPosition = useCallback(() => {
     const trigger = triggerRef.current;
     if (!trigger) return;
+    const ownerWindow = trigger.ownerDocument.defaultView ?? window;
     const rect = trigger.getBoundingClientRect();
 
     // The menu is portaled to <body>, so explicitly carry the effective theme
     // variables across that boundary instead of falling back to a solid color.
-    const computedStyle = window.getComputedStyle(trigger);
-    const appearance = trigger.closest(".dark, .light");
-    setPortalDark(
-      appearance
-        ? appearance.classList.contains("dark")
-        : computedStyle.colorScheme === "dark",
-    );
+    const computedStyle = ownerWindow.getComputedStyle(trigger);
+    const effectiveDark = pickerAppearance(trigger) === "dark";
+    setPortalDark(effectiveDark);
     const inheritedTheme = [
       "--theme-primary",
       "--theme-css",
@@ -154,20 +185,26 @@ export function CustomSelect<T extends string>({
       "--sponsor-krd-accent",
       "--sponsor-krd-accent-gradient",
       "--sponsor-krd-accent-ink",
+      "--shared-control-surface",
+      "--shared-control-hover",
+      "--shared-control-text",
+      "--shared-control-muted",
+      "--shared-control-radius",
     ].reduce<Record<string, string>>((variables, property) => {
       const propertyValue = computedStyle.getPropertyValue(property).trim();
       if (propertyValue) variables[property] = propertyValue;
       return variables;
     }, {});
+    inheritedTheme["--select-neutral-border"] = effectiveDark
+      ? "rgb(255 255 255 / 10%)"
+      : "#e2e8f0";
     if (inheritAppearance) {
       Object.assign(inheritedTheme, {
-        "--select-surface": computedStyle.backgroundColor,
+        "--select-surface": menuTitle ? (effectiveDark ? "#161b22" : "#ffffff") : computedStyle.backgroundColor,
         "--select-font-size": computedStyle.fontSize,
         "--select-option-height": `${Math.min(44, Math.max(36, rect.height))}px`,
         "--select-text": computedStyle.color,
-        "--select-border":
-          computedStyle.getPropertyValue("--preview-border").trim() ||
-          (computedStyle.colorScheme === "dark" ? "#475569" : "#e2e8f0"),
+        "--select-border": inheritedTheme["--select-neutral-border"],
         "--select-color-scheme": computedStyle.colorScheme,
       });
     }
@@ -180,47 +217,31 @@ export function CustomSelect<T extends string>({
     const estimatedMenuHeight = Math.min(
       maxMenuHeight,
       menuLayout === "grid"
-        ? Math.ceil(options.length / (window.innerWidth < 480 ? 2 : 4)) * 108 +
+        ? Math.ceil(options.length / (ownerWindow.innerWidth < 480 ? 2 : 4)) * 108 +
             16
-        : options.length * optionHeight + 8,
+        : options.length * optionHeight + Math.max(0, options.length - 1) * 4 + 8,
     );
-    const shouldOpenUp =
-      placement === "top" ||
-      (window.innerHeight - rect.bottom < estimatedMenuHeight + gap &&
-        rect.top > estimatedMenuHeight + gap);
-    const width = Math.min(
-      Math.max(rect.width, minMenuWidth),
-      window.innerWidth - 16,
-    );
-
-    setMenuPosition({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
-      width,
-      maxHeight: Math.max(
-        32,
-        Math.min(
-          maxMenuHeight,
-          (shouldOpenUp ? rect.top : window.innerHeight - rect.bottom) -
-            gap -
-            8,
-        ),
-      ),
-      ...(shouldOpenUp
-        ? { bottom: window.innerHeight - rect.top + gap }
-        : { top: rect.bottom + gap }),
-    });
+    setMenuPosition(anchoredPopupPosition({
+      anchor: rect, ownerWindow, width: Math.max(rect.width, minMenuWidth),
+      maxHeight: maxMenuHeight, preferredHeight: estimatedMenuHeight + (searchable ? 56 : 0),
+      gap, margin: 8, preferTop: placement === "top",
+    }));
   }, [
     options.length,
+    searchable,
     placement,
     maxMenuHeight,
     minMenuWidth,
     menuLayout,
     inheritAppearance,
+    menuTitle,
   ]);
 
   useEffect(() => {
     if (!isOpen) return;
 
+    const ownerDocument = triggerRef.current?.ownerDocument ?? document;
+    const ownerWindow = ownerDocument.defaultView ?? window;
     updateMenuPosition();
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -231,13 +252,17 @@ export function CustomSelect<T extends string>({
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleOutsideClick);
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
+    ownerDocument.addEventListener("mousedown", handleOutsideClick);
+    ownerWindow.visualViewport?.addEventListener("resize", updateMenuPosition);
+    ownerWindow.visualViewport?.addEventListener("scroll", updateMenuPosition);
+    ownerWindow.addEventListener("resize", updateMenuPosition);
+    ownerWindow.addEventListener("scroll", updateMenuPosition, true);
     return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
+      ownerDocument.removeEventListener("mousedown", handleOutsideClick);
+      ownerWindow.visualViewport?.removeEventListener("resize", updateMenuPosition);
+      ownerWindow.visualViewport?.removeEventListener("scroll", updateMenuPosition);
+      ownerWindow.removeEventListener("resize", updateMenuPosition);
+      ownerWindow.removeEventListener("scroll", updateMenuPosition, true);
     };
   }, [isOpen, updateMenuPosition]);
 
@@ -279,20 +304,38 @@ export function CustomSelect<T extends string>({
         onClick={() => {
           if (!hasOptions) return;
           if (!isOpen) {
+            setPortalContainer(portalContainerRef?.current ?? triggerRef.current?.ownerDocument.body ?? null);
             triggerRef.current?.focus({ preventScroll: true });
             setSearchQuery("");
+            setInitialFocusValue(null);
+            typeahead.current = { text: "", time: 0 };
             updateMenuPosition();
           }
           setIsOpen((current) => !current);
         }}
-        className={`${styles.trigger} flex h-10 ${fullWidth ? "w-full" : "w-fit"} items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-xs font-semibold text-slate-600 outline-none transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 ${triggerClassName ?? ""}`}
+        className={`${SHARED_SOFT_BUTTON_CLASS} ${styles.trigger} flex h-10 ${fullWidth ? "w-full" : "w-fit"} items-center justify-between gap-2 rounded-lg px-3 text-left text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${triggerClassName ?? ""}`}
         role={ariaInvalid !== undefined ? "combobox" : undefined}
         aria-controls={isOpen ? menuId : undefined}
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid || undefined}
         onKeyDown={(event) => {
-          if (event.ctrlKey || event.metaKey || event.altKey) return;
+          if (event.ctrlKey || event.metaKey || event.altKey || event.nativeEvent.isComposing) return;
+          if (!searchable && event.key.length === 1 && event.key !== " ") {
+            const match = findTypedOption(event.key, !isOpen);
+            if (!match) return;
+            event.preventDefault();
+            setInitialFocusValue(match.value);
+            if (!isOpen) updateMenuPosition();
+            setIsOpen(true);
+            if (isOpen) {
+              const target = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role=option]") ?? [])
+                .find((option) => option.getAttribute("data-option-value") === match.value);
+              target?.focus({ preventScroll: true });
+              target?.scrollIntoView?.({ block: "nearest" });
+            }
+            return;
+          }
           if (
             event.key === "ArrowDown" ||
             event.key === "ArrowUp" ||
@@ -300,7 +343,11 @@ export function CustomSelect<T extends string>({
           ) {
             event.preventDefault();
             setSearchQuery(event.key.length === 1 ? event.key : "");
-            if (!isOpen) updateMenuPosition();
+            if (!isOpen) {
+              setInitialFocusValue(null);
+              typeahead.current = { text: "", time: 0 };
+              updateMenuPosition();
+            }
             setIsOpen(true);
           }
         }}
@@ -321,8 +368,10 @@ export function CustomSelect<T extends string>({
           <div className={portalDark ? "dark" : "light"}>
             <div
               id={menuId}
+              data-picker-surface
+              data-appearance={portalDark ? "dark" : "light"}
               ref={menuRef}
-              className={`${styles.menuShell} custom-scrollbar theme-custom-scrollbar fixed z-[150] select-none rounded-xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-[#1c222b] ${menuLayout === "grid" ? styles.gridShell : "overflow-y-auto overscroll-contain p-1"} ${inheritAppearance ? styles.isolatedMenu : ""}`}
+              className={`${styles.menuShell} ${surfaceStyles.surface} custom-scrollbar theme-custom-scrollbar fixed z-[150] select-none border ${menuTitle ? styles.pickerShell : ""} ${menuLayout === "grid" ? styles.gridShell : "overflow-y-auto overscroll-contain p-1"} ${searchable && menuLayout === "list" ? styles.searchableShell : ""} ${inheritAppearance ? styles.isolatedMenu : ""}`}
               data-placement={
                 menuPosition.bottom !== undefined ? "top" : "bottom"
               }
@@ -352,7 +401,7 @@ export function CustomSelect<T extends string>({
                 if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                   event.preventDefault();
                   const position = items.indexOf(
-                    document.activeElement as HTMLButtonElement,
+                    event.currentTarget.ownerDocument.activeElement as HTMLButtonElement,
                   );
                   const next =
                     position < 0
@@ -365,6 +414,15 @@ export function CustomSelect<T extends string>({
                         items.length;
                   items[next]?.focus({ preventScroll: true });
                   items[next]?.scrollIntoView?.({ block: "nearest" });
+                } else if (
+                  !searchable && event.key.length === 1 && event.key !== " " &&
+                  !event.ctrlKey && !event.metaKey && !event.altKey && !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  const match = findTypedOption(event.key);
+                  const target = items.find((option) => option.getAttribute("data-option-value") === match?.value);
+                  target?.focus({ preventScroll: true });
+                  target?.scrollIntoView?.({ block: "nearest" });
                 } else if (
                   searchable &&
                   event.key === "Enter" &&
@@ -392,8 +450,14 @@ export function CustomSelect<T extends string>({
               }}
               dir="ltr"
             >
-              {searchable && (
-                <div className={styles.searchRow}>
+              {(menuTitle || searchable) && (
+                <div className={styles.menuToolbar}>
+                  {menuTitle && <PickerPopupHeader title={menuTitle} closeLabel={closeLabel} onClose={() => {
+                    setIsOpen(false);
+                    triggerRef.current?.focus({ preventScroll: true });
+                  }} />}
+                  {searchable && <div className={styles.searchRow}>
+                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
                   <input
                     data-custom-select-search
                     ref={searchRef}
@@ -402,8 +466,9 @@ export function CustomSelect<T extends string>({
                     placeholder={searchPlaceholder}
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    className={styles.searchInput}
+                    className={`${SHARED_CONTROL_CLASS} ${SHARED_INSET_CONTROL_CLASS} ${styles.searchInput}`}
                   />
+                  </div>}
                 </div>
               )}
               {!displayedOptions.length && (
@@ -412,7 +477,7 @@ export function CustomSelect<T extends string>({
                 </p>
               )}
               <div
-                className={menuLayout === "grid" ? styles.gridMenu : undefined}
+                className={menuLayout === "grid" ? styles.gridMenu : `${styles.listMenu} custom-scrollbar theme-custom-scrollbar`}
                 style={
                   menuLayout === "grid"
                     ? { maxHeight: menuPosition.maxHeight }
@@ -433,12 +498,13 @@ export function CustomSelect<T extends string>({
                     <button
                       ref={
                         option ===
-                        displayedOptions.find((item) => !item.disabled)
+                        (displayedOptions.find((item) => !item.disabled && item.value === initialFocusValue) ?? displayedOptions.find((item) => !item.disabled))
                           ? firstOptionRef
                           : undefined
                       }
                       type="button"
                       role="option"
+                      data-option-value={option.value}
                       aria-selected={option.value === value}
                       disabled={option.disabled}
                       onClick={() => {
@@ -448,7 +514,7 @@ export function CustomSelect<T extends string>({
                         if (menuLayout === "grid" || searchable)
                           triggerRef.current?.focus({ preventScroll: true });
                       }}
-                      className={`${styles.option} ${menuLayout === "grid" ? styles.gridOption : "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs"} transition disabled:opacity-40 ${
+                      className={`${styles.option} ${menuLayout === "grid" ? styles.gridOption : "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs"} transition disabled:opacity-40 ${
                         option.value === value
                           ? menuLayout === "grid"
                             ? "theme-fill font-bold text-[var(--theme-ink)]"
@@ -475,7 +541,7 @@ export function CustomSelect<T extends string>({
               </div>
             </div>
           </div>,
-          document.body,
+          portalContainer ?? document.body,
         )}
     </div>
   );

@@ -3,7 +3,7 @@ import { BusinessAdministrationService } from './business-administration.service
 import { SubdomainsModule } from '../subdomains/subdomains.module';
 import { BusinessAdministrationController } from './business-administration.controller';
 import { PlatformSettingsController } from './platform-settings.controller';
-import { AdvertisingModule } from '../advertising/advertising.module';
+
 import { AuthModule } from '../auth/auth.module';
 import { StorageModule } from '../storage/storage.module';
 import { PlatformSettingsService } from './platform-settings.service';
@@ -27,13 +27,11 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { PlatformContentWorkspaceModule } from '../platform-workspace/platform-content-workspace.module';
 
 @Module({
-  // AdvertisingModule so a plan or subscription change can drop the published
-  // advertising payload cached for that business's subdomain.
   imports: [
     SubdomainsModule,
     AuthModule,
     StorageModule,
-    AdvertisingModule,
+
     LinktreesModule,
     AnalyticsModule,
     PlatformContentWorkspaceModule,

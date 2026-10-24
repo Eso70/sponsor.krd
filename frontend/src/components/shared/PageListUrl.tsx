@@ -4,6 +4,10 @@ import { Check, Copy, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/utils/clipboard";
 import { Tooltip } from "./Tooltip";
+import {
+  SHARED_CONTROL_CLASS,
+  SHARED_SOFT_BUTTON_CLASS,
+} from "./shared-control-styles";
 
 export function PageListUrl({
   url,
@@ -25,25 +29,17 @@ export function PageListUrl({
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const isCopied = copied ?? copiedUrl === url;
   return (
-    <div
-      className={
-        boxed
-          ? "mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2 sm:mb-3 sm:rounded-xl sm:p-3 dark:border-white/10 dark:bg-white/5"
-          : ""
-      }
-    >
-      {boxed && (
-        <div className="mb-1 flex items-center gap-1 sm:mb-1.5 sm:gap-1.5">
-          <LinkIcon className="size-3 shrink-0 text-gray-400 sm:size-3.5" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
-            URL
-          </span>
-        </div>
-      )}
+    <div className={boxed ? `${SHARED_CONTROL_CLASS} mb-3 p-2 sm:p-2.5` : ""}>
       <div
-        className={`flex items-center gap-1.5 ${boxed ? "" : "flex-wrap"}`}
+        className={`flex items-center gap-1.5 ${boxed ? "" : "min-w-0"}`}
         dir="ltr"
       >
+        {boxed && (
+          <LinkIcon
+            aria-hidden
+            className="ms-1 size-4 shrink-0 text-slate-400"
+          />
+        )}
         <a
           href={url}
           target="_blank"
@@ -55,7 +51,7 @@ export function PageListUrl({
               onOpen();
             }
           }}
-          className={`${boxed ? "min-w-0 flex-1 truncate" : "break-all"} font-mono text-xs text-gray-700 underline decoration-gray-300 transition-colors hover:text-gray-900 hover:decoration-gray-500 dark:text-gray-300 dark:hover:text-white`}
+          className={`${boxed ? "min-w-0 flex-1 truncate" : "min-w-0 flex-1 break-all"} text-xs text-gray-700 decoration-gray-300 transition-colors hover:text-gray-900 hover:underline hover:decoration-gray-500 dark:text-gray-300 dark:hover:text-white`}
         >
           {displayUrl}
         </a>
@@ -75,10 +71,9 @@ export function PageListUrl({
               if (await copyToClipboard(url)) {
                 setCopiedUrl(url);
                 toast.success(labels.copied);
-              }
-              else if (labels.copyError) toast.error(labels.copyError);
+              } else if (labels.copyError) toast.error(labels.copyError);
             }}
-            className="shrink-0 cursor-pointer rounded-lg p-1 text-gray-500 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700 active:scale-90 sm:p-1.5 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200"
+            className={`${SHARED_SOFT_BUTTON_CLASS} flex size-8 shrink-0 cursor-pointer items-center justify-center sm:size-9`}
           >
             {isCopied ? (
               <Check className="size-3.5 text-emerald-600 sm:size-4 dark:text-emerald-400" />

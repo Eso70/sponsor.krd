@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CircleOff,
   KeyRound,
@@ -11,10 +11,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { EffectiveAccessManifest } from "@linktree/types";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
+import { SectionSaveActions } from "@/components/shared/SectionSaveActions";
+import { PageManagementSection } from "@/components/shared/PageManagementSection";
+import { Skeleton } from "@/components/shared/SkeletonBlock";
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { SkeletonTikTokPixelConfig } from "@/components/shared/SkeletonPageLayouts";
+import { SkeletonTikTokPixelConfig, SkeletonTikTokToolbar } from "@/components/shared/SkeletonPageLayouts";
 import { TikTokPixelGroupCard, type TikTokPixelGroupCopy } from "@/features/analytics/components/TikTokPixelGroupCard";
 import { Tooltip } from "@/components/shared/Tooltip";
 
@@ -78,13 +84,22 @@ function normalizeConfigs(value: unknown): PixelConfig[] {
 export function BusinessTikTokPixelConfigPage({
   owner = "business",
   copy,
+  embedded = false,
+  children,
+  managementTitle,
+  managementDescription,
 }: {
   owner?: TikTokConfigOwner;
   copy?: Partial<TikTokPixelConfigCopy>;
+  embedded?: boolean;
+  children?: ReactNode;
+  managementTitle?: string;
+  managementDescription?: string;
 } = {}) {
   const labels = { ...KURDISH_COPY, ...copy };
   const workspace = TIKTOK_CONFIG_WORKSPACES[owner];
   const [configs, setConfigs] = useState<PixelConfig[]>([]);
+  const [unavailable, setUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [access, setAccess] = useState<EffectiveAccessManifest | null>(null);
@@ -127,9 +142,11 @@ export function BusinessTikTokPixelConfigPage({
           settingsResponse.json(),
           accessResponse.json(),
         ]);
+        setUnavailable(false);
         setConfigs(normalizeConfigs(settingsPayload.data?.tiktok_configs));
         setAccess(workspace.accessEndpoint ? accessPayload.data || null : null);
       } catch (error) {
+        setUnavailable(true);
         if (rethrow) throw error;
         toast.error(labels.loadFailed);
       }
@@ -153,6 +170,8 @@ export function BusinessTikTokPixelConfigPage({
     return () =>
       window.removeEventListener("sponsor-krd:access-updated", syncAccess);
   }, []);
+
+  const refreshing = useRegisterDashboardRefresh(`tiktok-pixels:${owner}`, () => loadConfig(true));
 
   const updateConfig = (index: number, patch: Partial<PixelConfig>) => {
     setConfigs((current) =>
@@ -208,20 +227,20 @@ export function BusinessTikTokPixelConfigPage({
   };
 
   if (loading) {
-    return <SkeletonTikTokPixelConfig loadingLabel={labels.loadingLabel} />;
+    if (managementTitle) {
+      return <PageManagementSection title={managementTitle} loading toolbar={<SkeletonTikTokToolbar />}>
+        <SkeletonTikTokPixelConfig embedded showControls={false} loadingLabel={labels.loadingLabel} />
+        {children}
+        <SectionSaveActions><Skeleton className="h-10 w-24" rounded="rounded-xl" /></SectionSaveActions>
+      </PageManagementSection>;
+    }
+    return <SkeletonTikTokPixelConfig embedded={embedded} loadingLabel={labels.loadingLabel} />;
   }
 
-  return (
-    <DashboardSurface>
-      {/* Simple Page Header */}
-      <PageHeader
-        icon={KeyRound}
-        title={labels.title}
-        description={copy ? labels.description : workspace.description}
-      />
+  if (unavailable) return <RequestErrorNotice message={labels.loadFailed} />;
 
-      {/* Group Controls Bar */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-white/5">
+  const controls = (
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             {labels.groups}
@@ -252,15 +271,8 @@ export function BusinessTikTokPixelConfigPage({
                 },
               ])
             }
-            disabled={!canAdd}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--theme-primary) 28%, transparent)",
-              background:
-                "color-mix(in srgb, var(--theme-primary) 10%, transparent)",
-              color: "var(--theme-primary)",
-            }}
+            disabled={!canAdd || refreshing}
+            className={`${SHARED_SOFT_BUTTON_CLASS} inline-flex h-10 shrink-0 items-center gap-2 px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45`}
           >
             <Plus className="h-4 w-4" />
             {labels.addGroup}
@@ -268,8 +280,20 @@ export function BusinessTikTokPixelConfigPage({
         </Tooltip>
       </div>
 
+  );
+  const Surface = embedded ? "div" : DashboardSurface;
+  const content = (
+    <>
+      {/* Simple Page Header */}
+      {!embedded && <PageHeader
+        icon={KeyRound}
+        title={labels.title}
+        description={copy ? labels.description : workspace.description}
+      />}
+
+      {!managementTitle && <div className="mb-5">{controls}</div>}
       {/* Group Cards */}
-      {configs.length === 0 ? (
+      {refreshing ? <SkeletonTikTokPixelConfig embedded showControls={false} loadingLabel={labels.loadingLabel} /> : configs.length === 0 ? (
         <div className="mt-5">
           <EmptyState
             compact
@@ -279,7 +303,7 @@ export function BusinessTikTokPixelConfigPage({
           />
         </div>
       ) : (
-        <div className="mt-5 space-y-4">
+        <div className="divide-y divide-slate-100 dark:divide-white/5">
           {configs.map((config, index) => (
             <TikTokPixelGroupCard
               key={config.id || `group-${index}`}
@@ -300,8 +324,10 @@ export function BusinessTikTokPixelConfigPage({
         </div>
       )}
 
+      {children}
+
       {/* Save Action Footer */}
-      <div className="mt-6 flex justify-end border-t border-slate-100 pt-5 dark:border-white/5">
+      <SectionSaveActions>
         <Tooltip
           content={
             saving
@@ -316,7 +342,7 @@ export function BusinessTikTokPixelConfigPage({
             type="button"
             onClick={() => void save()}
             aria-busy={saving}
-            disabled={hasInvalidRows || saving}
+            disabled={hasInvalidRows || saving || refreshing}
             className="theme-fill flex h-10 shrink-0 items-center gap-2 rounded-xl border border-transparent px-4 text-xs font-black text-[var(--theme-ink)] shadow-sm transition hover:brightness-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
           >
             {saving ? (
@@ -329,7 +355,13 @@ export function BusinessTikTokPixelConfigPage({
             {saving ? labels.saving : labels.save}
           </button>
         </Tooltip>
-      </div>
-    </DashboardSurface>
+      </SectionSaveActions>
+    </>
   );
+  if (managementTitle) {
+    return <PageManagementSection title={managementTitle} description={managementDescription} icon={<KeyRound className="size-5" />} toolbar={controls}>
+      {content}
+    </PageManagementSection>;
+  }
+  return <Surface>{content}</Surface>;
 }

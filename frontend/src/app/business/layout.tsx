@@ -1,3 +1,16 @@
+import type { Metadata } from "next";
+import { headers, cookies } from "next/headers";
+import { requestBranding } from "@/lib/brand/request-branding.server";
+import { privateTabTitle } from "@/lib/brand/tab-sections";
+import { BUSINESS_LOCALE_COOKIE, businessLocaleFromCookie } from "@/features/business/i18n/locale-cookie";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [branding, headerStore, cookieStore] = await Promise.all([requestBranding(), headers(), cookies()]);
+  const path = headerStore.get("x-public-path") || "/business";
+  const segment = path.split("/").filter(Boolean).at(-1) || "pages";
+  const page = segment === "business" ? (cookieStore.has("business_session") ? "pages" : "login") : segment;
+  return {title: {absolute: privateTabTitle(page, branding.name, businessLocaleFromCookie(cookieStore.get(BUSINESS_LOCALE_COOKIE)?.value))}, robots: {index: false, follow: false}};
+}
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";

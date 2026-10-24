@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
   // Standard Next.js configuration
   reactStrictMode: true,
   // Isolate the disposable HTTP fixture test from the owner's running dev app.
-  distDir: process.env.SEO_SMOKE === "1" ? ".next/seo-smoke" : ".next",
+  distDir: process.env.SEO_SMOKE === "1" ? ".next/seo-smoke" : process.env.SEO_VERIFY === "1" ? ".next/seo-verify" : ".next",
   // NOTE: "standalone" output mode is intentionally disabled.
   // It has known issues with Tailwind v4 CSS chunking on Next.js 16
   // (CSS files end up missing from the traced output, leaving pages

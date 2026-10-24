@@ -1,6 +1,7 @@
-import { isProductConfigured } from "./product-selection";
+import { isProductConfigured, validProductPriceBreaks } from "./product-selection";
 import { createRuntimeId } from "@/lib/utils/random-id";
 import { formContentOrder } from "./form-content-order";
+import { reorderItems } from "@/lib/utils/reorder-items";
 import { formsCopy } from "./forms-copy";
 import { formEditorCopy } from "./form-editor-copy";
 import { isConditionalAnswers } from "./conditional-csv";
@@ -39,6 +40,7 @@ export function formDraftName(form: FormDraft): string {
 }
 
 export function createForm(language: FormLanguage = "ckb"): FormDraft {
+  // Optional authored copy stays empty; preview components provide sample text.
   const copy = formsCopy(language);
   const editor = formEditorCopy(language);
   return {
@@ -121,7 +123,7 @@ export function duplicateForm(form: FormDraft): FormDraft {
       productSelection: question.productSelection
         ? {
             ...question.productSelection,
-            items: question.productSelection.items.map((item) => ({ ...item })),
+            items: question.productSelection.items.map((item) => ({ ...item, ...(item.priceBreaks ? { priceBreaks: item.priceBreaks.map((tier) => ({ ...tier })) } : {}) })),
           }
         : undefined,
       conditional: question.conditional
@@ -257,6 +259,7 @@ export function validateForm(
     )
   )
     return "questions";
+  if (form.questions.some((question) => question.productSelection?.items.some((item) => !validProductPriceBreaks(item.unitPrice, item.priceBreaks)))) return "questions";
   if (form.status === "active") {
     if (
       form.actionsEnabled !== false &&
@@ -294,12 +297,8 @@ export function reorderFormQuestions(
   sourceId: string,
   targetId: string,
 ): FormQuestion[] {
-  const source = questions.findIndex((question) => question.id === sourceId);
-  const target = questions.findIndex((question) => question.id === targetId);
-  if (source < 0 || target < 0 || source === target) return questions;
-  const reordered = [...questions];
-  const [question] = reordered.splice(source, 1);
-  reordered.splice(target, 0, question);
+  const reordered = reorderItems(questions, sourceId, targetId);
+  if (reordered === questions) return questions;
   const positions = new Map(reordered.map((item, index) => [item.id, index]));
   if (
     reordered.some(

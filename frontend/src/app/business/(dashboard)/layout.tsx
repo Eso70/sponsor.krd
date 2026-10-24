@@ -41,6 +41,7 @@ interface BusinessProfile {
   default_footer_phone?: string | null;
   default_template?: string | null;
   default_background_color?: string | null;
+  default_background_pattern?: string | null;
   default_footer_hidden?: boolean;
   default_whatsapp_enabled?: boolean;
   onboarding_required?: boolean;
@@ -250,6 +251,7 @@ export default async function BusinessDashboardLayout({
             default_footer_phone: currentUser.default_footer_phone,
             default_template: currentUser.default_template,
             default_background_color: currentUser.default_background_color,
+            default_background_pattern: currentUser.default_background_pattern,
             default_footer_hidden: currentUser.default_footer_hidden,
             default_whatsapp_enabled: currentUser.default_whatsapp_enabled,
             default_avatar: currentUser.default_avatar,

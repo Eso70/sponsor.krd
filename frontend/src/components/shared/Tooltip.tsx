@@ -6,11 +6,11 @@ import React, {
   useEffect,
   useCallback,
   useId,
-  useSyncExternalStore,
   type ReactNode,
   type ReactElement,
 } from "react";
 import { createPortal } from "react-dom";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export type TooltipSide = "top" | "bottom" | "left" | "right";
 
@@ -28,16 +28,6 @@ interface Coords {
   top: number;
   left: number;
   actualSide: TooltipSide;
-}
-
-const emptySubscribe = () => () => {};
-
-function useIsMounted() {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
 }
 
 function assignRef<T>(ref: React.Ref<T> | undefined, value: T) {
@@ -196,7 +186,7 @@ export function Tooltip({
 
   if (React.isValidElement(children)) {
     const child = children as ReactElement<Record<string, unknown>>;
-    const originalRef = (child as unknown as { ref?: React.Ref<HTMLElement> }).ref;
+    const originalRef = child.props.ref as React.Ref<HTMLElement> | undefined;
     const existingClassName = (child.props.className as string) || "";
     const mergedClassName = className
       ? `${existingClassName} ${className}`.trim()
@@ -232,7 +222,7 @@ export function Tooltip({
         }
         handleBlur();
       },
-      "aria-describedby": isOpen ? tooltipId : undefined,
+      "aria-describedby": [child.props["aria-describedby"], isOpen ? tooltipId : undefined].filter(Boolean).join(" ") || undefined,
     });
   } else {
     triggerElement = (

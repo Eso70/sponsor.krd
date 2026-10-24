@@ -1,3 +1,4 @@
+import type { AuthenticationLocalePreference } from "./authentication-header-copy";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
 import { Skeleton } from "@/components/shared/Skeleton";
 
@@ -5,7 +6,6 @@ import { Skeleton } from "@/components/shared/Skeleton";
 export function SkeletonAuthenticationPage({
   brandDescription = "Loading your secure workspace",
   content = "methods",
-  rememberDevice = false,
   brandName,
   brandLogo,
   accentColor,
@@ -15,10 +15,10 @@ export function SkeletonAuthenticationPage({
   backLabel,
   themeCopy,
   language,
+  localePreference,
 }: {
   brandDescription?: string;
   content?: "google" | "methods" | "form" | "operation";
-  rememberDevice?: boolean;
   brandName?: string;
   brandLogo?: string | null;
   accentColor?: string | null;
@@ -28,6 +28,7 @@ export function SkeletonAuthenticationPage({
   backLabel?: string;
   themeCopy?: { label: string; light: string; dark: string };
   language?: string;
+  localePreference?: AuthenticationLocalePreference;
 }) {
   return (
     <AuthenticationShell
@@ -40,6 +41,7 @@ export function SkeletonAuthenticationPage({
       backLabel={backLabel}
       themeCopy={themeCopy}
       language={language}
+      localePreference={localePreference}
     >
       <section
         className="rounded-[26px] border border-slate-200 bg-white/80 p-5 shadow-[0_18px_55px_rgba(15,23,42,.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[0_18px_55px_rgba(0,0,0,.22)] sm:p-6"
@@ -81,12 +83,6 @@ export function SkeletonAuthenticationPage({
                 </div>
                 <Skeleton className="h-11 w-full" rounded="rounded-xl" />
                 <Skeleton className="h-11 w-full" rounded="rounded-xl" />
-                {rememberDevice ? (
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="size-4" rounded="rounded-md" />
-                    <Skeleton className="h-3 w-48" rounded="rounded-md" />
-                  </div>
-                ) : null}
               </>
             ) : (
               <div className="flex justify-center gap-2 pt-1">

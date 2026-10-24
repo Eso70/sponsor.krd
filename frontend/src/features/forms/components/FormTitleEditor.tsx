@@ -23,7 +23,6 @@ export function FormTitleEditor({
         validationField="name"
         value={title}
         onChange={onChange}
-        placeholder={copy.titlePlaceholder}
         maxLength={100}
         required
       />

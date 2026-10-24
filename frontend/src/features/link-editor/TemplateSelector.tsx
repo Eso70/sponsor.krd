@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, type RefObject } from "react";
 import { CompactTemplateSelectorModal, type CompactTemplateSelectorCopy } from "@/components/shared/CompactTemplateSelectorModal";
 import { useTemplateAccess } from "@/hooks/useTemplateAccess";
 import { TEMPLATE_OPTIONS } from "@/lib/templates/config";
@@ -12,6 +12,7 @@ export const TemplateSelector = memo(function TemplateSelector({
   selectedTemplate,
   onSelectTemplate,
   allowedTemplateKeys,
+  anchorRef,
 }: {
   copy?: CompactTemplateSelectorCopy;
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const TemplateSelector = memo(function TemplateSelector({
   onSelectTemplate: (template: string) => void;
   /** Explicit access snapshot for workflows without a signed-in business. */
   allowedTemplateKeys?: readonly string[];
+  anchorRef?: RefObject<HTMLElement | null>;
 }) {
   const { isTemplateAllowed } = useTemplateAccess(
     allowedTemplateKeys === undefined,
@@ -28,6 +30,7 @@ export const TemplateSelector = memo(function TemplateSelector({
 
   return (
     <CompactTemplateSelectorModal
+      anchorRef={anchorRef}
       copy={copy}
       isOpen={isOpen}
       onClose={onClose}

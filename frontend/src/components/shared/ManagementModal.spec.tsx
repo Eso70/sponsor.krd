@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ManagementModal } from "@/components/shared/ManagementModal";
+import { renderToString } from "react-dom/server";
 
 /**
  * The modal renders through a portal on `document.body`, so it inherits
@@ -13,6 +14,9 @@ function shell() {
 }
 
 describe("ManagementModal accent scoping", () => {
+  it("defers an initially open drawer portal until client hydration", () => {
+    expect(renderToString(<ManagementModal isOpen presentation="drawer" onClose={vi.fn()} title="Editor"><p>content</p></ManagementModal>)).toBe("");
+  });
   it("rescopes the platform accent to the colour being edited", () => {
     render(
       <ManagementModal

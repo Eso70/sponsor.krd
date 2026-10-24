@@ -2,7 +2,6 @@ import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
 import { BillingManagementService } from './billing-management.service';
 import { BillingRepository } from './billing.repository';
-import { AdvertisingService } from '../advertising/advertising.service';
 
 describe('BillingManagementService overview', () => {
   it('loads a bounded business/subscription projection', async () => {
@@ -16,9 +15,6 @@ describe('BillingManagementService overview', () => {
       database,
       {} as RedisService,
       new BillingRepository(database),
-      {
-        invalidatePublicCacheForBusiness: () => Promise.resolve(),
-      } as unknown as AdvertisingService,
     );
 
     const result = await service.getOverview({ page: 2, limit: 10 });

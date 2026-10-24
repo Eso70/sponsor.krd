@@ -24,6 +24,18 @@ export type FormTextKey =
   | "viewContent";
 export type QuestionType =
   "short" | "email" | "phone" | "choice" | "conditional" | "date" | "image" | "product";
+export interface ProductPriceBreak {
+  minimumQuantity: number | null;
+  unitPrice: number | null;
+}
+export interface FormProductItem {
+  id: string;
+  name: string;
+  unit: string;
+  unitPrice: number | null;
+  /** All units use the highest qualifying minimum-quantity price. */
+  priceBreaks?: ProductPriceBreak[];
+}
 export interface FormQuestion {
   id: string;
   type: QuestionType;
@@ -39,7 +51,7 @@ export interface FormQuestion {
   /** Owner-authored product prices; submission amounts are recalculated server-side. */
   productSelection?: {
     currency: "IQD" | "USD" | "EUR";
-    items: { id: string; name: string; unit: string; unitPrice: number | null }[];
+    items: FormProductItem[];
   };
   category?: string;
   image?: string;
@@ -100,6 +112,7 @@ export interface FormDraft {
   name: string;
   status: "active" | "paused";
   /** Archive only controls the dashboard collection, independently of availability. */
+  isPinned?: boolean;
   isArchived?: boolean;
   archivedAt?: string | null;
   layout: "form" | "card";
@@ -185,7 +198,7 @@ export interface FormSubmission {
 }
 export interface FormProductAnswer {
   currency: "IQD" | "USD" | "EUR";
-  items: { id: string; name: string; unit: string; quantity: number; unitPrice: number; lineTotal: number }[];
+  items: { id: string; name: string; unit: string; quantity: number; unitPrice: number; lineTotal: number; baseUnitPrice?: number; discount?: number; priceBreakMinimum?: number }[];
   total: number;
 }
 export interface FormSubmissionsPage {
@@ -255,6 +268,7 @@ export type FormSummary = Pick<
   | "id"
   | "name"
   | "status"
+  | "isPinned"
   | "isArchived"
   | "archivedAt"
   | "slug"
@@ -265,6 +279,8 @@ export type FormSummary = Pick<
   | "revision"
   | "submissionCount"
 > & {
+  /** First enabled saved banner image for collection thumbnails. */
+  banner?: string | null;
   questionCount?: number;
   questions?: FormQuestion[];
   description?: string;

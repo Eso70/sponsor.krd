@@ -14,7 +14,7 @@ export function completionTime(
   duration: number | null | undefined,
   copy: FormsCopy,
 ) {
-  if (duration == null) return "—";
+  if (duration == null || !Number.isFinite(duration) || duration < 0) return "—";
   const seconds = Math.round(duration / 1000);
   return seconds < 60
     ? `${seconds} ${copy.seconds}`
@@ -24,5 +24,6 @@ export function completionTime(
 export function formCompletionRate(
   completion?: import("@linktree/types").FormCompletionPeriod,
 ) {
-  return completion?.rate != null ? `${completion.rate.toFixed(1)}%` : "—";
+  const rate = completion?.rate;
+  return rate != null && Number.isFinite(rate) && rate >= 0 && rate <= 100 ? `${rate.toFixed(1)}%` : "—";
 }

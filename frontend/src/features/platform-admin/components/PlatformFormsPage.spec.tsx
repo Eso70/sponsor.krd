@@ -29,7 +29,7 @@ it("mounts the shared Forms workspace with platform API ownership", async () => 
       expect.any(AbortSignal),
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Create form" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create" }));
   fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
   expect(toggle).toHaveBeenCalledOnce();
   expect(formsApi.stats).toHaveBeenCalledWith(

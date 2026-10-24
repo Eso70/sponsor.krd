@@ -87,7 +87,7 @@ export function ImageCropEditorSkeleton({
           <Skeleton className="h-4 w-24" />
         </aside>
       </div>
-      {footerTarget ? createPortal(footer, footerTarget) : footer}
+      {footerTarget ? createPortal(footer, footerTarget) : footerTarget === undefined ? footer : null}
     </section>
   );
 }

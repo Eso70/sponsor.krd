@@ -156,4 +156,18 @@ describe("LinktreeSearchModal", () => {
 
     expect(handleClose).toHaveBeenCalled();
   });
+
+  it.each([false, true])("uses shared search keyboard behavior with platformTheme=%s", (platformTheme) => {
+    const select = vi.fn();
+    const close = vi.fn();
+    render(<LinktreeSearchModal isOpen platformTheme={platformTheme}
+      searchQuery="aso" onSearchQueryChange={vi.fn()} items={sampleItems}
+      onSelect={select} onClose={close} />);
+    const input = screen.getByRole("searchbox");
+    expect(input).toHaveFocus();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(select).toHaveBeenCalledWith(sampleItems[0]);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,7 +1,5 @@
 import {
   LINKTREE_DEFAULT_DESCRIPTION,
-  LINKTREE_DEFAULT_FOOTER_PHONE,
-  LINKTREE_DEFAULT_FOOTER_TEXT,
   LINKTREE_DEFAULT_SUBTITLE,
 } from "@linktree/types";
 import { getPlatformBrand } from "@/lib/brand/platform-brands";
@@ -101,8 +99,6 @@ export const BACKGROUND_COLORS = [
 // shown beneath it (e.g. "click the links below").
 export const DEFAULT_SUBTITLE = LINKTREE_DEFAULT_SUBTITLE;
 export const DEFAULT_DESCRIPTION = LINKTREE_DEFAULT_DESCRIPTION;
-export const DEFAULT_FOOTER_TEXT = LINKTREE_DEFAULT_FOOTER_TEXT; // Clickable footer name, opens WhatsApp
-export const DEFAULT_FOOTER_PHONE = LINKTREE_DEFAULT_FOOTER_PHONE;
 
 // Kurdish platform names mapping
 export function getPlatformNameKurdish(platform: string): string {

@@ -36,7 +36,7 @@ export function CampaignVideoPreview({
       <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(15,23,42,0.64),transparent_68%)]" />
       {!compact && (
         <span className="absolute left-3 top-3 rounded-full border border-white/30 bg-white/20 px-2 py-1 font-mono text-[9px] font-semibold text-white shadow-sm backdrop-blur-md">
-          {campaign.video.format} · {campaign.video.resolution}
+          {campaign.video.format ?? "—"} · {campaign.video.resolution}
         </span>
       )}
       <div className="absolute inset-0 flex items-center justify-center">

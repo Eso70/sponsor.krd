@@ -1,0 +1,80 @@
+/* Navigation and header controls share one quiet, borderless treatment. */
+.control {
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: #526174;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+.control:hover:not(:disabled),
+.control[aria-expanded="true"]:not(:disabled) {
+  background: #f2f4f7;
+  color: #1e293b;
+}
+.control:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+.control:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+:global(.dark) .control {
+  color: #a8b1bf;
+}
+:global(.dark) .control:hover:not(:disabled),
+:global(.dark) .control[aria-expanded="true"]:not(:disabled) {
+  background: rgb(255 255 255 / 5%);
+  color: #e2e8f0;
+}
+.headerAction {
+  background: #f3f5f7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+}
+.headerAction:hover:not(:disabled),
+.headerAction[aria-expanded="true"]:not(:disabled) {
+  background: #eaeef2;
+}
+:global(.dark) .headerAction {
+  background: rgb(255 255 255 / 5%);
+}
+:global(.dark) .headerAction:hover:not(:disabled),
+:global(.dark) .headerAction[aria-expanded="true"]:not(:disabled) {
+  background: rgb(255 255 255 / 9%);
+}
+.headerAction:disabled {
+  cursor: wait;
+}
+@media (prefers-reduced-motion: reduce) {
+  .control {
+    transition: none;
+  }
+}
+.headerRow {
+  /* Includes the divider; shared by the header, sidebar and loading frames. */
+  box-sizing: border-box;
+  height: 73px;
+}
+
+@media (min-width: 640px) {
+  .headerRow {
+    height: 81px;
+  }
+}
+
+@media (min-width: 768px) {
+  .headerRow {
+    height: 85px;
+  }
+}
+

@@ -13,7 +13,6 @@ import { seedDefaultCommunications } from './seed-communications';
 import { encryptPrivateCommunications } from './encrypt-communications';
 import { ensurePlatformRetention } from './ensure-platform-retention';
 import { ensurePlatformMedia } from './ensure-platform-media';
-import { ensureAdvertisingPages } from './ensure-advertising-pages';
 import { seedPlatformAdmin } from './seed-platform-admin';
 import { assertSupportedSchema } from '../src/database/migration-compatibility';
 import { applyForwardMigrations } from '../src/database/forward-migrations';
@@ -122,7 +121,7 @@ async function migrate() {
         [schemaFile],
       );
       if (check.rows.length > 0) {
-        await assertSupportedSchema(client);
+        await assertSupportedSchema(client, { beforeForwardMigrations: true });
         console.log(`  OK ${schemaFile} already applied`);
       } else {
         const legacyCheck = await client.query(
@@ -143,7 +142,9 @@ async function migrate() {
         }
 
         if (Number(existingTables.rows[0]?.count || 0) > 0) {
-          await assertSupportedSchema(client);
+          await assertSupportedSchema(client, {
+            beforeForwardMigrations: true,
+          });
           await client.query(
             'INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING',
             [schemaFile],
@@ -161,7 +162,7 @@ async function migrate() {
           appliedCount += 1;
           console.log(`  OK ${schemaFile} applied`);
         }
-        await assertSupportedSchema(client);
+        await assertSupportedSchema(client, { beforeForwardMigrations: true });
       }
     }
 
@@ -175,7 +176,6 @@ async function migrate() {
     await seedPlatformAdmin(client);
     await ensurePlatformRetention(client);
     await ensurePlatformMedia(client);
-    await ensureAdvertisingPages(client);
     await encryptPrivateCommunications(client);
     await seedDefaultCommunications(client);
     await encryptPrivateCommunications(client);

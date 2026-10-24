@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { SegmentedTabsFrame } from "./SegmentedTabsFrame";
 import {
   isWebsiteColor,
   parseWebsiteColor,
@@ -19,7 +20,7 @@ export function SegmentedTabs<T extends string>({
   tabs,
   value,
   onChange,
-  accent = "var(--theme-primary)",
+  accent,
   fullWidth,
   className,
 }: {
@@ -31,6 +32,7 @@ export function SegmentedTabs<T extends string>({
   className?: string;
 }) {
   const accentStyle = (() => {
+    if (!accent) return undefined;
     if (!isWebsiteColor(accent)) {
       return { "--theme-primary": accent } as CSSProperties;
     }
@@ -44,11 +46,12 @@ export function SegmentedTabs<T extends string>({
   })();
 
   return (
-    <div
-      className={`custom-scrollbar brand-custom-scrollbar theme-custom-scrollbar overflow-x-auto rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-[#1c222b] ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
+    <SegmentedTabsFrame
+      className={className}
+      fullWidth={fullWidth}
       style={accentStyle}
+      role="tablist"
     >
-      <div className={`flex gap-1 ${fullWidth ? "w-full" : "min-w-max sm:min-w-0"}`}>
         {tabs.map((tab) => (
           <Tooltip key={tab.id} content={tab.label} side="top" className="flex-1">
             <button
@@ -56,14 +59,24 @@ export function SegmentedTabs<T extends string>({
               onClick={() => onChange(tab.id)}
               className={`flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-xs font-semibold outline-none transition sm:text-sm ${value === tab.id ? "theme-fill text-[var(--theme-ink)] shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5"}`}
               aria-selected={value === tab.id}
+              tabIndex={value === tab.id ? 0 : -1}
               role="tab"
+              onKeyDown={(event) => {
+                const index = tabs.findIndex((item) => item.id === tab.id);
+                const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 :
+                  event.key === "ArrowRight" ? (index + 1) % tabs.length :
+                  event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length : -1;
+                if (next < 0) return;
+                event.preventDefault();
+                onChange(tabs[next].id);
+                event.currentTarget.closest('[role="tablist"]')?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+              }}
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
             </button>
           </Tooltip>
         ))}
-      </div>
-    </div>
+    </SegmentedTabsFrame>
   );
 }

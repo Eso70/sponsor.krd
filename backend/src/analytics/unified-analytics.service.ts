@@ -12,6 +12,9 @@ import type {
   TrackAnalyticsEventDto,
 } from './dto/analytics-event.dto';
 import { TIKTOK_OWNER_ELIGIBLE_SQL } from './tiktok-owner-eligibility';
+import { PAGE_ENGAGEMENT_QUERY } from './page-engagement-query';
+import { whatsappQuestionAttribution } from './whatsapp-question-attribution';
+import type { PageAnalyticsInsights } from '@linktree/types';
 
 export interface AnalyticsRequestContext {
   ip: string;
@@ -26,7 +29,7 @@ export interface AnalyticsRequestContext {
 interface PublicPageRow {
   id: string;
   business_id: string;
-  page_type: 'linktree' | 'advertising' | 'route' | 'form';
+  page_type: 'linktree' | 'route' | 'form';
   timezone: string;
   name: string;
   slug: string;
@@ -34,7 +37,7 @@ interface PublicPageRow {
 
 /**
  * Only published public Linktree and form identities may be forwarded to TikTok. Fixed platform
- * routes, business landing pages, and advertising pages remain first-party
+ * routes and business landing pages remain first-party
  * analytics only.
  */
 const TIKTOK_FORWARDED_PAGE_TYPES: ReadonlySet<PublicPageRow['page_type']> =
@@ -79,8 +82,11 @@ export function forwardsToTikTok(input: {
   eventName: AnalyticsEventName;
   /** Whether the event resolved to a registered `public_page_actions` row. */
   hasAction: boolean;
+  engagementOnly?: boolean;
+  serverConfirmed?: boolean;
 }): boolean {
   if (!TIKTOK_FORWARDED_PAGE_TYPES.has(input.pageType)) return false;
+  if (input.engagementOnly) return false;
   if (input.pageType === 'form') {
     // Public forms expose views, accepted submissions and registered final
     // buttons. They are not a checkout/registration funnel.
@@ -90,9 +96,12 @@ export function forwardsToTikTok(input: {
       (input.eventName === 'button_click' && input.hasAction)
     );
   }
-  if (!input.hasAction && ENGAGEMENT_ONLY_EVENTS.has(input.eventName))
-    return false;
-  return true;
+  if (ENGAGEMENT_ONLY_EVENTS.has(input.eventName)) return false;
+  return (
+    input.eventName === 'page_view' ||
+    (input.hasAction && CLICK_EVENTS.has(input.eventName)) ||
+    Boolean(input.serverConfirmed && CONVERSION_EVENTS.has(input.eventName))
+  );
 }
 
 interface ActionRow {
@@ -468,9 +477,9 @@ export class UnifiedAnalyticsService {
     action: ActionRow | null,
   ): string {
     if (eventName === 'page_view') return 'ViewContent';
-    if (eventName === 'form_submit')
-      return action?.tiktok_event || 'SubmitForm';
-    if (eventName === 'lead_created') return action?.tiktok_event || 'Lead';
+    if (action) return action.tiktok_event;
+    if (eventName === 'form_submit') return 'SubmitForm';
+    if (eventName === 'lead_created') return 'Lead';
     if (eventName === 'checkout_started') return 'InitiateCheckout';
     if (eventName === 'order_completed') return 'CompletePayment';
     if (eventName === 'download') return 'Download';
@@ -479,7 +488,7 @@ export class UnifiedAnalyticsService {
     // it reports as a plain button click rather than inventing a funnel step.
     if (eventName === 'action_open' || eventName === 'share')
       return 'ClickButton';
-    return action?.tiktok_event || 'ClickButton';
+    return 'ClickButton';
   }
 
   async ingest(
@@ -512,11 +521,9 @@ export class UnifiedAnalyticsService {
       );
     }
     // Identity data does not belong in the analytics event table.
-    const propertiesJson = JSON.stringify(
-      Object.fromEntries(
-        Object.entries(properties).filter(
-          ([key]) => !CONTACT_IDENTITY_KEYS.has(key),
-        ),
+    const safeProperties = Object.fromEntries(
+      Object.entries(properties).filter(
+        ([key]) => !CONTACT_IDENTITY_KEYS.has(key),
       ),
     );
 
@@ -533,6 +540,33 @@ export class UnifiedAnalyticsService {
         if (!form.rows.length) throw new NotFoundException('Form not found');
       }
       const action = await this.resolveAction(client, page.id, input.actionId);
+      const propertiesJson = JSON.stringify(
+        await whatsappQuestionAttribution(
+          client,
+          page,
+          action,
+          input.eventName,
+          safeProperties,
+        ),
+      );
+      if (Buffer.byteLength(propertiesJson, 'utf8') > 8192)
+        throw new BadRequestException(
+          'Analytics event properties must be 8 KB or smaller',
+        );
+      if (
+        !transactionClient &&
+        [
+          'lead_created',
+          'order_completed',
+          'form_submit',
+          'checkout_started',
+        ].includes(input.eventName) &&
+        page.page_type !== 'form'
+      ) {
+        throw new BadRequestException(
+          'Confirmed outcomes require a server-side submission',
+        );
+      }
       // Form conversions must originate in the accepted submission transaction,
       // never from a visitor posting a conversion to the generic tracking API.
       if (
@@ -591,10 +625,6 @@ export class UnifiedAnalyticsService {
            ttclid = COALESCE(analytics_sessions.ttclid, EXCLUDED.ttclid),
            ttp = COALESCE(analytics_sessions.ttp, EXCLUDED.ttp),
            channel = COALESCE(analytics_sessions.channel, EXCLUDED.channel),
-           engagement_seconds = GREATEST(
-             analytics_sessions.engagement_seconds,
-             EXTRACT(EPOCH FROM (EXCLUDED.last_activity_at - analytics_sessions.started_at))::int
-           ),
            updated_at = now()
          RETURNING id, ttclid, ttp`,
         [
@@ -638,7 +668,24 @@ export class UnifiedAnalyticsService {
        */
       const sessionTtclid = sessionResult.rows[0].ttclid || undefined;
       const sessionTtp = sessionResult.rows[0].ttp || undefined;
-      const isConversion = CONVERSION_EVENTS.has(input.eventName);
+      const isConversion =
+        action?.metadata?.engagement_only !== true &&
+        (CONVERSION_EVENTS.has(input.eventName) ||
+          Boolean(
+            action?.tiktok_event === 'Contact' &&
+            CLICK_EVENTS.has(input.eventName) &&
+            action?.metadata?.engagement_only !== true,
+          ));
+      // Contact taps are intent, not revenue. Monetary values require a trusted
+      // transaction and an explicit currency; public browser claims are ignored.
+      const hasValue = Boolean(
+        transactionClient &&
+        input.eventName === 'order_completed' &&
+        input.conversionValue !== undefined &&
+        input.currency,
+      );
+      const conversionValue = hasValue ? input.conversionValue! : null;
+      const currency = hasValue ? input.currency! : null;
 
       const eventResult = await client.query<{ id: string }>(
         `INSERT INTO analytics_events (
@@ -650,7 +697,7 @@ export class UnifiedAnalyticsService {
            conversion_value, currency, is_bot, consent_state,
            action_label_snapshot, action_type_snapshot, properties, channel
          ) VALUES (
-           $1,$2,$3,$4,$5,$6,$7,'browser',$8,$9,$10,$11::inet,$12,$13,$14,$15,
+           $1,$2,$3,$4,$5,$6,$7,'${transactionClient ? 'server' : 'browser'}',$8,$9,$10,$11::inet,$12,$13,$14,$15,
            $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,
            $32,$33,$34::jsonb,$35
          )
@@ -684,8 +731,8 @@ export class UnifiedAnalyticsService {
           input.ttclid || attribution.ttclid || null,
           input.ttp || context.ttp || null,
           isConversion,
-          isConversion ? input.conversionValue || 0 : null,
-          isConversion ? input.currency || 'USD' : null,
+          conversionValue,
+          currency,
           bot,
           consent,
           action?.label || null,
@@ -718,7 +765,7 @@ export class UnifiedAnalyticsService {
           action,
           eventName: input.eventName,
           occurredAt,
-          conversionValue: isConversion ? input.conversionValue || 0 : 0,
+          conversionValue: conversionValue ?? 0,
         });
       }
 
@@ -728,19 +775,13 @@ export class UnifiedAnalyticsService {
           pageType: page.page_type,
           eventName: input.eventName,
           hasAction: Boolean(action),
+          engagementOnly: action?.metadata?.engagement_only === true,
+          serverConfirmed: Boolean(transactionClient),
         })
       ) {
-        // Deduplication needs the event *name* to agree as well as the id.
-        // When the browser already fired this event it tells us which name it
-        // used, and that name wins: our own mapping can legitimately reach a
-        // different one — a service click is `Contact` in the page and
-        // `ClickButton` here — and TikTok would then count the pair twice
-        // instead of collapsing it.
-        const tikTokName =
-          page.page_type === 'form'
-            ? this.tiktokEvent(input.eventName, action)
-            : (input.browserDispatched && input.browserEventName) ||
-              this.tiktokEvent(input.eventName, action);
+        // Both channels read the registered action name. The browser claim
+        // cannot promote a contact click into a purchase event.
+        const tikTokName = this.tiktokEvent(input.eventName, action);
         const identity = properties;
         const rawPlatform =
           action?.metadata &&
@@ -764,14 +805,8 @@ export class UnifiedAnalyticsService {
           content_ids: [action?.id || page.id],
           content_type: action ? action.action_type : page.page_type,
           content_name: contentName,
-          value:
-            isConversion && page.page_type !== 'form'
-              ? input.conversionValue || 0
-              : undefined,
-          currency:
-            isConversion && page.page_type !== 'form'
-              ? input.currency || 'USD'
-              : undefined,
+          value: conversionValue ?? undefined,
+          currency: currency ?? undefined,
           ip: context.ip,
           user_agent: userAgent,
           ttclid: input.ttclid || attribution.ttclid || sessionTtclid,
@@ -816,7 +851,9 @@ export class UnifiedAnalyticsService {
             tikTokName,
             input.eventId,
             JSON.stringify(payload),
-            input.browserDispatched || false,
+            Boolean(
+              input.browserDispatched && input.browserEventName === tikTokName,
+            ),
           ],
         );
       }
@@ -871,7 +908,7 @@ export class UnifiedAnalyticsService {
       ],
     );
 
-    if (input.action && isClick) {
+    if (input.action && (isClick || isConversion)) {
       await client.query(
         `INSERT INTO analytics_action_daily (
          business_id, public_page_id, public_page_action_id, day, timezone,
@@ -890,7 +927,7 @@ export class UnifiedAnalyticsService {
           input.action.id,
           input.occurredAt,
           input.page.timezone,
-          1,
+          isClick ? 1 : 0,
           isConversion ? 1 : 0,
           input.conversionValue,
         ],
@@ -927,7 +964,7 @@ export class UnifiedAnalyticsService {
       values.push(filters.to);
       where.push(`daily.day <= $${values.length}::date`);
     }
-    const result = await this.database.query<{
+    const summaryRequest = this.database.query<{
       total_views: string;
       total_clicks: string;
       conversions: string;
@@ -943,11 +980,10 @@ export class UnifiedAnalyticsService {
        WHERE ${where.join(' AND ')}`,
       values,
     );
-    const row = result.rows[0];
 
     // Daily rows hold additive totals. Exact uniques for the selected range
     // come directly from the event log.
-    const uniqueResult = await this.database.query<{
+    const uniqueRequest = this.database.query<{
       unique_views: string;
       unique_clickers: string;
     }>(
@@ -960,8 +996,8 @@ export class UnifiedAnalyticsService {
          AND event.is_bot = false
          AND ($2::uuid IS NULL OR page.id = $2 OR page.source_linktree_id = $2)
          AND ($3::varchar IS NULL OR page.page_type = $3)
-         AND ($4::date IS NULL OR event.occurred_at >= $4::date)
-         AND ($5::date IS NULL OR event.occurred_at < $5::date + interval '1 day')`,
+         AND ($4::date IS NULL OR event.occurred_at >= ($4::date::timestamp AT TIME ZONE page.timezone))
+         AND ($5::date IS NULL OR event.occurred_at < (($5::date + 1)::timestamp AT TIME ZONE page.timezone))`,
       [
         businessId,
         filters.pageId || null,
@@ -971,9 +1007,50 @@ export class UnifiedAnalyticsService {
         [...CLICK_EVENTS],
       ],
     );
-    const uniques = uniqueResult.rows[0];
 
+    const insightRequest = this.database.query<{
+      measured_visits: string;
+      average_active_seconds: string;
+      engaged_visits: string;
+      contact_actions: string;
+      contact_visitors: string;
+      confirmed_outcomes: string;
+      valued_outcomes: string;
+      channels: Array<{ name: string; views: number }>;
+      devices: Array<{ name: string; views: number }>;
+      revenue: Array<{ currency: string; value: number }>;
+      whatsapp: PageAnalyticsInsights['whatsapp'];
+    }>(PAGE_ENGAGEMENT_QUERY, [
+      businessId,
+      filters.pageId || null,
+      filters.pageType || null,
+      filters.from || null,
+      filters.to || null,
+    ]);
+    const [result, uniqueResult, insightResult] = await Promise.all([
+      summaryRequest,
+      uniqueRequest,
+      insightRequest,
+    ]);
+    const row = result.rows[0];
+    const uniques = uniqueResult.rows[0];
+    const insights = insightResult.rows[0];
     return {
+      insights: insights
+        ? {
+            measuredVisits: Number(insights.measured_visits),
+            averageActiveSeconds: Number(insights.average_active_seconds),
+            engagedVisits: Number(insights.engaged_visits),
+            contactActions: Number(insights.contact_actions),
+            contactVisitors: Number(insights.contact_visitors),
+            confirmedOutcomes: Number(insights.confirmed_outcomes),
+            valuedOutcomes: Number(insights.valued_outcomes),
+            channels: insights.channels ?? [],
+            devices: insights.devices ?? [],
+            revenue: insights.revenue ?? [],
+            whatsapp: insights.whatsapp,
+          }
+        : undefined,
       total_views: Number(row.total_views),
       unique_views: Number(uniques.unique_views),
       unique_visitors: Number(uniques.unique_views),
@@ -1029,7 +1106,7 @@ export class UnifiedAnalyticsService {
            AND (event.occurred_at AT TIME ZONE page.timezone)::date >= target.local_today - ($3::integer - 1)
          GROUP BY 1
        )
-       SELECT daily.day, daily.total_views, daily.total_clicks, daily.conversions,
+       SELECT to_char(daily.day, 'YYYY-MM-DD') AS day, daily.total_views, daily.total_clicks, daily.conversions,
               COALESCE(du.unique_visitors, 0)::bigint AS unique_visitors,
               COALESCE(du.unique_clickers, 0)::bigint AS unique_clickers
        FROM analytics_page_daily daily

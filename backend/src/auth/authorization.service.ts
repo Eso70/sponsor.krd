@@ -1,3 +1,4 @@
+import { resolveLinktreeFieldMode } from '../common/linktree-field-policy';
 import { planAllowsPermission } from '../billing/feature-plan-policy';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type {
@@ -351,7 +352,13 @@ export class AuthorizationService implements OnModuleInit {
     }
 
     const deniedFields = changedFields.filter(
-      (field) => (rule.fieldModes[field] || rule.accessMode) === 'deny',
+      (field) =>
+        resolveLinktreeFieldMode(
+          request.permission,
+          field,
+          rule.fieldModes,
+          rule.accessMode,
+        ) === 'deny',
     );
     if (deniedFields.length) {
       return this.deny('FIELD_DENIED', rule.source, {
@@ -359,7 +366,13 @@ export class AuthorizationService implements OnModuleInit {
       });
     }
     const approvalFields = changedFields.filter(
-      (field) => (rule.fieldModes[field] || rule.accessMode) === 'approval',
+      (field) =>
+        resolveLinktreeFieldMode(
+          request.permission,
+          field,
+          rule.fieldModes,
+          rule.accessMode,
+        ) === 'approval',
     );
     const approvalRequired =
       rule.accessMode === 'approval' || approvalFields.length > 0;

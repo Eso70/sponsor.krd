@@ -9,8 +9,11 @@ import {
   Layers,
 } from "lucide-react";
 import { TbBrandTiktok } from "react-icons/tb";
+import { StatCard } from "@/components/shared/StatCard";
+import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import type { TikTokAdAccount } from "../types";
+import { formatAdAccountAmount } from "../campaign-metrics";
 import { useCampaignText } from "../use-campaign-text";
 
 interface TikTokAdAccountCardProps {
@@ -50,7 +53,9 @@ export function TikTokAdAccountCard({
                 </span>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                {t("هەژماری ڕیکلامی تیکتۆک بە وێبسایتەکەتەوە ببەستەرەوە بۆ ئەوەی ڕاستەوخۆ کەمپەینەکانی ڕیکلام دروست بکەیت و بینەران ڕەوانەی لاپەڕەی لینکەکانت بکەیت بە ئامار و تۆماری ورد.")}
+                {t(
+                  "هەژماری ڕیکلامی تیکتۆک بە وێبسایتەکەتەوە ببەستەرەوە بۆ ئەوەی ڕاستەوخۆ کەمپەینەکانی ڕیکلام دروست بکەیت و بینەران ڕەوانەی لاپەڕەی لینکەکانت بکەیت بە ئامار و تۆماری ورد.",
+                )}
               </p>
             </div>
           </div>
@@ -92,9 +97,16 @@ export function TikTokAdAccountCard({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 font-mono">
-              <span>{t("Advertiser ID:")} <span className="text-slate-700 dark:text-slate-300 font-bold">{account.advertiserId}</span></span>
+              <span>
+                {t("Advertiser ID:")}{" "}
+                <span className="text-slate-700 dark:text-slate-300 font-bold">
+                  {account.advertiserId}
+                </span>
+              </span>
               <span>•</span>
-              <span>{t("کاتی ڕێکخستن:")} {account.timezone}</span>
+              <span>
+                {t("کاتی ڕێکخستن:")} {account.timezone}
+              </span>
             </div>
           </div>
         </div>
@@ -107,7 +119,9 @@ export function TikTokAdAccountCard({
             title={t("نوێکردنەوەی داتای ئەکاونت")}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`size-3.5 ${isSyncing ? "animate-spin text-slate-900 dark:text-white" : ""}`} />
+            <RefreshCw
+              className={`size-3.5 ${isSyncing ? "animate-spin text-slate-900 dark:text-white" : ""}`}
+            />
             {isSyncing ? t("نوێدەکرێتەوە...") : t("نوێکردنەوە")}
           </button>
 
@@ -123,45 +137,32 @@ export function TikTokAdAccountCard({
         </div>
       </div>
 
-      {/* Account Info Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-        <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <Wallet className="size-4 text-emerald-500" />
-            {t("باڵانسی ئەکاونت (Balance)")}
-          </div>
-          <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
-            ${(account.balance ?? 0).toFixed(2)}{" "}
-            <span className="text-xs font-normal text-slate-500 font-sans">{account.currency}</span>
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <Layers className="size-4 text-sky-500" />
-            {t("پیکسڵی بەستراوە (Connected Pixel)")}
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-              {account.connectedPixelName || "Main Business Pixel"}
-            </p>
-            <span className="text-xs font-mono text-slate-500">
-              {account.connectedPixelId}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <ShieldCheck className="size-4 text-indigo-500" />
-            {t("سنووری خەرجی ڕۆژانە (Daily Cap)")}
-          </div>
-          <p className="text-xl font-bold text-slate-900 dark:text-white font-mono">
-            ${(account.dailySpendCap ?? 0).toFixed(2)}{" "}
-            <span className="text-xs font-normal text-slate-500 font-sans">{t("لە ڕۆژێکدا")}</span>
-          </p>
-        </div>
-      </div>
+      <StatCardGrid columns={3} className="pt-6">
+        <StatCard
+          compact
+          icon={Wallet}
+          label={t("باڵانسی ئەکاونت (Balance)")}
+          value={formatAdAccountAmount(account.balance, account.currency)}
+          subtitle={account.currency}
+          color="green"
+        />
+        <StatCard
+          compact
+          icon={Layers}
+          label={t("پیکسڵی بەستراوە (Connected Pixel)")}
+          value={account.connectedPixelName || account.connectedPixelId || "—"}
+          subtitle={account.connectedPixelId || undefined}
+          color="blue"
+        />
+        <StatCard
+          compact
+          icon={ShieldCheck}
+          label={t("سنووری خەرجی ڕۆژانە (Daily Cap)")}
+          value={formatAdAccountAmount(account.dailySpendCap, account.currency)}
+          subtitle={t("لە ڕۆژێکدا")}
+          color="purple"
+        />
+      </StatCardGrid>
     </DashboardSurface>
   );
 }

@@ -6,10 +6,11 @@ export type FormExportCell = string | number | Date | null;
 
 /** Authoritative CSV column order, including historical questions. */
 export function formResponsesTable(
-  form: FormSummary,
+  form: Pick<FormSummary, "id" | "name" | "slug">,
   responses: FormSubmission[],
   copy: FormsCopy,
   questions: FormDraft["questions"] = [],
+  essential = false,
 ) {
   const columns = new Map(
     questions.map((question) => [question.id, question.label]),
@@ -101,6 +102,7 @@ export function formResponsesTable(
       `${group.label} / total`,
       (response) => snapshot(response)?.total ?? null,
     );
+    const hasPriceBreaks = responses.some((response) => snapshot(response)?.items.some((item) => item.baseUnitPrice !== undefined));
     for (const [productId, name] of group.items) {
       for (const field of [
         "name",
@@ -108,6 +110,7 @@ export function formResponsesTable(
         "quantity",
         "unitPrice",
         "lineTotal",
+        ...(hasPriceBreaks ? ["baseUnitPrice", "discount", "priceBreakMinimum"] as const : []),
       ] as const)
         addProductColumn(
           `${group.label} / ${name || productId} / ${field}`,
@@ -152,5 +155,11 @@ export function formResponsesTable(
       ...productFields.map((read) => read(response)),
     ];
   });
+  if (essential)
+    return {
+      headers: ["created_time_utc", ...headers.slice(answerColumnStart)],
+      rows: rows.map((row) => [row[1], ...row.slice(answerColumnStart)]),
+      answerColumnStart: 1,
+    };
   return { headers, rows, answerColumnStart };
 }

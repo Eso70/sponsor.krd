@@ -15,17 +15,11 @@ export interface BusinessPublicFooterProps {
   linktrees?: BusinessPublicFooterPage[];
   homeHref?: string;
   /**
-   * Whether this business has a live advertising page. Plans below the top one
-   * do not, and those two routes 404 for them — a footer link to a dead page is
-   * worse than no link.
-   */
-  advertisingEnabled?: boolean;
-  /**
    * Ultra pays to drop the "Powered by Sponsor.krd" badge. Read from the live
    * entitlement, so a downgrade puts the badge back.
    */
   brandingRemoved?: boolean;
-  copy?: Partial<Record<"home" | "advertise" | "videoPage" | "pages" | "publicPages" | "contact" | "officialSite" | "rightsReserved" | "poweredBy" | "logoLabel", string>>;
+  copy?: Partial<Record<"home" | "pages" | "publicPages" | "contact" | "officialSite" | "rightsReserved" | "poweredBy" | "logoLabel", string>>;
 }
 
 function normalizePhone(value?: string | null) {
@@ -48,7 +42,6 @@ export function BusinessPublicFooter({
   accentColor,
   linktrees = [],
   homeHref,
-  advertisingEnabled = false,
   brandingRemoved = false,
   copy,
 }: BusinessPublicFooterProps) {
@@ -57,12 +50,6 @@ export function BusinessPublicFooter({
 
   const pageLinks: BusinessPublicFooterPage[] = [];
   if (homeHref) pageLinks.push({ name: copy?.home ?? "Home", href: homeHref });
-  if (advertisingEnabled) {
-    pageLinks.push({ name: copy?.advertise ?? "Advertise", href: "/advertising" });
-    pageLinks.push({ name: copy?.videoPage ?? "Video page", href: "/advertising/video-code" });
-  }
-  // Without the advertising links this column can end up empty, and a heading
-  // over nothing reads as a rendering fault.
   if (pageLinks.length > 0) {
     columns.push({
       title: copy?.pages ?? "Pages",

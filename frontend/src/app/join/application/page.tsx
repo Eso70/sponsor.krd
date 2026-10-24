@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 export async function generateMetadata(): Promise<Metadata> {
   const locale = parseRootPublicLocale((await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value);
   const copy = rootOnboardingCopy[locale];
-  return { title: `${copy.title} | Sponsor.krd`, description: copy.formDescription };
+  return { title: `${copy.title} | Sponsor.krd`, robots: {index: false, follow: false}, description: copy.formDescription };
 }
 
 export default async function SignupApplicationPage() {

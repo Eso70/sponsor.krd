@@ -9,7 +9,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/api/request";
-import { PLATFORM_LOCALE_COOKIE, type PlatformLocale } from "./locale";
+import { rememberPlatformLocale, type PlatformLocale } from "./locale";
 
 type PlatformLocaleContextValue = {
   locale: PlatformLocale;
@@ -21,10 +21,6 @@ type PlatformLocaleContextValue = {
 const PlatformLocaleContext = createContext<PlatformLocaleContextValue | null>(
   null,
 );
-
-function rememberLocale(locale: PlatformLocale) {
-  document.cookie = `${PLATFORM_LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
-}
 
 export function PlatformLocaleProvider({
   initialLocale,
@@ -38,7 +34,7 @@ export function PlatformLocaleProvider({
 
   const syncLocale = useCallback((next: PlatformLocale) => {
     setLocale(next);
-    rememberLocale(next);
+    rememberPlatformLocale(next);
   }, []);
 
   const changeLocale = useCallback(
@@ -56,7 +52,9 @@ export function PlatformLocaleProvider({
         toast.error(
           locale === "ar"
             ? "تعذّر تغيير اللغة. حاول مرة أخرى"
-            : locale === "en" ? "Could not change language. Please try again" : "گۆڕینی زمان سەرکەوتوو نەبوو. دووبارە هەوڵ بدەوە",
+            : locale === "en"
+              ? "Could not change language. Please try again"
+              : "گۆڕینی زمان سەرکەوتوو نەبوو. دووبارە هەوڵ بدەوە",
         );
       } finally {
         setSaving(false);

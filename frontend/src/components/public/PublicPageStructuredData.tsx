@@ -1,9 +1,9 @@
 import type { PublicLinktree } from "@linktree/types";
 import { buildPageJsonLd, serializeJsonLd } from "@/lib/public/page-seo";
 
-export function PublicPageStructuredData({ page, origin, nonce }: {
-  page: PublicLinktree; origin: string; nonce: string;
+export function PublicPageStructuredData({ page, origin, nonce, links = [] }: {
+  page: PublicLinktree; origin: string; nonce: string; links?: { platform: string; url: string }[];
 }) {
   return <script type="application/ld+json" nonce={nonce}
-    dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildPageJsonLd(page, origin)) }} />;
+    dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildPageJsonLd(page, origin, links)) }} />;
 }

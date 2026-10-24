@@ -1,6 +1,8 @@
 "use client";
 
+import styles from "./table-pagination.module.css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 export interface TablePaginationCopy {
@@ -32,24 +34,24 @@ export function TablePagination({
   const lastItem = Math.min(page * pageSize, totalItems);
 
   return (
-    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-5 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-white/5 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
         {firstItem}–{lastItem} {copy?.of ?? "لە"} {totalItems.toLocaleString()}
       </span>
-      <div className="flex items-center justify-between gap-2 sm:justify-end">
+      <div className={styles.controls}>
         <Tooltip content={copy?.previous ?? "پەڕەی پێشوو"} side="top">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
             aria-label={copy?.previous ?? "پەڕەی پێشوو"}
-            className="flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 cursor-pointer"
+            className={`${SHARED_SOFT_BUTTON_CLASS} ${styles.button} disabled:cursor-not-allowed disabled:opacity-40`}
           >
-            <ChevronLeft className="h-4 w-4" />
-            {copy?.previous ?? "پێشوو"}
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            <span className="min-w-0">{copy?.previous ?? "پێشوو"}</span>
           </button>
         </Tooltip>
-        <span className="min-w-16 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <span className="min-w-0 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
           {page} / {totalPages}
         </span>
         <Tooltip content={copy?.next ?? "پەڕەی دواتر"} side="top">
@@ -58,10 +60,10 @@ export function TablePagination({
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
             aria-label={copy?.next ?? "پەڕەی دواتر"}
-            className="flex h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 cursor-pointer"
+            className={`${SHARED_SOFT_BUTTON_CLASS} ${styles.button} disabled:cursor-not-allowed disabled:opacity-40`}
           >
-            {copy?.next ?? "دواتر"}
-            <ChevronRight className="h-4 w-4" />
+            <span className="min-w-0">{copy?.next ?? "دواتر"}</span>
+            <ChevronRight className="h-4 w-4 shrink-0" />
           </button>
         </Tooltip>
       </div>

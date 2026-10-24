@@ -69,7 +69,7 @@ describe("Form layout builder", () => {
     );
     fireEvent.click(row.getByRole("button", { name: "Delete Options 2" }));
     fireEvent.click(row.getByRole("button", { name: "Add option" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -108,7 +108,7 @@ describe("Form layout builder", () => {
     expect(
       preview.getByRole("textbox", { name: "Your project" }),
     ).toHaveAccessibleDescription("Tell us what you need.");
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -164,7 +164,7 @@ describe("Form layout builder", () => {
     expect(within(menu).queryByText("Demographics")).not.toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("option", { name: "Phone number" }));
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -199,7 +199,7 @@ describe("Form layout builder", () => {
     expect(screen.queryByText("Q3")).not.toBeInTheDocument();
     expect(screen.getByText("Q1")).toBeInTheDocument();
     expect(screen.getByText("Q2")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -304,7 +304,7 @@ describe("Form layout builder", () => {
         .getAllByRole("tab")
         .map((tab) => tab.textContent),
     ).toEqual(["Content", "Final page"]);
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -348,7 +348,7 @@ describe("Form layout builder", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Website URL" }), {
       target: { value: "javascript:alert(1)" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(
       screen.getByRole("textbox", { name: "Website URL" }),
     ).toHaveAttribute("aria-invalid", "true");
@@ -360,7 +360,7 @@ describe("Form layout builder", () => {
     expect(
       preview.getByRole("link", { name: formEditorCopy("ar").website }),
     ).toHaveAttribute("href", "https://example.com");
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({

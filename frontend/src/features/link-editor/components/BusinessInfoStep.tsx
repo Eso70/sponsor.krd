@@ -178,7 +178,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
               onBlur={onNameBlur}
               required
               className={modalInputClass(!!(errors.name && touched.name))}
-              placeholder={copy?.businessNamePlaceholder ?? "ناوی بزنس بنووسە"}
+              placeholder={copy?.businessName ?? "ناوی بزنس"}
             />
             {errors.name && touched.name && (
               <p className="mt-1 text-xs text-red-500 font-kurdish">
@@ -227,7 +227,7 @@ export const BusinessInfoStep = memo(function BusinessInfoStep({
                   !!(errors.subdomain && touched.subdomain),
                   "pr-11",
                 )}
-                placeholder={copy?.subdomainPlaceholder ?? "سەب دۆمەین بنووسە"}
+                placeholder={copy?.subdomain ?? "دۆمەینی لاوەکی"}
                 required
               />
               <Tooltip content={copy?.randomSubdomain ?? "دروستکردنی سەب دۆمەینی هەڕەمەکی"} side="top">

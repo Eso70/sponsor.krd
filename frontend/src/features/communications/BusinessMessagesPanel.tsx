@@ -9,6 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { SkeletonList } from "@/components/shared/Skeleton";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import { Tooltip } from "@/components/shared/Tooltip";
@@ -97,7 +98,7 @@ export function BusinessMessagesPanel({
   const lastThreadRef = useRef<string>("");
 
   // Not memoized: `usePolling` reads the latest task from a ref each tick.
-  const refreshMessages = async () => {
+  const refreshMessages = async (rethrow = false) => {
     try {
       const items = await communicationRequest<Conversation[]>(
         "/api/auth/communications/conversations",
@@ -117,10 +118,13 @@ export function BusinessMessagesPanel({
           setActive(detail);
         }
       }
-    } catch {
+    } catch (error) {
+      if (rethrow) throw error;
       // Keep the current conversation visible during transient failures.
     }
   };
+
+  const globallyRefreshing = useRegisterDashboardRefresh("business-messages", () => refreshMessages(true));
 
   usePolling(refreshMessages, 5_000, { immediate: false });
 
@@ -215,7 +219,7 @@ export function BusinessMessagesPanel({
     }
   };
 
-  if (loading) {
+  if (loading || globallyRefreshing) {
     return <SkeletonList className="min-h-[30vh]" rows={5} loadingLabel={t("loadingMessages")} />;
   }
 

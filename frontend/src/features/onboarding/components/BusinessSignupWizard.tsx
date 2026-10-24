@@ -7,7 +7,10 @@ import { apiRequest, ApiRequestError } from "@/lib/api/request";
 import { useSubdomainAvailability } from "@/features/subdomains/use-subdomain-availability";
 import { subdomainCopy } from "@/features/subdomains/copy";
 import { SubdomainAvailabilityMessage } from "@/features/subdomains/SubdomainAvailabilityMessage";
-import { getBusinessWorkspaceEntryUrl, getRootDomain } from "@/lib/utils/app-url";
+import {
+  getBusinessWorkspaceEntryUrl,
+  getRootDomain,
+} from "@/lib/utils/app-url";
 import { AuthenticationCard } from "@/components/shared/AuthenticationCard";
 import { AuthenticationShell } from "@/components/shared/AuthenticationShell";
 import { AuthenticationRefreshButton } from "@/components/shared/AuthenticationRefreshButton";
@@ -18,8 +21,14 @@ import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
 import { toast } from "sonner";
-import { RootPublicLanguageToggle, useRootPublicLocale } from "@/features/public-site/RootPublicLocaleProvider";
-import { parseRootPublicLocale, type RootPublicLocale } from "@/features/public-site/root-public-locale";
+import {
+  RootPublicLanguageToggle,
+  useRootPublicLocale,
+} from "@/features/public-site/RootPublicLocaleProvider";
+import {
+  parseRootPublicLocale,
+  type RootPublicLocale,
+} from "@/features/public-site/root-public-locale";
 import { rootOnboardingCopy } from "../root-onboarding-copy";
 import {
   buildSignupApplicationPayload,
@@ -58,9 +67,15 @@ export function BusinessSignupWizard() {
     preferredLocale: "en",
   });
   const checkedAvailability = useSubdomainAvailability(form.requestedSubdomain);
-  const [conflictingSubdomain, setConflictingSubdomain] = useState<string | null>(null);
-  const availabilityStatus = conflictingSubdomain === form.requestedSubdomain ? "taken" : checkedAvailability.status;
-  const available = availabilityStatus === "taken" ? false : checkedAvailability.available;
+  const [conflictingSubdomain, setConflictingSubdomain] = useState<
+    string | null
+  >(null);
+  const availabilityStatus =
+    conflictingSubdomain === form.requestedSubdomain
+      ? "taken"
+      : checkedAvailability.status;
+  const available =
+    availabilityStatus === "taken" ? false : checkedAvailability.available;
   const availabilityCopy = subdomainCopy[locale];
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -68,12 +83,18 @@ export function BusinessSignupWizard() {
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<SignupFieldErrors>({});
   const [errorsLocale, setErrorsLocale] = useState(locale);
-  const visibleErrors = errorsLocale === locale || Object.keys(errors).length === 0
-    ? errors
-    : validateSignupApplication(form, available, locale);
-  const displayedError = error === "SIGNUP_SESSION_EXPIRED" ? copy.sessionExpired
-    : error === "SIGNUP_SUBMIT_FAILED" ? copy.submitFailed
-    : error === "SIGNUP_REFRESH_FAILED" ? copy.refreshFailed : error;
+  const visibleErrors =
+    errorsLocale === locale || Object.keys(errors).length === 0
+      ? errors
+      : validateSignupApplication(form, available, locale);
+  const displayedError =
+    error === "SIGNUP_SESSION_EXPIRED"
+      ? copy.sessionExpired
+      : error === "SIGNUP_SUBMIT_FAILED"
+        ? copy.submitFailed
+        : error === "SIGNUP_REFRESH_FAILED"
+          ? copy.refreshFailed
+          : error;
 
   useEffect(() => {
     void apiRequest<Application>("/api/signup/application")
@@ -83,12 +104,12 @@ export function BusinessSignupWizard() {
           businessName: "",
           phone: "",
           requestedSubdomain: "",
-          preferredLocale: data.preferredLocale ? parseRootPublicLocale(data.preferredLocale) : "en",
+          preferredLocale: data.preferredLocale
+            ? parseRootPublicLocale(data.preferredLocale)
+            : "en",
         });
       })
-      .catch(() =>
-        setError("SIGNUP_SESSION_EXPIRED"),
-      )
+      .catch(() => setError("SIGNUP_SESSION_EXPIRED"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -132,7 +153,10 @@ export function BusinessSignupWizard() {
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.status === 409) {
         setConflictingSubdomain(form.requestedSubdomain);
-        setErrors((current) => ({ ...current, subdomainAvailability: availabilityCopy.taken }));
+        setErrors((current) => ({
+          ...current,
+          subdomainAvailability: availabilityCopy.taken,
+        }));
         setErrorsLocale(locale);
       }
       setError("SIGNUP_SUBMIT_FAILED");
@@ -143,7 +167,14 @@ export function BusinessSignupWizard() {
 
   if (loading || !application) {
     return (
-      <AuthenticationShell brandDescription={copy.wizardBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
+      <AuthenticationShell
+        brandDescription={copy.wizardBrand}
+        backLabel={copy.back}
+        previewTitle={copy.preview}
+        themeCopy={copy.theme}
+        language={locale}
+        headerAction={<RootPublicLanguageToggle />}
+      >
         <AuthenticationCard
           title={loading ? copy.preparing : copy.unavailable}
           description={loading ? copy.loadingData : displayedError}
@@ -173,11 +204,11 @@ export function BusinessSignupWizard() {
           <div className="flex items-center gap-2">
             <RootPublicLanguageToggle />
             {pending ? (
-            <AuthenticationRefreshButton
-              refreshing={refreshing}
-              onRefresh={() => void refreshStatus()}
-              label={copy.refreshStatus}
-            />
+              <AuthenticationRefreshButton
+                refreshing={refreshing}
+                onRefresh={() => void refreshStatus()}
+                label={copy.refreshStatus}
+              />
             ) : null}
           </div>
         }
@@ -228,8 +259,18 @@ export function BusinessSignupWizard() {
 
   if (application.status === "deleted") {
     return (
-      <AuthenticationShell brandDescription={copy.wizardBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
-        <AuthenticationCard title={copy.deletedTitle} description={copy.deletedDescription}>
+      <AuthenticationShell
+        brandDescription={copy.wizardBrand}
+        backLabel={copy.back}
+        previewTitle={copy.preview}
+        themeCopy={copy.theme}
+        language={locale}
+        headerAction={<RootPublicLanguageToggle />}
+      >
+        <AuthenticationCard
+          title={copy.deletedTitle}
+          description={copy.deletedDescription}
+        >
           <div className="flex justify-center py-3">
             <ShieldCheck className="h-12 w-12 text-slate-400" />
           </div>
@@ -239,11 +280,15 @@ export function BusinessSignupWizard() {
   }
 
   return (
-    <AuthenticationShell brandDescription={copy.wizardFormBrand} backLabel={copy.back} previewTitle={copy.preview} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
-      <AuthenticationCard
-        title={copy.title}
-        description={copy.formDescription}
-      >
+    <AuthenticationShell
+      brandDescription={copy.wizardFormBrand}
+      backLabel={copy.back}
+      previewTitle={copy.preview}
+      themeCopy={copy.theme}
+      language={locale}
+      headerAction={<RootPublicLanguageToggle />}
+    >
+      <AuthenticationCard title={copy.title} description={copy.formDescription}>
         <div className="space-y-4" dir="ltr">
           {error ? (
             <InlineRequestError
@@ -260,7 +305,11 @@ export function BusinessSignupWizard() {
               {application.reviewReason}
             </div>
           ) : null}
-          <EditorField label={copy.businessName} required error={visibleErrors.businessName}>
+          <EditorField
+            label={copy.businessName}
+            required
+            error={visibleErrors.businessName}
+          >
             <input
               autoFocus
               autoComplete="off"
@@ -290,7 +339,10 @@ export function BusinessSignupWizard() {
           <EditorField
             label={copy.subdomain}
             required
-            error={visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability}
+            error={
+              visibleErrors.requestedSubdomain ||
+              visibleErrors.subdomainAvailability
+            }
           >
             <div className="flex items-center gap-2">
               <input
@@ -298,17 +350,26 @@ export function BusinessSignupWizard() {
                 className={modalInputClass(
                   available === false ||
                     Boolean(
-                      visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
+                      visibleErrors.requestedSubdomain ||
+                      visibleErrors.subdomainAvailability,
                     ),
                 )}
-                aria-invalid={available === false || Boolean(
-                  visibleErrors.requestedSubdomain || visibleErrors.subdomainAvailability,
-                )}
+                aria-invalid={
+                  available === false ||
+                  Boolean(
+                    visibleErrors.requestedSubdomain ||
+                    visibleErrors.subdomainAvailability,
+                  )
+                }
                 value={form.requestedSubdomain}
                 maxLength={63}
                 placeholder={copy.subdomainPlaceholder}
                 onChange={(event) => {
-                  setErrors((current) => ({ ...current, requestedSubdomain: undefined, subdomainAvailability: undefined }));
+                  setErrors((current) => ({
+                    ...current,
+                    requestedSubdomain: undefined,
+                    subdomainAvailability: undefined,
+                  }));
                   setConflictingSubdomain(null);
                   setForm({
                     ...form,
@@ -316,15 +377,22 @@ export function BusinessSignupWizard() {
                   });
                 }}
               />
-              <span className="shrink-0 text-xs text-slate-400">.{getRootDomain().split(":")[0]}</span>
+              <span className="shrink-0 text-xs text-slate-400">
+                .{getRootDomain().split(":")[0]}
+              </span>
             </div>
-            <SubdomainAvailabilityMessage status={availabilityStatus} locale={locale} />
+            <SubdomainAvailabilityMessage
+              status={availabilityStatus}
+              locale={locale}
+            />
           </EditorField>
           <LanguagePreferenceSelect
             label={copy.defaultLanguage}
             hint={copy.languageHint}
             value={form.preferredLocale}
-            onChange={(preferredLocale) => setForm((current) => ({ ...current, preferredLocale }))}
+            onChange={(preferredLocale) =>
+              setForm((current) => ({ ...current, preferredLocale }))
+            }
             disabled={busy}
           />
           <button
@@ -343,7 +411,7 @@ export function BusinessSignupWizard() {
           </button>
           <p
             className="text-center text-[11px] leading-5 text-slate-400"
-            dir="rtl"
+            dir="ltr"
           >
             {copy.submitConsentBefore}{" "}
             <Link href="/legal/terms" target="_blank" className="underline">

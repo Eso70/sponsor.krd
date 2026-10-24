@@ -28,6 +28,7 @@ export function FormCardPreview({
   placeholders = false,
   scrollable = false,
   presentation = "preview",
+  viewport = "embedded",
 }: FormPreviewProps) {
   const copy = formsCopy(language),
     labels = formEditorCopy(language),
@@ -68,13 +69,14 @@ export function FormCardPreview({
   return (
     <FormPreviewSurface
       presentation={presentation}
+      viewport={viewport}
       language={language}
       appearance={appearance}
       color={color}
       scrollable={scrollable}
       card
       navigation={
-        !onSubmit && (
+        !onSubmit && viewport !== "device" && (
           <FormPreviewNavigation
             currentIndex={currentIndex}
             pageCount={allIds.length}

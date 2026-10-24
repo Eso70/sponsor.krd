@@ -1,11 +1,19 @@
 import {
   IsArray,
+  IsIn,
+  Matches,
   IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+
+import {
+  WEBSITE_COLOR_MAX_LENGTH,
+  WEBSITE_COLOR_PATTERN,
+} from '../../common/website-color';
+import { BACKGROUND_PATTERN_STYLES } from '@linktree/types/linktree-defaults.cjs';
 
 export enum SettingsSection {
   Profile = 'profile',
@@ -28,7 +36,14 @@ export class UpdateSettingsDto {
   @IsOptional() @IsString() @MaxLength(2000) default_footer_text?: string;
   @IsOptional() @IsString() @MaxLength(40) default_footer_phone?: string;
   @IsOptional() @IsString() @MaxLength(80) default_template?: string;
-  @IsOptional() @IsString() @MaxLength(30) default_background_color?: string;
+  @IsOptional()
+  @IsString()
+  @MaxLength(WEBSITE_COLOR_MAX_LENGTH)
+  @Matches(WEBSITE_COLOR_PATTERN)
+  default_background_color?: string;
+  @IsOptional()
+  @IsIn(BACKGROUND_PATTERN_STYLES)
+  default_background_pattern?: string;
   @IsOptional() @IsBoolean() default_footer_hidden?: boolean;
   @IsOptional() @IsBoolean() default_whatsapp_enabled?: boolean;
 

@@ -21,10 +21,11 @@ const props = {
   totalViews: 0,
   uniqueViews: 0,
   totalClicks: 0,
-  conversions: 0,
+  uniqueClicks: 0,
+  contactActions: 0,
   isRefreshing: false,
   isClearingAnalytics: false,
-  hasAnalyticsData: false,
+
   searchQuery: "",
   isSearchModalOpen: false,
   viewMode: "grid" as const,

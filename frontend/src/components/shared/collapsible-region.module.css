@@ -1,0 +1,17 @@
+.region {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease;
+}
+.region[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.content {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .region { transition: none; }
+}

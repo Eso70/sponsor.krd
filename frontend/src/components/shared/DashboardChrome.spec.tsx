@@ -33,7 +33,6 @@ describe("shared dashboard chrome", () => {
 
     const item = screen.getByRole("button", { name: "Dashboard" });
     expect(item).toHaveAttribute("aria-current", "page");
-    expect(item).toHaveClass("theme-fill");
     expect(item.closest("aside")).toHaveAttribute("data-dashboard-sidebar");
     fireEvent.click(item);
     expect(navigate).toHaveBeenCalledOnce();
@@ -76,20 +75,11 @@ describe("shared dashboard chrome", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Refresh dashboard data" }),
     );
-    const homeLink = screen.getByRole("link", {
-      name: "Open home page in new tab",
-    });
     fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
 
     expect(toggleSidebar).toHaveBeenCalledOnce();
     expect(refresh).toHaveBeenCalledOnce();
-    expect(homeLink).toHaveAttribute("href", "/");
-    expect(homeLink).toHaveAttribute("target", "_blank");
-    expect(homeLink).toHaveAttribute("rel", "noopener noreferrer");
-    expect(
-      screen.getByRole("button", { name: "Refresh dashboard data" })
-        .nextElementSibling,
-    ).toBe(homeLink);
+    expect(screen.queryByRole("link", { name: "Open home page in new tab" })).not.toBeInTheDocument();
     expect(toggleTheme).toHaveBeenCalledOnce();
     expect(
       screen.getByRole("button", { name: "Notifications" }),

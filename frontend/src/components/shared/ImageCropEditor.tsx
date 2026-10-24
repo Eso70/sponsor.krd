@@ -38,6 +38,7 @@ export function ImageCropEditor({
   src,
   aspect = "free",
   maxEdge = 1440,
+  allowWebp = true,
   copy,
   cancelLabel,
   onClose,
@@ -48,6 +49,7 @@ export function ImageCropEditor({
   src: string;
   aspect?: ImageCropAspect;
   maxEdge?: number;
+  allowWebp?: boolean;
   copy: ImageCropCopy;
   cancelLabel: string;
   onClose: () => void;
@@ -286,6 +288,7 @@ export function ImageCropEditor({
         transform,
         fill,
         maxEdge,
+        allowWebp,
       );
       if (mounted.current) await onConfirm(file);
     } catch {

@@ -11,6 +11,21 @@ HTML, two tenants with identical slugs, robots/sitemaps, share images, real
 anchors, noindex, crawler agents and HTTP status/redirect behavior. See
 [SEO verification and live deployment checks](seo.md).
 
+The SEO HTTP suite also checks the real root homepage and existing service routes
+in all three languages, trusted canonicals, marketing Pixel exclusion, and one
+service data read shared by metadata/body. Run this fixture sequentially after
+an isolated frontend build: Next rewrites the workspace's generated type files
+even when distDir is separate, which can trigger a dev reload during a request.
+`seo-production-audit.mjs` checks the actual canonical tag and social image status,
+MIME/PNG dimensions, and reports response-header/body timings. Its nonzero exit
+on a failed image must not be mistaken for an ordinary successful page audit.
+
+Set `SEO_SMOKE_FORMS_LOADING_ONLY=1` when running that command to test the real
+Next.js server/client boundary for Forms loading. Disposable authenticated
+fixtures cover Business and Platform routes in English, Arabic and Kurdish;
+the checks require successful HTTP responses, the shared three-column grid,
+and no function-serialization errors. This mode does not write application data.
+
 The HTTP fixture also serves custom-domain dashboard entry through the real
 Next.js server without changing host, rejects inactive default-host pages and
 APIs without redirects, blocks platform/internal APIs on customer hosts, and
@@ -28,6 +43,12 @@ and `type-check` never write to the working tree, so the same command is
 safe in CI. Use `pnpm lint:fix` when you do want ESLint to apply fixes.
 
 Individual applications:
+
+The migration upgrade suite also recreates the previous Linktree content column
+names and field catalog in its guarded disposable database. It runs the actual
+migration command for both an empty ledger and an already-recorded baseline,
+checks retained page content and public-page IDs/URLs, and verifies rerun safety.
+Run it with `pnpm --filter backend exec jest --config ./test/jest-e2e.json --runInBand migration-upgrade`.
 
 ```bash
 pnpm --filter backend lint

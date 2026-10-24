@@ -46,7 +46,6 @@ export function FormIntroductionEditor({
         label={copy.headline}
         hint={labels.optional}
         value={form.headline}
-        placeholder={labels.headlineHint}
         onChange={(headline) => onChange({ headline })}
         maxLength={card ? 50 : 60}
         showCount={card}
@@ -54,7 +53,6 @@ export function FormIntroductionEditor({
       <FormEditorInput
         label={copy.descriptionLabel}
         value={form.description}
-        placeholder={labels.descriptionHint}
         onChange={(description) => onChange({ description })}
         multiline
         maxLength={210}
@@ -63,7 +61,6 @@ export function FormIntroductionEditor({
       <FormEditorInput
         label={labels.slogan}
         value={form.slogan ?? ""}
-        placeholder={labels.sloganHint}
         onChange={(slogan) => onChange({ slogan })}
         maxLength={94}
         hint={labels.optional}

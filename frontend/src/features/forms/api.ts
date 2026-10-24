@@ -79,6 +79,8 @@ async function uploadDraftImages(
   return (await visit(form)) as FormDraft;
 }
 export const formsApi = {
+  duplicateOptions: (scope: FormsScope, id: string) =>
+    apiRequest<{ form: FormDraft; name: string; slug: string; available: boolean }>(`${endpoint(scope)}/${id}/duplicate-options`),
   titleAvailability: (
     scope: FormsScope,
     title: string,
@@ -103,6 +105,8 @@ export const formsApi = {
       `${endpoint(scope)}?page=${page}&q=${encodeURIComponent(q)}&filter=${filter}`,
       { signal },
     ),
+  selection: (scope: FormsScope, q: string, filter: string, signal?: AbortSignal) =>
+    apiRequest<string[]>(`${endpoint(scope)}/selection?q=${encodeURIComponent(q)}&filter=${encodeURIComponent(filter)}`, { signal }),
   analytics: (scope: FormsScope, id: string, signal?: AbortSignal) =>
     apiRequest<FormAnalytics>(`${endpoint(scope)}/${id}/analytics`, { signal }),
   get: (scope: FormsScope, id: string, signal?: AbortSignal) =>
@@ -126,10 +130,13 @@ export const formsApi = {
       method: "PATCH",
       json: { isArchived },
     }),
-  duplicate: (scope: FormsScope, id: string) =>
-    apiRequest<FormDraft>(`${endpoint(scope)}/${id}/duplicate`, {
+  async duplicate(scope: FormsScope, id: string, form: FormDraft, slug: string) {
+    const definition = await uploadDraftImages(form, scope);
+    return apiRequest<FormDraft>(`${endpoint(scope)}/${id}/duplicate`, {
       method: "POST",
-    }),
+      json: { definition, slug },
+    });
+  },
   remove: (scope: FormsScope, id: string) =>
     apiRequest(`${endpoint(scope)}/${id}`, { method: "DELETE" }),
   deleteSubmissions: (scope: FormsScope, id: string) =>

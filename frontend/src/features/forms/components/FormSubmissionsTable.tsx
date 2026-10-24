@@ -1,4 +1,8 @@
 "use client";
+import {
+  FORM_REPORT_TABLE_FRAME_CLASS,
+  FORM_REPORT_TABLE_ROW_CLASS,
+} from "../form-report-styles";
 import { formAnswerText, completionTime } from "../form-response-utils";
 import { Fragment, useState } from "react";
 import { FormResponseToggle } from "./FormResponseToggle";
@@ -15,6 +19,7 @@ export function FormSubmissionsTable({
   copy,
   locale,
   pageSize = 20,
+  essential = false,
 }: {
   data: FormSubmissionsPage;
   page: number;
@@ -22,6 +27,7 @@ export function FormSubmissionsTable({
   copy: FormsCopy;
   locale: FormLanguage;
   pageSize?: 20 | 50 | 100;
+  essential?: boolean;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (id: string) =>
@@ -34,15 +40,20 @@ export function FormSubmissionsTable({
   return (
     <ManagementTable
       compact
-      minWidth="min-w-[640px]"
+      className={FORM_REPORT_TABLE_FRAME_CLASS}
+      minWidth={essential ? "min-w-[420px]" : "min-w-[640px]"}
       data={data.items}
       getRowKey={(row) => row.id}
       columns={[
         { key: "date", header: copy.submittedAt, width: "w-36" },
         { key: "answers", header: copy.answerPreview },
-        { key: "source", header: copy.source, width: "w-28" },
-        { key: "time", header: copy.timeSpent, width: "w-24" },
-        { key: "details", header: copy.viewDetails, width: "w-12" },
+        ...(!essential
+          ? [
+              { key: "source", header: copy.source, width: "w-28" },
+              { key: "time", header: copy.timeSpent, width: "w-24" },
+            ]
+          : []),
+        { key: "details", header: copy.viewDetails, width: "w-32" },
       ]}
       pagination={{
         mode: "server",
@@ -77,33 +88,42 @@ export function FormSubmissionsTable({
       )}
       renderRow={(row) => (
         <Fragment>
-          <tr className="border-b border-slate-100 transition-colors hover:bg-slate-50/70 dark:border-white/5 dark:hover:bg-white/[0.025]">
+          <tr className={FORM_REPORT_TABLE_ROW_CLASS}>
             <td className="px-3 py-3 align-top text-xs text-slate-500">
               {date(row)}
             </td>
             <td className="px-3 py-3">
               <p
-                className="line-clamp-2 break-words text-sm font-medium text-slate-700 dark:text-slate-200"
+                className="line-clamp-2 break-words [overflow-wrap:anywhere] text-sm font-medium text-slate-700 dark:text-slate-200"
                 dir="auto"
               >
-                {row.answers
-                  .slice(0, 2)
-                  .map((answer) => formAnswerText(answer.value))
-                  .filter(Boolean)
-                  .join(" · ") || "—"}
+                {row.answers.length
+                  ? row.answers.slice(0, 2).map((answer, index) => (
+                      <Fragment key={answer.questionId}>
+                        {index > 0 && <span aria-hidden> · </span>}
+                        <bdi dir="auto">
+                          {formAnswerText(answer.value) || "—"}
+                        </bdi>
+                      </Fragment>
+                    ))
+                  : "—"}
               </p>
             </td>
-            <td className="px-3 py-3 text-xs text-slate-500">
-              <span
-                className="block max-w-28 truncate"
-                title={row.attribution?.source}
-              >
-                {row.attribution?.source || copy.unknownSource}
-              </span>
-            </td>
-            <td className="px-3 py-3 text-xs text-slate-500">
-              {completionTime(row.durationMs, copy)}
-            </td>
+            {!essential && (
+              <>
+                <td className="px-3 py-3 text-xs text-slate-500">
+                  <span
+                    className="block max-w-28 truncate"
+                    title={row.attribution?.source}
+                  >
+                    {row.attribution?.source || copy.unknownSource}
+                  </span>
+                </td>
+                <td className="px-3 py-3 text-xs text-slate-500">
+                  {completionTime(row.durationMs, copy)}
+                </td>
+              </>
+            )}
             <td className="px-3 py-3">
               <FormResponseToggle
                 expanded={expanded === row.id}
@@ -115,7 +135,7 @@ export function FormSubmissionsTable({
           {expanded === row.id && (
             <tr>
               <td
-                colSpan={5}
+                colSpan={essential ? 3 : 5}
                 className="bg-slate-50/60 px-3 py-3 dark:bg-white/[0.025]"
               >
                 <FormSubmissionDetails locale={locale} response={row} />

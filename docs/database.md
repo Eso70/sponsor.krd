@@ -1,5 +1,15 @@
 # Database
 
+Linktree profit tracking is retired. Apply `2026-10-15_retire_linktree_profit.sql` through `pnpm db:migrate` during deployment to remove its obsolete records table, including that table's indexes and triggers. This deletes only the retired profit records; Linktrees, links, Forms, responses, analytics, subscriptions and billing records remain intact. The retired table is absent from the fresh baseline. This migration has not been applied automatically. Editable Forms duplication uses existing columns and needs no schema addition.
+
+
+WhatsApp question video links use the nullable `whatsapp_questions.video_url`
+column. Apply `2026-10-14_whatsapp_question_video.sql` with `pnpm db:migrate`
+before deploying this release. It only adds a column and preserves existing
+questions/messages; no reset or data rewrite is needed. Fresh baseline installs
+include it. Page edits, duplication, public reads and business backup export/import
+retain the optional URL.
+
 ## Business deletion and immutable billing audits
 
 Apply `2026-10-11_immutable_audit_entity_deletion.sql` using `pnpm db:migrate`
@@ -27,13 +37,7 @@ concurrency-safe root public slug registry for platform-owned Linktrees.
 
 ## Fixed public marketing routes
 
-`public_pages.page_type='route'` represents allowlisted fixed URLs that do not
-have a specialized content table. Its `slug` is the stable route key and all
-specialized source-id columns are null. A business insert trigger creates the
-business home and advertising-video-code identities, or the platform home,
-join, and application identities for the single `account_type='platform'`
-workspace. The public tracking resolver still checks route publication and the
-underlying advertising-page entitlement where applicable.
+Businesses receive a Home route identity. The platform workspace receives Home, Join, and Application identities. These collect first-party analytics only.
 
 ## Business identity and applications
 
@@ -121,17 +125,6 @@ schema and its ledger unchanged.
 ## Schema groups
 
 The active schema is grouped as follows:
-
-| Area                             | Tables                                                                                                                                                                                                                                                                     |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Platform identity and access     | `platform_admins`, `platform_admin_sessions`, `platform_permission_denies`, `auth_permissions`, `permission_approval_requests`                                                                                                                                             |
-| Businesses and sessions          | `businesses`, `business_branding`, `business_defaults`, `business_profile_change_requests`, `business_sessions`, `business_tiktok_pixels`                                                                                                                                  |
-| Linktrees and public content     | `linktrees`, `links`, `whatsapp_questions`, `campaign_revenue_records`, `template_global_settings`, `public_pages`, `public_page_versions`, `public_page_actions`, `public_page_tombstones`                                                                                 |
-| Advertising service              | `advertising_pages`, `advertising_sections`, `advertising_package_categories`, `advertising_package_tiers`, `advertising_results`, `advertising_testimonials`, `advertising_faqs`, `advertising_payment_providers`, `advertising_page_versions`                            |
-| Billing and access configuration | `billing_entitlements`, `billing_plans`, `billing_plan_configurations`, `billing_plan_entitlements`, `billing_plan_permissions`, `billing_plan_templates`, `billing_subscription_plans`, `business_subscriptions`, `billing_usage_counters`, `billing_policy_audit_events` |
-| Analytics and marketing delivery | `analytics_visitors`, `analytics_sessions`, `analytics_events`, `analytics_page_daily`, `analytics_action_daily`, `marketing_event_outbox`, `marketing_delivery_attempts`                                                                                                  |
-| Communications                   | `communication_announcements`, `communication_announcement_deliveries`, `communication_notifications`, `communication_conversations`, `communication_messages`, `communication_homepage_placements`                                                                        |
-| Operations and media             | `platform_data_retention_settings`, `platform_data_retention_runs`, `platform_media_settings`, `uploaded_media_assets`, `schema_migrations`                                                                                                                                |
 
 ## Schema decisions carried in the baseline
 
@@ -224,25 +217,6 @@ The baseline is one schema split across numbered parts in
 `backend/src/database/migrations/baseline/`, applied in filename order inside a
 single transaction by both `db:migrate` and `db:reset`:
 
-| Part                             | Holds                                                   |
-| -------------------------------- | ------------------------------------------------------- |
-| `00_settings_and_extensions.sql` | dump preamble, session settings, extensions             |
-| `01_functions.sql`               | shared PL/pgSQL functions                               |
-| `10_core_tables.sql`             | identity, authorization, billing, linktrees, operations |
-| `11_core_constraints.sql`        | primary keys and unique constraints                     |
-| `12_core_indexes.sql`            | indexes for the core tables                             |
-| `13_core_triggers.sql`           | triggers for the core tables                            |
-| `14_core_foreign_keys.sql`       | foreign keys, after every table they reference          |
-| `20_communications.sql`          | Communication Center                                    |
-| `40_operations_and_media.sql`    | data retention and media policy                         |
-| `60_advertising.sql`             | advertising pages, packages, versions                   |
-| `70_public_pages_analytics.sql`  | unified public page model and analytics                 |
-| `80_performance.sql`             | FK-column indexes and per-table storage tuning          |
-| `90_onboarding_identity.sql`     | invite-only Google onboarding                           |
-| `92_root_public_slugs.sql`       | platform root-domain Linktree slug registry             |
-| `95_late_schema.sql`             | late objects that depend on earlier schema domains      |
-| `99_data.sql`                    | catalog rows the application cannot boot without        |
-
 `src/database/baseline.ts` owns the loading: `baselineFiles` reads the parts
 off disk and sorts them, `applyBaseline` runs them, and `readBaselineSql`
 concatenates them for the specs that assert against the schema text. Adding a
@@ -304,7 +278,7 @@ that workspace.
 ## Baseline consolidation, 2026-09-10
 
 The numbered baseline contains the complete current Sponsor.krd schema and
-required catalog data. Linktree subtitle styling, campaign state, archive
+required catalog data. Linktree subtitle styling, archive
 state, current branding, platform ownership, and all active permissions are
 declared directly in their owning baseline parts. There are no dated upgrade
 files in this reset-only release.
@@ -407,12 +381,6 @@ Production business creation uses approved signup applications. Any business
 created by environment seed helpers is an explicitly configured local
 development record, not part of public or administrator-manual onboarding.
 
-The baseline seeds only what the application cannot run without: the platform
-administrator, retention and media policy, and the permission and billing
-catalogues. Businesses entitled to the advertising
-feature also get a **draft** advertising page so the editor opens on real rows;
-nothing is published until the owner publishes it.
-
 No demo or fixture businesses are created — every business in a database is a
 real one, created through the platform administrator.
 ## Business custom domains
@@ -430,3 +398,101 @@ See [Custom domains](custom-domains.md).
 `forms` and `form_submissions` persist owner-scoped form definitions and response history. Form status is `active` or `paused`; separate `is_archived`/`archived_at` columns organize the dashboard without changing public availability. The `2026-10-10_forms_visibility.sql` migration safely converts legacy states and updates the shared analytics publication trigger. Form public-page/action identities join the shared analytics schema. Apply `2026-10-10_forms*.sql` with `pnpm db:migrate`; fresh baseline parts 65/70/75 include the same schema. See [Forms](forms.md).
 
 Product questions reuse forms.definition JSONB; accepted selections reuse form_submissions.answers JSONB. Each product answer stores an immutable server-priced snapshot and searchable value summary. No new table or migration is needed. See [Forms](forms.md#product-selection).
+
+## Linktree content names (2026-10-13)
+
+Optional banners are stored in the existing `linktrees.template_config.banner`
+JSON object as `{ enabled, mode, images }`; no content columns or existing rows
+are rewritten. Missing configuration means disabled. Saving validates local
+upload paths and tenant ownership, including approved edits. Asset retention
+already scans template configuration, so active banner uploads remain referenced.
+`2026-10-13_linktree_media_actions.sql` (fresh baseline part 97) adds registered
+media engagement actions to existing/future Linktree public pages without changing
+page content, URLs or analytics history. Apply it with the normal migration runner.
+
+Apply `2026-10-13_linktree_form_content.sql` through `pnpm db:migrate` for existing
+installations. Baseline part `96_linktree_form_content.sql` performs the identical
+change on fresh installs. The migration renames `name` to `headline`, `subtitle`
+to `slogan`, `subtitle_color` to `slogan_color`, and `image` to `logo`. It does not
+copy, truncate, delete or rewrite Linktree content. IDs, image paths, `seo_name`,
+UIDs, foreign keys, links, root slug reservations, statistics and analytics stay
+intact. The public-page synchronization function uses the renamed headline;
+permission field catalogs gain canonical keys while legacy keys remain available
+for existing clients and pending approvals. Authorization and its simulator resolve
+canonical/legacy field aliases to the same plan rule, preserving existing deny and
+approval settings without rewriting stored policies. Conflicting old/new columns abort
+rather than choosing one and hiding stored content. The migration runner wraps
+each forward migration and its ledger entry in one transaction.
+
+Before forward migrations, the schema check also accepts the complete previous
+Linktree content columns and their legacy field catalog. It still rejects mixed
+renames, ambiguous duplicate columns and unrelated missing schema requirements.
+After forward migrations, validation requires the canonical content columns and
+catalog. This lets existing baselined installations reach the rename migration
+without weakening the final schema check or requiring a database reset.
+
+New canonical requests allocate URLs from the headline inside the existing
+per-business transaction lock, adding a numeric suffix on collisions. Platform
+pages also consult the root slug registry. Non-Latin headlines use a stable
+hashed fallback. Headline changes preserve the stored URL. Explicit legacy API
+routes remain compatible, but the updated editors never send them.
+
+Linktree categories, optional business details and search/sharing customization
+use the existing `template_config` JSONB under `seo` with numeric `version: 1`.
+No new column, baseline change, migration or backfill is required. Legacy pages
+remain uncategorized; retired unversioned SEO settings are not resurrected.
+Shared validation bounds content and restricts stable category/type IDs. Owner
+updates retain the existing transaction, approval, timestamp and cache paths.
+
+
+## Advertising service retirement
+
+Advertising service routes, APIs, catalogs, seed helpers, and fresh-install tables have been removed. Apply `2026-10-15_remove_advertising_service.sql` through `pnpm db:migrate` on existing deployments. It deletes only the retired service content, service page identities and their dependent analytics, permission grants, entitlement, and tables. Linktrees, Forms, remaining route identities, tenant settings, and immutable audit history are preserved. The migration is idempotent and fresh installs never create the retired service. Historical Forms migration retains compatibility with pre-retirement schemas until the cleanup runs. No database reset is needed.
+
+## Linktree campaign flag retirement, 2026-10-15
+
+The Linktree campaign toggle is removed from the current baseline. Existing
+installations apply `2026-10-15_retire_linktree_campaign.sql` through `pnpm db:migrate`.
+It drops only the retired flag and its indexes, rebuilds the archive index
+without that flag, and removes its authorization catalog and plan field rules.
+Pages, content, publication/archive state, analytics and campaign attribution
+are preserved. Legacy backup imports ignore the retired flag. The compatibility
+check accepts the previous schema so the forward migration can run without a reset.
+
+## Saved page pins, 2026-10-20
+
+Apply `2026-10-20_page_pins.sql` through `pnpm db:migrate` before deploying
+this release. It adds non-null `is_pinned` flags (default false) to Forms and
+Linktrees, owner-scoped list indexes, and the Linktree `isPinned` permission
+field. The fresh baseline includes the same state. Existing pages and analytics
+are preserved; no reset is needed. Pins are dashboard preferences shared by
+managers of the same owner, rather than public-page settings. Linktree backups
+retain pins; newly created and duplicated pages start unpinned.
+
+## Analytics share links, 2026-10-20
+
+Apply `2026-10-20_analytics_sharing.sql` using `pnpm db:migrate` before deploying.
+The fresh baseline includes `73_analytics_sharing.sql`. This additive migration
+creates `analytics_share_links`, indexed by owner/page, with cascading owner and
+canonical public-page foreign keys. Existing data is preserved. `expires_at` is
+nullable: links have **no expiration by default**. Owners may choose hour/day/week/
+30-day presets or a future date/time, change expiry later, disable, or delete.
+Authentication codes use keyed HMAC hashes. Backups do not export share credentials.
+
+`2026-10-20_shared_form_responses.sql` adds `include_submissions` with a false
+default, preserving existing analytics-only grants and all saved responses.
+The fresh baseline includes the same column. Apply through `pnpm db:migrate`.
+
+`2026-10-20_share_code_reveal.sql` adds nullable `code_reveal_ciphertext` (bytea).
+New grants store one encrypted recovery copy, consumed under a row lock. Existing
+grants retain their original code/hash and get no recovery copy. No page or
+response data changes. Apply through `pnpm db:migrate`; never reset production.
+
+## New-page appearance defaults
+
+Apply `2026-10-24_new_page_appearance_defaults.sql` using `pnpm db:migrate`
+before deploying this release. It adds the validated `business_defaults.background_pattern`
+preference and the defaults permission field. Existing saved colors, Linktrees,
+links and analytics are preserved. Only the database default for future default rows
+changes to Dark (`#161b22`); the new pattern preference starts at `grid45`.
+Business backups include this preference; older backups receive the new fallback.

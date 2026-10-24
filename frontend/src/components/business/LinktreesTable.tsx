@@ -1,31 +1,27 @@
 "use client";
 
+import { PageSelectionCheckbox, usePageSelection } from "@/components/shared/PageSelection";
+import { PageListMobileCard } from "@/components/shared/PageListMobileCard";
+import { LinktreeRowActions } from "./LinktreeRowActions";
 import { memo, useCallback, useState, type ComponentType } from "react";
-import Image from "next/image";
+import {
+  type AnalyticsSharingControl,
+} from "@/features/analytics-sharing/components/AnalyticsShareButton";
+import {
+  type PagePinControl,
+} from "@/components/shared/PagePinButton";
+import { pageListLogo } from "@/components/shared/page-list-logo";
 import { PageListImage } from "@/components/shared/PageListImage";
 import { PageListUrl } from "@/components/shared/PageListUrl";
 import { PageListTraffic } from "@/components/shared/PageListTraffic";
 
-import {
-  Archive,
-  ArchiveRestore,
-  CirclePause,
-  CirclePlay,
-  Trash2,
-  Eye,
-  Copy,
-  CopyPlus,
-  Check,
-  Edit,
-  Link as LinkIcon,
-  MousePointerClick,
-} from "lucide-react";
+import { Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/utils/clipboard";
 import { formatDate, getAbsoluteUrl } from "@/lib/utils/linktree-utils";
 import {
   ManagementTable,
-  MANAGEMENT_TABLE_CARD_CLASS,
+  PAGE_LIST_ACTION_COLUMN_WIDTH,
   MANAGEMENT_TABLE_ROW_CLASS,
   type ManagementTableColumn,
   type ManagementTablePagination,
@@ -37,7 +33,6 @@ import {
   type PageListTrafficLabels,
 } from "@/components/business/LinktreeMeta";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
-import { Tooltip } from "@/components/shared/Tooltip";
 import {
   KURDISH_LINKTREE_LIST_COPY,
   type LinktreeListCopy,
@@ -48,9 +43,11 @@ interface LinktreesTableProps {
   data?: Linktree[];
   isLoading?: boolean;
   onEdit?: (id: string) => void;
-  onDuplicate?: (item: Linktree) => void;
+
   onDelete?: (id: string, uid: string, name: string) => void;
   onViewAnalytics?: (id: string, name: string) => void;
+  pinControl?: PagePinControl;
+  sharing?: AnalyticsSharingControl;
   viewActionLabel?: string;
   emptyTitle?: string;
   /**
@@ -64,9 +61,7 @@ interface LinktreesTableProps {
   trafficLabels?: PageListTrafficLabels;
   emptyDescription?: string;
   pagination?: ManagementTablePagination;
-  onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
-  onToggleArchive?: (id: string, isArchived: boolean) => void;
-  onToggleStatus?: (id: string, status: "active" | "inactive") => void;
+
   listCopy?: Partial<LinktreeListCopy>;
 }
 
@@ -110,7 +105,11 @@ function buildColumns(
       : []),
     { key: "created", header: labels.created, width: "w-28", hideBelow: "xl" },
     { key: "updated", header: labels.updated, width: "w-28", hideBelow: "xl" },
-    { key: "actions", header: labels.actions, width: "w-28 sm:w-32" },
+    {
+      key: "actions",
+      header: labels.actions,
+      width: PAGE_LIST_ACTION_COLUMN_WIDTH,
+    },
   ];
 }
 
@@ -123,12 +122,12 @@ function getPublicIdentifier(item: Linktree): string {
 const TableRow = memo(function TableRow({
   item,
   onEdit,
-  onDuplicate,
+
   onDelete,
   onViewAnalytics,
-  onToggleCampaign,
-  onToggleArchive,
-  onToggleStatus,
+  pinControl,
+  sharing,
+
   copiedUid,
   onCopy,
   formatDate,
@@ -143,12 +142,12 @@ const TableRow = memo(function TableRow({
 }: {
   item: Linktree;
   onEdit?: (id: string) => void;
-  onDuplicate?: (item: Linktree) => void;
+
   onDelete?: (id: string, uid: string, name: string) => void;
   onViewAnalytics?: (id: string, name: string) => void;
-  onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
-  onToggleArchive?: (id: string, isArchived: boolean) => void;
-  onToggleStatus?: (id: string, status: "active" | "inactive") => void;
+  pinControl?: PagePinControl;
+  sharing?: AnalyticsSharingControl;
+
   copiedUid: string | null;
   onCopy: (uid: string, e: React.MouseEvent) => void;
   formatDate: (dateString: string) => string;
@@ -161,6 +160,7 @@ const TableRow = memo(function TableRow({
   labels: LinktreeListCopy;
   metaCopy?: Partial<LinktreeListCopy>;
 }) {
+  const selection = usePageSelection();
   const publicIdentifier = getPublicIdentifier(item);
   const handleView = useCallback(
     (uid: string) => {
@@ -170,35 +170,22 @@ const TableRow = memo(function TableRow({
     [publicPathPrefix],
   );
 
-  const isCampaignActive = !!item.is_campaign_active;
-
   return (
     <tr
-      className={`${MANAGEMENT_TABLE_ROW_CLASS} ${
-        isCampaignActive
-          ? "bg-emerald-50/35 dark:bg-emerald-500/[0.04] hover:bg-emerald-50/55 dark:hover:bg-emerald-500/[0.07]"
-          : ""
-      }`}
+      className={MANAGEMENT_TABLE_ROW_CLASS}
       style={{
         contentVisibility: "auto",
         containIntrinsicSize: "80px",
       }}
     >
+      {selection && <td className="px-2 py-3"><PageSelectionCheckbox id={item.id} name={item.name} /></td>}
       <td className="px-2 sm:px-3 py-3">
         <div className="relative w-8 h-8 sm:w-10 sm:h-10 mx-auto">
           <PageListImage
-            src={
-              item.image || item.business_default_avatar || item.business_logo
-            }
+            src={pageListLogo(item.image, item.business_default_avatar)}
             name={item.name}
             variant="table"
           />
-          {isCampaignActive && (
-            <span
-              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
-              title={labels.campaignActive}
-            />
-          )}
         </div>
       </td>
       <td className="px-2 sm:px-3 py-3">
@@ -209,23 +196,28 @@ const TableRow = memo(function TableRow({
           item={item}
           showAgeBadge={showPageMeta}
           showTemplate={showPageMeta}
-          onToggleCampaign={onToggleCampaign}
           listCopy={metaCopy}
         />
       </td>
       <td className="px-2 sm:px-3 py-3 hidden md:table-cell">
-        <div className="text-xs text-gray-600 wrap-break-word line-clamp-2">
-          {item.subtitle || "—"}
-        </div>
-        <div className="mt-0.5 text-[11px] text-gray-400 wrap-break-word line-clamp-2">
-          {item.description?.trim() || "—"}
-        </div>
+        {item.subtitle?.trim() && (
+          <div className="text-xs text-gray-600 wrap-break-word line-clamp-2">
+            {item.subtitle?.trim()}
+          </div>
+        )}
+        {item.description?.trim() && (
+          <div className="mt-0.5 text-[11px] text-gray-400 wrap-break-word line-clamp-2">
+            {item.description?.trim()}
+          </div>
+        )}
       </td>
       {!showPageMeta && (
         <td className="px-2 sm:px-3 py-3 hidden lg:table-cell">
-          <div className="text-xs text-gray-700 font-mono break-all">
-            {item.seo_name || "—"}
-          </div>
+          {item.seo_name?.trim() && (
+            <div className="text-xs text-gray-700 font-mono break-all">
+              {item.seo_name?.trim()}
+            </div>
+          )}
         </td>
       )}
       <td className="px-2 sm:px-3 py-3">
@@ -259,119 +251,8 @@ const TableRow = memo(function TableRow({
         </div>
       </td>
       <td className="px-2 sm:px-3 py-3">
-        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-start">
-          {onViewAnalytics && (
-            <Tooltip content={viewActionLabel} side="top">
-              <button
-                onClick={() => onViewAnalytics(item.id, item.name)}
-                className="p-1.5 rounded-lg text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label={viewActionLabel}
-              >
-                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </Tooltip>
-          )}
-          {onEdit && (
-            <Tooltip content={labels.editTable} side="top">
-              <button
-                onClick={() => onEdit(item.id)}
-                className="p-1.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label={labels.editTable}
-              >
-                <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </Tooltip>
-          )}
-          {onDuplicate && (
-            <Tooltip content={labels.duplicate} side="top">
-              <button
-                onClick={() => onDuplicate(item)}
-                className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label={labels.duplicate}
-              >
-                <CopyPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </Tooltip>
-          )}
-          {onToggleArchive && !item.is_default && (
-            <Tooltip
-              content={item.is_archived ? labels.restore : labels.archive}
-              side="top"
-            >
-              <button
-                onClick={() => onToggleArchive(item.id, !item.is_archived)}
-                className={`p-1.5 rounded-lg transition-all duration-150 active:scale-90 shrink-0 cursor-pointer ${
-                  item.is_archived
-                    ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
-                    : "text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
-                }`}
-                aria-label={
-                  metaCopy
-                    ? item.is_archived
-                      ? labels.restore
-                      : labels.archive
-                    : item.is_archived
-                      ? "Restore from archive"
-                      : "Archive"
-                }
-              >
-                {item.is_archived ? (
-                  <ArchiveRestore className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                ) : (
-                  <Archive className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                )}
-              </button>
-            </Tooltip>
-          )}
-          {onToggleStatus && !item.is_default && (
-            <Tooltip
-              content={
-                item.status === "inactive" ? labels.activate : labels.deactivate
-              }
-              side="top"
-            >
-              <button
-                onClick={() =>
-                  onToggleStatus(
-                    item.id,
-                    item.status === "inactive" ? "active" : "inactive",
-                  )
-                }
-                className={`p-1.5 rounded-lg transition-all duration-150 active:scale-90 shrink-0 cursor-pointer ${
-                  item.status === "inactive"
-                    ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
-                    : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
-                }`}
-                aria-label={
-                  metaCopy
-                    ? item.status === "inactive"
-                      ? labels.activate
-                      : labels.deactivate
-                    : item.status === "inactive"
-                      ? "Activate page"
-                      : "Deactivate page"
-                }
-              >
-                {item.status === "inactive" ? (
-                  <CirclePlay className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                ) : (
-                  <CirclePause className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                )}
-              </button>
-            </Tooltip>
-          )}
-          {onDelete && item.uid !== "id" && !item.is_default && (
-            <Tooltip content={labels.delete} side="top">
-              <button
-                onClick={() => onDelete(item.id, item.uid, item.name)}
-                className="p-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15 transition-all duration-150 active:scale-90 shrink-0 cursor-pointer"
-                aria-label={labels.delete}
-              >
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </Tooltip>
-          )}
-        </div>
+        <LinktreeRowActions item={item} onEdit={onEdit} onDelete={onDelete} onViewAnalytics={onViewAnalytics}
+          pinControl={pinControl} sharing={sharing} viewActionLabel={viewActionLabel} editLabel={labels.editTable} deleteLabel={labels.delete} openLabel={labels.viewButton} onOpen={() => handleView(publicIdentifier)} />
       </td>
     </tr>
   );
@@ -382,12 +263,12 @@ const TableRow = memo(function TableRow({
 const MobileCard = memo(function MobileCard({
   item,
   onEdit,
-  onDuplicate,
+
   onDelete,
   onViewAnalytics,
-  onToggleCampaign,
-  onToggleArchive,
-  onToggleStatus,
+  pinControl,
+  sharing,
+
   copiedUid,
   onCopy,
   onView,
@@ -402,12 +283,12 @@ const MobileCard = memo(function MobileCard({
 }: {
   item: Linktree;
   onEdit?: (id: string) => void;
-  onDuplicate?: (item: Linktree) => void;
+
   onDelete?: (id: string, uid: string, name: string) => void;
   onViewAnalytics?: (id: string, name: string) => void;
-  onToggleCampaign?: (id: string, isCampaignActive: boolean) => void;
-  onToggleArchive?: (id: string, isArchived: boolean) => void;
-  onToggleStatus?: (id: string, status: "active" | "inactive") => void;
+  pinControl?: PagePinControl;
+  sharing?: AnalyticsSharingControl;
+
   copiedUid: string | null;
   onCopy: (uid: string, e: React.MouseEvent) => void;
   onView: (uid: string) => void;
@@ -421,250 +302,24 @@ const MobileCard = memo(function MobileCard({
   metaCopy?: Partial<LinktreeListCopy>;
 }) {
   const publicIdentifier = getPublicIdentifier(item);
-  const isCampaignActive = !!item.is_campaign_active;
   return (
-    <div
-      className={`${MANAGEMENT_TABLE_CARD_CLASS} ${
-        isCampaignActive
-          ? "bg-emerald-50/35 dark:bg-emerald-500/[0.04] hover:bg-emerald-50/55 dark:hover:bg-emerald-500/[0.07]"
-          : ""
-      }`}
-      onClick={() => onView(publicIdentifier)}
-      style={{
-        contentVisibility: "auto",
-        containIntrinsicSize: "150px",
-      }}
+    <PageListMobileCard
+      title={item.name}
+      selection={<PageSelectionCheckbox id={item.id} name={item.name} />}
+      image={<PageListImage src={pageListLogo(item.image, item.business_default_avatar)} name={item.name} variant="table" />}
+      badges={<MetaBadgesComponent item={item} showAgeBadge={showPageMeta} showTemplate={showPageMeta} listCopy={metaCopy} />}
+      description={item.subtitle?.trim() ? <p className="line-clamp-2 text-xs text-gray-600 [overflow-wrap:anywhere]" dir="auto">{item.subtitle.trim()}</p> : undefined}
+      actions={<LinktreeRowActions item={item} onEdit={onEdit} onDelete={onDelete} onViewAnalytics={onViewAnalytics}
+        pinControl={pinControl} sharing={sharing} viewActionLabel={viewActionLabel} editLabel={labels.editTable} deleteLabel={labels.delete} openLabel={labels.viewButton} onOpen={() => onView(publicIdentifier)} />}
     >
-      <div className="relative h-16 w-16 shrink-0">
-        <div className="relative w-full h-full rounded-full overflow-hidden border border-gray-200">
-          <Image
-            src={
-              item.image ||
-              item.business_default_avatar ||
-              item.business_logo ||
-              "/images/DefaultAvatar.png"
-            }
-            alt={item.name}
-            fill
-            className="object-cover"
-            sizes="64px"
-            quality={80}
-            unoptimized
-          />
-        </div>
-        {isCampaignActive && (
-          <span
-            className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"
-            title={labels.campaignActive}
-          />
-        )}
+      <PageListUrl url={getAbsoluteUrl(publicIdentifier, publicPathPrefix)} displayUrl={`${publicPathPrefix}/${publicIdentifier}`} labels={labels}
+        copied={copiedUid === publicIdentifier} onCopy={(event) => onCopy(publicIdentifier, event)} onOpen={() => onView(publicIdentifier)} />
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+        {item.created_at && <span>{labels.created} {formatDate(item.created_at)}</span>}
+        {item.updated_at && <span>{labels.updated} {formatDate(item.updated_at)}</span>}
       </div>
-      <div className="flex-1 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <span className="text-base font-semibold text-gray-900 leading-tight wrap-break-word block mb-1">
-              {item.name}
-            </span>
-            <div className="text-xs text-gray-600 wrap-break-word line-clamp-2">
-              {item.subtitle || "—"}
-            </div>
-            <MetaBadgesComponent
-              item={item}
-              showAgeBadge={showPageMeta}
-              showTemplate={showPageMeta}
-              onToggleCampaign={onToggleCampaign}
-              listCopy={metaCopy}
-              className="mt-1.5"
-            />
-          </div>
-          <div className="flex items-center gap-1">
-            {onViewAnalytics && (
-              <Tooltip content={viewActionLabel} side="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewAnalytics(item.id, item.name);
-                  }}
-                  className="flex items-center justify-center p-2 rounded-lg text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:bg-sky-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label={viewActionLabel}
-                >
-                  <Eye className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-            {onEdit && (
-              <Tooltip content={labels.editTable} side="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(item.id);
-                  }}
-                  className="flex items-center justify-center p-2 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label={labels.editTable}
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-            {onDuplicate && (
-              <Tooltip content={labels.duplicate} side="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDuplicate(item);
-                  }}
-                  className="flex items-center justify-center p-2 rounded-lg text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label={labels.duplicate}
-                >
-                  <CopyPlus className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-            {onToggleArchive && !item.is_default && (
-              <Tooltip
-                content={
-                  metaCopy
-                    ? item.is_archived
-                      ? labels.restore
-                      : labels.archive
-                    : item.is_archived
-                      ? "هێنانەدەرەوە لە ئەرشیف"
-                      : labels.archive
-                }
-                side="top"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleArchive(item.id, !item.is_archived);
-                  }}
-                  className={`flex items-center justify-center p-2 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-                    item.is_archived
-                      ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
-                      : "hover:bg-purple-50 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-500/15"
-                  }`}
-                  aria-label={
-                    metaCopy
-                      ? item.is_archived
-                        ? labels.restore
-                        : labels.archive
-                      : item.is_archived
-                        ? "هێنانەدەرەوە لە ئەرشیف"
-                        : labels.archive
-                  }
-                >
-                  {item.is_archived ? (
-                    <ArchiveRestore className="h-4 w-4" />
-                  ) : (
-                    <Archive className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-            )}
-            {onToggleStatus && !item.is_default && (
-              <Tooltip
-                content={
-                  item.status === "inactive"
-                    ? labels.activate
-                    : labels.deactivate
-                }
-                side="top"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleStatus(
-                      item.id,
-                      item.status === "inactive" ? "active" : "inactive",
-                    );
-                  }}
-                  className={`flex items-center justify-center p-2 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-                    item.status === "inactive"
-                      ? "hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-500/15"
-                      : "hover:bg-rose-50 text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15"
-                  }`}
-                  aria-label={
-                    metaCopy
-                      ? item.status === "inactive"
-                        ? labels.activate
-                        : labels.deactivate
-                      : item.status === "inactive"
-                        ? "چالاککردن"
-                        : "ناچالاککردن"
-                  }
-                >
-                  {item.status === "inactive" ? (
-                    <CirclePlay className="h-4 w-4" />
-                  ) : (
-                    <CirclePause className="h-4 w-4" />
-                  )}
-                </button>
-              </Tooltip>
-            )}
-            {onDelete && item.uid !== "id" && !item.is_default && (
-              <Tooltip content={labels.delete} side="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(item.id, item.uid, item.name);
-                  }}
-                  className="flex items-center justify-center p-2 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:text-rose-300 dark:hover:bg-rose-500/15 transition-all duration-150 active:scale-90 cursor-pointer"
-                  aria-label={labels.delete}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-700">
-          <Tooltip
-            content={
-              copiedUid === publicIdentifier ? labels.copied : labels.copyLink
-            }
-            side="top"
-          >
-            <button
-              onClick={(e) => onCopy(publicIdentifier, e)}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
-              aria-label={labels.copyLink}
-            >
-              {copiedUid === publicIdentifier ? (
-                <Check className="h-3.5 w-3.5 text-green-600" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-gray-500" />
-              )}
-              <span className="font-mono text-gray-700">
-                {publicPathPrefix}/{publicIdentifier}
-              </span>
-            </button>
-          </Tooltip>
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-gray-600 bg-gray-50">
-            {labels.created} {formatDate(item.created_at)}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 text-gray-600 bg-gray-50">
-            {labels.updated} {formatDate(item.updated_at)}
-          </span>
-          {showPageMeta && item.analytics && (
-            <span className="inline-flex items-center gap-2 px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
-              <Tooltip content={trafficLabels.views} side="top">
-                <span className="inline-flex items-center gap-1 cursor-default">
-                  <Eye className="h-3.5 w-3.5 text-gray-400" />
-                  {item.analytics.unique_views.toLocaleString()}
-                </span>
-              </Tooltip>
-              <Tooltip content={trafficLabels.interactions} side="top">
-                <span className="inline-flex items-center gap-1 cursor-default">
-                  <MousePointerClick className="h-3.5 w-3.5 text-gray-400" />
-                  {item.analytics.unique_clicks.toLocaleString()}
-                </span>
-              </Tooltip>
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
+      {showPageMeta && item.analytics && <PageListTraffic views={item.analytics.unique_views} interactions={item.analytics.unique_clicks} labels={trafficLabels} compact />}
+    </PageListMobileCard>
   );
 });
 
@@ -673,9 +328,11 @@ export const LinktreesTable = memo(function LinktreesTable({
   data = [],
   isLoading = false,
   onEdit,
-  onDuplicate,
+
   onDelete,
   onViewAnalytics,
+  pinControl,
+  sharing,
   viewActionLabel = "ئامار",
   emptyTitle = "هیچ داتایەک نەدۆزرایەوە",
   emptyDescription = "هیچ داتایەک بۆ پیشاندان نییە.",
@@ -684,9 +341,7 @@ export const LinktreesTable = memo(function LinktreesTable({
   showPageMeta,
   MetaBadgesComponent = LinktreeMetaBadges,
   trafficLabels = LINKTREE_TRAFFIC_LABELS,
-  onToggleCampaign,
-  onToggleArchive,
-  onToggleStatus,
+
   listCopy,
 }: LinktreesTableProps) {
   const labels = { ...KURDISH_LINKTREE_LIST_COPY, ...listCopy };
@@ -696,6 +351,7 @@ export const LinktreesTable = memo(function LinktreesTable({
   // The optional slug and traffic columns are table-level decisions so every
   // body row remains aligned with the header, even when one row has no totals.
   const showTraffic = displaysPageMeta && data.some((item) => item.analytics);
+  const selection = usePageSelection();
   const columns = buildColumns(
     displaysPageMeta,
     showTraffic,
@@ -703,6 +359,7 @@ export const LinktreesTable = memo(function LinktreesTable({
     labels,
   );
 
+  if (selection) columns.unshift({ key: "selection", header: <span className="sr-only">{selection.selectLabel}</span>, width: "w-12" });
   const formatDateString = useCallback((dateString: string) => {
     return formatDate(dateString);
   }, []);
@@ -751,6 +408,7 @@ export const LinktreesTable = memo(function LinktreesTable({
       columns={columns}
       getRowKey={(item) => item.id}
       isLoading={isLoading}
+      skeletonLeadingCell={selection ? "checkbox" : "avatar"}
       loadingLabel={labels.loadingTable}
       paginationCopy={{
         of: labels.paginationOf,
@@ -768,12 +426,12 @@ export const LinktreesTable = memo(function LinktreesTable({
         <TableRow
           item={item}
           onEdit={onEdit}
-          onDuplicate={onDuplicate}
+
           onDelete={handleDelete}
           onViewAnalytics={onViewAnalytics}
-          onToggleCampaign={onToggleCampaign}
-          onToggleArchive={onToggleArchive}
-          onToggleStatus={onToggleStatus}
+          pinControl={pinControl}
+          sharing={sharing}
+
           copiedUid={copiedUid}
           onCopy={handleCopyUrl}
           formatDate={formatDateString}
@@ -791,12 +449,12 @@ export const LinktreesTable = memo(function LinktreesTable({
         <MobileCard
           item={item}
           onEdit={onEdit}
-          onDuplicate={onDuplicate}
+
           onDelete={handleDelete}
           onViewAnalytics={onViewAnalytics}
-          onToggleCampaign={onToggleCampaign}
-          onToggleArchive={onToggleArchive}
-          onToggleStatus={onToggleStatus}
+          pinControl={pinControl}
+          sharing={sharing}
+
           copiedUid={copiedUid}
           onCopy={handleCopyUrl}
           onView={handleView}

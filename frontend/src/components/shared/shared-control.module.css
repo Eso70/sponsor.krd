@@ -1,0 +1,45 @@
+.surface {
+  border: 1px solid transparent !important;
+  background: var(--shared-control-surface, #f3f5f7) !important;
+  background-image: none !important;
+  color: var(--shared-control-text, #475569) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.surface:global(.shared-control) {
+  border-radius: var(--shared-control-radius, 14px) !important;
+}
+.inset {
+  --shared-control-surface: var(--shared-control-hover, #eaeef2);
+}
+.surface::placeholder {
+  color: var(--shared-control-muted, #94a3b8) !important;
+}
+.surface.error,
+.surface[aria-invalid="true"] {
+  background: var(--shared-control-error, #fff1f2) !important;
+}
+.surface.error::placeholder,
+.surface[aria-invalid="true"]::placeholder {
+  color: var(--shared-control-error-text, #dc2626) !important;
+}
+.surface[aria-checked="true"],
+.surface[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--theme-primary, #64748b) 8%, var(--shared-control-surface, #f3f5f7)) !important;
+}
+.surface:global(.theme-fill) {
+  background: var(--theme-css, var(--theme-primary, #64748b)) !important;
+  color: var(--theme-ink, #ffffff) !important;
+}
+.button:hover:not(:disabled),
+.button[aria-expanded="true"]:not(:disabled) {
+  background: var(--shared-control-hover, #eaeef2) !important;
+}
+.button:global(.theme-fill):hover:not(:disabled) {
+  background: var(--theme-css, var(--theme-primary, #64748b)) !important;
+  filter: brightness(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface { transition: none; }
+}

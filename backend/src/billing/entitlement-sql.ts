@@ -23,7 +23,6 @@
  * fragment builder that skips the check is one refactor away from splicing a
  * column name that came from a request.
  */
-import { featurePlanSql } from './feature-plan-policy';
 import { subscriptionAccessSql } from './subscription-access';
 
 function assertSqlAlias(alias: string): void {
@@ -67,13 +66,11 @@ export function entitledSql(
      WHERE subscription.business_id = ${businessAlias}.id
        AND ${subscriptionAccessSql('subscription')}
        AND plan_value.value = 'true'::jsonb
-       ${entitlementKey === 'feature.advertising_page' ? `AND ${featurePlanSql('advertising', businessAlias)}` : ''}
   )`;
 }
 
 /** Boolean entitlements that gate a public surface. */
 export const ENTITLEMENT = {
-  advertisingPage: 'feature.advertising_page',
   removeBranding: 'feature.remove_branding',
   tiktok: 'feature.tiktok',
 } as const;

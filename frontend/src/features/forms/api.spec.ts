@@ -7,6 +7,72 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 describe("forms API adapters", () => {
   it.each(["business", "platform"] as const)(
+    "%s uploads copy images once and saves edited fields and address atomically",
+    async (scope) => {
+      const data = "data:image/png;base64,aGVsbG8=";
+      const form = {
+        ...createForm("en"),
+        name: "Custom copy",
+        headline: "New headline",
+        slogan: "New slogan",
+        banner: data,
+        logo: data,
+        bannerImages: [data],
+      };
+      const base = scope === "platform" ? "/api/platform/forms" : "/api/forms";
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ url: "/images/upload/copy.png" })
+        .mockResolvedValueOnce({ id: "new-id" });
+      await formsApi.duplicate(scope, "source", form, "custom-copy");
+      expect(apiRequest).toHaveBeenCalledTimes(2);
+      expect(apiRequest).toHaveBeenNthCalledWith(
+        1,
+        `${base}/upload`,
+        expect.objectContaining({ method: "POST", body: expect.any(FormData) }),
+      );
+      expect(apiRequest).toHaveBeenLastCalledWith(`${base}/source/duplicate`, {
+        method: "POST",
+        json: {
+          slug: "custom-copy",
+          definition: expect.objectContaining({
+            name: form.name,
+            headline: form.headline,
+            slogan: form.slogan,
+            banner: "/images/upload/copy.png",
+            logo: "/images/upload/copy.png",
+            bannerImages: ["/images/upload/copy.png"],
+          }),
+        },
+      });
+      expect(form.banner).toBe(data);
+    },
+  );
+  for (const scope of ["business", "platform"] as const) {
+    it.each(["en", "ckb", "ar"] as const)(
+      `${scope} saves untouched optional %s copy as empty fields`,
+      async (language) => {
+        const form = { ...createForm(language), name: "Contact" };
+        await formsApi.save(scope, form, true);
+        expect(apiRequest).toHaveBeenLastCalledWith(
+          scope === "platform" ? "/api/platform/forms" : "/api/forms",
+          expect.objectContaining({
+            method: "POST",
+            json: expect.objectContaining({
+              headline: "",
+              description: "",
+              slogan: "",
+              purpose: "",
+              finalTitle: "",
+              finalDescription: "",
+              buttonText: "",
+              buttonUrl: "",
+            }),
+          }),
+        );
+      },
+    );
+  }
+  it.each(["business", "platform"] as const)(
     "%s loads insights and responses through owner-scoped endpoints",
     async (scope) => {
       const signal = new AbortController().signal;

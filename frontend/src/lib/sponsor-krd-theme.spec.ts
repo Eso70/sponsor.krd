@@ -22,6 +22,7 @@ describe("Sponsor.krd platform theme variables", () => {
     );
 
     expect(variables["--sponsor-krd-brand-accent"]).toBe("#2563eb");
+    expect(decodeURIComponent(variables["--app-default-cursor"])).toContain('stroke="#2563eb"');
     expect(variables["--sponsor-krd-accent"]).toBe("#2563eb");
     expect(variables["--sponsor-krd-brand-gradient"]).toBe(
       variables["--sponsor-krd-accent-gradient"],

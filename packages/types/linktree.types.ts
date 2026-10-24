@@ -2,20 +2,12 @@ import type {
   PublicPageAnalytics,
   PublicRouteTracking,
 } from "./analytics.types";
+import type { LinktreeSeo } from "./linktree-seo.cjs";
 /**
  * The background pattern catalogue used by Linktree pages.
  */
-export const BACKGROUND_PATTERN_STYLES = [
-  "none",
-  "grid",
-  "grid45",
-  "dots",
-  "diagonal",
-  "cross",
-  "circles",
-  "waves",
-  "zigzag",
-] as const;
+import { BACKGROUND_PATTERN_STYLES } from "./linktree-defaults.cjs";
+export { BACKGROUND_PATTERN_STYLES } from "./linktree-defaults.cjs";
 
 export type BackgroundPatternStyle = (typeof BACKGROUND_PATTERN_STYLES)[number];
 
@@ -73,6 +65,8 @@ export const LINKTREE_DEFAULT_WHATSAPP_QUESTIONS = [
 export type LinktreeTemplateConfig = Record<string, unknown> & {
   /** Opt-in display badge next to the page name. Defaults to false. */
   verification_badge?: boolean;
+  /** Legacy unversioned objects are read-only compatibility inputs. */
+  seo?: LinktreeSeo | Record<string, unknown>;
 };
 
 export interface LinkMetadata extends Record<string, unknown> {
@@ -96,8 +90,16 @@ export interface LinktreeLink extends LinkMetadata {
   metadata: LinkMetadata;
 }
 
+/** Canonical content fields; legacy aliases stay available during client upgrades. */
+export interface LinktreeContentFields {
+  headline?: string;
+  slogan?: string | null;
+  slogan_color?: string | null;
+  logo?: string | null;
+}
+
 /** Linktree list-card projection. */
-export interface LinktreeListItem {
+export interface LinktreeListItem extends LinktreeContentFields {
   id: string;
   uid: string;
   name: string;
@@ -113,7 +115,7 @@ export interface LinktreeListItem {
   template_config?: LinktreeTemplateConfig | null;
   whatsapp_modal_enabled?: boolean | null;
   status?: LinktreeStatus;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: string | null;
   is_default?: boolean;
@@ -131,32 +133,6 @@ export interface LinktreeListItem {
   };
 }
 
-/** A persisted campaign revenue entry attached to one Linktree page. */
-export interface CampaignRevenueRecord {
-  id: string;
-  linktreeId: string;
-  advertisementPriceIqd: number;
-  durationDays: number;
-  startDate: string;
-  endDate: string;
-  campaignSpendUsd: number;
-  usdToIqdRate: number;
-  campaignSpendIqd: number;
-  netRevenueIqd: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** User-entered values; converted spend and revenue are calculated server-side. */
-export interface CampaignRevenueInput {
-  advertisementPriceIqd: number;
-  startDate: string;
-  endDate: string;
-  campaignSpendUsd: number;
-  usdToIqdRate: number;
-}
-
-/** A Linktree returned by GET /linktrees for the business dashboard. */
 export interface BusinessLinktreeSummary extends LinktreeListItem {
   subtitle: string | null;
   subtitle_color?: string | null;
@@ -171,7 +147,7 @@ export interface BusinessLinktreeSummary extends LinktreeListItem {
   footer_phone: string | null;
   footer_hidden: boolean | null;
   status: LinktreeStatus;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: string | null;
   is_default: boolean;
@@ -179,7 +155,8 @@ export interface BusinessLinktreeSummary extends LinktreeListItem {
 }
 
 /** The public Linktree projection. It deliberately excludes business secrets. */
-export interface PublicLinktree {
+export interface PublicLinktree extends LinktreeContentFields {
+  updated_at?: string;
   id: string;
   uid: string;
   name: string;
@@ -196,7 +173,7 @@ export interface PublicLinktree {
   footer_phone: string | null;
   footer_hidden: boolean | null;
   status: LinktreeStatus;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: string | null;
   is_default: boolean;
@@ -223,7 +200,7 @@ export interface PublicLinktreePayload {
 }
 
 /** Input accepted by reusable template previews as well as public responses. */
-export interface LinktreePresentation {
+export interface LinktreePresentation extends LinktreeContentFields {
   id: string;
   uid: string;
   name: string;

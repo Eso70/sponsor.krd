@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
+import { SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 /** Consistent modal footer actions with optional loading and single-action modes. */
@@ -39,7 +40,7 @@ export function ModalFooterActions({
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className={`flex items-center justify-center border border-slate-200 font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5 cursor-pointer ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
+            className={`${SHARED_SOFT_BUTTON_CLASS} flex items-center justify-center font-bold disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
           >
             {cancelLabel}
           </button>
@@ -54,7 +55,7 @@ export function ModalFooterActions({
           type="button"
           onClick={onSubmit}
           disabled={submitDisabled || isSubmitting}
-          className={`flex items-center justify-center gap-2 border font-bold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${submitTone === "secondary" ? "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10" : "theme-fill border-transparent text-[var(--theme-ink)] hover:brightness-95"} ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
+          className={`${SHARED_SOFT_BUTTON_CLASS} flex items-center justify-center gap-2 font-bold disabled:cursor-not-allowed disabled:opacity-60 ${submitTone === "secondary" ? "" : "theme-fill"} ${compact ? "h-9 rounded-lg px-5 text-xs" : "h-11 w-full rounded-xl text-sm"}`}
         >
           {isSubmitting ? (
             <>

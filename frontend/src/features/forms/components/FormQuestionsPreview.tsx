@@ -2,6 +2,8 @@
 import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
+import { RadioField } from "@/components/shared/RadioField";
+import { DateInput } from "@/components/shared/DateTimeInput";
 import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import { formText } from "../forms-localization";
 import type { FormDraft, FormLanguage, FormQuestion } from "../types";
@@ -146,46 +148,20 @@ export function FormQuestionsPreview({
                 />
               ) : question.type === "choice" ? (
                 question.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex min-h-9 items-center gap-2 rounded-lg border border-slate-400/30 px-3 py-2 text-xs"
-                  >
-                    {isFormImage(question.optionImages?.[index] ?? "") && (
-                      <FormMediaPreview
-                        option
-                        imageTitle={option || `${copy.options} ${index + 1}`}
-                        images={[question.optionImages![index]]}
-                        copy={copy}
-                      />
-                    )}
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`${id}-${question.id}`}
-                        value={option}
-                        checked={answers[question.id] === option}
-                        required={question.required}
-                        aria-describedby={
-                          question.description
-                            ? `${id}-${question.id}-description`
-                            : undefined
-                        }
-                        onChange={(event) =>
-                          setAnswers((current) => ({
-                            ...current,
-                            [question.id]: event.target.value,
-                          }))
-                        }
-                      />
-                      {option || `${copy.options} ${index + 1}`}
-                    </label>
-                  </div>
+                  <RadioField key={index} label={option || `${copy.options} ${index + 1}`}
+                    name={`${id}-${question.id}`} value={option}
+                    checked={answers[question.id] === option} required={question.required}
+                    aria-describedby={question.description ? `${id}-${question.id}-description` : undefined}
+                    onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))}
+                    media={isFormImage(question.optionImages?.[index] ?? "") ?
+                      <FormMediaPreview option imageTitle={option || `${copy.options} ${index + 1}`}
+                        images={[question.optionImages![index]]} copy={copy} /> : undefined} />
                 ))
               ) : question.type === "phone" ? (
                 <PhoneNumberInput
                   language={language}
                   inputClassName={FORM_QUESTION_INPUT_CLASS}
-                  selectorClassName="!h-10 !rounded-lg !px-2 !py-0 !text-base sm:!text-sm"
+                  selectorClassName="!h-10 !rounded-2xl !px-2 !py-0 !text-base sm:!text-sm"
                   label={
                     formText(question.label, question.labelKey, language) ||
                     copy.questionLabel
@@ -213,6 +189,13 @@ export function FormQuestionsPreview({
                       : undefined
                   }
                 />
+              ) : question.type === "date" ? (
+                <DateInput hideLabel locale={language}
+                  label={formText(question.label, question.labelKey, language) || copy.questionLabel}
+                  ariaDescribedBy={question.description ? `${id}-${question.id}-description` : undefined}
+                  value={answers[question.id] || ""} required={question.required}
+                  accent="var(--preview-accent)"
+                  onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} />
               ) : (
                 <ModalTextInput
                   aria-describedby={
@@ -228,11 +211,9 @@ export function FormQuestionsPreview({
                   type={
                     question.type === "email"
                       ? "email"
-                      : question.type === "date"
-                        ? "date"
-                        : question.labelKey === "age"
-                          ? "number"
-                          : "text"
+                      : question.labelKey === "age"
+                        ? "number"
+                        : "text"
                   }
                   min={question.labelKey === "age" ? 0 : undefined}
                   step={question.labelKey === "age" ? 1 : undefined}

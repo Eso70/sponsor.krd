@@ -136,7 +136,7 @@ export function FormTextComponentEditor({
         </div>
         <ModalTextArea
           aria-label={copy.sectionText}
-          placeholder={labels.textHint}
+          placeholder={copy.sectionText}
           value={block.text}
           maxLength={2000}
           rows={4}

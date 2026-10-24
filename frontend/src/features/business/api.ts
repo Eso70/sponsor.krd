@@ -46,16 +46,6 @@ export async function logoutBusiness(): Promise<void> {
   await apiRequest("/api/auth/logout", { method: "POST" });
 }
 
-export async function setBusinessLinktreeCampaignStatus(
-  linktreeId: string,
-  isCampaignActive: boolean,
-): Promise<void> {
-  await apiRequest(`/api/linktrees/${linktreeId}/campaign-status`, {
-    method: "PATCH",
-    json: { is_campaign_active: isCampaignActive },
-  });
-}
-
 /**
  * Ends a platform-administrator impersonation of this business and returns the
  * console URL to go back to. Distinct from `logoutBusiness` so the server can

@@ -1,0 +1,74 @@
+.frame {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #edf0f4;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.header {
+  background: #f7f8fa;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.header th {
+  color: #64748b;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.body > tr,
+.mobile > div {
+  background: transparent;
+  border-color: #edf0f4;
+}
+
+.body > tr:last-child { border-bottom: 0; }
+
+.body > tr:hover,
+.mobile > div:hover { background: #f8fafc; }
+
+:global(.dark) .frame {
+  border-color: rgb(255 255 255 / 6%);
+  background: #1c222b;
+}
+
+:global(.dark) .header {
+  background: rgb(255 255 255 / 3%);
+  border-color: rgb(255 255 255 / 6%);
+}
+
+:global(.dark) .header th { color: #a8b1bf; }
+
+:global(.dark) .body > tr,
+:global(.dark) .mobile > div {
+  background: transparent;
+  border-color: rgb(255 255 255 / 6%);
+}
+
+:global(.dark) .body > tr:hover,
+:global(.dark) .mobile > div:hover { background: rgb(255 255 255 / 3%); }
+
+.card { container: collection-card / inline-size; }
+.cardActions { display: flex; align-items: center; gap: 4px; }
+@container collection-card (max-width: 320px) {
+  .cardActions { flex-wrap: wrap; gap: 8px; }
+  .cardActions > :is(button, [data-page-action])[data-primary-action="true"] { flex: 1 1 calc(50% - 4px); }
+  .cardActions > :is(button, [data-page-action]):not([data-primary-action="true"]) { flex: 1 1 0; width: auto; }
+}
+
+.rowActions { display: grid; grid-template-columns: repeat(3, 32px); width: max-content; max-width: 100%; align-items: center; gap: 4px; }
+.rowActions > button { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+@container collection-card (max-width: 320px) {
+  .cardActions > :is(button, [data-page-action]) { min-width: 32px; min-height: 32px; }
+}
+@media (min-width: 640px) {
+  .rowActions { grid-template-columns: repeat(3, 36px); gap: 6px; }
+  .rowActions > button { width: 36px; height: 36px; }
+}

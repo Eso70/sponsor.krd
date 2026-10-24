@@ -1,3 +1,9 @@
+import {
+  validProductQuantity,
+  validProductPrice,
+  validProductPriceBreaks,
+  priceProductLine,
+} from '@linktree/types/form-product-pricing.cjs';
 import { BadRequestException } from '@nestjs/common';
 import type { FormQuestion, FormProductAnswer } from '@linktree/types';
 
@@ -9,7 +15,12 @@ export function priceProductAnswer(
   const config = question.productSelection;
   if (
     !config?.items.length ||
-    config.items.some((item) => !item.name.trim() || item.unitPrice === null)
+    config.items.some(
+      (item) =>
+        !item.name.trim() ||
+        !validProductPrice(item.unitPrice) ||
+        !validProductPriceBreaks(item.unitPrice, item.priceBreaks),
+    )
   )
     throw new BadRequestException('Invalid product configuration');
   let selection: unknown;
@@ -27,9 +38,7 @@ export function priceProductAnswer(
       ([id, quantity]) =>
         !config.items.some((item) => item.id === id) ||
         typeof quantity !== 'string' ||
-        (quantity !== '' &&
-          (!/^(?:\d+(?:\.\d{0,3})?|\.\d{1,3})$/.test(quantity) ||
-            Number(quantity) > 100_000)),
+        !validProductQuantity(quantity),
     )
   )
     throw new BadRequestException('Invalid product quantity');
@@ -38,14 +47,9 @@ export function priceProductAnswer(
   const items = config.items.flatMap((item) => {
     const quantity = Number(quantities.get(item.id) || 0);
     if (!quantity) return [];
-    const unitPrice = item.unitPrice!;
-    const minor = Number(
-      (BigInt(Math.round(unitPrice * 100)) *
-        BigInt(Math.round(quantity * 1000)) +
-        500n) /
-        1000n,
-    );
-    totalMinor += minor;
+    const pricing = priceProductLine(item, quantities.get(item.id) || '');
+    const { unitPrice, lineTotal } = pricing;
+    totalMinor += Math.round(lineTotal * 100);
     return [
       {
         id: item.id,
@@ -53,7 +57,16 @@ export function priceProductAnswer(
         unit: item.unit,
         quantity,
         unitPrice,
-        lineTotal: minor / 100,
+        lineTotal,
+        ...(item.priceBreaks?.length
+          ? {
+              baseUnitPrice: pricing.baseUnitPrice,
+              discount: pricing.discount,
+              ...(pricing.priceBreakMinimum === undefined
+                ? {}
+                : { priceBreakMinimum: pricing.priceBreakMinimum }),
+            }
+          : {}),
       },
     ];
   });

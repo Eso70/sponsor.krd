@@ -1,3 +1,4 @@
+import { PagePinDto } from '../common/page-pin.dto';
 import {
   Body,
   Controller,
@@ -23,7 +24,6 @@ import { CreateLinktreeDto } from '../linktrees/dto/create-linktree.dto';
 import { DuplicateLinktreeDto } from '../linktrees/dto/duplicate-linktree.dto';
 import {
   ToggleLinktreeArchiveDto,
-  ToggleLinktreeCampaignDto,
   ToggleLinktreeStatusDto,
 } from '../linktrees/dto/update-linktree.dto';
 import { uploadLinktreeImage } from '../linktrees/linktree-image-upload';
@@ -138,6 +138,18 @@ export class PlatformLinktreesController {
     };
   }
 
+  @Get(':id/duplicate-options')
+  @RequireCapabilities(Capability.PlatformLinktreesCreate)
+  async duplicateOptions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('slug') slug?: string,
+  ) {
+    return {
+      success: true,
+      data: await this.platformLinktrees.getDuplicateOptions(id, slug),
+    };
+  }
+
   @Patch(':id')
   @RequireCapabilities(Capability.PlatformLinktreesUpdate)
   async update(@Param('id') id: string, @Body() body: CreateLinktreeDto) {
@@ -159,18 +171,12 @@ export class PlatformLinktreesController {
     };
   }
 
-  @Patch(':id/campaign-status')
+  @Patch(':id/pin')
   @RequireCapabilities(Capability.PlatformLinktreesUpdate)
-  async toggleCampaign(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: ToggleLinktreeCampaignDto,
-  ) {
+  async pin(@Param('id', ParseUUIDPipe) id: string, @Body() body: PagePinDto) {
     return {
       success: true,
-      data: await this.platformLinktrees.toggleCampaign(
-        id,
-        body.is_campaign_active,
-      ),
+      data: await this.platformLinktrees.pin(id, body.isPinned),
     };
   }
 

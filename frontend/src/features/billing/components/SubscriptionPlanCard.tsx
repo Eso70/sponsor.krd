@@ -42,7 +42,6 @@ export function SubscriptionPlanCard({
   const features = [
     [copy.tiktok, "feature.tiktok"],
     [copy.branding, "feature.remove_branding"],
-    [copy.advertising, "feature.advertising_page"],
   ] as const;
   return (
     <article

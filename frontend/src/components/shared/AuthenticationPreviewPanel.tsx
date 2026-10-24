@@ -40,20 +40,21 @@ export function AuthenticationPreviewPanel({
     logoSource === SPONSOR_KRD_LOGO ? SPONSOR_KRD_ORIGINAL_LOGO : logoSource;
 
   return (
-    <aside className="theme-fill relative hidden min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[32px] p-10 lg:flex lg:items-center lg:justify-center lg:ml-4 lg:mr-[-2.5rem] lg:min-h-[calc(100vh-2rem)]">
+    <aside className="theme-fill relative hidden min-w-0 overflow-hidden rounded-l-[32px] p-8 lg:flex lg:items-center lg:justify-center xl:p-10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(255,255,255,.5),transparent_28%),linear-gradient(145deg,transparent,rgba(15,23,42,.1))]" />
       <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-slate-900/10" />
       <div className="absolute -bottom-28 -left-20 h-96 w-96 rounded-full border border-slate-900/10" />
-      <div className="relative max-w-md text-center text-white" dir="rtl">
-        <div className="mx-auto h-20 w-20 overflow-hidden rounded-3xl border border-white/15 bg-[#161B22] p-1.5 shadow-[0_20px_45px_rgba(15,23,42,.18)] ring-4 ring-white/60">
-          <Image
-            src={previewLogoSource}
-            alt={effectiveBrandName}
-            width={80}
-            height={80}
-            className="h-full w-full rounded-[18px] object-contain"
-          />
-        </div>
+      <div
+        className="relative min-w-0 w-full max-w-md break-words text-center text-white [overflow-wrap:anywhere]"
+        dir="ltr"
+      >
+        <Image
+          src={previewLogoSource}
+          alt={effectiveBrandName}
+          width={80}
+          height={80}
+          className="mx-auto h-20 w-20 max-w-full rounded-3xl object-contain"
+        />
         <p className="mt-8 text-xs font-black uppercase tracking-[0.28em] text-white/75">
           {effectiveBrandName}
         </p>

@@ -12,6 +12,7 @@ import {
   FormPreviewButton,
 } from "./FormPreviewButton";
 import { AnimatedTapHint } from "@/components/shared/AnimatedTapHint";
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 
 /** Outside the scrolling body; form ownership preserves native required-field validation. */
 export function FormPreviewFooter({
@@ -106,7 +107,7 @@ export function FormPreviewFooter({
               <button
                 type="button"
                 onClick={onBack}
-                className="min-h-9 rounded-lg border border-slate-400/30 px-3 py-2 text-xs"
+                className={`${SHARED_SOFT_BUTTON_CLASS} min-h-9 px-3 py-2 text-xs`}
               >
                 {copy.back}
               </button>

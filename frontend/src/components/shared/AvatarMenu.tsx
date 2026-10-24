@@ -5,6 +5,10 @@ import Image from "next/image";
 import { UserRound } from "lucide-react";
 import { remoteAvatarSrc } from "@/lib/utils/remote-avatar";
 
+import {
+  AVATAR_MENU_SIZE_CLASS,
+  AVATAR_MENU_TRIGGER_CLASS,
+} from "./avatar-menu-styles";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 export interface AvatarMenuItem {
@@ -37,7 +41,7 @@ export function AvatarMenu({
   ariaLabel = "Avatar menu",
   className = "",
   panelClassName = "",
-  sizeClassName = "h-8 w-8 sm:h-9 sm:w-9 md:h-11 md:w-11",
+  sizeClassName = AVATAR_MENU_SIZE_CLASS,
   items,
   onItemClick,
 }: AvatarMenuProps) {
@@ -55,7 +59,10 @@ export function AvatarMenu({
   useEffect(() => {
     if (!open) return;
     const pointer = (event: PointerEvent) => {
-      if (container.current && !container.current.contains(event.target as Node))
+      if (
+        container.current &&
+        !container.current.contains(event.target as Node)
+      )
         setOpen(false);
     };
     const key = (event: KeyboardEvent) => {
@@ -83,7 +90,7 @@ export function AvatarMenu({
           onClick={() => setOpen((value) => !value)}
           aria-label={ariaLabel}
           aria-expanded={open}
-          className={`group relative flex items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 shadow-sm transition-all duration-300 hover:from-slate-100 hover:to-gray-100 hover:shadow dark:border-white/10 dark:from-white/5 dark:to-white/5 dark:hover:from-white/10 dark:hover:to-white/10 cursor-pointer ${sizeClassName} ${className}`}
+          className={`${AVATAR_MENU_TRIGGER_CLASS} ${sizeClassName} ${className}`}
         >
           {avatarImage ? (
             <Image
@@ -130,7 +137,8 @@ export function AvatarMenu({
               )}
             </div>
             {badge && (
-              <span className="flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-bold"
+              <span
+                className="flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-bold"
                 style={{
                   background:
                     "color-mix(in srgb, var(--theme-primary, #64748b) 9%, transparent)",

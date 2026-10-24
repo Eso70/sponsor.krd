@@ -34,7 +34,7 @@ export default async function LinktreePublicPage({ params }: PageProps) {
   }
   const nonce = (await headers()).get("x-nonce") || "";
   return <>
-    <PublicPageStructuredData page={result.linktree} origin={result.origin} nonce={nonce} />
+    <PublicPageStructuredData page={result.linktree} origin={result.origin} nonce={nonce} links={result.links} />
     <TikTokPixelBaseCode pixelIds={result.analytics.pixelIds} nonce={nonce} />
     <LinktreePage linktree={result.linktree} links={result.links} analytics={result.analytics}
       enableMarketingTracking initialLocale={automaticPageSeo(result.linktree).locale} />

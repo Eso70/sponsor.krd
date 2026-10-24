@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, Moon, Sun, X } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import { persistAppTheme, readAppTheme } from "@/lib/app-theme";
+import { useAppTheme } from "@/hooks/useAppTheme";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import {
   BUSINESS_LOGO_PLACEHOLDER,
   SPONSOR_KRD_LOGO,
@@ -60,10 +60,9 @@ export function PublicSiteNavbar({
     "--public-navbar-action-ink": primaryActionInk,
   } as CSSProperties;
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsMounted();
   const [scrolled, setScrolled] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const reduceMotion = useReducedMotion() ?? false;
+  const { theme, toggleTheme } = useAppTheme();
   const resolvedNavigationItems =
     navigationItems ??
     (branding
@@ -143,17 +142,6 @@ export function PublicSiteNavbar({
     </>
   );
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const isDark =
-        document.documentElement.classList.contains("dark") ||
-        readAppTheme() === "dark";
-      persistAppTheme(isDark ? "dark" : "light");
-      setTheme(isDark ? "dark" : "light");
-      setMounted(true);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
 
   useEffect(() => {
     let frame = 0;
@@ -178,28 +166,17 @@ export function PublicSiteNavbar({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [menuOpen]);
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    persistAppTheme(nextTheme);
-    setTheme(nextTheme);
-  };
-
   const navbar = (
-    <motion.nav
+    <nav
       dir="ltr"
       aria-label={copy?.navigation ?? "Primary navigation"}
-      className={`fixed inset-x-0 top-0 z-50 w-full border-b text-slate-950 dark:text-white ${businessGlassActive ? scrolledClass : atTopClass}`}
-      initial={false}
-      animate={{
+      className={`fixed inset-x-0 top-0 z-50 w-full border-b transition-[background-color,backdrop-filter,box-shadow] duration-200 motion-reduce:transition-none text-slate-950 dark:text-white ${businessGlassActive ? scrolledClass : atTopClass}`}
+      style={{
         backgroundColor: navbarBackground,
         backdropFilter: navbarBackdrop,
         boxShadow: navbarShadow,
       }}
-      transition={
-        reduceMotion
-          ? { duration: 0 }
-          : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
-      }
+
     >
       <div className="mx-auto flex h-[60px] w-full max-w-[75rem] items-center justify-between px-5 sm:px-6">
         {homeHref.startsWith("#") ? (
@@ -332,7 +309,7 @@ export function PublicSiteNavbar({
           </div>
         </div>
       )}
-    </motion.nav>
+    </nav>
   );
 
   if (!mounted) return navbar;

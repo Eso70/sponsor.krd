@@ -111,8 +111,8 @@ describe("getSubdomainPageUrl on the server", () => {
     vi.stubGlobal("window", {
       location: new URL("https://zhirsaz.com/business"),
     });
-    expect(getSubdomainPageUrl("eso", "/advertising")).toBe(
-      "https://zhirsaz.com/advertising",
+    expect(getSubdomainPageUrl("eso", "/form/contact")).toBe(
+      "https://zhirsaz.com/form/contact",
     );
   });
   it("builds a subdomain path with the served scheme", async () => {
@@ -122,8 +122,8 @@ describe("getSubdomainPageUrl on the server", () => {
       NODE_ENV: "development",
     });
 
-    expect(getSubdomainPageUrl("acme", "/advertising")).toBe(
-      "http://acme.lvh.me:3011/advertising",
+    expect(getSubdomainPageUrl("acme", "/form/contact")).toBe(
+      "http://acme.lvh.me:3011/form/contact",
     );
   });
 
@@ -134,8 +134,8 @@ describe("getSubdomainPageUrl on the server", () => {
       NODE_ENV: "production",
     });
 
-    expect(getSubdomainPageUrl("acme", "advertising/video-code")).toBe(
-      "https://acme.sponsor.krd/advertising/video-code",
+    expect(getSubdomainPageUrl("acme", "form/contact")).toBe(
+      "https://acme.sponsor.krd/form/contact",
     );
   });
 });

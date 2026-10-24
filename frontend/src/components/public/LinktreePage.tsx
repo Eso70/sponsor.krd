@@ -11,21 +11,9 @@ import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 import type { TemplateTheme } from "@/components/templates";
 import {
-  deriveAccentColor,
-  deriveBorderColor,
-  deriveTextColor,
-  deriveTextSecondaryColor,
-  deriveHighlightColor,
-} from "@/lib/utils/theme-colors";
-import {
-  getBackgroundGradient,
-  DEFAULT_BACKGROUND_COLOR,
-} from "@/lib/config/background-gradients";
-import {
   backgroundImageCss,
-  readBackgroundImage,
 } from "@/lib/templates/background-image";
-import { readBackgroundPattern } from "@/lib/templates/background-pattern";
+import { createLinktreeTemplateTheme } from "@/lib/templates/template-theme";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import {
   WhatsAppQuestionModal,
@@ -37,13 +25,13 @@ import {
   createPageTracker,
   type PageEventName,
 } from "@/features/analytics/page-tracking";
+import { startPageEngagement } from "@/features/analytics/page-engagement";
 
 /**
  * How long a visitor stays before the visit counts as engaged rather than a
  * bounce. Uses the shared public-page threshold so reports use the same
  * fact on the same scale.
  */
-const ENGAGED_AFTER_MS = 15_000;
 
 /**
  * The action key the database registers for a link.
@@ -129,28 +117,6 @@ export const LinktreePage = memo(function LinktreePage({
     };
   }, [rawLinktree]);
 
-  // Apply favicon overrides if set by business branding
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const businessFavicon = rawLinktree.business_favicon;
-    if (!businessFavicon) return;
-
-    let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    const originalHref = link.href;
-    link.href = businessFavicon;
-
-    return () => {
-      if (link && originalHref) {
-        link.href = originalHref;
-      }
-    };
-  }, [rawLinktree]);
-
   // One tracker for the page. Rebuilt only when the page or its registered
   // actions change; a fresh instance would reset the repeat window and let a
   // double tap report twice.
@@ -233,8 +199,8 @@ export const LinktreePage = memo(function LinktreePage({
   // The tracker refuses a second view for the same instance, so this is safe
   // under React's development double-invoke as well as a re-render.
   useEffect(() => {
-    tracker.trackView();
-  }, [tracker]);
+    if (enableMarketingTracking) tracker.trackView();
+  }, [tracker, enableMarketingTracking]);
 
   /**
    * Separates a visit from a bounce.
@@ -249,58 +215,11 @@ export const LinktreePage = memo(function LinktreePage({
    * stay comparable in one report.
    */
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => tracker.trackEngagement("engaged_view", { once: true }),
-      ENGAGED_AFTER_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [tracker]);
-  // Get background gradient or solid color based on background_color
-  const baseTheme = useMemo(() => {
-    const bgColor = linktree.background_color || DEFAULT_BACKGROUND_COLOR;
-    return getBackgroundGradient(bgColor);
-  }, [linktree.background_color]);
-
-  // An uploaded background image replaces the colour surface. The colours stay
-  // so text, accents, and borders keep deriving from the chosen palette.
-  const backgroundImage = useMemo(
-    () => readBackgroundImage(linktree.template_config),
-    [linktree.template_config],
-  );
-
-  // Drawn over whatever the surface turned out to be — gradient, solid colour
-  // or uploaded image — so it composes with all three.
-  const backgroundPattern = useMemo(
-    () => readBackgroundPattern(linktree.template_config),
-    [linktree.template_config],
-  );
-
-  // Extend theme with derived accent colors
-  const theme: TemplateTheme = useMemo(() => {
-    return {
-      ...baseTheme,
-      backgroundImage,
-      backgroundPattern,
-      accent: deriveAccentColor(baseTheme.from, baseTheme.via, baseTheme.to),
-      border: deriveBorderColor(
-        baseTheme.from,
-        baseTheme.via,
-        baseTheme.to,
-        0.3,
-      ),
-      text: deriveTextColor(baseTheme.from, baseTheme.via, baseTheme.to),
-      textSecondary: deriveTextSecondaryColor(
-        baseTheme.from,
-        baseTheme.via,
-        baseTheme.to,
-      ),
-      highlight: deriveHighlightColor(
-        baseTheme.from,
-        baseTheme.via,
-        baseTheme.to,
-      ),
-    };
-  }, [baseTheme, backgroundImage, backgroundPattern]);
+    if (!enableMarketingTracking) return;
+    return startPageEngagement(tracker);
+  }, [tracker, enableMarketingTracking]);
+  const theme: TemplateTheme = useMemo(() => createLinktreeTemplateTheme(linktree.background_color, linktree.template_config), [linktree.background_color, linktree.template_config]);
+  const backgroundImage = theme.backgroundImage;
 
   const businessWebsiteColor = useMemo(() => {
     return parseWebsiteColor(linktree.business_website_color || null);
@@ -453,6 +372,7 @@ export const LinktreePage = memo(function LinktreePage({
             id: obj.id as string,
             text: obj.text as string,
             message: obj.message as string,
+                videoUrl: typeof obj.videoUrl === "string" ? obj.videoUrl : undefined,
           };
         });
     }
@@ -501,7 +421,8 @@ export const LinktreePage = memo(function LinktreePage({
    * rule the deduplication depends on is one copy too many.
    */
   const reportLinkClick = useCallback(
-    (linkId: string, platform: string, destination: string) => {
+    (linkId: string, platform: string, destination: string, question?: WhatsAppQuestion) => {
+      if (!enableMarketingTracking) return;
       const link = links.find((item) => item.id === linkId);
       return tracker.trackAction(
         linkActionKey(linkId),
@@ -509,11 +430,11 @@ export const LinktreePage = memo(function LinktreePage({
         {
           label: link?.display_name || link?.platform || platform,
           destination,
-          properties: { platform },
+          properties: { platform, ...(question ? { whatsappQuestionId: question.id } : {}) },
         },
       );
     },
-    [links, tracker],
+    [links, tracker, enableMarketingTracking],
   );
 
   const handleLinkClick = useCallback(
@@ -530,9 +451,10 @@ export const LinktreePage = memo(function LinktreePage({
         // abandoned modal visible: without it, a visitor who opened the
         // questions and closed them is indistinguishable from one who never
         // tapped WhatsApp at all. Engagement only, so it never reaches TikTok.
-        tracker.trackEngagement("action_open", {
+        if (enableMarketingTracking) tracker.trackEngagement("action_open", {
           actionKey: `${linkActionKey(linkId)}:questions`,
           label: "WhatsApp questions",
+          properties: { measurement: "whatsapp_questions", step: "opened", linkId },
         });
         pendingWhatsAppRef.current = { url, linkId, platform };
         setPendingWhatsAppUrl(url);
@@ -544,12 +466,12 @@ export const LinktreePage = memo(function LinktreePage({
       const tracked = reportLinkClick(linkId, platform, finalUrl);
       openUrl(tracked?.navigationUrl || finalUrl);
     },
-    [whatsappModalConfig, openUrl, reportLinkClick, tracker],
+    [whatsappModalConfig, openUrl, reportLinkClick, tracker, enableMarketingTracking],
   );
 
   // Handle WhatsApp question selection
   const handleWhatsAppQuestionSelect = useCallback(
-    (message: string) => {
+    (message: string, question?: WhatsAppQuestion) => {
       const pending = pendingWhatsAppRef.current;
       if (!pending) return;
 
@@ -561,19 +483,19 @@ export const LinktreePage = memo(function LinktreePage({
         pending.linkId,
         pending.platform,
         finalUrl,
+        question,
       );
-      openUrl(tracked?.navigationUrl || finalUrl);
-
-      // Reset state
+      // Clear the pending chooser before handing off to another application.
       pendingWhatsAppRef.current = null;
       setPendingWhatsAppUrl("");
+      openUrl(tracked?.navigationUrl || finalUrl);
     },
     [openUrl, reportLinkClick],
   );
 
   return (
     <PublicLinktreeLocaleProvider locale={locale}>
-      <div className="relative" lang={locale}>
+      <div className="relative" lang={locale} dir={locale === "en" ? "ltr" : "rtl"}>
         {enableMarketingTracking ? (
           <TikTokPixel pixelIds={analytics.pixelIds} pageKey={pixelPageKey} />
         ) : null}
@@ -584,18 +506,26 @@ export const LinktreePage = memo(function LinktreePage({
             links={links}
             theme={theme}
             onLinkClick={handleLinkClick}
+            onMediaAction={enableMarketingTracking ? (action, index) => tracker.trackEngagement("action_open", {
+              actionKey: `page:${action}`,
+              properties: { media: index < 0 ? "logo" : "banner", index },
+            }) : undefined}
           />
 
           {/* WhatsApp Question Modal */}
           <WhatsAppQuestionModal
             isOpen={isWhatsAppModalOpen}
             onClose={() => {
+              const pending = pendingWhatsAppRef.current;
+              if (pending && enableMarketingTracking) tracker.trackEngagement("action_open", { actionKey: `${linkActionKey(pending.linkId)}:questions:closed`, properties: { measurement: "whatsapp_questions", step: "dismissed", linkId: pending.linkId } });
               setIsWhatsAppModalOpen(false);
               setPendingWhatsAppUrl("");
               pendingWhatsAppRef.current = null;
             }}
             onSelectQuestion={handleWhatsAppQuestionSelect}
             whatsappUrl={pendingWhatsAppUrl}
+            appearance={theme.text === "#ffffff" ? "dark" : "light"}
+            accentColor={linktree.business_website_color ?? undefined}
             title={whatsappModalConfig?.title}
             subtitle={whatsappModalConfig?.subtitle}
             questions={whatsappModalConfig?.questions}

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { formsApi } from "./api";
 import { downloadBlob } from "@/lib/utils/download";
-import { exportFormResponses, formResponsesCsv } from "./form-responses-export";
+import {
+  exportFormResponses,
+  exportResponsePages,
+  formResponsesCsv,
+} from "./form-responses-export";
 import { formsCopy } from "./forms-copy";
 import { createForm } from "./forms-model";
 import type { FormSubmission } from "./types";
@@ -29,6 +33,39 @@ beforeEach(() => {
   vi.mocked(formsApi.get).mockResolvedValue(form);
 });
 describe("form CSV export", () => {
+  it("uses the same safe exporter with only dates and answers for shared clients", async () => {
+    const table = formResponsesTable(form, [response], copy, [], true);
+    expect(table.headers).toEqual(["created_time_utc", "Name", "Phone"]);
+    expect(table.rows[0]).toEqual([
+      new Date(response.createdAt),
+      response.answers[0].value,
+      response.answers[1].value,
+    ]);
+    const readPage = vi
+      .fn()
+      .mockResolvedValue({
+        items: [response],
+        total: 1,
+        snapshotAt: "2026-10-20T12:00:00Z",
+      });
+    await exportResponsePages({
+      definition: form,
+      filters: { q: "customer", from: "2026-10-01", to: "2026-10-20" },
+      copy,
+      signal: new AbortController().signal,
+      onProgress: vi.fn(),
+      essential: true,
+      readPage,
+    });
+    expect(readPage).toHaveBeenCalledWith(
+      0,
+      expect.objectContaining({ q: "customer", pageSize: 100 }),
+    );
+    expect(downloadBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      "contact-responses-2026-10-01-to-2026-10-20.csv",
+    );
+  });
   it("exports immutable product quantities and prices in dedicated columns, including removed products", () => {
     const answer = {
       questionId: "products",
@@ -65,6 +102,12 @@ describe("form CSV export", () => {
       table.rows[0][table.headers.indexOf("Materials / =Cement / lineTotal")],
     ).toBe(56);
     expect(formResponsesCsv(form, [row], copy)).toContain("'=Cement");
+    const discounted = { ...row, answers: [{ ...answer, products: { ...answer.products, total: 52, items: [{ ...answer.products.items[0], unitPrice: 6.5, lineTotal: 52, baseUnitPrice: 7, discount: 4, priceBreakMinimum: 5 }] } }] };
+    const discountedTable = formResponsesTable(form, [discounted], copy);
+    for (const [field, value] of [["baseUnitPrice", 7], ["discount", 4], ["priceBreakMinimum", 5]] as const) {
+      expect(discountedTable.rows[0][discountedTable.headers.indexOf(`Materials / =Cement / ${field}`)]).toBe(value);
+    }
+
   });
   it("includes multilingual text, safe spreadsheet cells, metadata and questions from old revisions", () => {
     const csv = formResponsesCsv(

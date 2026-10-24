@@ -1,5 +1,34 @@
 # Backend
 
+Form volume prices use the shared runtime-safe
+`@linktree/types/form-product-pricing.cjs` helper. Definition validation enforces
+ordered, bounded discounts; submissions derive prices from the published locked
+form and persist the applied price/discount snapshot. No pricing amount supplied
+by a visitor is accepted. Existing standard-price submissions remain compatible.
+See [Forms](forms.md#quantity-pricing) for model and precision constraints.
+
+Form collection listings return 15 summaries per page for both Business and
+Platform owners, with matching zero-based offsets. Counts retain the same owner,
+archive and search predicates. Submission/analytics report page sizes are
+unchanged. Deploy the frontend collection pagination and backend list limit
+together; this change requires no database migration.
+
+Grouped Linktree payloads may provide a nonnegative integer `display_order` on
+each `linkMetadata` entry. Create and Platform sync sort by these positions before
+writing the existing sequential links.display_order column. Legacy payloads
+without positions retain their original grouped order. Business batch sync sends
+its rows in that same global order and preserves matching link/action identities.
+No schema migration is required for drag-and-drop ordering.
+
+Backend runtime banner imports use the explicit
+`@linktree/types/linktree-banner.cjs` subpath. That self-contained CommonJS helper
+is also re-exported by the frontend TypeScript facade, so validation remains one
+implementation. The package root points to source-only `index.ts` and must not
+be loaded by plain Node at runtime: its extensionless TypeScript exports cannot
+be resolved by Node. Use `import type` for ordinary shared contracts. The banner
+tests include a plain-Node subprocess to catch runtime resolution failures that
+TypeScript and ts-jest can otherwise hide.
+
 ## Public crawler projections
 
 `PublicService` owns the live public availability gate and owner-scoped,
@@ -97,9 +126,11 @@ verified user/Google identity. A later administrator invitation can reopen the
 application for the same owner with empty business details; an approval still linked to an existing
 business remains ineligible for signup.
 
-Both Google and email verification accept the shared private-device choice.
-Normal business sessions last 12 hours; remembered business sessions last 30
-days. Platform sessions last 30 minutes or 7 days when remembered. The
+Google and email verification use the backend remembered-device preset for all
+normal sign-ins: 30 days for business sessions and 7 days for platform sessions.
+Frontend flags do not select persistence. Legacy email booleans remain accepted
+but ignored for cached-client compatibility. Signup sessions and administrator
+impersonation retain their separate short lifetimes. The
 business sign-in path warms the Redis session cache before redirecting so the
 parallel dashboard bootstrap does not repeat PostgreSQL identity lookups.
 business onboarding API is `GET/PATCH /api/auth/onboarding`, with uploads at
@@ -232,19 +263,6 @@ slugs — so the editor shows the answer and still allows the save. Both compare
 case-insensitively against the trimmed value and accept an `excludeId` so
 editing a page does not collide with itself.
 
-## Linktree campaign revenue
-
-Campaign revenue entries are durable Linktree-owned records. Business routes
-under `/api/linktrees/:linktreeId/revenue-records` derive the tenant from the
-authenticated business session; platform routes under
-`/api/platform/linktrees/:linktreeId/revenue-records` derive it from the fixed
-platform content workspace. Neither route accepts an owner identifier.
-
-Create and update payloads contain only the advertisement price, date range,
-USD spend, and USD-to-IQD rate. `CampaignRevenueService` derives duration,
-converted IQD spend, and net revenue instead of trusting browser-calculated
-totals. Every operation is scoped by both `business_id` and `linktree_id`; the
-database enforces the same ownership with the composite Linktree foreign key.
 
 ## Platform-owned root-domain content
 
@@ -277,7 +295,7 @@ check before clearing the page analytics and requires the platform Linktree
 delete capability. Both endpoints power the shared page analytics modal rather
 than a platform-specific modal implementation.
 
-Platform campaign, archive, and publication status endpoints delegate to the
+Platform archive and publication status endpoints delegate to the
 tenant-scoped Linktree service with the resolved internal workspace ID. The
 browser never supplies an owner ID. Platform Linktree defaults are read from
 the existing `business_defaults` and `business_branding` rows for that internal
@@ -295,7 +313,7 @@ Platform Business Management exposes `GET /api/platform/businesses/export`,
 `sponsor-krd-business` document preserves the business profile, owner and Google
 identity, membership, branding, defaults, portable subscription state, every
 Linktree (including the default page), links, WhatsApp questions, archive and
-campaign state, timestamps, and uploaded asset bytes. Subscription products are
+publication state, timestamps, and uploaded asset bytes. Subscription products are
 resolved by stable plan code on restore so backups remain portable between
 installations.
 
@@ -649,3 +667,83 @@ both public pages and the tenant dashboard. See [Custom domains](custom-domains.
 ## Persisted forms
 
 `FormsModule` exposes authenticated business/platform controllers and rate-limited public reads/submissions. Both management scopes use the same service; the platform workspace resolves ownership. See [Forms](forms.md) for endpoints and validation.
+
+
+Linktree content accepts canonical `headline`, `description`, `slogan`,
+`slogan_color` and `logo` fields. Headline names the public page; there is no
+separate internal title. `normalizeLinktreeContent` is the sole legacy request
+adapter for name/subtitle/subtitle_color/image. Read projections expose matching
+canonical fields plus compatibility aliases used by existing public templates.
+New canonical requests do not supply slugs. URL allocation runs inside the owner
+transaction lock and preserves existing URLs on edit. See the Linktree content
+migration and coordinated deployment notes before upgrading a live installation.
+
+Optional Linktree SEO uses the existing protected template_config write and
+approval paths. `common/linktree-seo.ts` invokes the shared Node-compatible
+validator, rejects invalid new settings, and strips retired unversioned settings.
+The existing media ownership check also covers social preview images. Saves
+invalidate the same owner-scoped public caches and refresh parent timestamps;
+sitemap SQL uses the same category/noindex policy as metadata. No new endpoint
+or database migration is needed. See [seo.md](seo.md).
+
+## Linktree duplicate customization
+
+The shared duplicate endpoints accept optional text, logo, banner/carousel and appearance overrides. Omitted values inherit the saved source. Null clears a logo, slogan color, or background image; empty text clears an optional slogan/description. Nested banner DTO validation limits images to the shared maximum and accepts only managed paths. New logos, banner images and backgrounds must belong to the server-resolved business/workspace. Template changes respect business access policy. The existing source checks, copy-depth limits and transaction-locked quotas remain enforced. Overrides are written in the duplicate transaction without changing the source or its other configuration.
+
+GET :id/duplicate-options uses the same create capability and server-resolved owner as POST duplication. It verifies source ownership before suggesting an available slug or checking an edited value against tenant and root registries. Suggestions fit the 50-character slug limit. Checks are advisory; custom slugs are checked again under the creation lock before insertion.
+
+Both Business and Platform endpoints use the same service. Existing content columns and template_config store these values; no database migration is needed.
+
+## Editable form duplication
+
+GET :id/duplicate-options verifies source ownership before suggesting a collision-free copy name/address or checking an edited address. POST :id/duplicate accepts an optional validated definition and slug, uses existing definition and image-ownership checks, and reserves the destination under the same owner creation lock. Its unique index remains the final concurrency boundary. Responses, source lifecycle metadata and revisions are not cloned; a copy starts paused and unarchived. Business and Platform controllers share this service and require their corresponding FormsCreate capability; Platform resolves its workspace server-side. Normal create/edit title-derived addresses are unchanged.
+
+## Dashboard page pins
+
+Business and Platform Forms/Linktrees expose `PATCH :id/pin`, accepting only
+`{ isPinned: boolean }` under their existing update capabilities. UUID validation
+and the normal authorization guards apply; business owners come from the
+session and platform owners from the shared workspace resolver. SQL updates
+scope both owner and page ID and return 404 for an unavailable page. Forms sort
+by pins before limiting the owner-scoped page projection. Pins never set a
+public default, activate pages, or record tracking events.
+
+## Analytics sharing endpoints
+
+Each existing Business/Platform Forms/Linktrees prefix provides
+`:id/analytics-shares`: GET lists, POST creates, POST `:shareId/expiry` changes
+optional expiry, POST `:shareId/disable` revokes, and DELETE `:shareId` removes.
+Management is guarded by page read/update permissions. Input accepts locale,
+optional expiry (`never`, `hour`, `day`, `week`, `month`, `custom`) and an ISO instant
+with timezone for custom expiry. Omitted expiry means no expiration. Creation
+uses a per-page transaction lock and a 20-link limit. Public endpoints are POST
+`/api/public/analytics-shares/:id/unlock` and GET the same share's report; both
+validate UUIDs, prohibit caching and fail closed if Redis is unavailable.
+
+Form share creation optionally accepts boolean `includeSubmissions` (default
+false); Linktree shares reject enabling it. Report `responsePage` is a validated
+zero-based page index (20 responses per page). Answers and contact details are
+returned only for an explicitly enabled Form grant, through FormsService's
+owner-scoped query. The projection excludes tracking identifiers and full
+attribution. Expiry edits cannot expand a grant's response scope.
+
+`GET /api/public/analytics-shares/:id/responses` reuses FormResponsesDto for
+search, inclusive UTC date ranges, snapshot cutoff and 20/50/100-row pagination.
+Each page requires the same live session/grant and returns only response data;
+search is restricted to answers. The client CSV exporter reads these pages using
+the first response's snapshot cutoff and rejects incomplete or duplicate results.
+
+`GET :id/branding` returns the live owner's public name/logo/favicon/accent and
+canonical origin without report contents. Share URLs use the owner's selected
+active custom domain or configured tenant subdomain, retaining local protocol
+and port for development. Platform workspace links use the configured root.
+All unlock/report/response calls use the shared trusted Subdomain resolver and
+reject grants from another tenant, including requests with a valid code/session.
+
+Each management prefix also provides `POST :shareId/code`, guarded by its existing
+page read/update capabilities. It consumes one encrypted recovery copy under a
+transaction row lock and returns a non-cacheable code response. Listings expose
+only `canRevealCode`. Old hash-only grants, expired/disabled/deleted grants and
+already-consumed recovery copies cannot reveal a code.
+
+Advanced Linktree SEO uses the Max product ceiling through featurePlanSql, with the same live subscription window used by other plan restrictions. Changed versioned SEO on business create/update requires Max; unchanged or omitted stored SEO is preserved. Public projection checks live access outside the cache and reduces lower-plan SEO to automatic content plus any existing noindex exclusion. See docs/seo.md for downgrade and sitemap behavior.

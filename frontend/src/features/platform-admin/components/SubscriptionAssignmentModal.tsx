@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ManagementModal } from "@/components/shared/ManagementModal";
 import { ModalFooterActions } from "@/components/shared/ModalFooterActions";
 import { EditorField } from "@/components/shared/EditorField";
-import { ModalTextInput } from "@/components/shared/ModalTextInput";
+import { DateTimeInput } from "@/components/shared/DateTimeInput";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import { CheckboxField } from "@/components/shared/CheckboxField";
 import { apiRequest } from "@/lib/api/request";
@@ -166,18 +166,12 @@ export function SubscriptionAssignmentModal({
           ]}
         />
         <EditorField label={t("دەستپێکی ماوە")} required>
-          <ModalTextInput
-            type="datetime-local"
-            value={start}
-            onChange={(event) => setStart(event.target.value)}
-          />
+          <DateTimeInput label={t("دەستپێکی ماوە")} hideLabel required locale={locale}
+            value={start} onChange={setStart} />
         </EditorField>
         <EditorField label={t("کۆتایی ماوە")} hint={copy.noEnd}>
-          <ModalTextInput
-            type="datetime-local"
-            value={end}
-            onChange={(event) => setEnd(event.target.value)}
-          />
+          <DateTimeInput label={t("کۆتایی ماوە")} hideLabel locale={locale}
+            value={end} onChange={setEnd} />
         </EditorField>
         <CheckboxField
           label={cancelLabel}

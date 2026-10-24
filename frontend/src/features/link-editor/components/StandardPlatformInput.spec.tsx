@@ -26,7 +26,7 @@ describe("StandardPlatformInput", () => {
     );
 
     expect(screen.getByRole("button", { name: /\+964/ })).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText("0750 123 4567"), {
+    fireEvent.change(screen.getByPlaceholderText("ژمارەی تەلەفۆن"), {
       target: { value: "+964 750 123 4567" },
     });
     expect(onChange).toHaveBeenCalledWith("7501234567");
@@ -43,7 +43,7 @@ describe("StandardPlatformInput", () => {
     );
 
     fireEvent.change(
-      screen.getByPlaceholderText("@username یان instagram.com/username"),
+      screen.getByPlaceholderText("بەستەری ئینستاگرام"),
       { target: { value: "@business" } },
     );
     expect(onChange).toHaveBeenCalledWith("@business");
@@ -62,7 +62,7 @@ describe("StandardPlatformInput", () => {
 
     expect(screen.queryByText("لینکەکە نادروستە.")).not.toBeInTheDocument();
     fireEvent.blur(
-      screen.getByPlaceholderText("@username یان instagram.com/username"),
+      screen.getByPlaceholderText("بەستەری ئینستاگرام"),
     );
     expect(screen.getByText("لینکەکە نادروستە.")).toBeInTheDocument();
   });

@@ -23,6 +23,8 @@ describe("PlatformAdminLoginPage", () => {
     expect(
       screen.getByRole("button", { name: "گۆڕین بۆ عەرەبی" }),
     ).toHaveTextContent("KU");
+    expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
+    expect(screen.getByRole("main").querySelector('[dir="rtl"]')).toBeNull();
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
@@ -34,7 +36,8 @@ describe("PlatformAdminLoginPage", () => {
     );
     expect(
       screen.getByRole("link", { name: "بە گوگڵ بەردەوام بە" }),
-    ).toHaveAttribute("href", "/api/platform/auth/google/start?remember=1");
+    ).toHaveAttribute("href", "/api/platform/auth/google/start");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
       screen.getByRole("textbox", { name: "ناونیشانی ئیمەیڵ" }),
     ).toBeInTheDocument();

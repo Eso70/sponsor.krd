@@ -12,14 +12,17 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { toast } from "sonner";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
+import { StatCard } from "@/components/shared/StatCard";
+import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { DashboardSurface } from "@/components/shared/DashboardSurface";
 import { LockedNotice } from "@/components/shared/LockedContent";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SkeletonTikTokDelivery } from "@/components/shared/SkeletonPageLayouts";
 import { Tooltip } from "@/components/shared/Tooltip";
-import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import type { TikTokDeliveryError } from "@/features/analytics/api";
 import { useTranslations, useLocale } from "next-intl";
 
@@ -86,13 +89,13 @@ function formatWhen(value: string, locale: string): string {
   return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ", { timeZone: "Asia/Baghdad" });
 }
 
-function ErrorRow({ item }: { item: TikTokDeliveryError }) {
+function ErrorRow({ item, flat = false }: { item: TikTokDeliveryError; flat?: boolean }) {
   const t = useTranslations("TikTokDelivery");
   const locale = useLocale();
   const permanent = item.severity === "permanent";
   return (
     <li
-      className={`rounded-xl border p-3.5 transition ${
+      className={flat ? "py-3 text-xs" : `rounded-xl border p-3.5 transition ${
         permanent
           ? "border-red-200 bg-red-50/70 dark:border-red-500/25 dark:bg-red-500/10"
           : "border-amber-200 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10"
@@ -135,13 +138,14 @@ function ErrorRow({ item }: { item: TikTokDeliveryError }) {
   );
 }
 
-export function BusinessTikTokDeliveryPage() {
+export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: boolean } = {}) {
   const t = useTranslations("TikTokDelivery");
   const requestId = useRef(0);
   const [health, setHealth] = useState<TikTokHealth>(EMPTY_HEALTH);
   const [errors, setErrors] = useState<TikTokDeliveryError[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [locked, setLocked] = useState(false);
 
   const load = useCallback(async (showError = false) => {
@@ -151,9 +155,10 @@ export function BusinessTikTokDeliveryPage() {
         requestData<TikTokHealth>("/api/analytics/v2/tiktok/health"),
         requestData<{ items: TikTokDeliveryError[] }>(
           "/api/analytics/v2/tiktok/errors",
-        ).catch(() => ({ items: [] })),
+        ),
       ]);
       if (currentRequest !== requestId.current) return;
+      setUnavailable(false);
       setHealth(nextHealth);
       setErrors(errorPayload.items || []);
       setLocked(false);
@@ -165,6 +170,7 @@ export function BusinessTikTokDeliveryPage() {
         setErrors([]);
         return;
       }
+      setUnavailable(true);
       if (showError) toast.error(t("refreshFailed"));
       throw error;
     }
@@ -183,7 +189,7 @@ export function BusinessTikTokDeliveryPage() {
     }
   }, [load, t]);
 
-  useRegisterBusinessDashboardRefresh("analytics:tracking", refresh);
+  const globallyRefreshing = useRegisterDashboardRefresh("analytics:tracking", () => load(true));
 
   useEffect(() => {
     let active = true;
@@ -216,14 +222,17 @@ export function BusinessTikTokDeliveryPage() {
     }
   };
 
-  if (loading) return <SkeletonTikTokDelivery loadingLabel={t("loadingDelivery")} />;
+  if (loading || refreshing || globallyRefreshing) return <SkeletonTikTokDelivery embedded={embedded} loadingLabel={t("loadingDelivery")} />;
+
+  if (unavailable) return <RequestErrorNotice message={t("refreshFailed")} />;
 
   const pixelSilent = health.serverEvents > 0 && health.browserEvents === 0;
 
+  const Surface = embedded ? "div" : DashboardSurface;
   return (
-    <DashboardSurface>
+    <Surface>
       {/* Header */}
-      <PageHeader
+      {!embedded && <PageHeader
         icon={Target}
         title={t("title")}
         description={t("description")}
@@ -243,7 +252,7 @@ export function BusinessTikTokDeliveryPage() {
             </button>
           </Tooltip>
         }
-      />
+      />}
 
       {locked ? (
         <div className="border-t border-slate-100 pt-5 dark:border-white/5">
@@ -254,10 +263,10 @@ export function BusinessTikTokDeliveryPage() {
           />
         </div>
       ) : (
-        <div className="space-y-6 border-t border-slate-100 pt-5 dark:border-white/5">
+        <div className={embedded ? "space-y-5" : "space-y-6 border-t border-slate-100 pt-5 dark:border-white/5"}>
           {/* Status / Alert Banner */}
           {health.failed > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50/70 p-4 dark:border-red-500/20 dark:bg-red-500/[0.06]">
+            <div className={embedded ? "flex flex-wrap items-center justify-between gap-3 py-3" : "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50/70 p-4 dark:border-red-500/20 dark:bg-red-500/[0.06]"}>
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
                 <div>
@@ -285,7 +294,7 @@ export function BusinessTikTokDeliveryPage() {
               </Tooltip>
             </div>
           ) : health.retrying > 0 ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/[0.06]">
+            <div className={embedded ? "flex items-center gap-3 py-3" : "flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/[0.06]"}>
               <Clock className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
                 <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
@@ -299,7 +308,7 @@ export function BusinessTikTokDeliveryPage() {
           ) : null}
 
           {/* Reconciliation Card (بەراوردکردنی ئەنجامەکان) */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-slate-900/30 sm:p-6">
+          <div className={embedded ? "min-w-0" : "rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-slate-900/30 sm:p-6"}>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4 dark:border-white/5">
               <div>
                 <div className="flex items-center gap-2">
@@ -331,76 +340,29 @@ export function BusinessTikTokDeliveryPage() {
               </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* SponsorKrd Internal Side */}
-              <div className="relative rounded-xl border border-slate-200/70 bg-slate-50/50 p-4 transition hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {t("recordedLocally")}
-                  </span>
-                  <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-2xs dark:bg-white/10 dark:text-slate-400">
-                    {t("local")}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-800 dark:text-white font-mono">
-                    {formatNumber(health.reconciliation.internalConversions)}
-                  </span>
-                  <span className="text-xs text-slate-400">{t("eventsClicks")}</span>
-                </div>
-                <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                  {t("localDescription")}
-                </p>
-              </div>
-
-              {/* TikTok Accepted Side */}
-              <div className="relative rounded-xl border border-sky-200/70 bg-sky-50/40 p-4 transition hover:border-sky-300 dark:border-sky-500/20 dark:bg-sky-500/[0.04] dark:hover:border-sky-500/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-sky-800 dark:text-sky-300">
-                    {t("receivedByTikTok")}
-                  </span>
-                  <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700 shadow-2xs dark:bg-sky-500/20 dark:text-sky-300">
-                    Events API
-                  </span>
-                </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-sky-900 dark:text-sky-100 font-mono">
-                    {formatNumber(
-                      health.reconciliation.serverAcceptedConversions,
-                    )}
-                  </span>
-                  <span className="text-xs text-sky-600/70 dark:text-sky-400/70">
-                    {t("confirmed")}
-                  </span>
-                </div>
-                <p className="mt-2 text-[11px] text-sky-700/80 dark:text-sky-300/80">
-                  {t("tiktokDescription")}
-                </p>
-              </div>
-            </div>
+            {embedded ? (
+              <dl className="mt-4 space-y-3 text-xs">
+                <div className="flex items-center justify-between gap-4"><dt className="text-slate-500 dark:text-slate-400">{t("recordedLocally")}</dt><dd className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">{formatNumber(health.reconciliation.internalConversions)}</dd></div>
+                <div className="flex items-center justify-between gap-4"><dt className="text-slate-500 dark:text-slate-400">{t("receivedByTikTok")}</dt><dd className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">{formatNumber(health.reconciliation.serverAcceptedConversions)}</dd></div>
+              </dl>
+            ) : (
+            <StatCardGrid columns={2} className="mt-5">
+              <StatCard icon={Layers} label={t("recordedLocally")} value={formatNumber(health.reconciliation.internalConversions)} subtitle={t("localDescription")} color="slate" />
+              <StatCard icon={CheckCheck} label={t("receivedByTikTok")} value={formatNumber(health.reconciliation.serverAcceptedConversions)} subtitle={t("tiktokDescription")} color="blue" />
+            </StatCardGrid>
+            )}
           </div>
 
           {/* Diagnostics & Error Logs Section */}
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-slate-900/30 sm:p-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-white/5">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  {t("errorLog")}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {t("errorLogDescription")}
-                </p>
-              </div>
+          <div className={embedded ? "min-w-0" : "rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-slate-900/30 sm:p-6"}>
               {errors.length > 0 && (
                 <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-500/20 dark:text-red-300">
                   {errors.length} {t("errors")}
                 </span>
               )}
-            </div>
-
-            <div className="mt-4">
+            <div className={errors.length > 0 ? "mt-4" : undefined}>
               {pixelSilent && (
-                <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-500/25 dark:bg-amber-500/10">
+                <div className={embedded ? "mb-3 py-3" : "mb-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-500/25 dark:bg-amber-500/10"}>
                   <div className="flex items-start gap-3">
                     <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <div>
@@ -419,13 +381,14 @@ export function BusinessTikTokDeliveryPage() {
                 <ul className="space-y-2.5">
                   {errors.map((item) => (
                     <ErrorRow
+                      flat={embedded}
                       key={`${item.destinationId}:${item.statusCode ?? "none"}:${item.message}`}
                       item={item}
                     />
                   ))}
                 </ul>
               ) : !pixelSilent ? (
-                <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 dark:border-emerald-500/10 dark:bg-emerald-500/[0.03]">
+                <div className={embedded ? "flex items-center gap-3 py-2" : "flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 dark:border-emerald-500/10 dark:bg-emerald-500/[0.03]"}>
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                     <CheckCheck className="h-4 w-4" />
                   </div>
@@ -443,6 +406,6 @@ export function BusinessTikTokDeliveryPage() {
           </div>
         </div>
       )}
-    </DashboardSurface>
+    </Surface>
   );
 }

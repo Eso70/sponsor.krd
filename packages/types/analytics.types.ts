@@ -76,6 +76,58 @@ export interface BusinessDashboardAnalyticsSummary {
   conversion_value: number;
 }
 
+export interface PageAnalyticsInsights {
+  whatsapp?: {
+    opened: number;
+    dismissed: number;
+    selected: number;
+    questions: Array<{
+      id: string;
+      label: string;
+      historical: boolean;
+      clicks: number;
+      uniqueVisitors: number;
+      lastSelectedAt: string | null;
+      links: Array<{ label: string; clicks: number }>;
+    }>;
+  };
+  measuredVisits: number;
+  averageActiveSeconds: number;
+  engagedVisits: number;
+  contactActions: number;
+  contactVisitors: number;
+  confirmedOutcomes: number;
+  valuedOutcomes: number;
+  channels: Array<{ name: string; views: number }>;
+  devices: Array<{ name: string; views: number }>;
+  revenue: Array<{ currency: string; value: number }>;
+}
+
+export interface PageAnalyticsTotals {
+  insights?: PageAnalyticsInsights;
+  total_views: number;
+  unique_views: number;
+  total_clicks: number;
+  unique_clicks: number;
+  conversions: number;
+  conversion_value: number;
+}
+
+export interface PageAnalyticsAction {
+  id: string;
+  actionKey?: string;
+  metadata?: Record<string, string>;
+  label: string;
+  actionType: string;
+  destination: string | null;
+  totalClicks: number;
+  uniqueClickers: number;
+  conversions: number;
+  conversionValue: number;
+  ctr: number;
+  recordState?: "current" | "historical" | "unattributed";
+}
+
 export interface BusinessDashboardPageAsset {
   id: string;
   sourceId: string;
@@ -120,7 +172,6 @@ export interface TikTokEventsApiTestRequest {
   pixel_id?: string;
   event_name?: "ViewContent" | "Contact" | "ClickButton";
 }
-
 
 export interface TikTokEventsApiTestResult {
   success: boolean;

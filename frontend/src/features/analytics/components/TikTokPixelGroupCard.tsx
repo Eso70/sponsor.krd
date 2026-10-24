@@ -21,6 +21,7 @@ import {
   CustomSelect,
   type CustomSelectOption,
 } from "@/components/shared/CustomSelect";
+import { SHARED_CONTROL_CLASS } from "@/components/shared/shared-control-styles";
 import { EditorField } from "@/components/shared/EditorField";
 import { IconActionButton } from "@/components/shared/IconActionButton";
 import { Tooltip } from "@/components/shared/Tooltip";
@@ -119,8 +120,7 @@ export function TikTokPixelGroupCard({
     null,
   );
 
-  const inputClass =
-    "h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs text-slate-800 shadow-2xs transition outline-none placeholder:text-slate-400 focus:border-[var(--theme-primary)] focus:ring-1 focus:ring-[var(--theme-primary)] dark:border-white/10 dark:bg-[#161B22] dark:text-slate-200 dark:placeholder:text-slate-500";
+  const inputClass = `${SHARED_CONTROL_CLASS} h-10 w-full px-3.5 text-xs`;
 
   const hasEventsToken =
     Boolean(config.has_events_token) || Boolean(config.events_token.trim());
@@ -261,7 +261,7 @@ export function TikTokPixelGroupCard({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs transition hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/30 dark:hover:border-white/20">
+    <div className="min-w-0 py-5 first:pt-0">
       {/* Group Card Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-white/5">
         <div className="flex items-center gap-2.5">
@@ -275,7 +275,7 @@ export function TikTokPixelGroupCard({
           >
             {index + 1}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
               {labels.group} #{index + 1}
             </span>
@@ -498,10 +498,10 @@ export function TikTokPixelGroupCard({
       {/* Real-time Inline Result Feedback */}
       {testResult && (
         <div
-          className={`mt-3.5 rounded-xl border p-3 text-xs transition-all ${
+          className={`mt-3.5 py-3 text-xs ${
             testResult.success
-              ? "border-emerald-200 bg-emerald-50/80 dark:border-emerald-500/25 dark:bg-emerald-950/20"
-              : "border-red-200 bg-red-50/80 dark:border-red-500/25 dark:bg-red-950/20"
+              ? "text-emerald-700 dark:text-emerald-300"
+              : "text-red-700 dark:text-red-300"
           }`}
         >
           <div className="flex items-start gap-2.5">

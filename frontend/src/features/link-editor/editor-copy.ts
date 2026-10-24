@@ -1,3 +1,4 @@
+import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 /** Arabic labels for the shared Linktree editor. Platform keeps its Kurdish defaults. */
 import { getPlatformNameKurdish } from "./modal-constants";
 import type { BackgroundPatternStyle } from "@linktree/types";
@@ -5,7 +6,7 @@ import { localizeInlineRequestError, type InlineRequestErrorData } from "@/lib/a
 export { englishEditorCopy } from "./english-editor-copy";
 
 export const englishPatternCopy = {
-  title: "Choose a background pattern", count: "patterns", close: "Close",
+  title: "Choose a background pattern", count: "patterns", close: pageActionCopy("en").close,
   radiogroup: "Background patterns",
   labels: {
     none: "None", grid: "Grid", grid45: "45° grid", dots: "Dots",
@@ -15,24 +16,24 @@ export const englishPatternCopy = {
 };
 
 export const englishTemplatePickerCopy = {
-  title: "Choose a page design", count: "designs", close: "Close", locked: "Locked",
+  title: "Choose a page design", count: "designs", close: pageActionCopy("en").close, locked: "Locked",
 };
 
 export const englishIconPickerCopy = {
-  choose: "Choose icon", icon: "Icon", title: "Choose an icon",
-  search: "Search icons by name...", close: "Close", upload: "Upload image",
+  library: "Icon library", choose: "Choose icon", icon: "Icon", title: "Choose an icon",
+  search: "Search icons", close: pageActionCopy("en").close, upload: "Upload image",
   clear: "Remove", icons: "icons", noResults: "No icons found for",
   loading: "Loading more icons...", categories: { all: "All" },
 };
 
 export const englishCountrySelectorCopy = {
-  title: "Choose a country", count: "countries", close: "Close",
-  search: "Search country or calling code...", empty: "No country found",
+  title: "Choose a country", count: "countries", close: pageActionCopy("en").close,
+  search: "Search countries", empty: "No country found",
   loading: "Loading more countries...",
 };
 
 export const arabicPatternCopy = {
-  title: "اختر نمط الخلفية", count: "أنماط", close: "إغلاق",
+  title: "اختر نمط الخلفية", count: "أنماط", close: pageActionCopy("ar").close,
   radiogroup: "أنماط الخلفية",
   labels: {
     none: "بلا نمط", grid: "شبكة", grid45: "شبكة بزاوية ٤٥°",
@@ -42,21 +43,22 @@ export const arabicPatternCopy = {
 };
 
 export const arabicTemplatePickerCopy = {
-  title: "اختر تصميم الصفحة", count: "تصاميم", close: "إغلاق",
+  title: "اختر تصميم الصفحة", count: "تصاميم", close: pageActionCopy("ar").close,
   locked: "مقفل",
 };
 
 export const arabicIconPickerCopy = {
+  library: "مكتبة الأيقونات",
   choose: "اختيار أيقونة", icon: "أيقونة", title: "اختر أيقونة",
-  search: "ابحث باسم الأيقونة...", close: "إغلاق",
+  search: "البحث عن الأيقونات", close: pageActionCopy("ar").close,
   upload: "رفع صورة", clear: "إزالة", icons: "أيقونة",
   noResults: "لم يُعثر على أيقونات لـ", loading: "جارٍ تحميل المزيد من الأيقونات...",
   categories: { all: "الكل" },
 };
 
 export const arabicCountrySelectorCopy = {
-  title: "اختر البلد", count: "بلد", close: "إغلاق",
-  search: "ابحث عن بلد أو رمز الاتصال...",
+  title: "اختر البلد", count: "بلد", close: pageActionCopy("ar").close,
+  search: "البحث عن البلدان",
   empty: "لم يُعثر على بلد", loading: "جارٍ تحميل المزيد من البلدان...",
 };
 
@@ -77,18 +79,6 @@ const englishPlatformNames: Record<string, string> = {
   gps: "Location", custom: "Other link",
 };
 
-const arabicPlatformPlaceholders: Record<string, string> = {
-  telegram: "@username أو t.me/+رمز الدعوة أو +الرمز",
-  instagram: "@username أو instagram.com/username",
-  tiktok: "@username أو tiktok.com/@username",
-  snapchat: "username أو snapchat.com/add/username",
-  twitter: "@username أو x.com/username", x: "@username أو x.com/username",
-  facebook: "username أو facebook.com/username",
-  linkedin: "username أو linkedin.com/in/username",
-  youtube: "@username أو youtube.com/@username",
-  discord: "معرّف المستخدم أو discord.gg/...",
-};
-
 export const arabicColorNames: Record<string, string> = {
   red: "أحمر", orange: "برتقالي", yellow: "أصفر", green: "أخضر",
   cyan: "سماوي", blue: "أزرق", indigo: "نيلي", violet: "بنفسجي",
@@ -101,12 +91,16 @@ export const englishColorNames: Record<string, string> = {
   pink: "Pink", black: "Black", white: "White",
 };
 
-export function getEditorPlatformPlaceholder(platform: string, copy?: EditorCopy): string | undefined {
-  if (copy?.language === "en") {
-    const value = arabicPlatformPlaceholders[platform];
-    return value ? value.replaceAll("أو", "or").replace("رمز الدعوة", "invite code").replace("الرمز", "code").replace("معرّف المستخدم", "user ID") : undefined;
-  }
-  return arabicPlatformPlaceholders[platform];
+/** Professional field names; examples and format guidance belong outside placeholders. */
+export function getEditorPlatformPlaceholder(platform: string, copy?: EditorCopy): string {
+  const language = copy?.language === "en" ? "en" : copy ? "ar" : "ckb";
+  const index = language === "en" ? 0 : language === "ar" ? 2 : 1;
+  if (["whatsapp", "phone", "viber"].includes(platform)) return ["Phone number", "ژمارەی تەلەفۆن", "رقم الهاتف"][index];
+  if (platform === "email") return ["Email address", "ناونیشانی ئیمەیڵ", "البريد الإلكتروني"][index];
+  if (platform === "gps") return ["Location", "شوێن", "الموقع"][index];
+  if (["website", "custom"].includes(platform)) return ["Link", "بەستەر", "الرابط"][index];
+  const name = getEditorPlatformName(platform, copy);
+  return language === "en" ? `${name} link` : language === "ar" ? `رابط ${name}` : `بەستەری ${name}`;
 }
 
 export function getEditorPlatformName(platform: string, copy?: EditorCopy): string {
@@ -115,6 +109,7 @@ export function getEditorPlatformName(platform: string, copy?: EditorCopy): stri
 }
 
 export const arabicEditorCopy = {
+  headline: "العنوان", headlineHint: "اكتب عنوانًا", slogan: "الشعار الترويجي", sloganHint: "اكتب شعارًا", sloganColor: "لون الشعار", logo: "الشعار",
   verificationBadge: "إظهار شارة التوثيق الزرقاء",
   editPage: "تعديل الصفحة",
   createDefaultPage: "إنشاء الصفحة الافتراضية",
@@ -123,18 +118,17 @@ export const arabicEditorCopy = {
   selectDescription: "اختر المنصات",
   linksDescription: "أضف الروابط",
   basicStep: "المعلومات", selectStep: "المنصات", linksStep: "الروابط",
-  save: "حفظ", create: "إنشاء", saveNow: "احفظ الآن",
-  next: "متابعة", back: "العودة", backTooltip: "العودة إلى الخطوة السابقة",
-  cancel: "إلغاء", cancelTooltip: "إغلاق وتجاهل التغييرات",
-  requiredTooltip: "يرجى ملء الحقول المطلوبة", saving: "جارٍ الحفظ...",
-  close: "إغلاق",
+  save: pageActionCopy("ar").save, create: pageActionCopy("ar").create, saveNow: "احفظ الآن",
+  next: pageActionCopy("ar").next, back: pageActionCopy("ar").back, backTooltip: "العودة إلى الخطوة السابقة",
+  cancel: pageActionCopy("ar").cancel, cancelTooltip: "إغلاق وتجاهل التغييرات",
+  requiredTooltip: "يرجى ملء الحقول المطلوبة", saving: pageActionCopy("ar").saving,
+  close: pageActionCopy("ar").close,
   incompleteQuestions: "يرجى إكمال أسئلة واتساب غير المكتملة",
   backgroundRequired: "يرجى اختيار لون الخلفية",
   templateRequired: "يرجى اختيار تصميم الصفحة",
   platformRequired: "اختر منصة واحدة على الأقل",
   linkValueRequired: "يرجى إدخال قيمة الرابط",
   fixLinks: "يرجى تصحيح أخطاء الروابط",
-  footerPhoneInvalid: "رقم هاتف التذييل غير صالح (يجب أن يتكون من ١٠ إلى ١٥ رقمًا)",
   hexColorInvalid: "يجب أن يكون اللون بصيغة Hex (مثل #000000)",
   slugTaken: "معرّف الرابط مستخدم بالفعل",
   nameTaken: "توجد صفحة أخرى بالاسم نفسه",
@@ -155,7 +149,6 @@ export const arabicEditorCopy = {
   businessNamePlaceholder: "اكتب اسم النشاط التجاري", pageNamePlaceholder: "اسم الصفحة",
   checkingName: "جارٍ التحقق من الاسم...", username: "اسم المستخدم",
   subtitle: "العنوان الفرعي", subtitlePlaceholder: "اكتب عنوانًا فرعيًا",
-  footerButtonColor: "لون زر التذييل",
   subtitleColor: "لون العنوان الفرعي", clearColor: "إزالة اللون",
   subtitleColorHint: "اختر لونًا واحدًا للعنوان الفرعي",
   description: "الوصف", subdomain: "النطاق الفرعي",
@@ -165,10 +158,6 @@ export const arabicEditorCopy = {
   chooseStyle: "اختر تصميمًا", backgroundPattern: "نمط الخلفية",
   choosePatternHint: "تحديد نمط خلفية الصفحة",
   websiteColor: "لون الموقع (Website Color)", backgroundColor: "لون الخلفية",
-  hideFooter: "إخفاء التذييل", footerHiddenHint: "إخفاء التذييل (مخفي)",
-  footerShownHint: "إظهار التذييل (ظاهر)", footerHidden: "التذييل مخفي",
-  footerShown: "التذييل ظاهر", footerName: "اسم التذييل",
-  footerNamePlaceholder: "مثال: Sponsor.krd", mobilePhone: "رقم الهاتف",
   whatsappQuestions: "أسئلة واتساب", disableWhatsapp: "تعطيل نافذة واتساب",
   enableWhatsapp: "تفعيل نافذة واتساب", whatsappEnabled: "نافذة واتساب مفعّلة",
   whatsappDisabled: "نافذة واتساب معطّلة", modalTitle: "عنوان النافذة",

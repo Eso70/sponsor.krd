@@ -1,4 +1,4 @@
-import { BUSINESS_FAVICON_PLACEHOLDER } from "@/lib/brand/brand-assets";
+import { brandIcons } from "@/lib/brand/tab-branding";
 import type { Metadata } from "next";
 import type { FormDraft } from "./types";
 import { formsCopy } from "./forms-copy";
@@ -14,6 +14,7 @@ export function buildFormMetadata(
   form: FormDraft,
   origin: string,
   businessLogo?: string | null,
+  businessFavicon?: string | null,
 ): Metadata {
   const page = {
     name: form.headline,
@@ -36,16 +37,7 @@ export function buildFormMetadata(
   return {
     metadataBase: new URL(origin),
     title: { absolute: title },
-    icons: {
-      icon:
-        publicAssetUrl(form.logo, origin) ||
-        publicAssetUrl(businessLogo, origin) ||
-        new URL(BUSINESS_FAVICON_PLACEHOLDER, origin).href,
-      apple:
-        publicAssetUrl(form.logo, origin) ||
-        publicAssetUrl(businessLogo, origin) ||
-        new URL(BUSINESS_FAVICON_PLACEHOLDER, origin).href,
-    },
+    icons: brandIcons(businessFavicon, businessLogo),
     description: meaningfulPageDescription(form.description)
       ? seo.description
       : title,

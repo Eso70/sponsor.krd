@@ -1,4 +1,5 @@
 "use client";
+import { SHARED_CONTROL_CLASS } from "./shared-control-styles";
 
 import { useId, useState, type CSSProperties } from "react";
 import styles from "./ColorChannelSlider.module.css";
@@ -63,13 +64,14 @@ export function ColorChannelSlider({
       />
       <div className={styles.number}>
         <input
+          data-picker-field
           type="number"
           min={0}
           max={max}
           step={1}
           value={text}
           aria-label={label}
-          className="modal-standard-input border border-gray-200 bg-white text-gray-700 outline-none dark:border-white/10 dark:bg-[#161b22] dark:text-gray-100"
+          className={`${SHARED_CONTROL_CLASS} modal-standard-input`}
           inputMode="numeric"
           onChange={(event) => {
             const raw = event.target.value;

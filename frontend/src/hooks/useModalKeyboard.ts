@@ -3,6 +3,17 @@
 import { useEffect, useId, type RefObject } from "react";
 
 const modalKeyboardStack: string[] = [];
+const focusReturnTargets = new WeakMap<HTMLElement, HTMLElement | null>();
+
+function connectedFocusTarget(target: HTMLElement | null): HTMLElement | null {
+  const visited = new Set<HTMLElement>();
+  while (target && !target.isConnected && !visited.has(target)) {
+    visited.add(target);
+    const owner = target.closest<HTMLElement>('[role="dialog"]');
+    target = owner ? (focusReturnTargets.get(owner) ?? null) : null;
+  }
+  return target?.isConnected ? target : null;
+}
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -27,11 +38,12 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  const tagName = target.tagName.toLowerCase();
+  if (!target || !("nodeType" in target) || target.nodeType !== 1) return false;
+  const element = target as HTMLElement;
+  if (element.isContentEditable) return true;
+  const tagName = element.tagName.toLowerCase();
   if (tagName === "textarea" || tagName === "select") return true;
-  if (target.closest("button,a,[data-modal-enter-ignore]")) return true;
+  if (element.closest("button,a,[data-modal-enter-ignore]")) return true;
   return false;
 }
 
@@ -69,12 +81,12 @@ export function useModalKeyboard({
   useEffect(() => {
     if (!isOpen || !dialogRef) return;
 
-    const previouslyFocused =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
     const dialog = dialogRef.current;
     if (!dialog) return;
+    const ownerDocument = dialog.ownerDocument;
+    const previouslyFocused = ownerDocument.activeElement?.nodeType === 1
+      ? ownerDocument.activeElement as HTMLElement : null;
+    focusReturnTargets.set(dialog, previouslyFocused);
 
     const focusTarget = initialFocusRef?.current || dialog;
     // A panel may still be translated offscreen during its entrance. Default
@@ -82,13 +94,24 @@ export function useModalKeyboard({
     focusTarget.focus({ preventScroll: true });
 
     return () => {
-      if (previouslyFocused?.isConnected)
-        previouslyFocused.focus({ preventScroll: true });
+      const active = ownerDocument.activeElement;
+      // An older overlay may finish exiting beneath a newer one. Never steal
+      // that overlay's focus; if its opener disappeared, follow the return chain.
+      if (
+        !active ||
+        active === ownerDocument.body ||
+        !active.isConnected ||
+        dialog.contains(active)
+      ) {
+        connectedFocusTarget(previouslyFocused)?.focus({ preventScroll: true });
+      }
     };
   }, [dialogRef, initialFocusRef, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const ownerDocument = dialogRef?.current?.ownerDocument ?? initialFocusRef?.current?.ownerDocument ?? document;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const topmostId = modalKeyboardStack[modalKeyboardStack.length - 1];
@@ -105,7 +128,7 @@ export function useModalKeyboard({
 
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
-        const active = document.activeElement;
+        const active = ownerDocument.activeElement;
         if (!dialog.contains(active)) {
           event.preventDefault();
           (event.shiftKey ? last : first).focus();
@@ -142,7 +165,7 @@ export function useModalKeyboard({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown, true);
-    return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [dialogRef, enterEnabled, escapeEnabled, id, isOpen, onEnter, onEscape]);
+    ownerDocument.addEventListener("keydown", handleKeyDown, true);
+    return () => ownerDocument.removeEventListener("keydown", handleKeyDown, true);
+  }, [dialogRef, initialFocusRef, enterEnabled, escapeEnabled, id, isOpen, onEnter, onEscape]);
 }

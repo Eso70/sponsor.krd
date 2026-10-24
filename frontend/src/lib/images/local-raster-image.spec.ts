@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { isLocalRasterImage, loadLocalRasterImage } from "./local-raster-image";
 
 function decoder(width: number, height: number, fails = false) {
-  vi.spyOn(window, "Image").mockImplementation(function () {
+  vi.spyOn(window, "Image").mockImplementation(function() {
     const image = document.createElement("img");
     Object.defineProperties(image, {
       naturalWidth: { value: width },
@@ -24,6 +24,9 @@ describe("shared local raster validation", () => {
     expect(isLocalRasterImage("data:image/webp;base64,YQ==")).toBe(true);
     expect(isLocalRasterImage("https://example.com/logo.png")).toBe(false);
     expect(isLocalRasterImage("data:image/svg+xml;base64,YQ==")).toBe(false);
+  });
+  it("preserves raster validation when used directly as an array predicate", () => {
+    expect(["data:image/png;base64,YQ==", "data:image/webp;base64,Yg=="].filter(isLocalRasterImage)).toHaveLength(2);
   });
   it("decodes valid local rasters for both cropping and uploading", async () => {
     decoder(1600, 900);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { BackgroundImageUpload } from "@/components/shared/BackgroundImageUpload";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 import { ColorGradientModal, type ColorGradientModalProps } from "@/components/shared/ColorGradientModal";
 import { Tooltip } from "@/components/shared/Tooltip";
@@ -9,7 +9,7 @@ import { Tooltip } from "@/components/shared/Tooltip";
 import { RAINBOW_BACKGROUND_COLORS, type BackgroundColorOption } from "@/lib/utils/color-palettes";
 export { RAINBOW_BACKGROUND_COLORS, type BackgroundColorOption } from "@/lib/utils/color-palettes";
 
-interface BackgroundColorPickerProps {
+export interface BackgroundColorPickerProps {
   customLabel?: string;
   imageLabel?: string;
   imageRemoveLabel?: string;
@@ -30,6 +30,8 @@ interface BackgroundColorPickerProps {
   imagePreview?: string | null;
   onImageChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onImageRemove?: () => void;
+  onImageCrop?: (returnFocus: HTMLElement) => void;
+  cropLabel?: string;
 }
 
 const IMAGE_TILE_LABEL = "وێنەی باکگڕاوند";
@@ -102,48 +104,8 @@ export function BackgroundColorPicker({
         )}
 
         {onImageChange && (
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="relative">
-              <Tooltip content={imageLabel} side="top">
-                <label
-                  className={`relative flex h-6 w-6 cursor-pointer items-center justify-center overflow-hidden rounded-md border-2 transition-all duration-200 ${
-                    hasImage
-                      ? "theme-soft border-transparent scale-110 shadow-sm z-10"
-                      : "border-gray-300 hover:border-gray-400 hover:scale-105"
-                  }`}
-                >
-                  {imagePreview ? (
-                    // A data URL preview and an uploaded path both render here, so
-                    // the optimizer is bypassed.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imagePreview} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                  ) : (
-                    <ImagePlus className="h-3.5 w-3.5 text-gray-500" />
-                  )}
-                  <input
-                    aria-label={imageLabel}
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    onChange={onImageChange}
-                    className="hidden"
-                  />
-                </label>
-              </Tooltip>
-              {hasImage && onImageRemove && (
-                <Tooltip content={imageRemoveLabel} side="top">
-                  <button
-                    type="button"
-                    onClick={onImageRemove}
-                    aria-label={imageRemoveLabel}
-                    className="absolute -right-1.5 -top-1.5 z-20 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gray-700 text-white shadow-sm transition hover:bg-gray-900 cursor-pointer"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Tooltip>
-              )}
-            </div>
-            <span className="text-[8px] text-gray-500 leading-tight text-center w-7 truncate">{imageLabel}</span>
-          </div>
+          <BackgroundImageUpload compact image={imagePreview} onChange={onImageChange}
+            onRemove={onImageRemove} label={imageLabel} removeLabel={imageRemoveLabel} />
         )}
 
         {colors.map((color) => (

@@ -20,7 +20,6 @@ export function FormAboutEditor({
       <FormEditorInput
         label={copy.headline}
         value={block.title}
-        placeholder={labels.about}
         maxLength={20}
         showCount
         onChange={(title) => onChange({ title })}
@@ -52,7 +51,6 @@ export function FormAboutEditor({
       <FormEditorInput
         label={copy.descriptionLabel}
         value={block.text}
-        placeholder={labels.aboutDescriptionHint}
         multiline
         maxLength={2000}
         onChange={(text) => onChange({ text })}

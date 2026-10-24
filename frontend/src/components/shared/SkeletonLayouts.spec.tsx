@@ -1,9 +1,9 @@
+import { PageCollectionSkeleton } from "./PageCollectionSkeleton";
+import { SkeletonPageAnalyticsDrawer, PageAnalyticsSkeleton } from "@/features/analytics/components/PageAnalyticsSkeleton";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
-  SkeletonAdvertisingEditor,
   SkeletonBusinessDirectoryPage,
-  SkeletonLinktreeGrid,
   SkeletonPageManagement,
   SkeletonSettingsPage,
   SkeletonTikTokDelivery,
@@ -13,8 +13,6 @@ import {
   SkeletonBusinessAnalyticsContent,
   SkeletonBusinessInfoForm,
   SkeletonLinktreeBasicInfo,
-  SkeletonLinktreeEditorModal,
-  SkeletonPageAnalyticsContent,
 } from "@/components/shared/SkeletonModalLayouts";
 import {
   SkeletonChatThread,
@@ -27,7 +25,7 @@ import {
 describe("layout-matched skeletons", () => {
   it.each([
     [
-      <SkeletonPageManagement key="management" showTabs />,
+      <SkeletonPageManagement key="management" />,
       "Loading page management",
     ],
     [
@@ -35,10 +33,6 @@ describe("layout-matched skeletons", () => {
       "Loading business directory",
     ],
     [<SkeletonSettingsPage key="settings" tabCount={4} />, "Loading settings"],
-    [
-      <SkeletonAdvertisingEditor key="advertising" />,
-      "Loading advertising editor",
-    ],
     [<SkeletonTikTokPage key="tiktok" />, "Loading TikTok settings"],
     [<SkeletonTikTokDelivery key="delivery" />, "Loading TikTok delivery"],
     [
@@ -50,7 +44,7 @@ describe("layout-matched skeletons", () => {
       "Loading Linktree information",
     ],
     [
-      <SkeletonPageAnalyticsContent key="page-analytics" />,
+      <PageAnalyticsSkeleton key="page-analytics" />,
       "Loading page analytics data",
     ],
     [
@@ -70,17 +64,17 @@ describe("layout-matched skeletons", () => {
   });
 
   it("matches the six-card management grid used after loading", () => {
-    const { container } = render(<SkeletonLinktreeGrid count={6} />);
+    const { container } = render(<PageCollectionSkeleton count={6} />);
     expect(container.querySelectorAll("article")).toHaveLength(6);
   });
 
-  it("mounts modal loading chrome in the body portal used by the live modal", () => {
-    render(<SkeletonLinktreeEditorModal platformAdminTheme />);
+  it("mounts analytics loading in the shared drawer portal", () => {
+    render(<SkeletonPageAnalyticsDrawer platformAdminTheme />);
 
-    const modal = screen.getByRole("status", {
-      name: "Loading Linktree editor",
+    const modal = screen.getByRole("dialog", {
+      name: "Loading page analytics",
     });
-    expect(modal.parentElement).toBe(document.body);
-    expect(modal).toHaveAttribute("data-platform-admin-theme");
+    expect(modal.parentElement?.parentElement).toBe(document.body);
+    expect(modal.parentElement).toHaveAttribute("data-platform-admin-theme");
   });
 });

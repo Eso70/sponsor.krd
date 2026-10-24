@@ -444,3 +444,19 @@ Before considering a deployment successful verify:
 ## Persisted forms
 
 Before deploying persisted forms, run `pnpm db:migrate` to apply the `2026-10-10_forms*.sql` forward migrations, then restart application services. No database reset is required. Business plan permissions inherit corresponding Linktree grants; platform administrators retain their existing access. See [Forms](forms.md).
+
+
+### Linktree content field upgrade
+
+Before deploying this release to an existing database, take and verify the usual
+PostgreSQL backup/snapshot. Use a coordinated maintenance deployment: stop old
+backend workers, apply pending forward migrations with `pnpm db:migrate`, then
+start the updated backend and frontend. Do not run `db:reset`. Column renames
+preserve stored values but old backend binaries still query the old column names,
+so mixed-version backend workers must not run across this migration.
+
+Verify an existing public Linktree URL, its headline/logo/slogan, analytics and
+editing after deployment; create a page without a slug and verify the generated
+URL. Renaming a headline must leave its existing public URL reachable. The
+application preserves legacy response aliases for public renderers and old
+clients; no production data was migrated by editing the source alone.

@@ -83,6 +83,8 @@ describe("Product selection translations", () => {
           onChange={() => undefined}
         />,
       );
+      expect(preview.container.querySelector("[data-form-content]")).toHaveAttribute("dir", language === "en" ? "ltr" : "rtl");
+      expect(preview.container.querySelector("[data-form-content]")).toHaveAttribute("lang", language);
       expect(
         screen.getByRole("spinbutton", {
           name: `${copy.quantity}: Authored name`,

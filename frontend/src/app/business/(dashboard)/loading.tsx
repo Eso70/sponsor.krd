@@ -1,36 +1,22 @@
+import { DashboardPageLoading } from "@/components/shared/DashboardPageLoading";
 import { headers } from "next/headers";
-import { FormsPageSkeleton } from "@/features/forms/components/FormSkeletons";
-import { formsCopy } from "@/features/forms/forms-copy";
 import { cookies } from "next/headers";
-import { SkeletonDashboardShell } from "@/components/shared/Skeleton";
-import { SkeletonPageManagement } from "@/components/shared/SkeletonPageLayouts";
+import { DashboardLoadingShell } from "@/components/shared/DashboardLoadingShell";
+import { requestBranding } from "@/lib/brand/request-branding.server";
 import {
   BUSINESS_LOCALE_COOKIE,
   businessLocaleFromCookie,
 } from "@/features/business/i18n/locale-cookie";
 
 export default async function BusinessDashboardLoading() {
-  const cookieStore = await cookies();
+  const [cookieStore, requestHeaders, branding] = await Promise.all([cookies(), headers(), requestBranding()]);
   const locale = businessLocaleFromCookie(
     cookieStore.get(BUSINESS_LOCALE_COOKIE)?.value,
   );
-  const formPage = (await headers()).get("x-public-path") === "/business/forms";
+  const pathname = requestHeaders.get("x-public-path") || "";
   return (
-    <SkeletonDashboardShell navigationItems={5}>
-      {formPage ? (
-        <FormsPageSkeleton copy={formsCopy(locale)} />
-      ) : (
-        <SkeletonPageManagement
-          showTabs
-          loadingLabel={
-            locale === "ar"
-              ? "جارٍ تحميل إدارة الصفحات"
-              : locale === "en"
-                ? "Loading page management"
-                : "بەڕێوەبردنی پەیجەکان بار دەکرێت"
-          }
-        />
-      )}
-    </SkeletonDashboardShell>
+    <DashboardLoadingShell scope="business" accentColor={branding.accentColor}>
+      <DashboardPageLoading pathname={pathname} scope="business" locale={locale} />
+    </DashboardLoadingShell>
   );
 }

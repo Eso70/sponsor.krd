@@ -17,6 +17,13 @@ describe('LinktreesService duplication algorithms', () => {
   });
 
   describe('generateDuplicateSlug', () => {
+    it('keeps copy suggestions inside the 50-character slug limit', async () => {
+      service.isSlugAvailable = jest.fn().mockResolvedValue(true);
+      service.isRootSlugAvailable = jest.fn().mockResolvedValue(true);
+      const slug = await service.generateDuplicateSlug('owner', 'a'.repeat(50));
+      expect(slug).toHaveLength(50);
+      expect(slug).toMatch(/-copy$/);
+    });
     it('generates [slug]-copy for a simple slug if available', async () => {
       service.isSlugAvailable = jest.fn().mockResolvedValue(true);
       service.isRootSlugAvailable = jest.fn().mockResolvedValue(true);
@@ -108,10 +115,12 @@ describe('LinktreesService duplication algorithms', () => {
     };
     let mockStorage: {
       claimBusinessAssets: jest.Mock;
+      areBusinessAssetsOwned: jest.Mock;
     };
     let mockRedis: {
       del: jest.Mock;
     };
+    let templateAccess: { assertAllowed: jest.Mock };
 
     beforeEach(() => {
       mockDb = {
@@ -123,21 +132,262 @@ describe('LinktreesService duplication algorithms', () => {
       };
       mockStorage = {
         claimBusinessAssets: jest.fn().mockResolvedValue(undefined),
+        areBusinessAssetsOwned: jest.fn().mockResolvedValue(true),
       };
       mockRedis = {
         del: jest.fn().mockResolvedValue(undefined),
+      };
+      templateAccess = {
+        assertAllowed: jest.fn().mockResolvedValue(undefined),
       };
 
       service = new LinktreesService(
         mockDb as never,
         mockRedis as never,
         mockEntitlements as never,
-        {} as never,
+        templateAccess as never,
         mockStorage as never,
         {} as never,
         {} as never,
       );
     });
+
+    it('suggests and checks slugs only after verifying source ownership', async () => {
+      mockDb.query.mockResolvedValueOnce({ rows: [] });
+      await expect(
+        service.getDuplicateOptions('foreign', 'owner'),
+      ).rejects.toThrow('Source page not found');
+      expect(mockDb.query).toHaveBeenCalledWith(
+        expect.stringContaining('business_id=$2'),
+        ['foreign', 'owner'],
+      );
+      mockDb.query.mockResolvedValue({ rows: [{ seo_name: 'original' }] });
+      service.generateDuplicateSlug = jest
+        .fn()
+        .mockResolvedValue('original-copy-2');
+      expect(await service.getDuplicateOptions('source', 'owner')).toEqual({
+        slug: 'original-copy-2',
+        available: true,
+      });
+      service.isSlugAvailable = jest.fn().mockResolvedValue(true);
+      service.isRootSlugAvailable = jest.fn().mockResolvedValue(false);
+      expect(
+        await service.getDuplicateOptions('source', 'owner', 'taken'),
+      ).toEqual({ slug: 'taken', available: false });
+      expect(
+        await service.getDuplicateOptions('source', 'owner', 'INVALID'),
+      ).toEqual({ slug: 'INVALID', available: false });
+    });
+
+    it.each(['business', 'platform'] as const)(
+      'saves appearance overrides atomically on the %s copy',
+      async (scope) => {
+        const source = {
+          id: 'source',
+          name: 'Original',
+          seo_name: 'original',
+          template_key: 'spectrum',
+          image: '/images/upload/original.png',
+          template_config: {
+            retained: 'source-setting',
+            banner: { enabled: false, mode: 'image', images: [] },
+          },
+        };
+        const snapshot = JSON.stringify(source);
+        mockDb.query
+          .mockResolvedValue({ rows: [] })
+          .mockResolvedValueOnce({ rows: [source] });
+        service.isSlugAvailable = jest.fn().mockResolvedValue(true);
+        service.isRootSlugAvailable = jest.fn().mockResolvedValue(true);
+        const query = jest.fn(async (sql: string, values?: unknown[]) => {
+          if (sql.includes('COUNT(*)::int'))
+            return { rows: [{ total: 1, copies: 0 }] };
+          if (sql.includes('INSERT INTO linktrees'))
+            return {
+              rows: [{ id: 'copy', name: values?.[1], template_config: {} }],
+            };
+          return { rows: [] };
+        });
+        mockDb.transaction.mockImplementation(
+          async (
+            callback: (client: { query: typeof query }) => Promise<unknown>,
+          ) => callback({ query }),
+        );
+        await service.duplicateLinktree(
+          'source',
+          'owner',
+          {
+            headline: 'Different page',
+            slug: 'different-page',
+            slogan: 'New slogan',
+            slogan_color: '#123456',
+            description: 'New description',
+            background_color: '#161b22',
+            background_image: '/images/upload/background.png',
+            background_pattern: 'dots',
+            template_key: 'frost',
+            verification_badge: true,
+            banner: {
+              enabled: true,
+              mode: 'carousel',
+              images: ['/images/upload/banner.png'],
+            },
+          },
+          scope,
+        );
+        const values = query.mock.calls.find(([sql]) =>
+          sql.includes('INSERT INTO linktrees'),
+        )?.[1];
+        expect(values?.slice(1, 5)).toEqual([
+          'Different page',
+          'New slogan',
+          'New description',
+          'different-page',
+        ]);
+        expect(values?.[6]).toBe(source.image);
+        expect(values?.[7]).toBe('#161b22');
+        expect(values?.[8]).toBe('frost');
+        expect(values?.[16]).toBe('#123456');
+        expect(JSON.parse(values?.[9] as string)).toMatchObject({
+          retained: 'source-setting',
+          templateKey: 'frost',
+          background_image: '/images/upload/background.png',
+          background_pattern: 'dots',
+          verification_badge: true,
+          banner: {
+            enabled: true,
+            mode: 'carousel',
+            images: ['/images/upload/banner.png'],
+          },
+          _copy_lineage: { source_id: 'source' },
+        });
+        expect(mockStorage.areBusinessAssetsOwned).toHaveBeenCalledWith(
+          'owner',
+          ['/images/upload/banner.png'],
+        );
+        if (scope === 'business')
+          expect(templateAccess.assertAllowed).toHaveBeenCalledWith(
+            'owner',
+            'frost',
+          );
+        else expect(templateAccess.assertAllowed).not.toHaveBeenCalled();
+        expect(JSON.stringify(source)).toBe(snapshot);
+      },
+    );
+
+    it.each(['business', 'platform'] as const)(
+      'persists an owned replacement logo only on the %s copy',
+      async (scope) => {
+        const source = {
+          id: 'source',
+          name: 'Original',
+          image: '/images/upload/original.png',
+          seo_name: 'original',
+          template_config: {},
+        };
+        mockDb.query.mockResolvedValue({ rows: [] });
+        mockDb.query.mockResolvedValueOnce({ rows: [source] });
+        service.generateDuplicateSlug = jest
+          .fn()
+          .mockResolvedValue('original-copy');
+        const query = jest.fn(async (sql: string, values?: unknown[]) => {
+          if (sql.includes('COUNT(*)::int'))
+            return { rows: [{ total: 1, copies: 0 }] };
+          if (sql.includes('INSERT INTO linktrees'))
+            return {
+              rows: [
+                {
+                  id: 'copy',
+                  name: values?.[1],
+                  image: values?.[6],
+                  template_config: {},
+                },
+              ],
+            };
+          return { rows: [] };
+        });
+        mockDb.transaction.mockImplementation(
+          async (
+            callback: (client: { query: typeof query }) => Promise<unknown>,
+          ) => callback({ query }),
+        );
+        const result = await service.duplicateLinktree(
+          'source',
+          'owner',
+          { headline: 'Copy', logo: '/images/upload/new.png' },
+          scope,
+        );
+        expect(result.logo).toBe('/images/upload/new.png');
+        expect(mockStorage.areBusinessAssetsOwned).toHaveBeenCalledWith(
+          'owner',
+          '/images/upload/new.png',
+        );
+        expect(mockStorage.claimBusinessAssets).toHaveBeenCalledWith(
+          'owner',
+          '/images/upload/new.png',
+          expect.objectContaining(source.template_config),
+        );
+        expect(source.image).toBe('/images/upload/original.png');
+        expect(
+          query.mock.calls.some(([sql]) => sql.includes('UPDATE linktrees')),
+        ).toBe(false);
+      },
+    );
+
+    it.each(['business', 'platform'] as const)(
+      'rejects foreign or unsafe replacement logos before writing a %s copy',
+      async (scope) => {
+        mockDb.query.mockResolvedValue({
+          rows: [{ id: 'source', name: 'Original' }],
+        });
+        mockStorage.areBusinessAssetsOwned.mockResolvedValue(false);
+        for (const logo of [
+          '/images/upload/foreign.png',
+          '/images/upload/../private.png',
+          'https://example.com/logo.png',
+        ]) {
+          await expect(
+            service.duplicateLinktree('source', 'owner', { logo }, scope),
+          ).rejects.toThrow('replacement logo');
+        }
+        expect(mockDb.transaction).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['business', 'platform'] as const)(
+      'rejects foreign banner images for a %s copy',
+      async (scope) => {
+        mockDb.query.mockResolvedValue({ rows: [] }).mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'source',
+              name: 'Original',
+              seo_name: 'original',
+              template_config: {},
+            },
+          ],
+        });
+        service.generateDuplicateSlug = jest
+          .fn()
+          .mockResolvedValue('original-copy');
+        mockStorage.areBusinessAssetsOwned.mockResolvedValue(false);
+        await expect(
+          service.duplicateLinktree(
+            'source',
+            'owner',
+            {
+              banner: {
+                enabled: true,
+                mode: 'image',
+                images: ['/images/upload/foreign.png'],
+              },
+            },
+            scope,
+          ),
+        ).rejects.toThrow('Banner images must belong');
+        expect(mockDb.transaction).not.toHaveBeenCalled();
+      },
+    );
 
     it('rejects duplicating a page that has reached max nesting depth (depth >= 3)', async () => {
       // Source page at depth 3

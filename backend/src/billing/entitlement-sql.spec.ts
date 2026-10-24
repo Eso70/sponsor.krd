@@ -17,13 +17,11 @@ describe('entitledSql', () => {
   });
 
   it('counts only a subscription that is currently paying', () => {
-    const sql = entitledSql(ENTITLEMENT.advertisingPage);
+    const sql = entitledSql(ENTITLEMENT.tiktok);
     expect(sql).toContain(
       "subscription.status IN ('trialing','active','grace_period')",
     );
     expect(sql).toContain("plan_value.value = 'true'::jsonb");
-    expect(sql).toContain("LOWER(feature_plan.code) IN ('ultra','max')");
-    expect(sql).toContain('feature_subscription.business_id=business.id');
     expect(entitledSql(ENTITLEMENT.tiktok)).not.toContain('feature_plan');
   });
 

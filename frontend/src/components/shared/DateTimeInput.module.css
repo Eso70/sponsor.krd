@@ -1,0 +1,55 @@
+.calendar,
+.compactActions {
+  --shared-control-radius: 12px;
+}
+
+.calendar button {
+  border: 0 !important;
+  box-shadow: none !important;
+  font-weight: 500;
+  color: var(--picker-text, var(--shared-control-text, #475569)) !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  min-width: 0 !important;
+  padding: 0 6px !important;
+}
+
+.calendar button.day {
+  background: transparent !important;
+  border-radius: 12px !important;
+}
+
+.calendar button.day:hover {
+  background: var(--picker-hover) !important;
+}
+
+.field.field input[type="text"] {
+  background: transparent !important;
+  color: var(--shared-control-text, #475569) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.calendar button[aria-pressed="true"],
+.calendar button[aria-pressed="true"]:hover {
+  background: color-mix(
+    in srgb,
+    var(--date-accent, #64748b) 12%,
+    var(--picker-soft)
+  ) !important;
+  color: var(--date-accent, #64748b) !important;
+}
+
+.calendar {
+  container-type: inline-size;
+}
+.dateTimeLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 0.58fr);
+}
+@container (max-width: 360px) {
+  .dateTimeLayout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}

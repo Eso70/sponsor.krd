@@ -120,7 +120,7 @@ export function NotificationBell({
           aria-label={copy?.title ?? "ئاگادارییەکان"}
           aria-expanded={open}
         >
-          <Bell className="h-4 w-4 transition-transform group-hover:scale-110 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+          <Bell className="size-4" />
           {unreadTotal > 0 && (
             <span className="absolute -right-1.5 -top-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-black text-white dark:border-[#161B22]">
               {unreadTotal > 99 ? "99+" : unreadTotal}

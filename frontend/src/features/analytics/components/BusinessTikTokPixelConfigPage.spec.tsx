@@ -16,6 +16,21 @@ describe.each([
   ["business", "/api/auth/settings", "PATCH"],
   ["platform", "/api/platform/settings/tiktok", "PUT"],
 ] as const)("%s TikTok settings", (owner, endpoint, method) => {
+  it("composes embedded content before one final Save action without a second page heading", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: {
+      tiktok_configs: originalGroups,
+      entitlements: { "limit.tiktok_pixels": 3 },
+    } }), { status: 200 })));
+    render(<BusinessTikTokPixelConfigPage owner={owner} embedded managementTitle="TikTok management" copy={businessMessages.en.TikTokPixel}>
+      <div data-testid="delivery-content">Delivery status</div>
+    </BusinessTikTokPixelConfigPage>);
+    await screen.findByDisplayValue("PIXEL_ONE");
+    expect(screen.getByRole("heading", { name: "TikTok management" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: businessMessages.en.TikTokPixel.title })).not.toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
+    expect(screen.getByTestId("delivery-content").compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
   it("shows and saves both Pixel groups without a primary selection", async () => {
     const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
       if (input === "/api/auth/effective-access") {

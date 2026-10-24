@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { SPONSOR_KRD_FAVICON } from "@/lib/brand/brand-assets";
 
 export const metadata: Metadata = {
   title: "Admin | Sponsor.krd",
   robots: "noindex, nofollow",
-  icons: {
-    icon: SPONSOR_KRD_FAVICON,
-  },
 };
 
 function configuredConsoleSegment(): string | null {

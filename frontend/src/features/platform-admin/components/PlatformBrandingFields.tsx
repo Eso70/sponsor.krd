@@ -1,6 +1,7 @@
 import type { ChangeEvent } from "react";
 import { BrandAssetTile } from "@/features/link-editor/components/BrandAssetTile";
 import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 
 export function PlatformBrandingFields({ logo, uploadingAsset, logoLabel, onUpload }: {
   logo: string | null;
@@ -19,7 +20,7 @@ export function PlatformBrandingFields({ logo, uploadingAsset, logoLabel, onUplo
         inputLabel={logoLabel}
         onChange={(event) => onUpload("logo", event)}
         disabled={uploadingAsset !== null}
-        className="group relative h-28 w-28 cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-[#161B22]"
+        className={`${SHARED_SOFT_BUTTON_CLASS} group relative h-28 w-28 cursor-pointer overflow-hidden p-3`}
         imageClassName="h-full w-full object-contain"
         iconClassName="h-5 w-5"
         width={112}

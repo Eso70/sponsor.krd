@@ -1,14 +1,7 @@
 "use client";
 import { createContext, useContext } from "react";
-import type { ImageCropAspect } from "@/components/shared/ImageCropEditor";
-
-export type FormImageCropRequest = {
-  src: string;
-  aspect: ImageCropAspect;
-  maxEdge: number;
-  onConfirm: (file: File) => Promise<void>;
-  returnFocus?: HTMLElement;
-};
+import type { EditorImageCropRequest } from "@/components/shared/EditorImageCropWorkspace";
+export type FormImageCropRequest = EditorImageCropRequest;
 export const FormImageCropContext = createContext<
   ((request: FormImageCropRequest) => void) | null
 >(null);

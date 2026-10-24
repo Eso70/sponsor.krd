@@ -5,6 +5,7 @@ node_modules/
 # Build output
 .next/
 dist/
+dist-seo-verify/
 coverage/
 *.tsbuildinfo
 .runtime/

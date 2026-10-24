@@ -36,9 +36,12 @@ export async function uploadLinktreeImage(
     multipartField(data, 'assetType'),
     'profile-image',
   );
-  const assetType = ['profile-image', 'background-image'].includes(
-    submittedAssetType,
-  )
+  const assetType = [
+    'profile-image',
+    'background-image',
+    'banner-image',
+    'social-image',
+  ].includes(submittedAssetType)
     ? submittedAssetType
     : 'profile-image';
   const baseName = data.filename.split('.').slice(0, -1).join('.') || 'image';

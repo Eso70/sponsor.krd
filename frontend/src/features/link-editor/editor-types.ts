@@ -1,7 +1,11 @@
 export interface EditLinkData {
   linktree: {
     id: string;
-    name: string;
+    name?: string;
+    headline?: string;
+    slogan?: string | null;
+    slogan_color?: string | null;
+    logo?: string | null;
     subtitle?: string | null;
     subtitle_color?: string | null;
     description?: string | null;
@@ -29,24 +33,21 @@ export interface EditLinkData {
 
 export interface LinktreeEditorSubmitData {
   is_default?: boolean;
-  name: string;
-  subtitle?: string;
-  subtitle_color?: string;
+  headline: string;
+  slogan?: string;
+  slogan_color?: string;
   description?: string;
-  slug: string;
-  image: string | null;
+  logo: string | null;
   background_color: string;
   templateKey: TemplateKey;
   templateConfig: Record<string, unknown>;
-  footer_text?: string;
-  footer_phone?: string;
-  footer_hidden?: boolean;
   status?: "active" | "inactive";
   platforms: string[];
   links: Record<string, string[]>;
   linkMetadata?: Record<
     string,
     Array<{
+      display_order?: number;
       display_name?: string;
       description?: string;
       default_message?: string;

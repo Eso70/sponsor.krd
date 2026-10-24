@@ -255,7 +255,7 @@ export const privacyCopy: Record<RootPublicLocale, LegalCopy> = {
         title: "9. TikTok and lead advertising",
         paragraphs: [
           "Native TikTok Instant Forms operate under TikTok’s privacy policy and Lead Generation Terms, together with the advertiser’s own privacy notice. A Sponsor.krd form is not a TikTok Instant Form and does not automatically import TikTok profile data or send answers to TikTok.",
-          "TikTok marketing tracking is limited to eligible published public Linktree and form pages. It is not placed on the root website, legal pages, dashboards, sign-in pages, business landing pages, or the advertising page. Opening a policy link or editing a form does not enable TikTok marketing tracking.",
+          "TikTok marketing tracking is limited to eligible published public Linktree and form pages. It is not placed on the root website, legal pages, dashboards, sign-in pages, business landing pages. Opening a policy link or editing a form does not enable TikTok marketing tracking.",
           "A privacy acknowledgement is not permission for unrelated marketing. If a business needs marketing consent, it must obtain a separate, freely chosen opt-in and explain how to withdraw it.",
         ],
         links: [

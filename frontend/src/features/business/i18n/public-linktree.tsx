@@ -13,3 +13,7 @@ export function PublicLinktreeLocaleProvider({ locale, children }: { locale: Bus
 export function usePublicLinktreeCopy() {
   return publicLinktreeCopy[useContext(PublicLinktreeLocaleContext)];
 }
+
+export function usePublicLinktreeLocale() {
+  return useContext(PublicLinktreeLocaleContext);
+}

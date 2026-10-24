@@ -3,6 +3,22 @@ import { describe, expect, it, vi } from "vitest";
 import { ModalTextInput } from "./ModalTextInput";
 
 describe("ModalTextInput", () => {
+  it("places errors inside an empty field without changing its value", () => {
+    render(<ModalTextInput aria-label="Link" value="" onChange={vi.fn()} placeholder="Website" error="Enter a link value" />);
+    const input = screen.getByRole("textbox", { name: "Link" });
+    expect(input).toHaveValue("");
+    expect(input).toHaveAttribute("placeholder", "Enter a link value");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.parentElement).toContainElement(screen.getByRole("alert"));
+    expect(input).toHaveAttribute("aria-errormessage", screen.getByRole("alert").id);
+  });
+  it("keeps an invalid value visible with an embedded error and existing help description", () => {
+    render(<ModalTextInput aria-label="Link" value="bad link" onChange={vi.fn()} error="Enter a valid URL" aria-describedby="help" />);
+    const input = screen.getByRole("textbox", { name: "Link" });
+    expect(input).toHaveValue("bad link");
+    expect(input.parentElement).toContainElement(screen.getByRole("alert"));
+    expect(input.getAttribute("aria-describedby")).toBe(`help ${screen.getByRole("alert").id}`);
+  });
   it.each(["ltr", "rtl"] as const)(
     "places an action inside a %s field without changing its value",
     (dir) => {

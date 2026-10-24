@@ -1,3 +1,4 @@
+import { validProductPriceBreaks } from '@linktree/types/form-product-pricing.cjs';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import Joi from 'joi';
 import { priceProductAnswer, productAnswerText } from './form-products';
@@ -8,6 +9,7 @@ import {
   SOLID_HEX_COLOR_PATTERN,
 } from '../common/website-color';
 import type {
+  FormProductItem,
   FormDraft,
   FormSubmissionInput,
   FormSubmission,
@@ -66,13 +68,33 @@ const question = Joi.object({
           id: id.invalid('__proto__', 'constructor', 'prototype').required(),
           name: text(100).required(),
           unit: text(30).required(),
+          priceBreaks: Joi.array()
+            .items(
+              Joi.object({
+                minimumQuantity: Joi.number()
+                  .min(0.001)
+                  .max(100_000)
+                  .precision(3)
+                  .required(),
+                unitPrice: Joi.number()
+                  .min(0)
+                  .max(10_000_000)
+                  .precision(2)
+                  .required(),
+              }),
+            )
+            .max(10),
           unitPrice: Joi.number()
             .min(0)
             .max(10_000_000)
             .precision(2)
             .allow(null)
             .required(),
-        }),
+        }).custom((value: FormProductItem, helpers) =>
+          validProductPriceBreaks(value.unitPrice, value.priceBreaks)
+            ? value
+            : helpers.error('any.invalid'),
+        ),
       )
       .max(20)
       .unique('id')
@@ -99,6 +121,7 @@ const schema = Joi.object({
   id,
   name: Joi.string().trim().min(1).max(100).required(),
   status: Joi.string().valid('active', 'paused'),
+  isPinned: Joi.boolean().strip(),
   isArchived: Joi.boolean(),
   archivedAt: Joi.string().isoDate().allow(null),
   slug: text(80),

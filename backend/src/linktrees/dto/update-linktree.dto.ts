@@ -17,6 +17,26 @@ import {
 
 export class UpdateLinktreeDto {
   @IsString()
+  @IsOptional()
+  @MinLength(2)
+  @MaxLength(255)
+  headline?: string;
+
+  @IsString()
+  @IsOptional()
+  slogan?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(SOLID_HEX_COLOR_MAX_LENGTH)
+  @Matches(SOLID_HEX_COLOR_PATTERN)
+  slogan_color?: string;
+
+  @IsString()
+  @IsOptional()
+  logo?: string;
+
+  @IsString()
   @MinLength(2)
   @IsOptional()
   name?: string;
@@ -73,20 +93,11 @@ export class UpdateLinktreeDto {
 
   @IsBoolean()
   @IsOptional()
-  is_campaign_active?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
   is_archived?: boolean;
 
   @IsIn(['active', 'inactive'])
   @IsOptional()
   status?: 'active' | 'inactive';
-}
-
-export class ToggleLinktreeCampaignDto {
-  @IsBoolean()
-  is_campaign_active!: boolean;
 }
 
 export class ToggleLinktreeArchiveDto {

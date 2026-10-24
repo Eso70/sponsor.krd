@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { useFormValidation } from "./FormValidationContext";
+import { EDITOR_FIELD_CLASS, EDITOR_INPUT_CLASS, EDITOR_TEXTAREA_CLASS } from "@/components/shared/editor-control-styles";
 import { EditorField } from "@/components/shared/EditorField";
 import { ModalTextInput } from "@/components/shared/ModalTextInput";
 import { ModalTextArea } from "@/components/shared/ModalTextArea";
@@ -9,7 +10,6 @@ export function FormEditorInput({
   label,
   value,
   onChange,
-  placeholder,
   multiline = false,
   required = false,
   maxLength = 300,
@@ -25,7 +25,6 @@ export function FormEditorInput({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  placeholder: string;
   multiline?: boolean;
   required?: boolean;
   maxLength?: number;
@@ -59,7 +58,7 @@ export function FormEditorInput({
     onBlur: () => setTouched(true),
     "aria-label": label,
     value,
-    placeholder,
+    placeholder: label,
     maxLength,
     onChange: (
       event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -74,7 +73,7 @@ export function FormEditorInput({
         required={required}
         hint={hint}
         interactive={!!inputAction}
-        className="[&>span:first-child]:text-[13px] [&>span:first-child]:mb-2"
+        className={EDITOR_FIELD_CLASS}
       >
         {description && (
           <span className="mb-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">
@@ -85,7 +84,7 @@ export function FormEditorInput({
           <ModalTextArea
             {...props}
             rows={2}
-            className="!min-h-20 !rounded-lg !px-3 !py-2 !text-sm"
+            className={EDITOR_TEXTAREA_CLASS}
           />
         ) : (
           <ModalTextInput
@@ -93,7 +92,7 @@ export function FormEditorInput({
             hasError={!!error}
             endAction={inputAction}
             className={
-              inputClassName ?? "!h-10 !rounded-lg !px-3 !py-2 !text-sm"
+              inputClassName ?? EDITOR_INPUT_CLASS
             }
           />
         )}

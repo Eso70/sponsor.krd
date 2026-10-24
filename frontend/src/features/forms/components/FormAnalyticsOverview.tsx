@@ -19,10 +19,12 @@ export function FormAnalyticsOverview({
   metrics,
   copy,
   locale,
+  title,
 }: {
   metrics: FormAnalytics;
   copy: FormsCopy;
   locale: FormLanguage;
+  title?: string;
 }) {
   const peakDailyResponses = Math.max(
     1,
@@ -30,11 +32,15 @@ export function FormAnalyticsOverview({
   );
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">
-          {copy.overview}
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <h2
+          className="min-w-0 truncate text-sm font-bold text-slate-700 dark:text-slate-200"
+          title={title}
+          dir="auto"
+        >
+          {title ?? copy.overview}
         </h2>
-        <span className="text-xs text-slate-500">{copy.allTime}</span>
+        <span className="shrink-0 text-xs text-slate-500">{copy.allTime}</span>
       </div>
       <StatCardGrid columns={3}>
         <StatCard

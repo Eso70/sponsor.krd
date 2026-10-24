@@ -40,7 +40,8 @@ describe("Card layout editor", () => {
       );
       const panel = screen.getByRole("tabpanel", { name: copy.content });
       fireEvent.change(
-        within(panel).getByPlaceholderText(labels.personalCardHint),
+        within(panel).getAllByRole("textbox", { name: copy.questionLabel })
+          .find((input) => (input as HTMLInputElement).value === "")!,
         { target: { value: "Contact us" } },
       );
       fireEvent.click(

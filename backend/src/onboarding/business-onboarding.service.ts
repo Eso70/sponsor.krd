@@ -57,6 +57,8 @@ import {
 
 import { TERMS_VERSION, PRIVACY_VERSION } from '../common/legal-versions';
 export { TERMS_VERSION, PRIVACY_VERSION } from '../common/legal-versions';
+// Normal Google/email sign-ins use remembered sessions; impersonation has its own short policy.
+const REMEMBER_SIGNIN_DEVICE = true;
 const SIGNUP_SESSION_SECONDS = 2 * 60 * 60;
 
 // An approved application can be reused only after its business was deleted.
@@ -92,7 +94,6 @@ interface OAuthState {
   verifier: string;
   subdomain?: string;
   invitationId?: string;
-  rememberDevice?: boolean;
 }
 
 interface SignupSession {
@@ -271,10 +272,7 @@ export class BusinessOnboardingService {
     return this.beginOAuth({ mode: 'signup', invitationId: invitation.id });
   }
 
-  async beginGoogleSignin(
-    subdomain: string,
-    rememberDevice = false,
-  ): Promise<string> {
+  async beginGoogleSignin(subdomain: string): Promise<string> {
     this.assertTemporaryStore();
     const normalized = normalizeBusinessSubdomain(subdomain);
     const found = await this.database.query(
@@ -286,7 +284,6 @@ export class BusinessOnboardingService {
     return this.beginOAuth({
       mode: 'signin',
       subdomain: normalized,
-      rememberDevice,
     });
   }
 
@@ -360,7 +357,6 @@ export class BusinessOnboardingService {
     subdomain: string;
     ipAddress: string;
     userAgent: string;
-    rememberDevice?: boolean;
   }) {
     this.assertTemporaryStore();
     const key = `business:email-login:${this.hash(input.challengeId || '')}`;
@@ -401,7 +397,7 @@ export class BusinessOnboardingService {
       userId: challenge.userId,
       ipAddress: input.ipAddress,
       userAgent: input.userAgent,
-      rememberDevice: Boolean(input.rememberDevice),
+      rememberDevice: REMEMBER_SIGNIN_DEVICE,
       sessionUser:
         challenge.username && challenge.businessName
           ? {
@@ -468,7 +464,6 @@ export class BusinessOnboardingService {
     code: string;
     ipAddress: string;
     userAgent: string;
-    rememberDevice?: boolean;
   }) {
     this.assertTemporaryStore();
     const key = `admin:email-login:${this.hash(input.challengeId || '')}`;
@@ -517,7 +512,7 @@ export class BusinessOnboardingService {
       email: admin.email,
       ipAddress: input.ipAddress,
       userAgent: input.userAgent,
-      rememberDevice: Boolean(input.rememberDevice),
+      rememberDevice: REMEMBER_SIGNIN_DEVICE,
     });
     const consolePath = this.config.get<string>('PLATFORM_ADMIN_PATH')?.trim();
     return {
@@ -691,17 +686,14 @@ export class BusinessOnboardingService {
     });
   }
 
-  async beginPlatformAdminSignin(rememberDevice = false): Promise<string> {
+  async beginPlatformAdminSignin(): Promise<string> {
     this.assertTemporaryStore();
     this.platformAdminGoogleEmail();
-    return this.beginOAuth({ mode: 'platform-admin', rememberDevice });
+    return this.beginOAuth({ mode: 'platform-admin' });
   }
 
   private async beginOAuth(
-    input: Pick<
-      OAuthState,
-      'mode' | 'subdomain' | 'invitationId' | 'rememberDevice'
-    >,
+    input: Pick<OAuthState, 'mode' | 'subdomain' | 'invitationId'>,
   ): Promise<string> {
     if (!this.google.isConfigured()) {
       throw new ServiceUnavailableException('Google sign-in is not configured');
@@ -750,11 +742,7 @@ export class BusinessOnboardingService {
       return this.finishSignupIdentity(oauth, identity);
     }
     if (oauth.mode === 'platform-admin') {
-      return this.finishPlatformAdminIdentity(
-        identity,
-        requestContext,
-        Boolean(oauth.rememberDevice),
-      );
+      return this.finishPlatformAdminIdentity(identity, requestContext);
     }
     return this.finishSigninIdentity(oauth, identity, requestContext);
   }
@@ -775,7 +763,6 @@ export class BusinessOnboardingService {
   private async finishPlatformAdminIdentity(
     identity: VerifiedGoogleIdentity,
     requestContext: { ipAddress: string; userAgent: string },
-    rememberDevice = false,
   ) {
     const allowedEmail = this.platformAdminGoogleEmail();
     const consolePath = this.config.get<string>('PLATFORM_ADMIN_PATH')?.trim();
@@ -835,7 +822,7 @@ export class BusinessOnboardingService {
       email: admin.email || allowedEmail,
       ipAddress: requestContext.ipAddress,
       userAgent: requestContext.userAgent,
-      rememberDevice,
+      rememberDevice: REMEMBER_SIGNIN_DEVICE,
     });
     return {
       mode: 'platform-admin' as const,
@@ -1131,7 +1118,7 @@ export class BusinessOnboardingService {
       ...membership,
       kind: 'login',
       hostname: new URL(redirectUrl).host,
-      rememberDevice: Boolean(oauth.rememberDevice),
+      rememberDevice: REMEMBER_SIGNIN_DEVICE,
     };
     const [stored] = await Promise.all([
       this.redis.set(

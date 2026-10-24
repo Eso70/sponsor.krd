@@ -41,3 +41,21 @@ describe('Platform content branding', () => {
     ]);
   });
 });
+
+it('preserves an explicitly uploaded platform favicon independently of the logo', async () => {
+  const query = jest.fn().mockResolvedValue({
+    rows: [
+      {
+        name: 'Sponsor.krd',
+        logo: '/images/upload/sponsor-krd/logo.jpg',
+        favicon: '/images/upload/sponsor-krd/custom.ico',
+      },
+    ],
+  });
+  const service = new PlatformContentWorkspaceService({
+    query,
+  } as unknown as DatabaseService);
+  expect((await service.getBranding()).favicon).toBe(
+    '/images/upload/sponsor-krd/custom.ico',
+  );
+});

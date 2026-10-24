@@ -1,4 +1,5 @@
 import {
+  ValidateIf,
   IsString,
   IsOptional,
   IsBoolean,
@@ -23,6 +24,7 @@ import {
  * service narrows each value with a `typeof` check before using it.
  */
 export type LinkMetadataInput = {
+  display_order?: unknown;
   display_name?: unknown;
   description?: unknown;
   default_message?: unknown;
@@ -31,8 +33,29 @@ export type LinkMetadataInput = {
 
 export class CreateLinktreeDto {
   @IsString()
+  @IsOptional()
   @MinLength(2)
-  name: string;
+  @MaxLength(255)
+  headline?: string;
+
+  @IsString()
+  @IsOptional()
+  slogan?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(SOLID_HEX_COLOR_MAX_LENGTH)
+  @Matches(SOLID_HEX_COLOR_PATTERN)
+  slogan_color?: string;
+
+  @IsString()
+  @IsOptional()
+  logo?: string;
+
+  @ValidateIf((value: CreateLinktreeDto) => value.headline == null)
+  @IsString()
+  @MinLength(2)
+  name?: string;
 
   @IsString()
   @IsOptional()

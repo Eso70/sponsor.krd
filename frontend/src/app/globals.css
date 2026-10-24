@@ -2,6 +2,44 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Capture final colors once, then blend two composited snapshots instead of
+   animating every dashboard control independently. */
+html[data-app-theme-changing] *,
+html[data-app-theme-changing] *::before,
+html[data-app-theme-changing] *::after {
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+html[data-app-theme-changing]::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-app-theme-changing]::view-transition-new(root) {
+  animation: app-theme-reveal 180ms ease-out both;
+  mix-blend-mode: normal;
+}
+
+@keyframes app-theme-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Older browsers use a short color-only transition; geometry never animates. */
+html[data-app-theme-fallback] * {
+  transition-property: color, background-color, border-color, box-shadow !important;
+  transition-duration: 160ms !important;
+  transition-timing-function: ease-out !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-app-theme-fallback] * {
+    transition-duration: 0s !important;
+  }
+}
+
+
 /* The transparent SVG follows the app theme, including manual theme changes. */
 img[src="/images/brand/rise.svg"] {
   color-scheme: light;
@@ -405,7 +443,7 @@ html.dark ::-moz-selection {
 /* Standard modal direction/layout contract.
    Modal chrome stays left-to-right even when the page or text language is RTL. */
 .modal-ltr,
-.modal-ltr * {
+.modal-ltr *:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   direction: ltr;
 }
 
@@ -413,23 +451,23 @@ html.dark ::-moz-selection {
   text-align: left;
 }
 
-.modal-ltr .text-right,
-.modal-ltr [class~="text-right"] {
+.modal-ltr .text-right:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)),
+.modal-ltr [class~="text-right"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   text-align: left !important;
 }
 
-.modal-ltr .flex-row-reverse,
-.modal-ltr [class~="flex-row-reverse"] {
+.modal-ltr .flex-row-reverse:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)),
+.modal-ltr [class~="flex-row-reverse"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   flex-direction: row !important;
 }
 
-.modal-ltr [dir="rtl"] {
+.modal-ltr [dir="rtl"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   direction: ltr !important;
 }
 
 /* Standard dashboard direction/layout contract for business-facing screens. */
 .dashboard-ltr,
-.dashboard-ltr * {
+.dashboard-ltr *:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   direction: ltr;
 }
 
@@ -437,17 +475,17 @@ html.dark ::-moz-selection {
   text-align: left;
 }
 
-.dashboard-ltr .text-right,
-.dashboard-ltr [class~="text-right"] {
+.dashboard-ltr .text-right:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)),
+.dashboard-ltr [class~="text-right"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   text-align: left !important;
 }
 
-.dashboard-ltr .flex-row-reverse,
-.dashboard-ltr [class~="flex-row-reverse"] {
+.dashboard-ltr .flex-row-reverse:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)),
+.dashboard-ltr [class~="flex-row-reverse"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   flex-direction: row !important;
 }
 
-.dashboard-ltr [dir="rtl"] {
+.dashboard-ltr [dir="rtl"]:not(:where([data-form-preview], [data-form-preview] *, [data-form-content], [data-form-content] *)) {
   direction: ltr !important;
 }
 
@@ -692,6 +730,13 @@ html.dark ::-moz-selection {
   background-size: 100% 100% !important;
   background-origin: border-box !important;
   background-clip: border-box !important;
+}
+
+/* Filled action buttons share the sidebar's white foreground. This changes
+   only text/icons; decorative fills and neutral controls retain their design. */
+html body :is(button, a, [role="button"]):is(.theme-fill, .sa-gradient, .sa-bg),
+html body :is(button, a, [role="button"]):is(.theme-fill, .sa-gradient, .sa-bg) :is(span, svg) {
+  color: #ffffff !important;
 }
 
 .theme-soft,
@@ -1492,13 +1537,25 @@ img {
     background-color: var(--color-bg-primary-95);
   }
 
-  /* Ensure table rows have white backgrounds by default */
-  table tbody tr {
+  /* Legacy tables retain their default fill. Shared management tables own
+     their frame/header/hover surfaces in management-collection.module.css. */
+  table:not(.management-collection-table) tbody tr {
     background-color: var(--color-bg-primary) !important;
   }
 
-  table thead tr {
+  table:not(.management-collection-table) thead tr {
     background-color: var(--color-bg-primary) !important;
+  }
+
+  /* Report frames own their surface; legacy table defaults must not paint a
+     second, darker plate inside response and source-performance tables. */
+  .form-report-table table tbody tr {
+    background-color: transparent !important;
+  }
+
+  .form-report-table table thead tr,
+  .form-report-table table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--foreground) 3%, transparent) !important;
   }
 
   /* Public marketing navigation owns its CTA color. */
@@ -1743,14 +1800,14 @@ img {
   border-color: rgba(255, 255, 255, 0.04) !important;
 }
 
-.dark input[type="text"],
-.dark input[type="password"],
-.dark select,
-.dark textarea,
-.dark [data-business-dashboard] input[type="text"],
-.dark [data-business-dashboard] input[type="password"],
-.dark [data-business-dashboard] select,
-.dark [data-business-dashboard] textarea {
+.dark input[type="text"]:not(.shared-control),
+.dark input[type="password"]:not(.shared-control),
+.dark select:not(.shared-control),
+.dark textarea:not(.shared-control),
+.dark [data-business-dashboard] input[type="text"]:not(.shared-control),
+.dark [data-business-dashboard] input[type="password"]:not(.shared-control),
+.dark [data-business-dashboard] select:not(.shared-control),
+.dark [data-business-dashboard] textarea:not(.shared-control) {
   background-color: var(--color-bg-input) !important;
   color: #f3f4f6 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
@@ -2123,14 +2180,14 @@ img {
 }
 
 /* CountrySelector and other list modal items hover overrides */
-.dark [data-business-dashboard] .overflow-y-auto button.w-full,
-.dark [role="dialog"] .overflow-y-auto button.w-full {
+.dark [data-business-dashboard] .overflow-y-auto button.w-full:not(.shared-control),
+.dark [role="dialog"] .overflow-y-auto button.w-full:not(.shared-control) {
   border-color: transparent !important;
-  transition: all 0.3s ease !important;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
 }
 
-.dark [data-business-dashboard] .overflow-y-auto button.w-full:not([aria-current="page"]):hover,
-.dark [role="dialog"] .overflow-y-auto button.w-full:not([aria-current="page"]):hover {
+.dark [data-business-dashboard] .overflow-y-auto button.w-full:not(.shared-control):not([aria-current="page"]):hover,
+.dark [role="dialog"] .overflow-y-auto button.w-full:not(.shared-control):not([aria-current="page"]):hover {
   background: var(--color-bg-secondary) !important;
   color: #f3f4f6 !important;
 }
@@ -2215,7 +2272,33 @@ img {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Native browser cursors, with hand feedback for draggable controls. */
+/* Shared branded arrow and hand; text, resize and status cursors stay native. */
+html {
+  --app-default-cursor: url("/cursors/default.svg") 4 3, default;
+  --app-pointer-cursor: url("/cursors/pointer.svg") 10 3, pointer;
+  cursor: var(--app-default-cursor);
+}
+[data-theme-scope],
+.cursor-default {
+  cursor: var(--app-default-cursor);
+}
+:where(
+  input:not([type]),
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  [contenteditable="true"],
+  [role="textbox"]
+) {
+  cursor: text;
+}
+
+/* Branded hand feedback for enabled interactive controls. */
 :where(
   button,
   a[href],
@@ -2236,8 +2319,9 @@ img {
   [role="combobox"]:not(input):not(textarea),
   [data-clickable="true"]
 ),
+.cursor-pointer,
 input::file-selector-button {
-  cursor: pointer !important;
+  cursor: var(--app-pointer-cursor, pointer) !important;
 }
 /* Crop handles resize instead of clicking; override the shared button cursor. */
 :is([data-crop-edge="n"], [data-crop-edge="s"]):not(:disabled) {
@@ -2389,7 +2473,7 @@ html[data-reorder-dragging] * {
   object-fit: cover;
 }
 
-.public-template-shell :is(button.w-full, button.block) {
+.public-template-shell :is(button.w-full, button.block):not([data-image-preview-trigger]) {
   width: 100% !important;
   min-height: 3.5rem;
   padding: 0.75rem 1.25rem !important;
@@ -2397,7 +2481,7 @@ html[data-reorder-dragging] * {
   line-height: 1.5rem !important;
 }
 
-.public-template-shell :is(button.w-full, button.block) > * {
+.public-template-shell :is(button.w-full, button.block):not([data-image-preview-trigger]) > * {
   max-width: 100%;
 }
 
@@ -2472,7 +2556,7 @@ svg text {
 
 /* Drag feedback is temporary and uses the active business/platform theme.
    These states are separate from ordinary focus and interaction outlines. */
-[data-reorder-id][data-reorder-held="true"] {
+[data-reorder-id]:not([data-reorder-thumbnail])[data-reorder-held="true"] {
   border-color: var(--theme-primary, #64748b) !important;
   box-shadow: inset 0 0 0 1px var(--theme-primary, #64748b) !important;
 }
@@ -2480,7 +2564,7 @@ svg text {
 section[data-reorder-held="true"] > div:first-child {
   background: color-mix(in srgb, var(--theme-primary, #64748b) 14%, transparent) !important;
 }
-[data-reorder-id][data-reorder-target="true"] {
+[data-reorder-id]:not([data-reorder-thumbnail])[data-reorder-target="true"] {
   border-color: var(--theme-primary, #64748b) !important;
   border-style: dashed;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-primary, #64748b) 45%, transparent) !important;
@@ -2491,19 +2575,68 @@ section[data-reorder-target="true"] > div:first-child {
 }
 
 
-/* Override themed input focus in the same layer, including portaled dropdown search. */
+/* Shared field tokens inherit from the nearest local appearance boundary. */
+:root, .light, [data-appearance="light"] {
+  --shared-control-surface: #f3f5f7;
+  --shared-control-hover: #eaeef2;
+  --shared-control-text: #475569;
+  --shared-control-muted: #64748b;
+  --shared-control-error-text: #dc2626;
+  --shared-control-error: #fff1f2;
+}
+.dark, [data-appearance="dark"] {
+  --shared-control-surface: #20262e;
+  --shared-control-hover: #282f38;
+  --shared-control-text: #cbd5e1;
+  --shared-control-muted: #94a3b8;
+  --shared-control-error-text: #fda4af;
+  --shared-control-error: #351f29;
+}
 @layer base {
-  [data-theme-active] [data-custom-select-trigger]:focus,
-  [data-theme-active] input[data-custom-select-search]:focus {
-    border-color: var(--preview-border, var(--select-border, var(--select-neutral-border, #e2e8f0))) !important;
+  .shared-control:focus,
+  [data-theme-active] .shared-control:focus {
+    border-color: transparent !important;
     background-image: none !important;
     outline: none !important;
     box-shadow: none !important;
   }
 }
 
+/* Override themed input focus in the same layer, including portaled dropdown search. */
+@layer base {
+  input[data-picker-field]:focus,
+  [data-theme-active] input[data-picker-field]:focus,
+  input[data-icon-picker-search]:focus,
+  [data-theme-active] input[data-icon-picker-search]:focus {
+    border-color: transparent !important;
+    --tw-ring-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  .dark input[data-icon-picker-search]:focus,
+  .dark [data-theme-active] input[data-icon-picker-search]:focus,
+  [data-theme-active] .dark input[data-icon-picker-search]:focus {
+    border-color: transparent !important;
+  }
+  [data-custom-select-trigger]:not([aria-invalid="true"]):focus,
+  [data-theme-active] [data-custom-select-trigger]:not([aria-invalid="true"]):focus,
+  [data-theme-active] input[data-custom-select-search]:focus {
+    border-color: transparent !important;
+    background-image: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  input[data-custom-select-search]:focus,
+  [data-theme-active] input[data-custom-select-search]:focus {
+    border-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
 /* Active navigation retains the accent's readable ink on both dashboard surfaces. */
 .dark [data-dashboard-sidebar] button[aria-current="page"],
 .dark [data-dashboard-sidebar] button[aria-current="page"]:hover {
-  color: var(--theme-ink, #fff) !important;
+  color: var(--sidebar-ink, var(--theme-ink, #fff)) !important;
 }

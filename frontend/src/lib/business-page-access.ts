@@ -4,7 +4,6 @@ export type BusinessDashboardPage =
   | "linktrees"
   | "forms"
   | "tiktok-config"
-  | "advertising"
   | "templates"
   | "profile"
   | "settings";
@@ -23,7 +22,6 @@ const PAGE_PERMISSIONS: Partial<Record<BusinessDashboardPage, string>> = {
   linktrees: "business:pages:linktrees-access",
   forms: "business:forms:read",
   "tiktok-config": "business:tiktok:update",
-  advertising: "business:pages:advertising-access",
   templates: "business:pages:templates-access",
   profile: "business:pages:profile-access",
 };
@@ -48,9 +46,7 @@ export function isBusinessPageLocked(
   const outcome = access?.permissions?.[permission]?.outcome;
   const planCode = access?.subscription?.planCode?.trim().toLowerCase();
   if (page === "forms" && planCode !== "max") return true;
-  if (page === "advertising" && planCode !== "ultra" && planCode !== "max")
-    return true;
-  return page === "advertising" || page === "forms"
+  return page === "forms"
     ? outcome !== "allow"
     : outcome === "deny";
 }

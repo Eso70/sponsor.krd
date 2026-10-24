@@ -1,3 +1,4 @@
+import { applyTabIcon } from "@/lib/brand/tab-branding";
 import {
   parseWebsiteColor,
   type ParsedColor,
@@ -12,7 +13,6 @@ export interface BusinessFooterData {
   footerText?: string | null;
   footerPhone?: string | null;
   whatsappEnabled?: boolean | null;
-  advertisingEnabled?: boolean;
   brandingRemoved?: boolean;
   linktrees?: Array<{ name: string; href: string }>;
 }
@@ -131,7 +131,6 @@ export async function fetchBusinessFooterData(
           footer_text?: string | null;
           footer_phone?: string | null;
           whatsapp_enabled?: boolean | null;
-          advertising_enabled?: boolean;
           branding_removed?: boolean;
         };
       };
@@ -140,7 +139,6 @@ export async function fetchBusinessFooterData(
         footer.footerText = data.footer_text || null;
         footer.footerPhone = data.footer_phone || null;
         footer.whatsappEnabled = data.whatsapp_enabled;
-        footer.advertisingEnabled = data.advertising_enabled;
         footer.brandingRemoved = data.branding_removed;
       }
     }
@@ -243,6 +241,7 @@ export async function loadAuthenticatedBusinessTheme(): Promise<BusinessSubdomai
 export function applyBusinessTabBranding(
   favicon?: string | null,
   name?: string | null,
+  logo?: string | null,
 ) {
   if (typeof document === "undefined") return;
 
@@ -252,15 +251,5 @@ export function applyBusinessTabBranding(
     }
   }
 
-  if (!favicon) return;
-
-  let link = document.querySelector(
-    "link[rel~='icon']",
-  ) as HTMLLinkElement | null;
-  if (!link) {
-    link = document.createElement("link");
-    link.rel = "icon";
-    document.head.appendChild(link);
-  }
-  link.href = favicon;
+  if (favicon || logo) applyTabIcon(favicon, logo);
 }

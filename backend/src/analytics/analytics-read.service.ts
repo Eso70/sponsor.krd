@@ -85,7 +85,7 @@ export class AnalyticsReadService {
       record_state: 'current' | 'historical' | 'unattributed';
     }>(
       `WITH selected_pages AS (
-         SELECT id
+         SELECT id, timezone
          FROM public_pages
          WHERE business_id = $1
            AND (
@@ -112,17 +112,17 @@ export class AnalyticsReadService {
        -- and unique clickers in the requested date range.
        unique_totals AS (
          SELECT event.public_page_action_id,
-                COUNT(*)::bigint AS total_clicks,
-                COUNT(DISTINCT event.visitor_id)::bigint AS unique_clickers,
-                COUNT(*) FILTER (WHERE event.is_conversion)::bigint AS conversions,
-                COALESCE(SUM(event.conversion_value) FILTER (WHERE event.is_conversion), 0)::numeric AS conversion_value
+                COUNT(*) FILTER (WHERE event.event_name = ANY($6::varchar[]))::bigint AS total_clicks,
+                COUNT(DISTINCT event.visitor_id) FILTER (WHERE event.event_name = ANY($6::varchar[]))::bigint AS unique_clickers,
+                COUNT(*) FILTER (WHERE (event.event_name IN ('whatsapp_click','call_click','email_click') OR (event.is_conversion AND (event.event_name NOT IN ('lead_created','order_completed','form_submit') OR event.source = 'server'))))::bigint AS conversions,
+                COALESCE(SUM(event.conversion_value) FILTER (WHERE event.source = 'server' AND event.is_conversion), 0)::numeric AS conversion_value
          FROM analytics_events event
          WHERE event.public_page_action_id IS NOT NULL
            AND event.is_bot = false
            AND event.public_page_id IN (SELECT id FROM selected_pages)
-           AND event.event_name = ANY($6::varchar[])
-           AND ($3::date IS NULL OR event.occurred_at >= $3::date)
-           AND ($4::date IS NULL OR event.occurred_at < $4::date + interval '1 day')
+           AND (event.event_name = ANY($6::varchar[]) OR (event.event_name IN ('whatsapp_click','call_click','email_click') OR (event.is_conversion AND (event.event_name NOT IN ('lead_created','order_completed','form_submit') OR event.source = 'server'))))
+           AND ($3::date IS NULL OR event.occurred_at >= ($3::date::timestamp AT TIME ZONE (SELECT timezone FROM selected_pages WHERE id=event.public_page_id)))
+           AND ($4::date IS NULL OR event.occurred_at < (($4::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM selected_pages WHERE id=event.public_page_id)))
          GROUP BY event.public_page_action_id
        ),
        page_total AS (
@@ -141,17 +141,17 @@ export class AnalyticsReadService {
        -- instead of making the headline and its breakdown silently disagree.
        unattributed_totals AS (
          SELECT event.public_page_id,
-                COUNT(*)::bigint AS total_clicks,
-                COUNT(DISTINCT event.visitor_id)::bigint AS unique_clickers,
-                COUNT(*) FILTER (WHERE event.is_conversion)::bigint AS conversions,
-                COALESCE(SUM(event.conversion_value) FILTER (WHERE event.is_conversion), 0)::numeric AS conversion_value
+                COUNT(*) FILTER (WHERE event.event_name = ANY($6::varchar[]))::bigint AS total_clicks,
+                COUNT(DISTINCT event.visitor_id) FILTER (WHERE event.event_name = ANY($6::varchar[]))::bigint AS unique_clickers,
+                COUNT(*) FILTER (WHERE (event.event_name IN ('whatsapp_click','call_click','email_click') OR (event.is_conversion AND (event.event_name NOT IN ('lead_created','order_completed','form_submit') OR event.source = 'server'))))::bigint AS conversions,
+                COALESCE(SUM(event.conversion_value) FILTER (WHERE event.source = 'server' AND event.is_conversion), 0)::numeric AS conversion_value
          FROM analytics_events event
          WHERE event.public_page_action_id IS NULL
            AND event.is_bot = false
            AND event.public_page_id IN (SELECT id FROM selected_pages)
-           AND event.event_name = ANY($6::varchar[])
-           AND ($3::date IS NULL OR event.occurred_at >= $3::date)
-           AND ($4::date IS NULL OR event.occurred_at < $4::date + interval '1 day')
+           AND (event.event_name = ANY($6::varchar[]) OR (event.event_name IN ('whatsapp_click','call_click','email_click') OR (event.is_conversion AND (event.event_name NOT IN ('lead_created','order_completed','form_submit') OR event.source = 'server'))))
+           AND ($3::date IS NULL OR event.occurred_at >= ($3::date::timestamp AT TIME ZONE (SELECT timezone FROM selected_pages WHERE id=event.public_page_id)))
+           AND ($4::date IS NULL OR event.occurred_at < (($4::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM selected_pages WHERE id=event.public_page_id)))
          GROUP BY event.public_page_id
        ),
        action_rows AS (
@@ -163,8 +163,8 @@ export class AnalyticsReadService {
                 action.destination,
                 GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0))::bigint AS total_clicks,
                 COALESCE(unique_totals.unique_clickers, 0)::bigint AS unique_clickers,
-                GREATEST(COALESCE(totals.conversions, 0), COALESCE(unique_totals.conversions, 0))::bigint AS conversions,
-                GREATEST(COALESCE(totals.conversion_value, 0), COALESCE(unique_totals.conversion_value, 0))::numeric AS conversion_value,
+                COALESCE(unique_totals.conversions, totals.conversions, 0)::bigint AS conversions,
+                COALESCE(unique_totals.conversion_value, totals.conversion_value, 0)::numeric AS conversion_value,
                 COALESCE(page_total.views, 0)::bigint AS page_views,
                 page.name AS page_name,
                 CASE
@@ -192,7 +192,7 @@ export class AnalyticsReadService {
                OR action.action_key NOT LIKE 'link:%'
              ))
              OR GREATEST(COALESCE(totals.total_clicks, 0), COALESCE(unique_totals.total_clicks, 0)) > 0
-             OR GREATEST(COALESCE(totals.conversions, 0), COALESCE(unique_totals.conversions, 0)) > 0
+             OR COALESCE(unique_totals.conversions, totals.conversions, 0) > 0
            )
        ),
        report_rows AS (
@@ -350,7 +350,7 @@ export class AnalyticsReadService {
           FROM analytics_events event
           WHERE ${this.eventPredicate()}
             AND event.is_conversion = true) AS internal_conversions,
-         COUNT(outbox.id) FILTER (
+         COUNT(DISTINCT outbox.analytics_event_id) FILTER (
            WHERE outbox.status = 'delivered' AND event.is_conversion = true
          )::bigint AS conversion_deliveries
        FROM marketing_event_outbox outbox

@@ -4,7 +4,8 @@ import type { TemplatesPageCopy } from "./components/TemplatesPage";
 export const arabicTemplatesPageCopy: TemplatesPageCopy = {
   totalTemplates: "إجمالي القوالب", available: "القوالب المتاحة",
   linktreeTemplates: "قوالب الصفحات", title: "القوالب",
-  description: "تصفّح قوالب الصفحات وعاين تصميم كل قالب.",
+  formTemplates: "قوالب النماذج", pagesTab: "الصفحات", formsTab: "النماذج", defaultFormTemplate: "الافتراضي",
+  description: "تصفّح قوالب الصفحات والنماذج وعاين تصميم كل قالب.",
   clearSearch: "مسح البحث", searchTooltip: "البحث في القوالب (Ctrl+K)",
   searchLabel: "بحث (Ctrl+K)", search: "بحث...",
   noTemplates: "لم يُعثر على قوالب", tryAnother: "جرّب البحث بكلمة أخرى",

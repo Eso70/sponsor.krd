@@ -14,7 +14,6 @@ import { seedDefaultCommunications } from './seed-communications';
 import { encryptPrivateCommunications } from './encrypt-communications';
 import { ensurePlatformRetention } from './ensure-platform-retention';
 import { ensurePlatformMedia } from './ensure-platform-media';
-import { ensureAdvertisingPages } from './ensure-advertising-pages';
 import { seedPlatformAdmin } from './seed-platform-admin';
 import { assertSupportedSchema } from '../src/database/migration-compatibility';
 import {
@@ -135,7 +134,6 @@ async function reset() {
     await seedPlatformAdmin(client);
     await ensurePlatformRetention(client);
     await ensurePlatformMedia(client);
-    await ensureAdvertisingPages(client);
     await encryptPrivateCommunications(client);
     await seedDefaultCommunications(client);
     await encryptPrivateCommunications(client);

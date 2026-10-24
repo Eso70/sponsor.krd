@@ -32,7 +32,6 @@ describe("BusinessSignupWizard application status", () => {
     fireEvent.change(await screen.findByPlaceholderText("Enter business name"), { target: { value: "Acme Studio" } });
     fireEvent.change(screen.getByPlaceholderText("Enter mobile number"), { target: { value: "7501234567" } });
     fireEvent.change(screen.getByPlaceholderText("Enter subdomain"), { target: { value: "acme-studio" } });
-    expect(await screen.findByRole("status")).toHaveTextContent("Checking availability");
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Available"));
     fireEvent.click(screen.getByRole("button", { name: "Submit application" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("already taken or reserved"));

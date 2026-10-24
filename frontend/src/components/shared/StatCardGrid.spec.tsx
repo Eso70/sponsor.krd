@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { StatCardGrid } from "./StatCardGrid";
+import { SkeletonStatCards } from "./Skeleton";
 
 /**
  * Stat rows behave the same on every page.
@@ -66,25 +67,45 @@ describe("StatCardGrid", () => {
     expect(container.firstElementChild).toHaveClass("mb-8");
   });
 
+  it.each([1, 2, 3, 4, 6] as const)(
+    "preserves grid breakpoints and spacing while %s columns load",
+    (columns) => {
+      const { container, rerender } = render(
+        <SkeletonStatCards count={columns} columns={columns} />,
+      );
+      const pendingClasses = container.firstElementChild?.className;
+      rerender(
+        <StatCardGrid columns={columns}>
+          <span />
+        </StatCardGrid>,
+      );
+      expect(container.firstElementChild?.className).toBe(pendingClasses);
+    },
+  );
+
   it("is the only thing that lays out a row of stat cards", () => {
-    const offenders = sourceFiles(SOURCE_ROOT)
-      .flatMap((file) => {
-        const source = readFileSync(file, "utf8");
-        if (!source.includes("<StatCard")) return [];
-        const flat = source.replace(/\n\s*/g, " ");
-        const wrappers = [
-          ...flat.matchAll(
-            /className="([^"]*\bgrid\b[^"]*)"[^>]*>\s*(?:\{[^}]*\}\s*)?<StatCard/g,
-          ),
-        ];
-        // A `divide-*` wrapper is a different pattern: two `comparison` cards
-        // sharing a rule rather than a row of stats. It is already two columns
-        // at every width, and the rule between them only reads correctly with
-        // no gap — which is exactly what this grid adds.
-        return wrappers.some((match) => !match[1].includes("divide-"))
-          ? [file.slice(SOURCE_ROOT.length + 1).split(/[\\/]/).join("/")]
-          : [];
-      });
+    const offenders = sourceFiles(SOURCE_ROOT).flatMap((file) => {
+      const source = readFileSync(file, "utf8");
+      if (
+        !source.includes("<StatCard") &&
+        !source.includes("<SkeletonStatCard")
+      )
+        return [];
+      const flat = source.replace(/\n\s*/g, " ");
+      const wrappers = [
+        ...flat.matchAll(
+          /className="([^"]*\bgrid\b[^"]*)"[^>]*>\s*(?:\{[^}]*\}\s*)?<(?:StatCard|SkeletonStatCard)\b/g,
+        ),
+      ];
+      return wrappers.length > 0
+        ? [
+            file
+              .slice(SOURCE_ROOT.length + 1)
+              .split(/[\\/]/)
+              .join("/"),
+          ]
+        : [];
+    });
 
     expect(offenders).toEqual([]);
   });

@@ -96,7 +96,7 @@ export function drawImageCrop(
 }
 
 /** Raster-only, local assets. Avoid remote fetches and excessive decoded allocations. */
-export const loadCropImage = loadLocalRasterImage;
+export const loadCropImage = (src: string) => loadLocalRasterImage(src, 14_000_000);
 
 export async function exportImageCrop(
   image: HTMLImageElement,
@@ -104,6 +104,7 @@ export async function exportImageCrop(
   transform: CropTransform,
   fill: boolean,
   maxEdge = 1440,
+  allowWebp = true,
 ): Promise<File> {
   const frame = cropOutputSize(ratio, maxEdge);
   const canvas = document.createElement("canvas");
@@ -122,7 +123,7 @@ export async function exportImageCrop(
       ),
     );
   let blob = await encode("image/png");
-  if (blob.size > 5 * 1024 * 1024) blob = await encode("image/webp");
+  if (allowWebp && blob.size > 5 * 1024 * 1024) blob = await encode("image/webp");
   // Browsers may return PNG when WebP encoding is unavailable. Preserve alpha by
   // reducing the raster rather than converting transparent logos to JPEG.
   if (blob.size > 5 * 1024 * 1024) {

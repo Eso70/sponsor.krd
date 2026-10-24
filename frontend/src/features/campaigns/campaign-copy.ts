@@ -2,6 +2,7 @@ import type { PlatformLocale } from "@/features/platform-admin/i18n/locale";
 
 export const campaignCopy = {
   en: {
+    reportingUnavailable: "Live reporting is not connected. Performance data is unavailable.",
     filters: { all: "All", active: "Active", paused: "Paused", review: "In review", completed: "Completed" },
     totalCampaigns: "Total campaigns", activeCampaigns: "Active campaigns", totalImpressions: "Total impressions", totalClicks: "Total clicks", totalSpent: "Total spent", totalConversions: "Total conversions", costPerConversion: "Cost per conversion", title: "Campaign management", description: "View, search, and manage TikTok video campaigns in a grid or table.", clearSearch: "Clear search", searchShortcut: "Search (Ctrl+K)", search: "Search", searchPlaceholder: "Search...", gridView: "Grid view", tableView: "Table view", newCampaign: "New campaign", searchCampaigns: "Search by campaign, video, or page name...", noCampaigns: "No campaigns found", deleteTitle: "Delete campaign", deleteQuestion: "Are you sure you want to delete", confirmDelete: "Delete", cancel: "Cancel", close: "Close",
     status: { active: "Active", paused: "Paused", review: "In review", completed: "Completed" },
@@ -9,6 +10,7 @@ export const campaignCopy = {
     detail: { description: "TikTok campaign performance and details", adVideo: "Ad video", objective: "Campaign objective", destination: "Destination page", settings: "Campaign settings", objectiveLabel: "Objective:", dailyBudget: "Daily budget:", destinationLabel: "Destination page:", callToAction: "Call-to-action button:", targetedLocation: "Target location:", startDate: "Start date:", jsonStructure: "Production JSON structure", copyJson: "Copy full JSON", videoOf: "Video of", creative: "TikTok creative", performance: "Campaign performance", performanceDescription: "Summary of ad performance and cost", liveMetrics: "Live metrics", conversionRate: "Conversion rate", costPerClick: "Cost per click" },
   },
   ckb: {
+    reportingUnavailable: "ڕاپۆرتی ڕاستەوخۆ نەبەستراوەتەوە. داتای ئەنجامەکان بەردەست نییە.",
     filters: { all: "هەمووی", active: "چالاک", paused: "ڕاگیراو", review: "پێداچوونەوە", completed: "تەواوبوو" },
     totalCampaigns: "کۆی کەمپەینەکان", activeCampaigns: "کەمپەینی چالاک",
     totalImpressions: "کۆی پیشاندانەکان", totalClicks: "کۆی کلیکەکان",
@@ -52,6 +54,7 @@ export const campaignCopy = {
     },
   },
   ar: {
+    reportingUnavailable: "التقارير المباشرة غير متصلة. بيانات الأداء غير متاحة.",
     filters: { all: "الكل", active: "نشطة", paused: "متوقفة مؤقتًا", review: "قيد المراجعة", completed: "مكتملة" },
     totalCampaigns: "إجمالي الحملات", activeCampaigns: "حملة نشطة",
     totalImpressions: "إجمالي مرات الظهور", totalClicks: "إجمالي النقرات",

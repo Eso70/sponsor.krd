@@ -9,7 +9,6 @@ import {
   SkeletonList,
   SkeletonManagementPage,
   SkeletonModal,
-  SkeletonPublicLandingPage,
   SkeletonPublicLinktreePage,
   SkeletonStatCards,
   SkeletonStatCard,
@@ -69,7 +68,7 @@ describe("loading skeletons", () => {
 
     const stats = render(<SkeletonStatCards count={4} />);
     expect(stats.container.firstElementChild?.className).toContain(
-      "sm:grid-cols-4",
+      "lg:grid-cols-4",
     );
     stats.unmount();
 
@@ -119,6 +118,63 @@ describe("loading skeletons", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
+  it.each([false, true])(
+    "matches the actual dashboard controls (platform=%s)",
+    (platformAdminTheme) => {
+      const { container, rerender } = render(
+        <SkeletonDashboardShell platformAdminTheme={platformAdminTheme} />,
+      );
+      const sidebar = container.querySelector("aside")!;
+      expect(
+        sidebar.querySelectorAll('[data-sidebar-skeleton="item"]'),
+      ).toHaveLength(platformAdminTheme ? 9 : 5);
+      expect(
+        sidebar.querySelector('[data-sidebar-skeleton="plan"]') !== null,
+      ).toBe(!platformAdminTheme);
+      expect(
+        sidebar.querySelector('[data-sidebar-skeleton="support"]') !== null,
+      ).toBe(!platformAdminTheme);
+      expect(
+        sidebar.querySelector('[data-sidebar-skeleton="settings"]') !== null,
+      ).toBe(platformAdminTheme);
+      expect(
+        sidebar.querySelector('[data-sidebar-skeleton="website"]'),
+      ).toBeInTheDocument();
+      expect(
+        Array.from(container.querySelectorAll("[data-header-skeleton]")).map(
+          (element) => element.getAttribute("data-header-skeleton"),
+        ),
+      ).toEqual([
+        "menu",
+        "refresh",
+        "notifications",
+        "language",
+        "theme",
+        "profile",
+      ]);
+      expect(
+        container.querySelector('[data-header-skeleton="profile"]'),
+      ).toHaveClass("h-8", "w-8", "sm:h-9", "md:h-11");
+      expect(container.querySelectorAll("button, a, input")).toHaveLength(0);
+      rerender(
+        <SkeletonDashboardShell
+          platformAdminTheme={platformAdminTheme}
+          navigationItems={3}
+          sidebarCollapsed
+        />,
+      );
+      expect(container.querySelector("aside")).toHaveClass("w-20");
+      expect(
+        container.querySelectorAll('[data-sidebar-skeleton="item"]'),
+      ).toHaveLength(3);
+      expect(
+        container.querySelectorAll(
+          '[data-sidebar-skeleton="item"][data-collapsed="true"]',
+        ),
+      ).toHaveLength(3);
+    },
+  );
+
   it("opts platform loading into the shared platform theme without changing tenant loading", () => {
     const { container, rerender } = render(
       <SkeletonDashboardShell platformAdminTheme />,
@@ -152,23 +208,6 @@ describe("loading skeletons", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
-  it.each(["platform", "business"] as const)(
-    "reserves the complete %s landing-page sections",
-    (variant) => {
-      const { container } = render(
-        <SkeletonPublicLandingPage variant={variant} />,
-      );
-      expect(
-        screen.getByRole("status", { name: "Loading homepage" }),
-      ).toBeInTheDocument();
-      if (variant === "business") {
-        expect(container.querySelectorAll("section")).toHaveLength(2);
-      } else {
-        expect(container.querySelectorAll("section").length).toBeGreaterThan(3);
-      }
-    },
-  );
-
   it("reserves the public Linktree identity, links, and footer", () => {
     const { container } = render(<SkeletonPublicLinktreePage />);
     expect(
@@ -179,12 +218,19 @@ describe("loading skeletons", () => {
     );
   });
 
-  it.each(["standard", "funnel", "live", "comparison", "story"] as const)(
-    "supports the %s metric-card shape",
-    (variant) => {
-      const { container } = render(<SkeletonStatCard variant={variant} />);
+  it.each([false, true])(
+    "uses the shared metric shell with compact=%s",
+    (compact) => {
+      const { container } = render(<SkeletonStatCard compact={compact} />);
+      expect(container.querySelector("[data-stat-card]")).toHaveAttribute(
+        "data-state",
+        "loading",
+      );
       expect(
-        container.querySelector("[aria-hidden='true']"),
+        container.querySelector("[data-stat-card-value] [data-skeleton]"),
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector("[data-stat-card-caption] [data-skeleton]"),
       ).toBeInTheDocument();
     },
   );

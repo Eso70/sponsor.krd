@@ -5,6 +5,8 @@ import type {
   FormSubmission,
   FormSummary,
   FormSubmissionFilters,
+  FormSubmissionsPage,
+  FormDraft,
 } from "./types";
 import type { FormsCopy } from "./forms-copy";
 
@@ -46,6 +48,41 @@ export async function exportFormResponses(
 ) {
   signal.throwIfAborted();
   const definition = await formsApi.get(scope, form.id, signal);
+  return exportResponsePages({
+    definition,
+    filters,
+    copy,
+    signal,
+    onProgress,
+    readPage: (page, snapshot) =>
+      formsApi.submissions(scope, form.id, page, signal, snapshot),
+  });
+}
+
+/** Shared snapshot pagination, completeness checks and safe CSV encoding. */
+export async function exportResponsePages({
+  definition,
+  filters,
+  copy,
+  signal,
+  onProgress,
+  readPage,
+  essential = false,
+}: {
+  definition: Pick<FormSummary, "id" | "name" | "slug"> & {
+    questions?: FormDraft["questions"];
+  };
+  filters: FormSubmissionFilters;
+  copy: FormsCopy;
+  signal: AbortSignal;
+  onProgress: (count: number, total: number) => void;
+  readPage: (
+    page: number,
+    filters: FormSubmissionFilters,
+  ) => Promise<FormSubmissionsPage>;
+  essential?: boolean;
+}) {
+  signal.throwIfAborted();
   const snapshot = {
     ...filters,
     pageSize: 100 as const,
@@ -55,13 +92,7 @@ export async function exportFormResponses(
   let total = 0;
   for (let page = 0; ; page++) {
     signal.throwIfAborted();
-    const result = await formsApi.submissions(
-      scope,
-      form.id,
-      page,
-      signal,
-      snapshot,
-    );
+    const result = await readPage(page, snapshot);
     signal.throwIfAborted();
     if (page === 0) snapshot.before = result.snapshotAt;
     total = result.total;
@@ -85,6 +116,7 @@ export async function exportFormResponses(
     responses,
     copy,
     definition.questions,
+    essential,
   );
   const blob = new Blob([tableCsv(table)], { type: "text/csv;charset=utf-8" });
   signal.throwIfAborted();

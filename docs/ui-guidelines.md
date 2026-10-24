@@ -12,8 +12,193 @@ General development principles are defined in `AGENTS.md`. This document focuses
 
 # Design Principles
 
-Shared CustomSelect list menus use subtle neutral hover and selection backgrounds
-in light and dark mode; icon-card menus keep the dashboard accent. The portaled menu carries the
+Linktree grid Open and Delete actions use GridCardActionButton, matching the
+Analytics, Edit and Share controls and shared table actions. Keep their neutral
+and destructive tones while reusing responsive sizing, borderless surfaces and
+rounded corners; do not reintroduce inline action button styles.
+
+CountrySelector uses the searchable CustomSelect list presentation directly,
+starting with search and omitting the title/close row. It shares dropdown radius,
+option spacing, hover and tenant selection colors. Search uses the shared soft
+control surface with a pill radius and leading icon. The search wrapper is
+transparent and only the option list scrolls, keeping moving options entirely
+below the search field. Escape, outside clicks and selection dismiss it;
+keyboard search and focus restoration remain available.
+
+Color, pattern, template and date/time pickers share the borderless 20px popup
+surface. Shared picker controls use 16px corners and visual choices use 18px
+corners, neutral hover and tenant selection accents. Color tab groups have no
+extra background layer; pattern/template previews and selection indicators avoid
+nested surfaces. Compact calendar/time actions keep 12px corners and spaced
+options. Popup headers and action footers stay outside their scrolling content;
+time-column labels remain above their independently scrolling choices.
+
+Dashboard header and sidebar branding rows share the responsive `headerRow`
+geometry from `dashboard-chrome.module.css`, including their bottom divider.
+Business, Platform, collapsed navigation and loading frames use the same height
+and divider colors. Short viewport adjustments must not shrink the branding row
+independently of the global header.
+
+Pages and Forms use PageManagementSection in both dashboards. Its compact
+heading, full-width toolbar strip and collection body share one rounded surface.
+Search has room to show the current query; archive filters, view controls and
+actions form clear groups that wrap naturally on small screens. Tenant/platform
+accents remain on selected filters and Create. ThemeProvider emits its palette
+as inline variables on a display-contents scope from the server render, so
+loading controls keep the same business color before hydration. The root effect
+continues to supply portals; skeleton data placeholders remain neutral. All existing permissions and
+actions remain available. Existing grid card renderers are unchanged; tables keep
+their responsive card fallback. Both views use 15 items per collection page.
+Pending sections reuse the same shell and PageManagementToolbarSkeleton geometry.
+Management grids, tables and their loading frames share management-collection
+rounded surfaces. Tables use a soft neutral header, quiet row dividers and bounded
+horizontal scrolling. Both views use the same borderless soft pagination controls
+as the toolbar; card contents and action colors are preserved. Card and row hover
+transitions respect reduced motion and do not promote every item to a GPU layer.
+Refresh appears only in the global dashboard header for these sections. Its
+shared coordinator updates the current screen's registered data without
+resetting filters, pagination or drafts. The section toolbar and its loading
+placeholder contain no duplicate refresh button.
+Pages expose per-record checkboxes in both views to users with analytics-clear
+permission. Bulk controls appear only after selecting a page. Select all includes
+all records in the current search/archive collection, across its pagination;
+changing the search or archive filter resets selection. Deletion confirms the
+selected count, clears only their analytics, preserves pages/links, and reloads
+real totals even after partial failure. Failed attempts retain selection for retry.
+The main toolbar orders Search, Active/Archive, text-only Grid/Table tabs, then
+Create. Contextual selection actions use a second compact row that transitions
+its intrinsic height in both directions through shared CollapsibleRegion.
+Collapsed controls are inert and hidden from assistive technology; reduced-motion
+preferences disable the transition. Loading view tabs reserve text-sized space.
+
+Filled primary action buttons (theme-fill, sa-gradient and sa-bg) use white text
+and icons, matching selected sidebar navigation. This is a foreground-only rule:
+retain original backgrounds, gradients, borders, spacing and hover treatments.
+Neutral controls retain their original readable foregrounds on pale surfaces.
+
+Form and Linktree edit drawers share EditorPageActions and the same action-icon
+tones as analytics sharing. Pause uses amber, Archive violet, Duplicate blue,
+and Resume/Restore green icons. Sharing's primary actions retain the tenant color. Neutral button surfaces and
+readable labels remain consistent in light and dark mode. Semantic icon colors
+are defined once in shared action-icon-tones.
+
+AuthenticationShell uses one AuthenticationHeader across sign-in, sign-up,
+invitations, code entry, loading and related error screens. Back, language, theme
+and refresh controls share DashboardHeaderActionButton's soft neutral surface and
+HEADER_ACTION_SIZE_CLASS (40px). Existing locale adapters retain their own
+preferences; screens without one receive a working cookie-based language control.
+Platform loading screens explicitly select the platform preference. Theme and
+language remain available in light/dark and pending states. All authentication
+screens share the original full-size split composition: overlay controls and a
+colored right column reaching the top, bottom and right edges, without outer
+margins, with 32px top-left and bottom-left corners and a flush right edge.
+The dynamic viewport is a minimum height, so
+short screens scroll naturally and tall forms can grow. No negative panel margins
+or independent viewport-height minimums are used. Authentication layout, cards, forms, preview copy and consent text always use LTR
+direction in Kurdish, Arabic and English; changing language only changes copy.
+Form response tables and loading states share rounded frames with bounded internal
+horizontal scrolling, readable detail-column width and isolated mixed-direction answers.
+Response and source-performance tables reuse form-report-styles for frames and rows.
+Their shared surface overrides legacy global row backgrounds, with a subtle neutral
+header and hover tint in both themes. Shared reports show the owner business logo
+beside the truncated business name. The report name uses the existing overview or date-range row, adding no extra header row. DashboardHeaderFrame provides one full-width,
+sticky navbar surface and responsive height for Business, Platform and shared
+reports; report controls remain LTR and on one row.
+Language changes keep analytics/report chrome and column order LTR, matching the
+Business/Platform drawers. Authored text uses automatic direction where needed;
+changing copy does not reverse control groups. Shared icon actions use inline flex
+centering so SVG baselines cannot shift mobile response toggles.
+
+The remembered-device checkbox and its skeleton are removed from authentication.
+Google links and email verification bodies contain no persistence preference;
+the backend applies the remembered preset for normal sign-in.
+
+Authentication preview logos use one rounded image without an additional color
+plate, padded frame, border, ring or shadow. AuthenticationShell shares this
+treatment across Business/Platform sign-in, invitations, onboarding and analytics
+share access/error pages. Transparent and opaque uploaded logos keep their own
+appearance in light and dark modes; no second background is added behind them.
+
+Form and Linktree carousel banners share PublicImageGallery. Multiple-image
+banners advance every 3 seconds, pause during hover/focus/touch or full-image
+viewing, and stop while the document is hidden. Horizontal touch swipes move
+one image and wrap around; vertical scrolling and pinch zoom remain native.
+Swipes suppress the following image-open click. Automatic changes do not report
+engagement; manual arrows/swipes use the existing media action callback.
+EditorBannerControls keeps carousel thumbnails unobstructed, with replace/crop/
+remove actions below each image and no visible drag grip. Holding the image for
+250 ms starts mouse/touch ordering; ordinary clicks open its preview. The shared
+useReorderGesture powers both thumbnail holds and visible row ReorderHandles with keyboard
+ordering. Thumbnail drag feedback applies only to the image: the drop target
+gets a stronger tenant-color rim and soft tint, with no outline around the action
+buttons beneath it. Row editors retain their existing drag feedback. Stable
+thumbnail keys preserve focus and duplicate image URLs. Empty
+upload slots are not drop targets, and uploads disable reordering. The ordered
+image array updates previews and persists through existing Form/Linktree saves.
+
+WhatsApp question dialogs use WhatsAppQuestionPanel in the published page and
+the editor's phone viewport: a compact heading, soft question rows, and no
+decorative numbering or gradient borders. They follow the page's light/dark
+appearance and tenant accent. Opening the editor's WhatsApp questions section
+shows the live draft dialog; preview choices never navigate or report analytics.
+The drawer uses shared fields, compact errors and LinktreeQuestionCard for
+question/message pairs. Published dialogs trap focus, close with Escape and
+restore the prior scroll lock; Enter alone never chooses a question.
+Recognized built-in WhatsApp headings and subtitles are localized when saved
+config loads and when the drawer language changes. Custom or explicitly edited
+content stays authored; capitalization/outer whitespace in old built-in text does
+not prevent localization.
+WhatsApp question cards use the shared ReorderHandle for mouse/touch dragging
+and Arrow Up/Down keyboard moves. Stable question IDs preserve messages and
+validation; the ordered array drives the live preview and existing saved config.
+Each question has an optional Video link field inside the Message group, above
+the message textarea, with a localized placeholder and accessible name in place
+of a visible label. SHARED_INSET_CONTROL_CLASS gives this nested field a subtly
+stronger neutral background in either appearance. The shared soft surface groups the outgoing text and URL;
+each input retains its own accessible name and validation.
+Valid HTTP(S) links are appended on a separate line in the click-to-chat message.
+The application does not download or embed third-party videos. WhatsApp controls
+link previews; a website link is not a native video attachment. Public and editor
+previews use the same message composer. Video labels/errors support EN/CKB/AR.
+
+Shared color, design/pattern, language/theme, drawer-close and footer action buttons use
+SHARED_SOFT_BUTTON_CLASS: borderless fills with neutral hover/open feedback.
+ColorPickerMark shows solid/gradient values inside a neutral button; primary
+footer actions retain the tenant theme fill and readable ink.
+Authoring placeholders repeat a concise localized field name, such as Headline,
+Description, Phone number, Link or Unit price. Avoid example values, URLs,
+phone numbers and instructions inside placeholders. FormEditorInput derives
+its placeholder from the label; platform fields use one localized field-name
+resolver. Public tenant-authored question placeholders remain authored content.
+Shared text inputs, textareas, choice controls and dropdown triggers use
+SHARED_CONTROL_CLASS from shared-control-styles.ts. Appearance tokens in
+globals.css own their soft surfaces, text and muted colors; shared-control.module.css
+owns borderless styling. Focus preserves the same surface. Errors retain accessible descriptions and a subtle error fill. Link destination
+errors sit inside the input: empty fields use the error placeholder, while
+nonempty invalid fields keep their value with a compact caption. Button text
+never inherits destination errors. Shared controls have a 14 px radius and subtle
+surfaces (#f3f5f7 in light mode and #20262e in dark mode), with slightly stronger
+neutral hover feedback. Linktree platform choices and authoring actions reuse
+these controls; sections and nested cards use 16 px corners and faint neutral
+boundaries. Selected choices retain their accent tint and primary actions retain
+the tenant color.
+Shared dropdown triggers use the same soft, borderless surface as popup search;
+menus retain subtle neutral boundaries. Search fields blend into their parent
+surface and retain identical styling when focused or unfocused.
+Page design and Background pattern use PickerPopup and PickerOptionCard:
+three-column visual galleries with miniature page/pattern previews, captions
+below the image, subtle selection checks and visible disabled locks. They share
+the picker palette/header and bounded placement; cards never scale or stagger
+on opening. Template access rules and stored identifiers remain unchanged.
+Icon, country and color pickers share PickerPopupHeader and one popup surface
+palette: white/#f3f5f7 in light mode and #161b22/#20262e in dark mode.
+Their portal appearance comes from the nearest drawer/public-page appearance,
+with neutral controls, soft selected states and the same 180 ms reduced-motion
+aware transition. Color swatches and channel tracks preserve the actual colors.
+List options have a 4 px gap so neighboring hover/selected surfaces stay separate.
+Shared CustomSelect list menus use neutral hover backgrounds and a subtle tenant
+accent tint for selected options, with an accent checkmark in light and dark mode;
+selected text retains the readable neutral palette. Icon-card menus keep the dashboard accent. The portaled menu carries the
 trigger's theme variables and local light/dark appearance across the portal, so
 drawer dropdown menus remain readable when their theme differs from the page.
 Selected list rows use the menu's light/dark text palette (or explicit inherited
@@ -23,15 +208,19 @@ dashboard surfaces use the same tenant/platform accent. Hover does not select
 an item or add a colored outline. List rows use compact heights and reduced-motion
 aware opening transitions.
 
-Enabled buttons, links, expandable section headers, switches, selection actions,
-and upload controls use the native pointer (hand) cursor through the shared root
-stylesheet. Form section toggles also declare `cursor-pointer` explicitly.
-Disabled and busy controls retain their native not-allowed/wait feedback;
-crop frame edges and corners explicitly override the global button cursor with
-directional resize cursors through the shared `data-crop-edge` selectors.
-reorder handles retain grab/grabbing, including while dragging across other
-controls. Text inputs keep the normal text cursor. Do not restore custom cursor
-assets or colored focus outlines. During drag only, the shared ReorderHandle
+Enabled buttons, links, expandable section headers, switches and upload controls
+share a white hand cursor with a tenant-colored outline, matching the normal
+arrow. Validated SVG data URLs and static public/cursors fallbacks are supplied
+through createCursorVariables by server host branding and live Business/Platform
+theme providers. Public pages, authentication and dashboards use the owner color.
+Text inputs, disabled/busy controls, crop resize handles and reorder controls
+retain their native interaction cursors. Root CursorGlow adds one decorative,
+soft radial halo with a short, frame-rate-independent trailing movement. It never
+replaces or delays the actual cursor, intercepts clicks, or stores pointer data.
+It stops rendering frames when settled and hides during dragging, editing,
+window exit and reduced-motion/touch interaction. Its listeners and frames are
+cleaned up on unmount. Keep this shared implementation across all surfaces.
+During drag only, the shared ReorderHandle
 marks the held item with a theme-tinted header and solid border, and the current
 drop target with a lighter tint and dashed border. These states clear on release,
 cancel, lost pointer capture, or unmount.
@@ -58,13 +247,15 @@ presentation, result selection, and dialog keyboard behavior. The editor uses
 `ManagementModal`, sharing its theme, focus trap, Escape handling, and focus
 restoration. The drawer slides horizontally from the right edge toward the left,
 with 32px rounded exposed left corners matching the sign-in preview card,
-full viewport height, and no modal zoom. Opening and closing use a 900 ms
-transform with a gradual start and finish; the dimmed backdrop fades over 600 ms with a small static blur. Reduced-motion users receive an
+full viewport height, and no modal zoom. All drawers use the same transform-only
+320 ms eased entry and shorter 220 ms exit from `drawer-motion`; their backdrop
+fades over 200 ms with a small static blur. Reduced-motion users receive an
 immediate transition. It fills mobile screens and leaves part of the dashboard
 visible on desktop. Its header/footer remain visible.
 Form editing keeps one mounted drawer from its loading skeleton through the
 loaded editor, so fetching the definition does not restart its entrance. Form
-editor and analytics drawers retain their surfaces until exit animation finishes.
+editor, Linktree, analytics and sharing drawers retain their surfaces until exit
+animation finishes through shared DrawerPresence boundaries.
 The overlay uses `overflow: clip`, and initial/restored dialog focus uses
 `preventScroll` so the browser cannot scroll a translated right-side panel into
 view before its entrance completes. Keep scrolling within the drawer body.
@@ -227,15 +418,6 @@ Marketing primary CTAs use the fixed
 Sponsor.krd cyan-to-red brand gradient rather than the configurable platform accent. Visible
 marketing sentences do not use terminal full stops.
 
-Business landing pages, Sponsor.krd marketing pages, and business advertising
-pages share `PublicMarketingHero`, `PublicHeroAccentBackdrop`,
-`PublicSection`, `PublicSectionHeading`, and `PublicCallToActionSection`.
-Responsive spacing, heading scale, light/dark surfaces, action hierarchy, and
-tablet/mobile behavior belong to those primitives. Each surface supplies only
-its copy, accent, actions, decorations, section data, and permission-specific
-behavior. Advertising editor statistics and public-section visibility controls
-also live in standalone feature components rather than inside the editor page.
-
 Shared UI belongs in:
 
 - `frontend/src/components/ui`
@@ -377,47 +559,6 @@ alternatives such as `Ú©Ø±ØªÛ•` for the same event.
 
 Modal field markup lives in one shared system so every dialog looks identical:
 
-- `features/link-editor/modal-input-styles.ts` exports `modalInputClass`,
-  `modalTextareaClass`, and `modalChoiceButtonClass` â€” the single source for
-  input, textarea, and select-style button styling. Use these classes instead
-  of inline input styling.
-- `components/shared/EditorField` is the label wrapper: an `11px` black-weight
-  label, an optional `RequiredMark`, an optional right-aligned hint, and the
-  control itself. Prefer it over hand-rolled `label` + `span` markup.
-- `components/shared/RequiredMark` renders the required `*` in the tenant
-  accent (`var(--theme-primary, #64748b)`). Never hard-code the marker color in
-  individual fields; always reuse this component.
-- `components/shared/AvatarImageUpload` renders the shared 128px circular
-  avatar/logo picker (hover overlay, red remove badge, full-width choose-image
-  button) used by the linktree editor and the advertising testimonials modal.
-  It exports `DEFAULT_AVATAR_SRC`.
-- The tenant-accent action button (publish toggles, create/save/export actions,
-  wizard next/submit) is written inline at each call site as a plain `button`.
-  Only the accent paint is invariant: `[background:var(--theme-css)]`,
-  `text-[var(--theme-ink)]`, `hover:brightness-95`, and `disabled:cursor-wait`.
-  Geometry and typography follow the button row the action sits in â€” copy the
-  height/padding/text-size/weight of the neighbouring cancel, back, or secondary
-  button rather than a fixed pill, and lift the font one weight step for the
-  primary action. A row sized by padding (`px-4 py-2.5 sm:px-5 sm:py-3`) keeps
-  padding; a row on a fixed `h-10`/`h-11` keeps that height. Standalone accent
-  buttons with no neighbours use `flex h-10 shrink-0 items-center gap-2
-rounded-xl border border-transparent px-3.5 text-xs font-black`. In-flight
-  actions set `aria-busy` and include the busy flag in `disabled` so the wait
-  cursor applies. Segmented controls, toggle switches, and circular icon buttons
-  keep their own patterns.
-- `features/link-editor/BackgroundColorPicker` is the background-color field
-  used by the linktree editor. It renders the preset swatch grid plus an
-  optional "custom" toggle that opens `ColorGradientModal`. Pass
-  `colors={RAINBOW_BACKGROUND_COLORS}` for the simple base-rainbow preset grid
-  and `allowGradient={false}` to restrict the custom modal to solid colors
-  (both used by the advertising package-category modal). It exports
-  `RAINBOW_BACKGROUND_COLORS` for reuse.
-
-Both the linktree editor (`BasicInfoStep`) and the
-advertising testimonials modal (`AdvertisingServicePage.tsx`) consume this same
-field system so their titles, sizes, placeholder styles, and required markers
-stay in sync.
-
 ## Required workflow before building a feature
 
 This sequence is mandatory, not advisory:
@@ -451,10 +592,6 @@ Every destructive action must confirm through
 `components/shared/ConfirmDeleteModal` before it mutates state. Deleting on the
 first click is not acceptable, including for items that only exist in local
 editor state.
-
-A surface with several delete affordances should hold one pending-delete slot
-in state and render a single `ConfirmDeleteModal`, rather than one modal per
-row. See `features/advertising/components/AdvertisingServicePage.tsx`.
 
 ## Numeric fields
 
@@ -752,12 +889,11 @@ It supplies one accessible announcement, consistent dark-mode contrast, and
 reduced-motion-safe animation. Do not use it for predictable replacement
 content; use the matching skeleton composition in that case.
 
-Every public route owns a route-level skeleton. Marketing pages preserve the
-shared navbar plus their actual cards, pricing, article, form, or template body.
-The root loading boundary detects platform versus business hosts so tenant
-requests receive the business landing composition. Public Linktree,
-invitation, and results routes reserve their own renderer or
-branded client-access shell.
+Loading skeletons belong to the route whose content they represent. There is no
+global homepage loading fallback, and routes without a matching skeleton wait for
+their actual content without fabricated placeholders. Existing Public Linktree,
+Form, invitation, and results boundaries reserve their own renderer or branded
+client-access shell. Short indeterminate operations reuse LoadingState.
 
 ## Dashboard notification bell
 
@@ -931,9 +1067,10 @@ theme back into a flat cyan fill.
   create page-specific shimmer colors or animations.
 - Platform dialogs use the shared `ManagementModal` Sponsor.krd mode. Tenant
   editors pass an explicit accent and continue to use the tenant theme.
-- All surfaces use native browser cursors. Drag controls use grab before pressing
+- All surfaces share the branded normal arrow and pointer hand; specialized interaction cursors stay native.
+  Drag controls use grab before pressing
   and grabbing while held; the shared reorder handle keeps grabbing active until
-  drop, cancellation, or unmount. Custom cursor painting and preloading are disabled.
+  drop, cancellation, or unmount. CursorGlow is decorative only; the native cursor image remains immediate.
 
 Interaction outlines and focus rings are disabled globally at the owner's request,
 including keyboard, mouse, touch, focus-within wrappers and form drag targets.
@@ -951,7 +1088,6 @@ the inline banner for card pages without duplicating fields or buttons.
 CustomSelect list and grid menus share keyboard focus entry/trapping/restoration
 and modal-stack dismissal; arrows navigate enabled choices. Search is opt-in.
 
-
 Form choice authoring uses shared image-first answer cards with numbered labels,
 a visible option count, per-row removal and one full-width Add option action.
 Conditional CSV answers reuse the shared CustomSelect without a search field, including
@@ -960,12 +1096,10 @@ retain neutral borders while open, hovered or focused; option hover and selected
 remain unchanged. Conditional display is
 configured per question without a global Logic settings switch.
 
-
 FormPreviewNavigation shares compact previous/next icon buttons above both preview
 frames, with disabled boundaries and localized labels. No page counter is displayed.
 These authoring controls browse pages without submitting or clearing answers; the
 in-preview Start/Back/Next/Send controls retain their usual validation.
-
 
 CustomSelect popup shells and search fields retain neutral light/dark borders,
 without focus outlines or rings. Preview menus inherit --preview-border rather
@@ -984,3 +1118,317 @@ its accent background and readable theme ink remain unchanged on hover.
 Collapsed desktop plan controls remove their label flex boxes with md:hidden,
 so the remaining crown icon is centered. Mobile and expanded sidebar labels
 remain visible; upgrade and support behavior is unchanged.
+## Shared time choices
+
+DateInput, DateTimeInput and TimeInput use the neutral shared control surface and PickerPopup for local
+light/dark appearance and viewport-aware placement. TimeColumn keeps choices in
+stable order with separate hover surfaces, a subtle tenant accent for selection,
+and arrow/Home/End keyboard navigation. Legacy dark list overrides exclude shared
+controls so their neutral hover and selected colors remain consistent. Date/time
+popups are compact (280px date, 248px time, 440px combined, bounded by the viewport).
+The entire field opens the popup, aligned to its start edge, while retaining
+manual input focus. These editable anchored popups do not trap focus away from
+the field. Calendar cells and time choices use 28px rows, neutral hover surfaces,
+and soft selected fills in both appearances. Internal calendar controls, time
+choices and picker actions use a soft 9px corner radius instead of pill shapes;
+the shared control radius token keeps this scoped to date/time popups. Month/year
+and navigation controls have 4px gaps so adjacent surfaces remain distinct.
+
+## Shared page actions
+
+Forms and Linktrees use `features/shared/i18n/page-action-copy.ts` for common action and lifecycle names in English, Kurdish, and Arabic. Both dashboard adapters, list controls, editor footers, duplicate titles, submit/progress labels, and status labels resolve through this catalog. Use the same short Create, Save, Edit, Delete, Open, Pause, Activate, Archive, Restore and Duplicate labels; keep feature-specific content field names where the underlying meaning differs.
+
+Shared report header contents align with the centered report width. Its solid background matches the report body in both themes; only the divider separates them.
+
+Form and Linktree collection cards use ManagementCard media for an edge-to-edge saved banner above their existing details. PageListBanner serves Business and Platform grid covers only; desktop and mobile tables omit banners. It shows the first enabled banner image in saved order, never autoplays, and uses the same neutral tenant-tinted placeholder for absent, disabled or failed images. Grid loading cards reserve the same cover ratio. LinktreeListBanner adapts saved Linktree configuration to the same PageListBanner surface; PageListCardHeader centers the logo halfway over the lower banner edge and centers the title, badges and description beneath it. Grid traffic cells share the same centered alignment. Existing Linktree table logos remain visible.
+
+Linktree and Form collection grids, tables and mobile cards omit blank optional text (including whitespace-only slogans/descriptions) instead of rendering dash placeholders. Text blocks and their spacing disappear; table cells remain aligned with their headers. Missing optional creation dates omit their card metadata label and leave table cells empty. Real zero traffic values remain visible.
+
+Shared StatCard variants render their label and optional supporting context through StatCardCaption in one bounded row beneath the value. Context uses smaller muted text after a separator; narrow cards truncate text without introducing a third line. Hover or keyboard focus exposes the complete caption through the shared Tooltip. All stat-card skeletons use StatCardFrame to reserve the same two-line metric layout. Callers keep their existing subtitle/description values and localization.
+
+Grid pin controls sit at the physical top-right of the banner through PageListCardMedia, as an icon without a background in default, hover and pinned states. Form cards omit absent/disabled logos and their overlap spacing. Linktree collection logos fall back to the business default avatar, never the system default avatar or business logo. Legacy DefaultAvatar placeholders count as unset; without owner media no image is rendered.
+
+Analytics share management groups credential and lifecycle actions in one responsive toolbar. Icons use tenant, warning and destructive accents; labels appear when the card container is at least 560px wide, while smaller cards retain 36px icon buttons with localized accessible names and shared tooltips. Metadata sits in one compact row above the toolbar. Language, theme and close follow the analytics drawer order with 36px controls; changing drawer language updates copy and newly created link locale without altering existing grants.
+
+Linktree category fields and Search & page details are shown only with advancedSeoAllowed. Business access comes from a live Max subscription; the internal Platform workspace keeps advanced authoring. Lower plans retain automatic page SEO and the existing headline/description/logo editor. Hidden paid data remains in the saved draft on unrelated edits and is excluded from lower-plan previews.
+
+
+App light/dark switches share a short whole-page crossfade rather than staggered
+control animations. Use `useAppTheme` for app appearance; do not create local theme
+state or persist preferences from React state updater callbacks. Preserve tenant
+accent colors and authored public page palettes. Respect reduced motion, keep
+focus in the existing control, and animate colors rather than layout geometry in
+the compatibility fallback.
+
+
+Stat cards use one horizontal Linktree-inspired layout everywhere, including
+nested settings and campaign metrics. Customize color, icon, action, context and
+compact size through StatCard props; do not create alternative metric shells.
+StatCardFrame and shared color tokens are the single design source for resolved
+cards and SkeletonStatCard. Pending icon, value, caption, context and action
+slots all use shared skeleton primitives and have identical dimensions in both
+states. Skeleton grids use StatCardGrid with the actual count and desktop column
+configuration. Avoid per-card hover scaling, geometry transitions, or custom
+loading colors. A pending card is noninteractive and its loading owner announces
+status once; loaded cards retain readable zero values and bounded long text.
+
+
+Dashboard Website navigation lives in DashboardSidebar's shared footer, with a
+localized label and globe icon, and opens the current host's homepage in a new
+tab. It is absent from DashboardHeader. Footer support/settings and Website rows
+reuse DashboardSidebarAction, keep accessible names when collapsed, and
+close the mobile navigation on activation. The business plan is a single compact
+clickable row with current-plan text and an inline tenant-colored upgrade cue;
+Max retains plan details without an upgrade cue. Do not nest a second button or
+wrap the plan row in another card surface.
+
+
+ManagementDrawer owns its controlled open/close presence through ManagementModal
+and ManagementDialog. Conditionally rendered feature drawers must be wrapped in
+DrawerPresence at their owner; do not return null before a controlled false open
+prop reaches the shell. The shared DrawerSession spans lazy skeleton/content
+handoffs so the actual editor does not slide in a second time. Keep the same
+owner key during that handoff. New independent drawers get independent sessions.
+The retained dialog owns keyboard trapping and document scroll locking through
+its exit, ignores duplicate dismissals, and restores focus only after removal.
+useDocumentScrollLock is reference-counted so overlapping overlays can close in
+any order. Focus restoration never steals focus from a newer overlay and can
+follow a removed parent dialog back to its original opener. Motion owns temporary
+transform promotion; drawer surfaces do not permanently reserve compositor layers.
+
+
+Dashboard navigation and footer rows share DashboardSidebarAction and scoped
+sidebar styles: 46px targets, 15px corners, quiet neutral hover, bounded labels
+and no hover scaling or layout animation. Header actions and sidebar rows compose
+the same dashboard-chrome control styles, including keyboard focus, disabled and
+reduced-motion states. Menu, refresh, notifications, language and theme
+controls share 40px targets and 15px corners, with a subtle neutral background
+and a slightly stronger hover/open fill in both themes. Header icons remain 16px
+without hover scaling, with tighter mobile spacing. The profile trigger retains
+its original responsive size and edge-to-edge image rather than an inset image.
+Dashboard headers use the sidebar's
+solid light/dark surface and a divider; shared reports retain their page-matched
+surface. The shell skeleton reuses DashboardHeaderFrame and matching controls.
+DashboardSidebarSkeleton reuses sidebar brand/navigation/footer classes, row icon
+slots and the real plan-row geometry, including short-viewport and collapsed
+states. Business loading reserves five navigation rows plus plan/support/Website;
+Platform loading reserves nine rows plus administrator settings/Website, with
+the visible permission-filtered count supplied when available. Header loading
+uses the actual button surfaces with 16px icon placeholders, a language-code
+placeholder and the original responsive profile image size. No arbitrary extra
+actions, decorative blocks or alternating label widths are added. These loading
+controls are non-interactive and hidden from assistive technology; the page body
+provides the single loading announcement. SkeletonBlock owns the shared pulse
+primitive independently of the shell to avoid circular component imports.
+Selected navigation and the plan cue
+use white ink on the tenant's solid primary color; light colors are darkened only
+for selection to preserve readable contrast. Gradient themes use their first stop
+here to avoid text crossing incompatible backgrounds. Selected icons have no
+separate background. The plan row has a soft brand tint with a gold crown;
+its shared 28px icon slot, 12px gap and horizontal padding align its text with
+the Website and Help and support actions, including collapsed navigation.
+Support and Website icons use green and blue. The sidebar uses the dynamic
+viewport height with compact spacing on short screens and safe-area footer padding.
+It has no separate navigation scroller; unusually short/zoomed screens retain
+whole-sidebar overflow so no controls become inaccessible.
+Sidebar variables are computed from explicit Business/Platform branding props,
+independently of light/dark appearance. readableInk uses sRGB contrast and selects
+white, dark slate, or black to achieve at least 4.5:1 on valid solid colors.
+Disabled rows keep native disabled semantics and their reason tooltip; hidden
+items remain absent, collapsed labels retain accessible names and mobile labels
+stay visible even when the saved desktop sidebar is collapsed.
+
+
+Management collection responsiveness is based on the section/card's available
+width, including space consumed by the sidebar. The desktop toolbar retains its
+single row; narrow sections place Search/Create above Active/Archive and
+Grid/Table. These are the same controls, labels, colors and rounded surfaces,
+with 36px phone, 38px compact and 40px desktop toolbar heights. Scoped minimums
+prevent the legacy global 44px mobile rule from overflowing segmented groups.
+Selected actions wrap into a two-column row on phones with a full-width delete
+action. PageListMobileCard places optional selection/avatar beside a wrapping
+headline and puts actions below details, shared by Forms and Linktrees. URLs
+and pagination can wrap without widening the page. Narrow grid cards retain
+all actions and show the two labeled actions above icon actions. Loading states
+reuse the same responsive toolbar and stacked table-row structure.
+
+
+Forms and Linktrees use PageCollectionSkeleton for grid and table loading, plus
+SkeletonPageManagement for route-level loading. These delegate to the real shared
+ManagementCard/GridLayout and SkeletonTable frames, preserving responsive action
+wrapping, banners, overlapping logos, URLs, metadata and optional selection slots.
+Skeletons contain no disabled fake action buttons. FormsStats passes loading into
+the same StatCard component used for its settled values, matching LinktreeStats;
+failed data requests show unavailable values rather than invented zero counts.
+Public form previews and submission reports retain their domain-specific loaders.
+
+Forms and Linktrees table actions use the same three-column action layout on
+mobile, tablet and desktop, wrapping after every third visible button. Table and
+grid actions share GridCardActionButton tones, rounded surfaces and responsive
+32/36px targets; grid cards retain their labeled primary actions and each
+resource retains its own capabilities and action order.
+Collection action buttons use borderless, low-opacity semantic fills with
+slightly stronger hover fills in both themes, 14/16px corners and consistent
+1.75px icon strokes. Only colors transition; controls do not scale or move on
+press. Keyboard focus remains visible, and reduced-motion preferences disable
+transitions. Both presentations share one base style in GridCardActionButton.
+
+Spotlight template links center both label lines within the full button width,
+using balanced icon-side columns so the icon cannot offset the text. Bounded
+label columns truncate long titles and identities without overflowing phone
+previews. Icons inherit the platform/custom-color foreground. Template search
+highlights follow the dashboard accent, and scrolling/card motion honors reduced
+motion preferences in the shared Business/Platform catalogue.
+
+SearchModal and ConfirmDeleteModal share soft-modal.module.css for centered,
+viewport-bounded panels, 24px corners, neutral surfaces, quiet dividers and
+borderless 14px controls in both themes. Search and accent confirmations inherit
+the active dashboard palette rather than forcing platform branding into business
+portals. Destructive confirmations keep a soft red semantic action. Both use the
+shared modal keyboard/focus trap and document scroll lock; search restores input
+focus after clearing and only its result list scrolls on short screens.
+ManagementSearchModal is a data/result adapter over SearchModal, including Forms
+and Linktree searches in both dashboards; it owns no separate portal, overlay,
+input or keyboard implementation. Its Enter key opens the first matching result
+and its close control dismisses without selecting. All destructive confirmation
+dialogs use ConfirmDeleteModal, which owns its pending state and prevents repeat
+submissions or dismissal while a mutation is pending, even when a caller does
+not supply an external loading flag.
+
+The template catalogue uses PageManagementSection, ManagementGridLayout,
+ManagementCard, EmptyState and the same ManagementSearchModal result adapter as
+Pages and Forms. ManagementSearchTrigger is shared by collection toolbars and
+the catalogue. TemplateCatalog owns only template preview configuration; each
+preview continues to use the real PhoneMockup and DynamicTemplate renderer.
+SkeletonTemplatePage reuses the section/card/phone frames, matching three metric
+colors, category tabs and the full-width search control without fake actions.
+Pages and Forms use shared SegmentedTabs, including keyboard navigation.
+The template category tabs occupy a standalone full-width row above the content,
+matching Business and Platform Settings; they are not nested in the search toolbar.
+SegmentedTabsFrame owns the shared surface for tabs and their loading placeholders.
+SegmentedTabs inherits tenant theme variables by default, including saved solid
+colors and gradients. Explicit saved color values override both primary color and
+fill; the default emits no self-referencing CSS variable. The Business catalogue does
+not force platform branding. Only the Platform catalogue sets that boundary.
+Search and metrics follow the active category; switching categories clears the query.
+Forms currently shows one localized Default preview using createForm/FormPreview,
+with sample copy confined to preview rendering and no persistence, submission or
+tracking callbacks. The form renderer loads only when its preview is needed.
+Catalogue forms pass viewport="device" to the shared preview renderer. This
+reuses the public responsive surface, full viewport height and mobile field sizes
+inside PhoneMockup's real 390px viewport, without enabling public behavior or
+removing sample copy. It hides editor browsing controls, removes the inset card
+frame and starts the banner behind the phone status overlay without a top strip. Embedded editor previews keep
+their compact layout; published pages keep their existing presentation semantics.
+CustomSelect, PickerPopup and their positioning/focus hooks use the trigger's
+ownerDocument/defaultView. Menus rendered inside PhoneMockup stay within its
+390px document and use that viewport for bounds, scrolling and dismissal.
+The Forms catalogue fixture demonstrates all eight question types and all eight
+content-block types, sample media/carousels, conditional choices, product prices,
+privacy consent and completion actions in all three languages. Its local demo
+images include their SVG source; fixtures never initialize saved forms or send
+responses/tracking events.
+Public and device form surfaces use white primary-action text/icons while
+retaining the saved fill. Shared input/picker tokens are scoped to the form's
+appearance, with soft borderless fills and 16px corners. Product rows and totals
+use quiet surface/accent tints. Choice questions compose shared RadioField,
+which styles a native radio while retaining grouping, keyboard interaction,
+required validation and high-contrast fallback. Appointment fields reuse the
+shared DateInput (localized calendar plus manual entry), including native custom
+validity for invalid typed dates. Consent continues using shared CheckboxField.
+Help popovers share the picker surface and use their trigger's document.
+
+Settings → New page defaults uses the editor's shared design, pattern and
+Light/Dark/Custom appearance controls, including the anchored custom-color popup.
+New Linktree drafts honor these saved preferences in Business and Platform editors.
+When preferences are absent, Dark (`#161b22`) and 45-degree grid are used.
+Explicit `none` remains a valid saved pattern; editing and duplication retain the
+page's own appearance. Existing pages without a pattern continue to render without one.
+
+CustomSelect uses the shared picker popup palette for both plain and titled menus.
+Menu shells have 20px corners; list and grid options use 16px corners. List rows
+have a 6px gap and inset so hover and tenant-colored selection remain distinct.
+Search surfaces keep the same appearance while focused and unfocused.
+
+CustomSelect menu edges are transparent in both appearances, including inherited
+and titled menus; the shared soft shadow separates them from surrounding content.
+
+Non-searchable CustomSelect menus support letter/prefix navigation from the
+trigger or open list. Repeated letters cycle enabled matches; a 700ms pause
+starts a fresh prefix. Typing moves focus without committing a selection.
+Searchable menus retain their editable prefix filtering.
+
+Public Linktree templates share LegalLinks for small,
+centered Privacy/Terms footer navigation, with quiet inherited text, a dot
+separator, accessible keyboard focus and responsive wrapping. URLs use the
+configured platform origin and English legal-document language, never a
+tenant-controlled host. Legal navigation does not dispatch marketing actions.
+
+LinktreeLegalFooter is fixed to the bottom of the real/device viewport in every
+Linktree template. The layout reserves 56px plus the device safe area so final
+links are not covered. Only English Privacy/Terms links are shown, directly over
+the page body without a background, blur or ownership label. Legal URLs request
+English regardless of page language. Forms are unchanged.
+
+Linktree headers keep profile identity and introduction above the primary links.
+Extended service details and hours are rendered after the links in
+PublicLinktreeBusinessDetails, a compact native details/summary disclosure. Empty business objects render nothing; content remains in the document
+and can be expanded by pointer or keyboard in every template and preview.
+
+PublicLinktreeBusinessSummary keeps category and location visible as compact,
+soft icon facts in the profile header. Extended services, cuisine, service area
+and hours remain in a disclosure below primary actions, using aligned label/value
+rows. Empty summaries and disclosures are omitted. Both respect the page palette
+and language direction and are shared by all templates and previews.
+
+Business Settings uses the same PageManagementSection as collections, with its
+active-tab heading and save action in one surface. Shared SegmentedTabs sit above
+that surface, matching Templates and Platform Settings; loading mirrors this placement.
+Profile, defaults and messages render flat content without nested section headers.
+Branding uses three upright BrandAssetTile controls with captions; disabled upload
+permissions remain on the actual file inputs. Settings inputs use the shared soft
+control surface in Business and Platform, and idle save buttons use the shared
+neutral button surface. Platform settings sections reuse PageManagementSection.
+The four Business overview cards use StatCard.loading, with a real tab count.
+Settings loading mirrors the three branding tiles, color action, six profile
+fields, separate three-tab navigation and one Save slot, at the same responsive breakpoints.
+
+## Management-page parity
+
+Use PageManagementSection and the existing management control components for
+collection pages on both dashboards. Primary and secondary toolbar actions share
+SettingsActionButton sizing, soft radius, keyboard focus and busy behavior;
+ManagementViewToggle always shows Grid/Table text in the selected locale. Use an
+explicit tenant/platform accent rather than inferring it inside resource markup.
+Use PageListActions for grid footers/table action rows and PageListDescription for
+optional authored descriptions. Preserve native content direction with dir=auto.
+Route loading must match its page and owner palette through DashboardLoadingShell;
+DashboardPageLoading selects the matching composition or a simple shared progress
+state. Do not substitute a business-directory skeleton for Settings or Billing.
+
+
+Grid card URL and traffic details use the shared soft, borderless control surface
+through PageListUrl and PageListTraffic, with one compact link/copy row. The
+shared collection skeleton mirrors this geometry for Forms and Linktrees.
+CheckboxField keeps its label surface neutral when selected; only the checkbox
+indicator uses the accent, with a white checkmark.
+
+DashboardSidebar animates both CSS translate (mobile) and width (desktop/tablet)
+with the same 300ms easing. Its persistent backdrop fades on close, mobile closed
+navigation is inert, and keyboard focus/Escape use the shared modal keyboard hook.
+Reduced-motion preferences disable these transitions.
+
+Anchored picker and dropdown placement share anchoredPopupPosition and account
+for visualViewport offsets and keyboard resize/scroll. Popups shrink to available
+space instead of imposing a minimum height. Icon/color popups portal into the
+trigger document so phone previews retain their own bounds, focus and theme.
+Icon selection is search-first like CountrySelector, with fixed search/actions
+and a separately scrolling grid; upload, libraries and clear remain available.
+Date/time columns stack only when the actual popup content is too narrow.
+
+
+Selection toolbars distinguish amber analytics deletion (chart icon) from red
+page/form deletion (trash icon), with matching warning/danger confirmation tones.
+Both controls appear only after selection, reuse the same responsive action row,
+and clearly describe whether submitted answers and contact details are preserved
+or deleted. Select all/deselect remain neutral; default Linktrees cannot be deleted.

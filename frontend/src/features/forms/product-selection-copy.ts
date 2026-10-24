@@ -1,5 +1,13 @@
 import type { FormLanguage } from "./types";
 const labels = {
+  quantityPricing: ["Quantity pricing", "نرخ بەپێی بڕ", "التسعير حسب الكمية"],
+  pricingHelp: ["The price for the highest qualifying quantity applies to every unit. Below the first break, the standard price applies.", "نرخی گەورەترین بڕی گونجاو بۆ هەموو یەکەکان جێبەجێ دەبێت. لە ژێر یەکەم بڕدا نرخی ئاسایی جێبەجێ دەبێت.", "يُطبّق سعر أعلى حد كمية مستوفى على جميع الوحدات. دون الحد الأول يُطبّق السعر العادي."],
+  addPriceBreak: ["Add price break", "زیادکردنی نرخی بڕ", "إضافة سعر للكمية"],
+  minimumQuantity: ["Minimum quantity", "کەمترین بڕ", "الحد الأدنى للكمية"],
+  removePriceBreak: ["Remove price break", "سڕینەوەی نرخی بڕ", "حذف سعر الكمية"],
+  invalidPriceBreaks: ["Use increasing quantities and unit prices no higher than the previous price. Complete every price break (up to 10).", "بڕەکان بەرەو زیادبوون بن و نرخی یەکە لە نرخی پێشوو زیاتر نەبێت. هەموو نرخەکان تەواو بکە (تا ١٠).", "استخدم كميات متزايدة وأسعار وحدة لا تزيد عن السعر السابق. أكمل جميع حدود الأسعار (حتى 10)."],
+  savings: ["You save", "پاشەکەوت دەکەیت", "توفر"],
+
   invalidPrice: [
     "Use a price from 0 to 10,000,000, with up to 2 decimal places.",
     "نرخێک لە ٠ تا ١٠٬٠٠٠٬٠٠٠ بنووسە، تا ٢ ژمارە دوای خاڵ.",
@@ -13,9 +21,9 @@ const labels = {
   ],
   name: ["Product name", "ناوی بەرهەم", "اسم المنتج"],
   unit: ["Unit", "یەکە", "الوحدة"],
-  unitHint: ["Piece, kg, meter…", "دانە، کگ، مەتر…", "قطعة، كغ، متر…"],
+  unitHint: ["Unit", "یەکە", "الوحدة"],
   price: ["Unit price", "نرخی یەکە", "سعر الوحدة"],
-  priceHint: ["Enter unit price", "نرخی یەکە بنووسە", "أدخل سعر الوحدة"],
+  priceHint: ["Unit price", "نرخی یەکە", "سعر الوحدة"],
   currency: ["Currency", "دراو", "العملة"],
   currencyIqd: [
     "Iraqi dinar (IQD)",

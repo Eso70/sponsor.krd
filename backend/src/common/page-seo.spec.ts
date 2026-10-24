@@ -3,12 +3,40 @@ import { isIndexableLinktree, indexableLinktreeSql } from './page-seo';
 describe('stored page SEO policy', () => {
   it('derives sitemap eligibility from content rather than manual choices', () => {
     const sql = indexableLinktreeSql();
-    expect(sql).toContain('lt.name');
-    expect(sql).toContain('lt.subtitle');
+    expect(sql).toContain('lt.headline');
+    expect(sql).toContain('lt.slogan');
     expect(sql).toContain('lt.description');
     expect(sql).toContain('regexp_replace');
     expect(sql).not.toContain('robotsIndex');
-    expect(sql).not.toContain('template_config');
+    expect(sql).toContain('template_config');
+    expect(sql).toContain("'1'::jsonb");
+    expect(sql).toContain("'noindex'");
+  });
+  it('accepts visible categories but lets versioned noindex veto real content', () => {
+    const page = {
+      name: 'Business',
+      template_config: { seo: { version: 1, category: 'food' } },
+    };
+    expect(isIndexableLinktree(page)).toBe(true);
+    expect(
+      isIndexableLinktree({
+        ...page,
+        template_config: { seo: { version: 1, category: 'invalid' } },
+      }),
+    ).toBe(false);
+    expect(
+      isIndexableLinktree({
+        ...page,
+        template_config: { seo: { version: 1, category: 'other' } },
+      }),
+    ).toBe(false);
+    expect(
+      isIndexableLinktree({
+        ...page,
+        subtitle: 'Real services',
+        template_config: { seo: { version: 1, indexing: 'noindex' } },
+      }),
+    ).toBe(false);
   });
   it('excludes starter pages and ignores retired index/noindex settings', () => {
     const page = {

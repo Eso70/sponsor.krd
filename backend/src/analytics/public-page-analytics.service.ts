@@ -89,12 +89,11 @@ export class PublicPageAnalyticsService {
 
   /** Resolves by source record for a specialized public content model. */
   async forSource(
-    source: 'linktree' | 'advertising' | 'form',
+    source: 'linktree' | 'form',
     sourceId: string,
   ): Promise<PublicPageAnalytics> {
     const column = {
       linktree: 'source_linktree_id',
-      advertising: 'source_advertising_page_id',
       form: 'source_form_id',
     }[source];
     const page = await this.database.query<{

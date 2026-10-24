@@ -29,6 +29,9 @@ describe("stored product response display", () => {
                   quantity: 8,
                   unitPrice: 7,
                   lineTotal: 56,
+                  baseUnitPrice: 8,
+                  discount: 8,
+                  priceBreakMinimum: 5,
                 },
               ],
             },
@@ -37,7 +40,10 @@ describe("stored product response display", () => {
       };
       render(<FormSubmissionDetails response={response} locale={language} />);
       expect(screen.getByText("Cement")).toBeInTheDocument();
+      expect(screen.getByText("Cement").closest("[data-form-content]")).toHaveAttribute("dir", language === "en" ? "ltr" : "rtl");
       expect(screen.getByText(/8 bag/)).toBeInTheDocument();
+      expect(screen.getByText(productSelectionCopy(language).savings)).toBeInTheDocument();
+      expect(screen.getByText("USD 8")).toBeInTheDocument();
       expect(
         screen.getByText(new RegExp(productSelectionCopy(language).total)),
       ).toBeInTheDocument();

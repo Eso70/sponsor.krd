@@ -99,11 +99,11 @@ describe("Form preview color", () => {
     );
   });
 
-  it("uses readable ink for pale colors and rejects arbitrary CSS", () => {
+  it("keeps white action ink for pale colors and rejects arbitrary CSS", () => {
     const form = createForm("en");
     const view = render(<FormPreview form={form} color="#fff" />);
     expect(preview().style.getPropertyValue("--preview-accent-ink")).toBe(
-      "#111827",
+      "#ffffff",
     );
     view.rerender(
       <FormPreview

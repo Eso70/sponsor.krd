@@ -18,7 +18,7 @@ describe("root legal documents", () => {
     ).toHaveAttribute("href", "mailto:esma3ildilshad04x@gmail.com");
     expect(
       screen.getByText(
-        /does not publish forms, store responses, or send leads/,
+        /Dashboard preview answers remain temporary/,
       ),
     ).toBeInTheDocument();
     expect(

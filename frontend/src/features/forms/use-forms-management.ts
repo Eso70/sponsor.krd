@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { FormDraft, FormMetrics, FormSummary } from "@linktree/types";
 import { ApiRequestError } from "@/lib/api/request";
 import { formsApi, type FormsScope } from "./api";
+import { readFormMetrics } from "./form-metrics";
 export function useFormsManagement(
   scope: FormsScope,
   page = 0,
@@ -17,6 +18,7 @@ export function useFormsManagement(
   >("generic");
   const [forms, setForms] = useState<FormSummary[]>([]);
   const [total, setTotal] = useState(0);
+  const [dataUnavailable, setDataUnavailable] = useState(false);
   const [metrics, setMetrics] = useState<FormMetrics>({
     views: 0,
     visitors: 0,
@@ -37,15 +39,17 @@ export function useFormsManagement(
     ])
       .then(([items, stats]) => {
         if (controller.signal.aborted) return;
+        const metrics = readFormMetrics(stats);
         setFailed(false);
+        setDataUnavailable(false);
         setFailureReason("generic");
         setForms(items.items);
         setTotal(items.total);
-        setMetrics(stats);
+        setMetrics(metrics);
         return true;
       })
       .catch(() => {
-        if (!controller.signal.aborted) setFailed(true);
+        if (!controller.signal.aborted) { setFailed(true); setDataUnavailable(true); }
         return false;
       })
       .finally(() => {
@@ -94,6 +98,7 @@ export function useFormsManagement(
     busy,
     failed,
     failureReason,
+    dataUnavailable,
     load: async () => {
       setLoading(true);
       setFailed(false);
@@ -111,6 +116,7 @@ export function useFormsManagement(
       ),
     archive: (form: FormSummary) =>
       mutate(() => formsApi.archive(scope, form.id, !form.isArchived)),
+    duplicate: (id: string, form: FormDraft, slug: string) => mutate(() => formsApi.duplicate(scope, id, form, slug), true, "generic", false),
     remove: (id: string) => mutate(() => formsApi.remove(scope, id)),
   };
 }

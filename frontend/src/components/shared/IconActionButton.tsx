@@ -41,7 +41,7 @@ export function IconActionButton({
         disabled={disabled}
         aria-label={label}
         aria-expanded={expanded}
-        className={`rounded-lg p-1.5 transition disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer ${toneClasses}`}
+        className={`inline-flex shrink-0 items-center justify-center align-middle rounded-xl p-1.5 leading-none transition disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer ${toneClasses}`}
       >
         {children}
       </button>

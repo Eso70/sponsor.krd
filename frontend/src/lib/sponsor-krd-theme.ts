@@ -1,3 +1,4 @@
+import { createCursorVariables } from "@/lib/utils/default-cursor";
 import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
 
 /** Sponsor.krd's primary TikTok-inspired cyan accent. */
@@ -42,6 +43,7 @@ export function createSponsorKrdThemeVariables(
   const ink = getSponsorKrdAccentInk(accent.primary);
 
   return {
+    ...createCursorVariables(accent.primary),
     "--sponsor-krd-brand-accent": accent.primary,
     "--sponsor-krd-brand-gradient": accent.css,
     "--sponsor-krd-accent": accent.primary,

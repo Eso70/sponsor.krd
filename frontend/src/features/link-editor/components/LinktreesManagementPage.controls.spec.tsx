@@ -7,7 +7,7 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 describe.each(["tenant", "platform"] as const)(
   "Shared Linktree toolbar (%s)",
   (accentMode) => {
-    it("shares archive, view, search and refresh controls across both surfaces", () => {
+    it("shares archive, view and search controls without a duplicate refresh action", () => {
       const refresh = vi.fn();
       const view = vi.fn();
       const search = vi.fn();
@@ -19,10 +19,11 @@ describe.each(["tenant", "platform"] as const)(
           totalViews={0}
           uniqueViews={0}
           totalClicks={0}
-          conversions={0}
+          uniqueClicks={0}
+          contactActions={0}
           isRefreshing={false}
           isClearingAnalytics={false}
-          hasAnalyticsData={false}
+
           searchQuery=""
           isSearchModalOpen={false}
           viewMode="grid"
@@ -46,6 +47,15 @@ describe.each(["tenant", "platform"] as const)(
         />,
       );
       const active = screen.getByRole("button", { name: "Active" });
+      for (const name of ["Grid", "Table"]) {
+        const control = screen.getByRole("button", { name });
+        expect(control).toHaveTextContent(name);
+        expect(control.querySelector("svg")).toBeNull();
+      }
+
+      expect(
+        screen.queryByRole("button", { name: /campaign|کەمپەین|الحملة/i }),
+      ).not.toBeInTheDocument();
       expect(active).toHaveAttribute("aria-pressed", "true");
       expect(active).toHaveClass(
         accentMode === "platform" ? "sa-gradient" : "theme-fill",
@@ -59,8 +69,10 @@ describe.each(["tenant", "platform"] as const)(
       expect(view).toHaveBeenCalledWith("table");
       fireEvent.click(screen.getByRole("button", { name: "Search" }));
       expect(search).toHaveBeenCalledOnce();
-      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-      expect(refresh).toHaveBeenCalledOnce();
+      expect(
+        screen.queryByRole("button", { name: "Refresh" }),
+      ).not.toBeInTheDocument();
+      expect(refresh).not.toHaveBeenCalled();
     });
   },
 );

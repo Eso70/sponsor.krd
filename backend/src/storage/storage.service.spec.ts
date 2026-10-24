@@ -170,6 +170,12 @@ describe('StorageService', () => {
       expect.stringContaining('SET owner_business_id=$1'),
       ['business-id', ['/images/upload/pending/logo.png']],
     );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'owner_business_id IS NULL OR owner_business_id=$1',
+      ),
+      expect.any(Array),
+    );
   });
 
   it('deletes a replaced upload only after it has no database references', async () => {

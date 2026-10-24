@@ -79,7 +79,7 @@ describe("CommunicationCenterPage Arabic", () => {
     expect(screen.getByPlaceholderText("اكتب عنوان الإعلان")).toBeInTheDocument();
     expect(screen.getByText("قنوات التسليم")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "فتح وقت النشر" }));
-    expect(screen.getByRole("button", { name: "الشهر السابق" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "الشهر السابق" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "اليوم" })).toBeInTheDocument();
   });
 
@@ -90,7 +90,7 @@ describe("CommunicationCenterPage Arabic", () => {
     fireEvent.click(screen.getByRole("button", { name: "New announcement" }));
     expect(screen.getByPlaceholderText("Enter announcement title")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open Publish time" }));
-    expect(screen.getByRole("button", { name: "Previous month" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Previous month" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Today" })).toBeInTheDocument();
   });
 });

@@ -1,3 +1,5 @@
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
+import { questionVideoUrl } from '../common/whatsapp-question-video';
 import {
   Injectable,
   Logger,
@@ -6,7 +8,7 @@ import {
   BadRequestException,
   Optional,
 } from '@nestjs/common';
-import { AdvertisingService } from '../advertising/advertising.service';
+
 import {
   DEFAULT_LINKTREE_BACKGROUND_COLOR,
   DEFAULT_LINKTREE_TEMPLATE_KEY,
@@ -67,6 +69,7 @@ type BusinessDefaultsRow = {
   default_footer_phone: string | null;
   default_template: string | null;
   default_background_color: string | null;
+  default_background_pattern?: string | null;
   default_footer_hidden: boolean | null;
   default_whatsapp_enabled: boolean | null;
 };
@@ -111,7 +114,7 @@ type ExportedLinktreeRow = {
   whatsapp_modal_enabled: boolean | null;
   status: string;
   is_default?: boolean;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: Date | null;
   created_at?: Date;
@@ -119,6 +122,7 @@ type ExportedLinktreeRow = {
 };
 
 type ExportedWhatsappQuestionRow = {
+  video_url?: string | null;
   id: string;
   question_text: string;
   message: string | null;
@@ -182,7 +186,7 @@ type BackupPage = {
   whatsapp_modal_enabled?: unknown;
   status?: unknown;
   is_default?: unknown;
-  is_campaign_active?: unknown;
+  is_pinned?: unknown;
   is_archived?: unknown;
   archived_at?: unknown;
   created_at?: unknown;
@@ -218,7 +222,7 @@ type BusinessLinktreeStatsRow = {
   image: string | null;
   background_color: string | null;
   status: string;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: Date | null;
   is_default: boolean;
@@ -249,7 +253,7 @@ export class BusinessAdministrationService {
     // Ahead of the optional parameters, and not `@Optional()` itself: an
     // unresolved provider would turn the plan-change cache invalidation into a
     // silent no-op, which is what it exists to stop.
-    private readonly advertising: AdvertisingService,
+
     private readonly repository: BusinessAdministrationRepository = new BusinessAdministrationRepository(
       databaseService,
     ),
@@ -559,13 +563,6 @@ export class BusinessAdministrationService {
       // Keep the database sessions active, but remove their cached identity so
       // the next request immediately reloads the latest business record.
       this.redisService.clearBusinessSessions(businessId),
-      // The published advertising payload is cached by subdomain and its
-      // entitlement check lives inside the query that cache short-circuits, so
-      // a plan change here would otherwise keep serving a paid public page
-      // until the TTL lapsed.
-      this.advertising
-        .invalidatePublicCacheForBusiness(businessId)
-        .catch(() => undefined),
     ]);
   }
 
@@ -592,7 +589,7 @@ export class BusinessAdministrationService {
          d.footer_text AS default_footer_text,
          d.footer_phone AS default_footer_phone,
          d.template_key AS default_template,
-         d.background_color AS default_background_color,
+         d.background_color AS default_background_color, d.background_pattern AS default_background_pattern,
          d.footer_hidden AS default_footer_hidden,
          d.whatsapp_enabled AS default_whatsapp_enabled,
          COALESCE(dl.default_links, '[]'::json) AS default_links,
@@ -680,7 +677,7 @@ export class BusinessAdministrationService {
       `SELECT a.username, a.name, a.phone, a.email, a.subdomain, a.status,
               b.logo, b.favicon, b.default_avatar, b.website_color,
               d.footer_text AS default_footer_text, d.footer_phone AS default_footer_phone,
-              d.template_key AS default_template, d.background_color AS default_background_color,
+              d.template_key AS default_template, d.background_color AS default_background_color, d.background_pattern AS default_background_pattern,
               d.footer_hidden AS default_footer_hidden, d.whatsapp_enabled AS default_whatsapp_enabled
        FROM businesses a
        LEFT JOIN business_branding b ON b.business_id = a.id
@@ -837,7 +834,7 @@ export class BusinessAdministrationService {
            footer_hidden = EXCLUDED.footer_hidden, whatsapp_enabled = EXCLUDED.whatsapp_enabled,
            updated_at = NOW()
          RETURNING footer_text AS default_footer_text, footer_phone AS default_footer_phone,
-                   template_key AS default_template, background_color AS default_background_color,
+                   template_key AS default_template, background_color AS default_background_color, background_pattern AS default_background_pattern,
                    footer_hidden AS default_footer_hidden, whatsapp_enabled AS default_whatsapp_enabled`,
           [
             id,
@@ -860,7 +857,7 @@ export class BusinessAdministrationService {
 
         await client.query(
           `UPDATE linktrees
-         SET name = COALESCE($1, name), image = $2, background_color = $3,
+         SET headline = COALESCE($1, headline), logo = $2, background_color = $3,
              template_key = $4, template_config = $5::jsonb,
              whatsapp_modal_enabled = $6, footer_text = $7, footer_phone = $8,
              footer_hidden = $9, updated_at = NOW()
@@ -1003,7 +1000,7 @@ export class BusinessAdministrationService {
     const business = businessRes.rows[0];
 
     const ltRes = await this.databaseService.query<{ image: string | null }>(
-      `SELECT image FROM linktrees WHERE business_id = $1 AND image IS NOT NULL`,
+      `SELECT logo AS image FROM linktrees WHERE business_id = $1 AND logo IS NOT NULL`,
       [id],
     );
     const linktreeImages = ltRes.rows
@@ -1069,12 +1066,12 @@ export class BusinessAdministrationService {
     // keeping two copies of the aggregate in step by hand.
     const [linktreesRes, totals] = await Promise.all([
       this.databaseService.query<BusinessLinktreeStatsRow>(
-        `SELECT lt.id, lt.uid, lt.name, lt.subtitle, lt.description, lt.seo_name,
-                lt.image, lt.background_color, lt.status, lt.is_campaign_active, lt.is_archived, lt.archived_at, lt.is_default,
+        `SELECT lt.id, lt.uid, lt.headline AS name, lt.slogan AS subtitle, lt.description, lt.seo_name,
+                lt.logo AS image, lt.background_color, lt.status, lt.is_pinned, lt.is_archived, lt.archived_at, lt.is_default,
                 lt.created_at, lt.updated_at
            FROM linktrees lt
           WHERE lt.business_id = $1
-          ORDER BY lt.is_default DESC, lt.is_campaign_active DESC, lt.created_at DESC`,
+          ORDER BY lt.is_pinned DESC, lt.is_default DESC, lt.created_at DESC, lt.id`,
         [id],
       ),
       this.analyticsRead.linktreeTotalsForBusiness(id),
@@ -1092,7 +1089,7 @@ export class BusinessAdministrationService {
         image: row.image,
         background_color: row.background_color,
         status: row.status,
-        is_campaign_active: row.is_campaign_active,
+        is_pinned: row.is_pinned,
         is_archived: row.is_archived,
         archived_at: row.archived_at,
         is_default: row.is_default,
@@ -1162,7 +1159,7 @@ export class BusinessAdministrationService {
       `SELECT id, name, subtitle, subtitle_color, description, seo_name, uid, image,
               background_color, footer_text, footer_phone, footer_hidden, template_key,
               template_config, whatsapp_modal_enabled, status, is_default,
-              is_campaign_active, is_archived, archived_at, created_at, updated_at
+               is_pinned, is_archived, archived_at, created_at, updated_at
        FROM linktrees
        WHERE business_id = $1 AND ($2::boolean OR is_default = false)
        ORDER BY is_default DESC, created_at ASC`,
@@ -1178,7 +1175,7 @@ export class BusinessAdministrationService {
           [page.id],
         ),
         this.databaseService.query<ExportedWhatsappQuestionRow>(
-          `SELECT id, question_text, message, display_order, created_at, updated_at
+          `SELECT id, question_text, message, video_url, display_order, created_at, updated_at
            FROM whatsapp_questions WHERE linktree_id = $1 ORDER BY display_order ASC`,
           [page.id],
         ),
@@ -1237,6 +1234,7 @@ export class BusinessAdministrationService {
         }
       }
       for (const question of asArray(page.whatsapp_questions)) {
+        questionVideoUrl(question.video_url);
         if (
           typeof question.question_text !== 'string' ||
           typeof question.message !== 'string'
@@ -1282,21 +1280,21 @@ export class BusinessAdministrationService {
       const isDefault = allowDefault && page.is_default === true;
       await client.query(
         `INSERT INTO linktrees (
-           id, business_id, name, subtitle, subtitle_color, description, seo_name, uid,
-           image, background_color, footer_text, footer_phone, footer_hidden, template_key,
-           template_config, whatsapp_modal_enabled, status, is_default, is_campaign_active,
-           is_archived, archived_at, created_at, updated_at)
+           id, business_id, headline, slogan, slogan_color, description, seo_name, uid,
+           logo, background_color, footer_text, footer_phone, footer_hidden, template_key,
+           template_config, whatsapp_modal_enabled, status, is_default,
+           is_archived, archived_at, created_at, updated_at, is_pinned)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,$16,$17,$18,$19,$20,$21,$22,$23)
          ON CONFLICT (id) DO UPDATE SET
-           name=EXCLUDED.name, subtitle=EXCLUDED.subtitle, subtitle_color=EXCLUDED.subtitle_color,
+           headline=EXCLUDED.headline, slogan=EXCLUDED.slogan, slogan_color=EXCLUDED.slogan_color,
            description=EXCLUDED.description, seo_name=EXCLUDED.seo_name, uid=EXCLUDED.uid,
-           image=EXCLUDED.image, background_color=EXCLUDED.background_color,
+           logo=EXCLUDED.logo, background_color=EXCLUDED.background_color,
            footer_text=EXCLUDED.footer_text, footer_phone=EXCLUDED.footer_phone,
            footer_hidden=EXCLUDED.footer_hidden, template_key=EXCLUDED.template_key,
            template_config=EXCLUDED.template_config,
            whatsapp_modal_enabled=EXCLUDED.whatsapp_modal_enabled, status=EXCLUDED.status,
-           is_default=EXCLUDED.is_default, is_campaign_active=EXCLUDED.is_campaign_active,
-           is_archived=EXCLUDED.is_archived, archived_at=EXCLUDED.archived_at,
+           is_default=EXCLUDED.is_default,
+           is_pinned=EXCLUDED.is_pinned, is_archived=EXCLUDED.is_archived, archived_at=EXCLUDED.archived_at,
            updated_at=EXCLUDED.updated_at`,
         [
           targetPageId,
@@ -1317,13 +1315,13 @@ export class BusinessAdministrationService {
           page.whatsapp_modal_enabled === true,
           page.status === 'inactive' ? 'inactive' : 'active',
           isDefault,
-          !isDefault && page.is_campaign_active === true,
           !isDefault && page.is_archived === true,
           !isDefault && page.is_archived === true
             ? page.archived_at || new Date()
             : null,
           page.created_at || new Date(),
           page.updated_at || new Date(),
+          page.is_pinned === true,
         ],
       );
       await client.query(
@@ -1340,8 +1338,8 @@ export class BusinessAdministrationService {
         );
         await client.query(
           `INSERT INTO whatsapp_questions
-             (id, linktree_id, question_text, message, display_order, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+             (id, linktree_id, question_text, message, display_order, created_at, updated_at, video_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
           [
             owner.rows.length
               ? this.businessScopedUuid(businessId)
@@ -1352,6 +1350,7 @@ export class BusinessAdministrationService {
             Number(question.display_order) || 0,
             question.created_at || new Date(),
             question.updated_at || new Date(),
+            questionVideoUrl(question.video_url),
           ],
         );
       }
@@ -1462,7 +1461,7 @@ export class BusinessAdministrationService {
       image: string | null;
       template_config: unknown;
     }>(
-      `SELECT image,template_config FROM linktrees
+      `SELECT logo AS image,template_config FROM linktrees
        WHERE business_id=$1 AND is_default=FALSE`,
       [id],
     );
@@ -1522,7 +1521,7 @@ export class BusinessAdministrationService {
         ),
         this.databaseService.query<Record<string, unknown>>(
           `SELECT footer_text, footer_phone, footer_hidden, template_key,
-                  background_color, whatsapp_enabled, updated_at
+                  background_color, background_pattern, whatsapp_enabled, updated_at
            FROM business_defaults WHERE business_id=$1::uuid`,
           [id],
         ),
@@ -1875,8 +1874,8 @@ export class BusinessAdministrationService {
         await client.query(
           `INSERT INTO business_defaults (
            business_id,footer_text,footer_phone,footer_hidden,template_key,
-           background_color,whatsapp_enabled,updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+           background_color,whatsapp_enabled,updated_at,background_pattern)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
             businessId,
             toText(defaults.footer_text) || null,
@@ -1887,6 +1886,7 @@ export class BusinessAdministrationService {
               DEFAULT_LINKTREE_BACKGROUND_COLOR,
             defaults.whatsapp_enabled === true,
             defaults.updated_at || new Date(),
+            resolveNewPagePattern(defaults.background_pattern),
           ],
         );
         const resolvedPlan = plan.rows[0];

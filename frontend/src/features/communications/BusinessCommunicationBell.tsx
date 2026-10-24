@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { useTheme } from "@/lib/contexts/ThemeProvider";
 import { useBusinessLocale } from "@/features/business/i18n/BusinessLocaleProvider";
 import { businessMessages } from "@/features/business/i18n/messages";
@@ -27,7 +27,7 @@ export function BusinessCommunicationBell() {
   const copy = businessMessages[locale].Notifications;
   const notifications = useNotificationInbox(BUSINESS_COMMUNICATIONS_ENDPOINT, copy);
 
-  useRegisterBusinessDashboardRefresh("notifications", () =>
+  useRegisterDashboardRefresh("notifications", () =>
     notifications.load(true),
   );
 

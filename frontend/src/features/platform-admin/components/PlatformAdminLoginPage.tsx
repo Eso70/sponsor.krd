@@ -65,7 +65,6 @@ export default function PlatformAdminLoginPage() {
         }
       >
         <AuthenticationMethods
-          rememberDevice
           googleHref="/api/platform/auth/google/start"
           requestEndpoint="/api/platform/auth/email/request"
           verifyEndpoint="/api/platform/auth/email/verify"
@@ -98,7 +97,7 @@ export default function PlatformAdminLoginPage() {
               ? {
                   google: "المتابعة باستخدام جوجل",
                   or: "أو",
-                  remember: "البقاء مسجّلًا على هذا الجهاز",
+
                   changeEmail: "تغيير البريد الإلكتروني",
                   codeSent:
                     "أرسلنا رمزًا مكوّنًا من 6 أرقام إلى {email}. تنتهي صلاحيته خلال 10 دقائق.",
@@ -112,7 +111,7 @@ export default function PlatformAdminLoginPage() {
                 ? {
                     google: "Continue with Google",
                     or: "or",
-                    remember: "Remember this device",
+
                     changeEmail: "Change email",
                     codeSent:
                       "We sent a 6-digit code to {email}. It expires in 10 minutes.",
@@ -125,7 +124,7 @@ export default function PlatformAdminLoginPage() {
                 : {
                     google: "بە گوگڵ بەردەوام بە",
                     or: "یان",
-                    remember: "لەم ئامێرەدا چوونەژوورەوەکەم بهێڵەوە",
+
                     changeEmail: "گۆڕینی ئیمەیڵ",
                     codeSent:
                       "کۆدێکی ٦ ژمارەییمان نارد بۆ {email}. کۆدەکە لە ماوەی ١٠ خولەکدا بەسەر دەچێت.",

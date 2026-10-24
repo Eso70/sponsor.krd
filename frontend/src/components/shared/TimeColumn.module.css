@@ -1,0 +1,16 @@
+.option {
+  --shared-control-radius: 12px;
+  min-height: 28px !important;
+  height: 28px !important;
+  background: transparent !important;
+  color: var(--picker-text, var(--shared-control-text, #475569)) !important;
+}
+.option:hover:not(:disabled) {
+  background: var(--picker-hover) !important;
+}
+
+.option.selected[aria-selected="true"],
+.option.selected[aria-selected="true"]:hover {
+  background: color-mix(in srgb, var(--time-choice-accent, #64748b) 10%, var(--picker-soft, var(--shared-control-surface, #f3f5f7))) !important;
+  color: var(--time-choice-accent, #64748b) !important;
+}

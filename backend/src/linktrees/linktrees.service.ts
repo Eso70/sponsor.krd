@@ -1,3 +1,8 @@
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
+import {
+  normalizeLinktreeCreate,
+  normalizeLinktreeContent,
+} from './linktree-content';
 import { slugifyPublicPageName as slugifyLinktreeName } from '../common/public-page-slug';
 export { slugifyLinktreeName };
 import {
@@ -8,6 +13,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import type { QueryResult, QueryResultRow } from 'pg';
+import {
+  readLinktreeBanner,
+  LINKTREE_BANNER_KEY,
+} from '@linktree/types/linktree-banner.cjs';
+import { questionVideoUrl } from '../common/whatsapp-question-video';
+import { assertLinktreeBannerOwnership } from '../common/linktree-banner';
+import {
+  assertLinktreeSeoPlan,
+  normalizeLinktreeSeoConfig,
+} from '../common/linktree-seo';
+import { publicLinktreeCacheKeys } from '../common/root-public-cache';
 import { DatabaseService } from '../database/database.service';
 import {
   withLinkMetadata,
@@ -82,6 +98,7 @@ type BusinessDefaultsRow = {
   default_avatar?: string | null;
   default_template: string | null;
   default_background_color: string | null;
+  default_background_pattern?: string | null;
   default_footer_text: string | null;
   default_footer_phone: string | null;
   default_footer_hidden: boolean | null;
@@ -90,6 +107,7 @@ type BusinessDefaultsRow = {
 
 /** An unvalidated WhatsApp question as it arrives inside `template_config`. */
 type WhatsappQuestionInput = {
+  videoUrl?: unknown;
   text?: unknown;
   message?: unknown;
 };
@@ -111,7 +129,7 @@ type LinktreeRow = {
   footer_phone: string | null;
   footer_hidden: boolean | null;
   status: string;
-  is_campaign_active?: boolean;
+  is_pinned?: boolean;
   is_archived?: boolean;
   archived_at?: Date | null;
   is_default: boolean;
@@ -122,9 +140,14 @@ type LinktreeRow = {
 
 type MappedLinktree = Omit<LinktreeRow, 'template_config'> & {
   template_config: NormalizedTemplateConfig;
+  headline: string;
+  slogan: string | null;
+  slogan_color: string | null;
+  logo: string | null;
 };
 
 type WhatsappQuestionRow = {
+  video_url?: string | null;
   id: string;
   text: string;
   message: string | null;
@@ -224,6 +247,7 @@ export class LinktreesService {
   private normalizeTemplateConfig(
     templateConfig: TemplateConfig | string | null | undefined,
     templateKey?: string | null,
+    validateSeo = false,
   ): NormalizedTemplateConfig {
     const config: TemplateConfig =
       typeof templateConfig === 'string'
@@ -235,8 +259,12 @@ export class LinktreesService {
     config.buttonStyle = config.buttonStyle || 'pill';
     config.buttonGradient = config.buttonGradient !== false;
     config.verification_badge = config.verification_badge === true;
-    // Search and sharing are generated from content; never persist manual overrides.
-    delete config.seo;
+    if (config[LINKTREE_BANNER_KEY] !== undefined) {
+      config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
+        config[LINKTREE_BANNER_KEY],
+      );
+    }
+    normalizeLinktreeSeoConfig(config, validateSeo);
     config.whatsapp_modal = config.whatsapp_modal || {};
 
     // A background image is painted into public page CSS, so anything that is
@@ -259,7 +287,7 @@ export class LinktreesService {
     row: LinktreeRow,
   ): Promise<MappedLinktree> {
     const qRes = await clientOrDb.query<WhatsappQuestionRow>(
-      `SELECT id, question_text AS text, message FROM whatsapp_questions
+      `SELECT id, question_text AS text, message, video_url FROM whatsapp_questions
        WHERE linktree_id = $1
        ORDER BY display_order ASC`,
       [row.id],
@@ -279,10 +307,18 @@ export class LinktreesService {
         id: q.id,
         text: q.text,
         message: q.message,
+        videoUrl: q.video_url ?? undefined,
       })),
     };
 
-    return { ...row, template_config: config };
+    return {
+      ...row,
+      headline: row.name,
+      slogan: row.subtitle,
+      slogan_color: row.subtitle_color,
+      logo: row.image,
+      template_config: config,
+    };
   }
 
   private mapLinkRow(row: LinkRow): MappedLink {
@@ -290,6 +326,7 @@ export class LinktreesService {
   }
 
   private buildCreateLinks(data: CreateLinktreeDto) {
+    const displayOrders: number[] = [];
     const linksToCreate: Array<{
       platform: string;
       url: string;
@@ -318,6 +355,14 @@ export class LinktreesService {
         if (!url || typeof url !== 'string' || !url.trim()) return;
 
         const row: LinkMetadataInput = metadataRows[index] || {};
+        displayOrders.push(
+          typeof row.display_order === 'number' &&
+            Number.isSafeInteger(row.display_order) &&
+            row.display_order >= 0 &&
+            row.display_order <= 32767
+            ? row.display_order
+            : linksToCreate.length,
+        );
         const metadata: Record<string, unknown> =
           row.metadata &&
           typeof row.metadata === 'object' &&
@@ -368,7 +413,10 @@ export class LinktreesService {
       });
     }
 
-    return linksToCreate;
+    return linksToCreate
+      .map((link, index) => ({ link, order: displayOrders[index] ?? index }))
+      .sort((a, b) => a.order - b.order)
+      .map(({ link }) => link);
   }
 
   /**
@@ -406,14 +454,14 @@ export class LinktreesService {
 
   async getAllLinktrees(businessId: string) {
     const res = await this.databaseService.query<LinktreeRow>(
-      `SELECT lt.id, lt.name, lt.subtitle, lt.subtitle_color, lt.description, lt.seo_name, lt.uid, lt.image, lt.background_color,
+      `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
-              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_campaign_active, lt.is_archived, lt.archived_at, lt.is_default,
+              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_pinned, lt.is_archived, lt.archived_at, lt.is_default,
               lt.created_at, lt.updated_at, b.default_avatar AS business_default_avatar
        FROM linktrees lt
        LEFT JOIN business_branding b ON b.business_id = lt.business_id
        WHERE lt.business_id = $1
-       ORDER BY lt.is_default DESC, lt.is_campaign_active DESC, lt.created_at DESC`,
+       ORDER BY lt.is_pinned DESC, lt.is_default DESC, lt.created_at DESC, lt.id`,
       [businessId],
     );
     const mappedRows: MappedLinktree[] = [];
@@ -447,9 +495,9 @@ export class LinktreesService {
 
   async getLinktreeById(id: string, businessId: string) {
     const res = await this.databaseService.query<LinktreeRow>(
-      `SELECT lt.id, lt.name, lt.subtitle, lt.subtitle_color, lt.description, lt.seo_name, lt.uid, lt.image, lt.background_color,
+      `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
-              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_campaign_active, lt.is_archived, lt.archived_at, lt.is_default,
+              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_pinned, lt.is_archived, lt.archived_at, lt.is_default,
               lt.created_at, lt.updated_at, b.default_avatar AS business_default_avatar
        FROM linktrees lt
        LEFT JOIN business_branding b ON b.business_id = lt.business_id
@@ -497,7 +545,7 @@ export class LinktreesService {
     const result = await this.databaseService.query<{ '?column?': number }>(
       `SELECT 1 FROM linktrees
         WHERE business_id = $1
-          AND lower(btrim(name)) = lower(btrim($2))
+          AND lower(btrim(headline)) = lower(btrim($2))
           AND ($3::uuid IS NULL OR id <> $3)
         LIMIT 1`,
       [businessId, trimmed, excludeId || null],
@@ -525,10 +573,11 @@ export class LinktreesService {
   }
 
   async createLinktree(
-    data: CreateLinktreeDto,
+    input: CreateLinktreeDto,
     businessId: string,
     scope: LinktreeWriteScope = 'business',
   ) {
+    const data = normalizeLinktreeCreate(input);
     const isPlatform = scope === 'platform';
     const linktreeLimit = isPlatform
       ? -1
@@ -553,20 +602,20 @@ export class LinktreesService {
     if (attempts >= 10)
       throw new ConflictException('Failed to generate unique UID');
 
-    const seoName = data.seo_name || data.slug;
-    if (!seoName) throw new ConflictException('SEO name/slug is required');
-
-    const slugCheck = await this.databaseService.query<{
-      '?column?': number;
-    }>('SELECT 1 FROM linktrees WHERE business_id = $1 AND seo_name = $2', [
-      businessId,
-      seoName,
-    ]);
-    if (slugCheck.rows.length > 0)
-      throw new ConflictException('SEO URL slug already in use');
+    // Canonical clients never supply a route; legacy explicit routes remain compatible.
+    let seoName =
+      input.headline !== undefined ? '' : data.seo_name || data.slug || '';
+    if (seoName) {
+      const slugCheck = await this.databaseService.query(
+        'SELECT 1 FROM linktrees WHERE business_id = $1 AND seo_name = $2',
+        [businessId, seoName],
+      );
+      if (slugCheck.rows.length > 0)
+        throw new ConflictException('SEO URL slug already in use');
+    }
 
     const businessRes = await this.databaseService.query<BusinessDefaultsRow>(
-      `SELECT d.background_color AS default_background_color, d.template_key AS default_template,
+      `SELECT d.background_color AS default_background_color, d.background_pattern AS default_background_pattern, d.template_key AS default_template,
               d.footer_text AS default_footer_text, d.footer_phone AS default_footer_phone,
               d.footer_hidden AS default_footer_hidden, d.whatsapp_enabled AS default_whatsapp_enabled,
               b.default_avatar
@@ -579,9 +628,18 @@ export class LinktreesService {
     const business = businessRes.rows[0] || {};
 
     const config = this.normalizeTemplateConfig(
-      data.template_config,
+      {
+        ...data.template_config,
+        background_pattern:
+          data.template_config?.background_pattern ??
+          resolveNewPagePattern(business.default_background_pattern),
+      },
       business.default_template,
+      true,
     );
+    if (!isPlatform)
+      await assertLinktreeSeoPlan(this.databaseService, businessId, config);
+    await assertLinktreeBannerOwnership(this.storage, businessId, config);
     if (!isPlatform) {
       await this.ensureTemplateAllowed(businessId, config.templateKey);
     }
@@ -609,21 +667,24 @@ export class LinktreesService {
       );
 
       if (!isPlatform && data.is_default) {
-        const existingDefault = await client.query<{ id: string }>(
-          `SELECT id FROM linktrees WHERE business_id = $1 AND is_default = true LIMIT 1`,
+        const existingDefault = await client.query<{
+          id: string;
+          seo_name?: string;
+        }>(
+          `SELECT id, seo_name FROM linktrees WHERE business_id = $1 AND is_default = true LIMIT 1`,
           [businessId],
         );
         if (existingDefault.rows.length > 0) {
           const defaultId = existingDefault.rows[0].id;
-          const nextSeoName = data.seo_name || data.slug;
+          const nextSeoName = seoName || existingDefault.rows[0].seo_name;
           const updRes = await client.query<LinktreeRow>(
             `UPDATE linktrees SET
-              name = $1, subtitle = $2, subtitle_color = $15, description = $14, image = $3, background_color = $4,
+              headline = $1, slogan = $2, slogan_color = $15, description = $14, logo = $3, background_color = $4,
               template_key = $5, template_config = $6::jsonb, whatsapp_modal_enabled = $7,
               footer_text = $8, footer_phone = $9, footer_hidden = $10,
               seo_name = $13, updated_at = NOW()
              WHERE id = $11 AND business_id = $12
-             RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+             RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
                        template_key, template_config, whatsapp_modal_enabled,
                        footer_text, footer_phone, footer_hidden, status, is_default, created_at, updated_at`,
             [
@@ -694,16 +755,23 @@ export class LinktreesService {
         );
       }
 
+      if (!seoName)
+        seoName = await this.automaticPageSlug(
+          client,
+          businessId,
+          data.name,
+          isPlatform,
+        );
       const isDefaultFlag = !isPlatform && data.is_default ? true : false;
       const ltRes = await client.query<LinktreeRow>(
         `INSERT INTO linktrees (
-          name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+          headline, slogan, slogan_color, description, seo_name, uid, logo, background_color,
           template_key, template_config, whatsapp_modal_enabled,
           footer_text, footer_phone, footer_hidden, status, business_id, is_default
         ) VALUES ($1, $2, $16, $15, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, 'active', $13, $14)
-        RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+        RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
                   template_key, template_config, whatsapp_modal_enabled,
-                  footer_text, footer_phone, footer_hidden, status, is_campaign_active, is_archived, archived_at, is_default, created_at, updated_at`,
+                  footer_text, footer_phone, footer_hidden, status, is_pinned, is_archived, archived_at, is_default, created_at, updated_at`,
         [
           data.name,
           data.subtitle || null,
@@ -712,7 +780,7 @@ export class LinktreesService {
           image,
           data.background_color ||
             business.default_background_color ||
-            '#000000',
+            DEFAULT_LINKTREE_BACKGROUND_COLOR,
           config.templateKey,
           JSON.stringify(config),
           whatsappEnabled,
@@ -738,9 +806,15 @@ export class LinktreesService {
         if (typeof q?.text === 'string' && typeof q.message === 'string') {
           if (!q.text || !q.message) continue;
           await client.query(
-            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order)
-             VALUES ($1, $2, $3, $4)`,
-            [createdLinktree.id, q.text.trim(), q.message.trim(), i],
+            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order, video_url)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              createdLinktree.id,
+              q.text.trim(),
+              q.message.trim(),
+              i,
+              questionVideoUrl(q.videoUrl),
+            ],
           );
         }
       }
@@ -775,6 +849,34 @@ export class LinktreesService {
     await this.storage.claimBusinessAssets(businessId, image, config);
 
     return this.mapLinktreeRow(this.databaseService, row);
+  }
+
+  private async automaticPageSlug(
+    client: Queryable,
+    businessId: string,
+    headline: string,
+    root: boolean,
+  ) {
+    const base =
+      slugifyLinktreeName(headline) ||
+      `page-${crypto.createHash('sha256').update(headline.normalize('NFKC').toLowerCase()).digest('hex').slice(0, 12)}`;
+    const existing = await client.query<{ seo_name: string }>(
+      `SELECT seo_name FROM linktrees WHERE business_id=$1 AND seo_name LIKE $2 || '%'`,
+      [businessId, base],
+    );
+    const used = new Set(existing.rows.map((row) => row.seo_name));
+    if (root) {
+      const reserved = await client.query<{ slug: string }>(
+        `SELECT slug FROM root_public_slugs WHERE page_type='linktree' AND slug LIKE $1 || '%'`,
+        [base],
+      );
+      for (const row of reserved.rows) used.add(row.slug);
+    }
+    for (let suffix = 1; suffix <= 1000; suffix++) {
+      const candidate = suffix === 1 ? base : `${base}-${suffix}`;
+      if (!used.has(candidate)) return candidate;
+    }
+    throw new ConflictException('Unable to generate a unique page URL');
   }
 
   /**
@@ -818,7 +920,14 @@ export class LinktreesService {
       format = (p, n) => (n === 1 ? `${p}-copy` : `${p}-copy-${n}`);
     }
 
-    let candidate = format(prefix, nextNum);
+    const candidateFor = (number: number) => {
+      const suffix = format(prefix, number).slice(prefix.length);
+      return format(
+        prefix.slice(0, 50 - suffix.length).replace(/-+$/, ''),
+        number,
+      );
+    };
+    let candidate = candidateFor(nextNum);
     let attempts = 0;
     while (attempts < 100) {
       const isBusinessAvailable = await this.isSlugAvailable(
@@ -830,10 +939,41 @@ export class LinktreesService {
         return candidate;
       }
       nextNum++;
-      candidate = format(prefix, nextNum);
+      candidate = candidateFor(nextNum);
       attempts++;
     }
-    return `${prefix}-copy-${crypto.randomBytes(2).toString('hex')}`;
+    return `${prefix.slice(0, 40).replace(/-+$/, '')}-copy-${crypto.randomBytes(2).toString('hex')}`;
+  }
+
+  async getDuplicateOptions(
+    sourceId: string,
+    businessId: string,
+    slug?: string,
+  ) {
+    if (slug !== undefined && typeof slug !== 'string')
+      throw new BadRequestException('Invalid slug');
+    const source = await this.databaseService.query<{ seo_name: string }>(
+      "SELECT seo_name FROM linktrees WHERE id=$1 AND business_id=$2 AND status <> 'deleted'",
+      [sourceId, businessId],
+    );
+    if (!source.rows[0]) throw new NotFoundException('Source page not found');
+    if (slug !== undefined) {
+      const candidate = slug.trim();
+      if (!/^[a-z0-9-]{2,50}$/.test(candidate))
+        return { slug: candidate, available: false };
+      const [local, root] = await Promise.all([
+        this.isSlugAvailable(businessId, candidate),
+        this.isRootSlugAvailable(candidate),
+      ]);
+      return { slug: candidate, available: local && root };
+    }
+    return {
+      slug: await this.generateDuplicateSlug(
+        businessId,
+        source.rows[0].seo_name,
+      ),
+      available: true,
+    };
   }
 
   /**
@@ -896,7 +1036,7 @@ export class LinktreesService {
 
     // 1. Fetch source linktree
     const sourceRes = await this.databaseService.query<LinktreeRow>(
-      `SELECT lt.id, lt.name, lt.subtitle, lt.subtitle_color, lt.description, lt.seo_name, lt.uid, lt.image, lt.background_color,
+      `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
               lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_default
        FROM linktrees lt
@@ -908,6 +1048,17 @@ export class LinktreesService {
       throw new NotFoundException('پەڕەی سەرچاوە نەدۆزرایەوە');
     }
     const source = sourceRes.rows[0];
+
+    const targetLogo = dto?.logo !== undefined ? dto.logo : source.image;
+    if (
+      dto?.logo != null &&
+      (!isLinktreeBackgroundImage(dto.logo) ||
+        !(await this.storage.areBusinessAssetsOwned(businessId, dto.logo)))
+    ) {
+      throw new BadRequestException(
+        'The replacement logo must belong to this workspace',
+      );
+    }
 
     // Check nested copy depth limitation (max 3 levels of nested copies)
     const MAX_COPY_DEPTH = 3;
@@ -983,7 +1134,8 @@ export class LinktreesService {
     }
 
     // 3. Resolve target name (names do not carry a unique constraint, so same name is allowed)
-    const targetName = dto?.name?.trim() || source.name;
+    const targetName =
+      dto?.headline?.trim() || dto?.name?.trim() || source.name;
 
     // 4. Fetch source links and whatsapp questions
     const [linksRes, whatsappRes] = await Promise.all([
@@ -997,10 +1149,11 @@ export class LinktreesService {
       ),
       this.databaseService.query<{
         question_text: string;
+        video_url?: string | null;
         message: string;
         display_order: number;
       }>(
-        `SELECT question_text, message, display_order
+        `SELECT question_text, message, video_url, display_order
          FROM whatsapp_questions
          WHERE linktree_id = $1
          ORDER BY display_order ASC`,
@@ -1033,6 +1186,21 @@ export class LinktreesService {
     const originId = sourceLineage?.origin_id || sourceId;
     const targetTemplateConfig = {
       ...sourceTemplateConfig,
+      ...(dto?.banner !== undefined
+        ? { [LINKTREE_BANNER_KEY]: readLinktreeBanner(dto.banner) }
+        : {}),
+      ...(dto?.background_image !== undefined
+        ? { [BACKGROUND_IMAGE_CONFIG_KEY]: dto.background_image }
+        : {}),
+      ...(dto?.background_pattern !== undefined
+        ? { [BACKGROUND_PATTERN_CONFIG_KEY]: dto.background_pattern }
+        : {}),
+      ...(dto?.template_key !== undefined
+        ? { templateKey: dto.template_key }
+        : {}),
+      ...(dto?.verification_badge !== undefined
+        ? { verification_badge: dto.verification_badge }
+        : {}),
       _copy_lineage: {
         source_id: sourceId,
         origin_id: originId,
@@ -1041,6 +1209,36 @@ export class LinktreesService {
       },
     };
 
+    // Only explicit appearance overrides are accepted; source content and tracking config are retained.
+    if (
+      dto?.banner?.images.some((image) => !isLinktreeBackgroundImage(image))
+    ) {
+      throw new BadRequestException('Invalid banner images');
+    }
+    if (dto?.banner !== undefined)
+      await assertLinktreeBannerOwnership(this.storage, businessId, {
+        [LINKTREE_BANNER_KEY]: targetTemplateConfig[LINKTREE_BANNER_KEY],
+      });
+    if (
+      dto?.background_image != null &&
+      (!isLinktreeBackgroundImage(dto.background_image) ||
+        !(await this.storage.areBusinessAssetsOwned(
+          businessId,
+          dto.background_image,
+        )))
+    ) {
+      throw new BadRequestException(
+        'The background image must belong to this workspace',
+      );
+    }
+    const targetTemplateKey = dto?.template_key ?? source.template_key;
+    if (
+      !isPlatform &&
+      dto?.template_key !== undefined &&
+      dto.template_key !== source.template_key
+    )
+      await this.ensureTemplateAllowed(businessId, dto.template_key);
+
     // 7. Execute atomic transaction
     const row = await this.databaseService.transaction(async (client) => {
       // Share the creation lock so concurrent creates and copies cannot exceed quotas.
@@ -1048,6 +1246,14 @@ export class LinktreesService {
         `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
         [businessId],
       );
+      if (dto?.slug?.trim()) {
+        const existing = await client.query(
+          'SELECT 1 FROM linktrees WHERE business_id=$1 AND seo_name=$2',
+          [businessId, targetSlug],
+        );
+        if (existing.rows.length)
+          throw new ConflictException('This public URL is already in use');
+      }
       if (!isPlatform) {
         const capacity = await client.query<{ total: number; copies: number }>(
           `SELECT COUNT(*)::int AS total,
@@ -1068,24 +1274,24 @@ export class LinktreesService {
       }
       const ltRes = await client.query<LinktreeRow>(
         `INSERT INTO linktrees (
-          business_id, name, subtitle, subtitle_color, description, seo_name, uid, image,
+          business_id, headline, slogan, slogan_color, description, seo_name, uid, logo,
           background_color, template_key, template_config, whatsapp_modal_enabled,
           footer_text, footer_phone, footer_hidden, status, is_default
         ) VALUES (
           $1, $2, $3, $17, $4, $5, $6, $7,
           $8, $9, $10, $11,
           $12, $13, $14, $15, $16
-        ) RETURNING *`,
+        ) RETURNING *, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, logo AS image`,
         [
           businessId,
           targetName,
-          source.subtitle,
-          source.description,
+          dto?.slogan ?? source.subtitle,
+          dto?.description ?? source.description,
           targetSlug,
           uid,
-          source.image,
-          source.background_color,
-          source.template_key,
+          targetLogo,
+          dto?.background_color ?? source.background_color,
+          targetTemplateKey,
           JSON.stringify(targetTemplateConfig),
           source.whatsapp_modal_enabled,
           source.footer_text,
@@ -1093,7 +1299,9 @@ export class LinktreesService {
           source.footer_hidden,
           source.status || 'active',
           false, // duplicates are never default
-          source.subtitle_color || null,
+          dto?.slogan_color !== undefined
+            ? dto.slogan_color
+            : (source.subtitle_color ?? null),
         ],
       );
 
@@ -1102,9 +1310,15 @@ export class LinktreesService {
       // Clone WhatsApp questions
       for (const q of whatsappRes.rows || []) {
         await client.query(
-          `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order)
-           VALUES ($1, $2, $3, $4)`,
-          [created.id, q.question_text, q.message, q.display_order],
+          `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order, video_url)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            created.id,
+            q.question_text,
+            q.message,
+            q.display_order,
+            q.video_url ?? null,
+          ],
         );
       }
 
@@ -1138,11 +1352,11 @@ export class LinktreesService {
     });
 
     // Claim assets if image or config contains background assets
-    if (source.image || source.template_config) {
+    if (targetLogo || targetTemplateConfig) {
       await this.storage.claimBusinessAssets(
         businessId,
-        source.image,
-        source.template_config,
+        targetLogo,
+        targetTemplateConfig,
       );
     }
 
@@ -1153,23 +1367,19 @@ export class LinktreesService {
     businessId: string,
     uid: string,
     seoName?: string | null,
+    previousSeoName?: string | null,
   ) {
     try {
       const businessRes = await this.databaseService.query<{
         subdomain: string | null;
       }>(`SELECT subdomain FROM businesses WHERE id = $1`, [businessId]);
       const subdomain = businessRes.rows[0]?.subdomain?.toLowerCase();
-      if (!subdomain) return;
-      const keys = [
-        `cache:linktree:uid:${uid}`,
-        `cache:linktree:uid:${uid}:sub:${subdomain}`,
-        `cache:linktree:uid:id`,
-        `cache:linktree:uid:id:sub:${subdomain}`,
-      ];
-      if (seoName) {
-        keys.push(`cache:linktree:uid:${seoName}`);
-        keys.push(`cache:linktree:uid:${seoName}:sub:${subdomain}`);
-      }
+      const keys = publicLinktreeCacheKeys(
+        subdomain,
+        uid,
+        seoName,
+        previousSeoName,
+      );
       await Promise.all(keys.map((k) => this.redisService.del(k)));
     } catch (error) {
       // A failed cache purge must not fail the mutation, but it leaves stale
@@ -1182,13 +1392,15 @@ export class LinktreesService {
 
   async updateLinktree(
     id: string,
-    data: UpdateLinktreeDto,
+    input: UpdateLinktreeDto,
     businessId: string,
     scope: LinktreeWriteScope = 'business',
   ) {
+    const data = normalizeLinktreeContent(input);
     const isPlatform = scope === 'platform';
     const current = await this.getLinktreeById(id, businessId);
-    const nextSeoName = data.seo_name || data.slug;
+    const nextSeoName =
+      input.headline !== undefined ? undefined : data.seo_name || data.slug;
 
     if (nextSeoName && nextSeoName !== current.seo_name) {
       const slugCheck = await this.databaseService.query<{
@@ -1226,10 +1438,6 @@ export class LinktreesService {
       data.footer_hidden !== undefined
         ? data.footer_hidden
         : current.footer_hidden;
-    const is_campaign_active =
-      data.is_campaign_active !== undefined
-        ? data.is_campaign_active
-        : (current.is_campaign_active ?? false);
     const status =
       data.status !== undefined ? data.status : current.status || 'active';
     if (current.is_default && status === 'inactive') {
@@ -1241,7 +1449,16 @@ export class LinktreesService {
         ? data.template_config
         : current.template_config,
       current.template_key,
+      data.template_config !== undefined,
     );
+    if (!isPlatform)
+      await assertLinktreeSeoPlan(
+        this.databaseService,
+        businessId,
+        config,
+        current.template_config,
+      );
+    await assertLinktreeBannerOwnership(this.storage, businessId, config);
     if (!isPlatform) {
       await this.ensureTemplateAllowed(businessId, config.templateKey);
     }
@@ -1256,16 +1473,16 @@ export class LinktreesService {
     const row = await this.databaseService.transaction(async (client) => {
       const ltRes = await client.query<LinktreeRow>(
         `UPDATE linktrees
-         SET name = $1, subtitle = $2, subtitle_color = $15, description = $14, seo_name = $3,
-             image = $4, background_color = $5,
+         SET headline = $1, slogan = $2, slogan_color = $15, description = $14, seo_name = $3,
+             logo = $4, background_color = $5,
              template_key = $6, template_config = $7::jsonb, whatsapp_modal_enabled = $8,
              footer_text = $9, footer_phone = $10, footer_hidden = $11,
-             is_campaign_active = $16, status = $17,
+             status = $16,
              updated_at = NOW()
          WHERE id = $12 AND business_id = $13
-         RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+         RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
                    template_key, template_config, whatsapp_modal_enabled,
-                    footer_text, footer_phone, footer_hidden, status, is_campaign_active, is_archived, archived_at, is_default, created_at, updated_at`,
+                    footer_text, footer_phone, footer_hidden, status, is_pinned, is_archived, archived_at, is_default, created_at, updated_at`,
         [
           name,
           subtitle,
@@ -1282,7 +1499,6 @@ export class LinktreesService {
           businessId,
           description,
           subtitle_color,
-          is_campaign_active,
           status,
         ],
       );
@@ -1298,9 +1514,15 @@ export class LinktreesService {
         if (typeof q?.text === 'string' && typeof q.message === 'string') {
           if (!q.text || !q.message) continue;
           await client.query(
-            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order)
-             VALUES ($1, $2, $3, $4)`,
-            [id, q.text.trim(), q.message.trim(), i],
+            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order, video_url)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              id,
+              q.text.trim(),
+              q.message.trim(),
+              i,
+              questionVideoUrl(q.videoUrl),
+            ],
           );
         }
       }
@@ -1314,31 +1536,26 @@ export class LinktreesService {
       current.template_config,
     );
 
-    await this.clearLinktreeCache(businessId, row.uid, row.seo_name);
+    await this.clearLinktreeCache(
+      businessId,
+      row.uid,
+      row.seo_name,
+      current.seo_name,
+    );
 
     return this.mapLinktreeRow(this.databaseService, row);
   }
 
-  async toggleCampaignActive(
-    id: string,
-    businessId: string,
-    isCampaignActive: boolean,
-  ) {
-    const res = await this.databaseService.query<LinktreeRow>(
-      `UPDATE linktrees
-       SET is_campaign_active = $1, updated_at = NOW()
-       WHERE id = $2 AND business_id = $3
-       RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
-                 template_key, template_config, whatsapp_modal_enabled,
-                 footer_text, footer_phone, footer_hidden, status, is_campaign_active, is_archived, archived_at, is_default, created_at, updated_at`,
-      [isCampaignActive, id, businessId],
+  async pin(businessId: string, id: string, isPinned: boolean) {
+    const result = await this.databaseService.query<{
+      id: string;
+      isPinned: boolean;
+    }>(
+      'UPDATE linktrees SET is_pinned=$3 WHERE business_id=$1 AND id=$2 RETURNING id,is_pinned AS "isPinned"',
+      [businessId, id, isPinned],
     );
-    if (!res.rows || res.rows.length === 0) {
-      throw new NotFoundException('Linktree page not found');
-    }
-    const mapped = await this.mapLinktreeRow(this.databaseService, res.rows[0]);
-    await this.clearLinktreeCache(businessId, mapped.uid, mapped.seo_name);
-    return mapped;
+    if (!result.rows[0]) throw new NotFoundException('Linktree page not found');
+    return result.rows[0];
   }
 
   async toggleArchive(id: string, businessId: string, isArchived: boolean) {
@@ -1357,12 +1574,11 @@ export class LinktreesService {
       `UPDATE linktrees
        SET is_archived = $1::boolean,
            archived_at = CASE WHEN $1::boolean = true THEN NOW() ELSE NULL END,
-           is_campaign_active = CASE WHEN $1::boolean = true THEN false ELSE is_campaign_active END,
            updated_at = NOW()
        WHERE id = $2 AND business_id = $3
-       RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+       RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
                  template_key, template_config, whatsapp_modal_enabled,
-                 footer_text, footer_phone, footer_hidden, status, is_campaign_active, is_archived, archived_at, is_default, created_at, updated_at`,
+                 footer_text, footer_phone, footer_hidden, status, is_pinned, is_archived, archived_at, is_default, created_at, updated_at`,
       [isArchived, id, businessId],
     );
     const mapped = await this.mapLinktreeRow(this.databaseService, res.rows[0]);
@@ -1389,12 +1605,11 @@ export class LinktreesService {
     const res = await this.databaseService.query<LinktreeRow>(
       `UPDATE linktrees
        SET status = $1::varchar,
-           is_campaign_active = CASE WHEN $1::varchar = 'inactive' THEN false ELSE is_campaign_active END,
            updated_at = NOW()
        WHERE id = $2 AND business_id = $3
-       RETURNING id, name, subtitle, subtitle_color, description, seo_name, uid, image, background_color,
+       RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
                  template_key, template_config, whatsapp_modal_enabled,
-                 footer_text, footer_phone, footer_hidden, status, is_campaign_active, is_archived, archived_at, is_default, created_at, updated_at`,
+                 footer_text, footer_phone, footer_hidden, status, is_pinned, is_archived, archived_at, is_default, created_at, updated_at`,
       [status, id, businessId],
     );
     if (!res.rows || res.rows.length === 0) {
@@ -1407,9 +1622,9 @@ export class LinktreesService {
 
   async getDefaultLinktree(businessId: string) {
     const res = await this.databaseService.query<LinktreeRow>(
-      `SELECT lt.id, lt.name, lt.subtitle, lt.subtitle_color, lt.description, lt.seo_name, lt.uid, lt.image, lt.background_color,
+      `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
-              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_campaign_active, lt.is_archived, lt.archived_at, lt.is_default,
+              lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_pinned, lt.is_archived, lt.archived_at, lt.is_default,
               lt.created_at, lt.updated_at, b.default_avatar AS business_default_avatar
        FROM linktrees lt
        LEFT JOIN business_branding b ON b.business_id = lt.business_id
@@ -1498,11 +1713,11 @@ export class LinktreesService {
     const row = await this.databaseService.transaction(async (client) => {
       const ltRes = await client.query<LinktreeRow>(
         `INSERT INTO linktrees (
-          business_id, name, subtitle, description, seo_name, uid, image, background_color,
+          business_id, headline, slogan, description, seo_name, uid, logo, background_color,
           template_key, template_config, whatsapp_modal_enabled,
           footer_text, footer_phone, footer_hidden, status, is_default
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, 'active', true)
-        RETURNING id, name, subtitle, description, seo_name, uid, image, background_color,
+        RETURNING id, headline AS name, slogan AS subtitle, description, seo_name, uid, logo AS image, background_color,
                   template_key, template_config, whatsapp_modal_enabled,
                   footer_text, footer_phone, footer_hidden, status, is_default, created_at, updated_at`,
         [

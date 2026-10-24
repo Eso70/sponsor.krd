@@ -5,9 +5,20 @@ import {
   calculateCostPerConversion,
   formatConversionRate,
   formatCostPerConversion,
+  formatAdAccountAmount,
+  campaignReportedValue,
 } from "./campaign-metrics";
 
 describe("campaign conversion metrics", () => {
+  it("does not publish locally stored campaign numbers as live reporting", () => {
+    expect(campaignReportedValue(48920)).toBe("—");
+    expect(campaignReportedValue("$165.40")).toBe("—");
+  });
+  it("keeps missing ad-account amounts distinct from a real zero and respects currency", () => {
+    expect(formatAdAccountAmount(undefined, "USD")).toBe("—");
+    expect(formatAdAccountAmount(0, "USD")).toBe("$0.00");
+    expect(formatAdAccountAmount(25, "EUR")).toBe("€25.00");
+  });
   it("derives cost per conversion from spend and conversions", () => {
     expect(
       calculateCostPerConversion({ totalSpent: 165.4, conversions: 245 }),

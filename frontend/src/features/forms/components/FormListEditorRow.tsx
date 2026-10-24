@@ -62,7 +62,6 @@ export function FormListEditorRow({
         <FormEditorInput
           label={`${faq ? labels.faqQuestion : labels.stepTitle} ${index + 1}`}
           value={step.title}
-          placeholder={`${faq ? labels.faqQuestionHint : labels.stepTitleHint} ${index + 1}`}
           maxLength={70}
           showCount
           onChange={(title) => onChange({ title })}
@@ -70,7 +69,6 @@ export function FormListEditorRow({
         <FormEditorInput
           label={`${faq ? labels.faqAnswer : labels.stepDescription} ${index + 1}`}
           value={step.text}
-          placeholder={`${faq ? labels.faqAnswerHint : labels.stepDescriptionHint} ${index + 1}`}
           maxLength={1000}
           multiline
           onChange={(text) => onChange({ text })}

@@ -64,6 +64,15 @@ describe("accepted public form conversions", () => {
 });
 
 describe("navigation-critical page tracking", () => {
+  it("deduplicates a repeated question but records a different selection as one new contact", () => {
+    const tracker = createPageTracker({ pageId:PAGE_ID, pageName:"Page", contentType:"linktree", analytics:{ pixelIds:["PIXEL1"], actions:{ "link:test":{ id:ACTION_ID,pixelEvent:"Contact" } } } });
+    tracker.trackAction("link:test","whatsapp_click",{ properties:{ whatsappQuestionId:"first" } });
+    tracker.trackAction("link:test","whatsapp_click",{ properties:{ whatsappQuestionId:"first" } });
+    tracker.trackAction("link:test","whatsapp_click",{ properties:{ whatsappQuestionId:"second" } });
+    expect(mocks.queueAnalyticsEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.trackTikTokEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.queueAnalyticsEvent).toHaveBeenLastCalledWith(expect.objectContaining({ actionId:ACTION_ID, properties:expect.objectContaining({whatsappQuestionId:"second"}) }));
+  });
   it("records offer clicks as clicks, not checkout events", () => {
     const tracker = createPageTracker({
       pageId: PAGE_ID,

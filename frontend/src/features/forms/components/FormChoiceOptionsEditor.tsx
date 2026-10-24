@@ -108,7 +108,6 @@ export function FormChoiceOptionsEditor({
             validationField={`questions.${question.id}.options.${index}`}
             label={`${copy.options} ${index + 1}`}
             value={option}
-            placeholder={labels.optionHint}
             onChange={(value) => rename(index, value)}
           />
           <IconActionButton

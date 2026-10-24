@@ -1,40 +1,38 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { persistAppTheme, readAppTheme } from "@/lib/app-theme";
+import { useAppTheme } from "@/hooks/useAppTheme";
+import { HEADER_ACTION_SIZE_CLASS } from "./shared-control-styles";
+import { DashboardHeaderActionButton } from "./DashboardHeaderActionButton";
 import { Tooltip } from "@/components/shared/Tooltip";
 
-export function ThemeToggleButton({ className = "", copy }: { className?: string; copy?: { label: string; light: string; dark: string } }) {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      const dark = readAppTheme() === "dark";
-      setIsDark(dark);
-      persistAppTheme(dark ? "dark" : "light");
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setIsDark((current) => {
-      const next = !current;
-      persistAppTheme(next ? "dark" : "light");
-      return next;
-    });
-  }, []);
+export function ThemeToggleButton({
+  className = "",
+  copy,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+  copy?: { label: string; light: string; dark: string };
+}) {
+  const { theme, toggleTheme } = useAppTheme();
+  const isDark = theme === "dark";
 
   return (
-    <Tooltip content={isDark ? copy?.light ?? "دۆخی ڕووناک" : copy?.dark ?? "دۆخی تاریک"} side="bottom">
-      <button
+    <Tooltip
+      content={
+        isDark ? (copy?.light ?? "دۆخی ڕووناک") : (copy?.dark ?? "دۆخی تاریک")
+      }
+      side="bottom"
+    >
+      <DashboardHeaderActionButton
         type="button"
         onClick={toggleTheme}
-        className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-500 shadow-sm backdrop-blur transition hover:text-slate-900 dark:border-white/10 dark:bg-[#171a20]/90 dark:text-slate-400 dark:hover:text-white cursor-pointer ${className}`}
+        className={`${compact ? "!size-9 !p-0 shrink-0" : HEADER_ACTION_SIZE_CLASS} ${className}`}
         aria-label={copy?.label ?? "Change theme"}
       >
         {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
+      </DashboardHeaderActionButton>
     </Tooltip>
   );
 }

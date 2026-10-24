@@ -1,52 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  Activity,
-  CheckCircle2,
-  Globe2,
-  KeyRound,
-  LockKeyhole,
-  MousePointerClick,
-  Radar,
-  RefreshCw,
-  Search,
-  Send,
-  Server,
-} from "lucide-react";
+import { Activity, KeyRound, LockKeyhole, Radar, Send } from "lucide-react";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { readTikTokSummary } from "../tiktok-summary";
+import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import type { EffectiveAccessManifest } from "@linktree/types";
-import { DashboardSurface } from "@/components/shared/DashboardSurface";
-import { LockedContent } from "@/components/shared/LockedContent";
-import { SegmentedTabs } from "@/components/shared/SegmentedTabs";
+import { LockedNotice } from "@/components/shared/LockedContent";
 import { StatCard } from "@/components/shared/StatCard";
 import { SkeletonTikTokPage } from "@/components/shared/SkeletonPageLayouts";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { BusinessTikTokDeliveryPage } from "./BusinessTikTokDeliveryPage";
 import { BusinessTikTokPixelConfigPage, type TikTokPixelConfigCopy } from "./BusinessTikTokPixelConfigPage";
-import { useRegisterBusinessDashboardRefresh } from "@/features/business/dashboard-refresh";
+import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { useTranslations } from "next-intl";
 
-type TrackingTab = "delivery" | "config";
-
 interface TrackingSummary {
-  browserEvents: number;
-  serverEvents: number;
   delivered: number;
-  failed: number;
   deliveryRate: number;
 }
 
-const EMPTY_TRACKING_SUMMARY: TrackingSummary = {
-  browserEvents: 0,
-  serverEvents: 0,
-  delivered: 0,
-  failed: 0,
-  deliveryRate: 0,
-};
-
 function canReadDelivery(access: EffectiveAccessManifest | null): boolean {
-  const planCode = access?.subscription.planCode.toLowerCase();
+  const planCode = access?.subscription?.planCode?.toLowerCase();
   return (
     planCode !== "basic" &&
     planCode !== "pro" &&
@@ -76,6 +52,8 @@ function configCounts(settings: unknown): {
       (item) =>
         item &&
         typeof item === "object" &&
+        typeof (item as Record<string, unknown>).pixel_id === "string" &&
+        Boolean(((item as Record<string, unknown>).pixel_id as string).trim()) &&
         Boolean(
           (item as Record<string, unknown>).has_events_token ||
           (item as Record<string, unknown>).token_last_four,
@@ -85,25 +63,22 @@ function configCounts(settings: unknown): {
 }
 
 export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<TikTokPixelConfigCopy> }) {
+  const startRequest = useLatestRequest();
+  const startHealthRequest = useLatestRequest();
+  const [settingsUnavailable, setSettingsUnavailable] = useState(false);
   const t = useTranslations("TikTokPage");
-  const tabs = [
-    { id: "delivery" as const, label: t("eventsTab"), icon: Radar },
-    { id: "config" as const, label: t("configTab"), icon: Globe2 },
-  ];
-  const [tab, setTab] = useState<TrackingTab>("delivery");
   const [access, setAccess] = useState<EffectiveAccessManifest | null>(null);
   const [configuredPixels, setConfiguredPixels] = useState(0);
   const [apiConnections, setApiConnections] = useState(0);
-  const [summary, setSummary] = useState<TrackingSummary>(
-    EMPTY_TRACKING_SUMMARY,
-  );
+  const [summary, setSummary] = useState<TrackingSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const applyAccess = useCallback(
     async (next: EffectiveAccessManifest, rethrow = false) => {
+      const current = startHealthRequest();
       setAccess(next);
       if (!canReadDelivery(next)) {
-        setSummary(EMPTY_TRACKING_SUMMARY);
+        setSummary(null);
         return;
       }
       try {
@@ -113,22 +88,20 @@ export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<Ti
         });
         if (!response.ok) throw new Error("Failed to load summary");
         const payload = await response.json();
-        setSummary({
-          browserEvents: Number(payload.data?.browserEvents || 0),
-          serverEvents: Number(payload.data?.serverEvents || 0),
-          delivered: Number(payload.data?.delivered || 0),
-          failed: Number(payload.data?.failed || 0),
-          deliveryRate: Number(payload.data?.deliveryRate || 0),
-        });
+        const summary = readTikTokSummary(payload.data);
+        if (current()) setSummary(summary);
       } catch (error) {
+        if (!current()) return;
+        setSummary(null);
         if (rethrow) throw error;
       }
     },
-    [],
+    [startHealthRequest],
   );
 
   const loadTracking = useCallback(
     async (rethrow = false) => {
+      const current = startRequest();
       try {
         const [accessResponse, settingsResponse] = await Promise.all([
           fetch("/api/auth/effective-access", {
@@ -147,18 +120,23 @@ export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<Ti
           accessResponse.json(),
           settingsResponse.json(),
         ]);
+        if (!current()) return;
+        setSettingsUnavailable(false);
         const counts = configCounts(settingsPayload.data);
         setConfiguredPixels(counts.configuredPixels);
         setApiConnections(counts.apiConnections);
         await applyAccess(accessPayload.data, rethrow);
       } catch (error) {
+        if (!current()) return;
+        setSettingsUnavailable(true);
+        setSummary(null);
         if (rethrow) throw error;
       }
     },
-    [applyAccess],
+    [applyAccess, startRequest],
   );
 
-  useRegisterBusinessDashboardRefresh("tiktok-config", () =>
+  const refreshing = useRegisterDashboardRefresh("tiktok-config", () =>
     loadTracking(true),
   );
 
@@ -170,16 +148,8 @@ export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<Ti
       });
     }, 0);
 
-    const syncAccess = (event: Event) => {
-      const detail = (event as CustomEvent<EffectiveAccessManifest>).detail;
-      if (detail) void applyAccess(detail);
-    };
-    const syncSettings = (event: Event) => {
-      const detail = (event as CustomEvent<unknown>).detail;
-      const counts = configCounts(detail);
-      setConfiguredPixels(counts.configuredPixels);
-      setApiConnections(counts.apiConnections);
-    };
+    const syncAccess = () => { void loadTracking(); };
+    const syncSettings = () => { void loadTracking(); };
     window.addEventListener("sponsor-krd:access-updated", syncAccess);
     window.addEventListener(
       "sponsor-krd:business-settings-updated",
@@ -211,150 +181,65 @@ export function BusinessTikTokConfigPage({ pixelCopy }: { pixelCopy?: Partial<Ti
     </Tooltip>
   );
 
-  if (loading) {
-    return (
-      <SkeletonTikTokPage loadingLabel={t("loadingSettings")} />
-    );
-  }
-
   return (
     <div
       dir="ltr"
       className="theme-custom-scrollbar selection:bg-brand-500/30 dark:selection:bg-brand-500/40"
     >
-      <StatCardGrid columns={3} className="mb-8">
+      <StatCardGrid columns={4} className="mb-8">
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={t("loadingSettings")}
           icon={Radar}
           label={t("configuredPixels")}
-          value={configuredPixels}
+          value={settingsUnavailable ? "—" : configuredPixels}
           color="blue"
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={t("loadingSettings")}
           icon={KeyRound}
           label={t("activeApi")}
-          value={apiConnections}
+          value={settingsUnavailable ? "—" : apiConnections}
           color="cyan"
         />
         <StatCard
-          icon={MousePointerClick}
-          label={t("browserEvents")}
-          value={deliveryAllowed ? summary.browserEvents : "—"}
-          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
-          color="purple"
-          action={deliveryAllowed ? undefined : lockedAction}
-        />
-        <StatCard
-          icon={Server}
-          label={t("apiEvents")}
-          value={deliveryAllowed ? summary.serverEvents : "—"}
-          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
-          color="orange"
-          action={deliveryAllowed ? undefined : lockedAction}
-        />
-        <StatCard
+          loading={loading || refreshing}
+          loadingLabel={t("loadingSettings")}
           icon={Send}
           label={t("delivered")}
-          value={deliveryAllowed ? summary.delivered : "—"}
-          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
+          value={deliveryAllowed && summary ? summary.delivered : "—"}
+          subtitle={access && !settingsUnavailable && !deliveryAllowed ? t("higherPlan") : undefined}
           color="green"
-          action={deliveryAllowed ? undefined : lockedAction}
+          action={access && !settingsUnavailable && !deliveryAllowed ? lockedAction : undefined}
         />
         <StatCard
+          loading={loading || refreshing}
+          loadingLabel={t("loadingSettings")}
           icon={Activity}
           label={t("successRate")}
-          value={deliveryAllowed ? `${summary.deliveryRate.toFixed(1)}٪` : "—"}
-          subtitle={deliveryAllowed ? undefined : t("higherPlan")}
+          value={deliveryAllowed && summary ? `${summary.deliveryRate.toFixed(1)}٪` : "—"}
+          subtitle={access && !settingsUnavailable && !deliveryAllowed ? t("higherPlan") : undefined}
           color="pink"
-          action={deliveryAllowed ? undefined : lockedAction}
+          action={access && !settingsUnavailable && !deliveryAllowed ? lockedAction : undefined}
         />
       </StatCardGrid>
 
-      <div className="mb-5">
-        <SegmentedTabs tabs={tabs} value={tab} onChange={setTab} />
-      </div>
-
-      {tab === "config" ? (
-        <BusinessTikTokPixelConfigPage copy={pixelCopy} />
-      ) : deliveryAllowed ? (
-        <BusinessTikTokDeliveryPage />
-      ) : (
-        <LockedContent
-          locked
-          className="min-h-[520px]"
-          contentClassName="min-h-[520px]"
-          title={t("lockedTitle")}
-          description={t("lockedDescription")}
-        >
-          <DashboardSurface className="min-h-[520px]">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                  <Radar className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200">
-                    {t("title")}
-                  </h2>
-                  <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {t("simpleDescription")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 dark:border-white/10 dark:bg-white/5">
-                  <RefreshCw className="h-4 w-4" />
-                </div>
-                <div className="flex h-10 w-44 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-400 dark:border-white/10 dark:bg-white/5">
-                  <Search className="h-4 w-4" />
-                  <span className="text-xs">{t("allPages")}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-8 border-t border-slate-100 pt-6 dark:border-white/5 xl:grid-cols-2">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/[0.06]">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-                  <div>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      {t("allOkay")}
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                      {t("issueHint")}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-5 h-10 w-44 rounded-xl bg-emerald-200/70 dark:bg-emerald-500/15" />
-              </div>
-
-              <div className="rounded-2xl border border-slate-200/80 p-5 dark:border-white/10">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  {t("reconciliation")}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  {t("reconciliationDescription")}
-                </p>
-                <div className="mt-5 grid grid-cols-2 divide-x divide-slate-100 dark:divide-white/5">
-                  <StatCard
-                    className="p-4"
-                    color="green"
-                    label={t("localConfirmed")}
-                    value="—"
-                    variant="comparison"
-                  />
-                  <StatCard
-                    className="p-4"
-                    color="blue"
-                    label={t("tiktokReceived")}
-                    value="—"
-                    variant="comparison"
-                  />
-                </div>
-              </div>
-            </div>
-          </DashboardSurface>
-        </LockedContent>
-      )}
+      {settingsUnavailable && <RequestErrorNotice message={t("loadFailed")} />}
+      {loading ? <SkeletonTikTokPage showStats={false} loadingLabel={t("loadingSettings")} /> : settingsUnavailable ? null : <BusinessTikTokPixelConfigPage embedded copy={pixelCopy} managementTitle={t("configTab")} managementDescription={t("simpleDescription")}>
+        <div className="mt-6">
+        {deliveryAllowed ? (
+          <BusinessTikTokDeliveryPage embedded />
+        ) : (
+          <LockedNotice
+            compact
+            className="max-w-none"
+            title={t("lockedTitle")}
+            description={t("lockedDescription")}
+          />
+        )}
+        </div>
+        </BusinessTikTokPixelConfigPage>}
     </div>
   );
 }

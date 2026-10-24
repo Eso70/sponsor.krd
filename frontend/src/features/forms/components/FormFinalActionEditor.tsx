@@ -114,7 +114,6 @@ export function FormFinalActionEditor({
             validationField={`actions.${action.id}.text`}
             label={copy.buttonText}
             value={action.text}
-            placeholder={labels.buttonHint}
             onChange={(text) => update({ text, textKey: undefined })}
             maxLength={80}
           />
@@ -124,7 +123,6 @@ export function FormFinalActionEditor({
                 validationField={`actions.${action.id}.appStoreUrl`}
                 label={labels.appStore}
                 value={action.appStoreUrl ?? action.url}
-                placeholder={labels.appStoreHint}
                 onChange={(appStoreUrl) => update({ appStoreUrl, url: "" })}
                 previewLabel={copy.preview}
               />
@@ -132,7 +130,6 @@ export function FormFinalActionEditor({
                 validationField={`actions.${action.id}.googlePlayUrl`}
                 label={labels.googlePlay}
                 value={action.googlePlayUrl ?? ""}
-                placeholder={labels.googlePlayHint}
                 onChange={(googlePlayUrl) => update({ googlePlayUrl })}
                 previewLabel={copy.preview}
               />
@@ -148,7 +145,6 @@ export function FormFinalActionEditor({
                     : labels.imageUrl
               }
               value={action.url}
-              placeholder={labels.urlHint}
               onChange={(url) => update({ url })}
               previewLabel={copy.preview}
             />

@@ -65,6 +65,21 @@ describe("PlatformSettingsPage General tab", () => {
     expect(screen.getByText("لا توجد جلسات نشطة.")).toBeInTheDocument();
   });
 
+  it("shows the returned session count instead of a fixed figure", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input) => String(input).endsWith("/sessions")
+      ? jsonResponse({ data: { sessions: [{ id: "current-session", is_current: true, created_at: "2026-01-01T00:00:00Z", last_activity_at: "2026-01-01T00:00:00Z" }] } })
+      : jsonResponse({ data: savedSettings })));
+    renderSettings("ar");
+    await screen.findByDisplayValue("Saved SponsorKrd");
+    const label = screen.getByText("الجلسات النشطة");
+    expect(label.closest("article")).toHaveTextContent("—");
+    fireEvent.click(screen.getByRole("tab", { name: "تسجيل الدخول والجلسات" }));
+    await waitFor(() => {
+      const card = screen.getAllByText("الجلسات النشطة").find((node) => node.closest("article"))?.closest("article");
+      expect(card?.querySelector("[data-stat-card-value]")).toHaveTextContent("1");
+    });
+  });
+
   it("uses the shared Arabic copy in the platform TikTok Pixel panel", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input) =>
       String(input) === "/api/platform/settings/tiktok"

@@ -8,7 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
+import { PickerPopup } from "./PickerPopup";
+import { SHARED_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
+import pickerStyles from "./DateTimeInput.module.css";
 import {
   CalendarClock,
   ChevronDown,
@@ -16,7 +18,6 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { useModalKeyboard } from "@/hooks/useModalKeyboard";
 import { TimeColumn } from "./TimeColumn";
 import { Tooltip } from "@/components/shared/Tooltip";
 
@@ -39,6 +40,7 @@ interface DateTimeInputProps {
    * `aria-label`, so hiding it changes the look and nothing else.
    */
   hideLabel?: boolean;
+  ariaDescribedBy?: string;
   /** Localizes calendar chrome without changing the stored ISO value. */
   locale?: "ckb" | "ar" | "en";
 }
@@ -141,9 +143,7 @@ function formatMaskedDate(rawValue: string, previousValue: string) {
     const digits = parts[0].slice(0, 6);
     parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)];
   }
-  let year = (parts[0] || "").slice(0, 2);
-  const currentShortYear = new Date().getFullYear() % 100;
-  if (year.length === 2 && Number(year) < currentShortYear) year = year[0];
+  const year = (parts[0] || "").slice(0, 2);
   if (year.length < 2) return year;
   if (parts.length === 1) return deleting ? year : `${year}/`;
   let month = (parts[1] || "").slice(0, 2);
@@ -190,6 +190,7 @@ export function DateTimeInput({
   required = false,
   accent = BUSINESS_ACCENT,
   hideLabel = false,
+  ariaDescribedBy,
   locale = "ckb",
 }: DateTimeInputProps) {
   const arabic = locale === "ar";
@@ -199,7 +200,8 @@ export function DateTimeInput({
   const [isOpen, setIsOpen] = useState(false);
   const errorId = useId();
   const triggerRef = useRef<HTMLDivElement>(null);
-  const pickerRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const closePicker = useCallback(() => setIsOpen(false), []);
   const yearScrollRef = useRef<HTMLDivElement>(null);
 
   const parseValue = (candidate: string) =>
@@ -210,13 +212,10 @@ export function DateTimeInput({
     initialValue ? formatTypedDateTime(initialValue) : "",
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(validationError ?? "");
+  }, [validationError]);
   const [headerSelector, setHeaderSelector] = useState<"month" | "year" | null>(null);
-  const [pickerPosition, setPickerPosition] = useState<{
-    left: number;
-    width: number;
-    top?: number;
-    bottom?: number;
-  } | null>(null);
   const [draft, setDraft] = useState<Date>(() => parseValue(value) || defaultDateTime());
   const [visibleMonth, setVisibleMonth] = useState<Date>(() => {
     const initial = parseValue(value) || defaultDateTime();
@@ -226,7 +225,6 @@ export function DateTimeInput({
   const minimum = min ? parseValue(min) : null;
   const maximum = max ? parseValue(max) : null;
 
-  useModalKeyboard({ isOpen, onEscape: () => setIsOpen(false), escapeEnabled: true });
 
   // Auto-scroll year grid to the selected year when panel opens.
   useEffect(() => {
@@ -236,58 +234,12 @@ export function DateTimeInput({
     }
   }, [headerSelector]);
 
-  const updatePickerPosition = useCallback(() => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const gap = 8;
-    const viewportPadding = 8;
-    const width = Math.min(
-      dateOnly ? 308 : 500,
-      window.innerWidth - viewportPadding * 2,
-      Math.max(dateOnly ? 280 : 460, rect.width),
-    );
-    const left = Math.min(
-      Math.max(viewportPadding, rect.left),
-      window.innerWidth - width - viewportPadding,
-    );
-    const estimatedHeight = 380;
-    const openAbove =
-      window.innerHeight - rect.bottom < estimatedHeight + gap &&
-      rect.top > estimatedHeight + gap;
-    setPickerPosition({
-      left,
-      width,
-      ...(openAbove
-        ? { bottom: window.innerHeight - rect.top + gap }
-        : { top: rect.bottom + gap }),
-    });
-  }, [dateOnly]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    updatePickerPosition();
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (!triggerRef.current?.contains(target) && !pickerRef.current?.contains(target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    window.addEventListener("resize", updatePickerPosition);
-    window.addEventListener("scroll", updatePickerPosition, true);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      window.removeEventListener("resize", updatePickerPosition);
-      window.removeEventListener("scroll", updatePickerPosition, true);
-    };
-  }, [isOpen, updatePickerPosition]);
-
   const openPicker = () => {
-    const next = parseTypedDateTime(inputValue) || parseValue(value) || defaultDateTime();
+    if (disabled || isOpen) return;
+    const next = parseValue(value) || parseTypedDateTime(inputValue) || defaultDateTime();
     setDraft(next);
     setVisibleMonth(new Date(next.getFullYear(), next.getMonth(), 1));
     setHeaderSelector(null);
-    updatePickerPosition();
     setIsOpen(true);
   };
 
@@ -345,6 +297,8 @@ export function DateTimeInput({
       setValidationError(arabic ? "اكتب التاريخ بصيغة سنة/شهر/يوم؛ مثل 26/03/09." : english ? "Enter the date as year/month/day, for example 26/03/09." : "بەروارەکە بە شێوەی ساڵ/مانگ/ڕۆژ بنووسە؛ بۆ نموونە 26/03/09.");
       return false;
     }
+    const stored = parseValue(value);
+    if (!dateOnly && stored) parsed.setHours(stored.getHours(), stored.getMinutes());
     if (minimum && parsed < minimum) {
       setValidationError(arabic ? `لا يمكن أن يكون التاريخ قبل ${formatTypedDateTime(minimum)}.` : english ? `Date cannot be before ${formatTypedDateTime(minimum)}.` : `بەروارەکە نابێت پێش ${formatTypedDateTime(minimum)} بێت.`);
       return false;
@@ -395,22 +349,19 @@ export function DateTimeInput({
       {!hideLabel && (
         <span className="mb-2 block text-xs font-bold text-slate-600 dark:text-slate-300">
           {label}
-          <span className="ms-1" style={{ color: accent }}>
-            {required ? "*" : arabic ? "(اختياري)" : english ? "(optional)" : "(ئارەزوومەندانە)"}
-          </span>
         </span>
       )}
       <div
         ref={triggerRef}
-        className={`flex h-11 w-full items-center rounded-xl border bg-white transition focus-within:ring-2 dark:bg-[#161B22] ${
-          validationError
-            ? "border-red-400 focus-within:border-red-400 focus-within:ring-red-500/15"
-            : "border-slate-200 hover:border-slate-300 focus-within:border-[var(--date-accent)] focus-within:ring-[color-mix(in_srgb,var(--date-accent)_20%,transparent)] dark:border-white/10"
-        }`}
-        style={{ "--date-accent": accent } as React.CSSProperties}
+        data-date-field
+        className={`${SHARED_CONTROL_CLASS} ${pickerStyles.field} flex h-10 w-full items-center overflow-hidden`}
+        onClick={() => { openPicker(); inputRef.current?.focus(); }}
+        aria-invalid={!!validationError}
       >
         <input
+          ref={inputRef}
           type="text"
+          required={required}
           value={inputValue}
           disabled={disabled}
           onChange={(event) => {
@@ -420,24 +371,25 @@ export function DateTimeInput({
           onBlur={validateTypedValue}
           onKeyDown={(event) => {
             if (event.key === "Enter") { event.preventDefault(); validateTypedValue(); }
+            if (event.key === "ArrowDown") { event.preventDefault(); openPicker(); }
           }}
           aria-label={label}
           aria-invalid={!!validationError}
-          aria-describedby={validationError ? errorId : undefined}
+          aria-describedby={[ariaDescribedBy, validationError ? errorId : undefined].filter(Boolean).join(" ") || undefined}
           placeholder="YY/MM/DD"
           maxLength={8}
           inputMode="numeric"
           dir="ltr"
-          className="h-full min-w-0 flex-1 rounded-l-xl bg-transparent px-3.5 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200"
+          className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm font-medium tabular-nums outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
         />
         <button
           type="button"
           disabled={disabled}
-          onClick={openPicker}
+          onClick={() => { openPicker(); inputRef.current?.focus(); }}
           aria-label={arabic ? `فتح ${label}` : english ? `Open ${label}` : `کردنەوەی ${label}`}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
-          className="flex h-full w-11 shrink-0 items-center justify-center rounded-r-xl border-l border-slate-200 text-slate-400 transition hover:bg-slate-50 hover:text-[var(--date-accent)] disabled:cursor-not-allowed dark:border-white/10 dark:hover:bg-white/5"
+          className="flex h-full w-9 shrink-0 items-center justify-center bg-transparent text-slate-500 disabled:cursor-not-allowed"
         >
           <CalendarClock className="h-4 w-4" />
         </button>
@@ -453,54 +405,43 @@ export function DateTimeInput({
         </span>
       )}
 
-      {isOpen && pickerPosition &&
-        createPortal(
-          <section
-            ref={pickerRef}
-            role="dialog"
-            aria-label={label}
-            className="theme-custom-scrollbar fixed z-[170] max-h-[calc(100vh-1rem)] overflow-y-auto rounded-2xl border bg-white shadow-2xl dark:bg-[#1c222b]"
-            style={{
-              ...pickerPosition,
-              "--date-accent": accent,
-              borderColor: `color-mix(in srgb, ${accent} 22%, transparent)`,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08)",
-            } as React.CSSProperties}
-            dir="ltr"
-          >
-            <div className={dateOnly ? "block" : "grid grid-cols-[minmax(0,1fr)_minmax(130px,0.58fr)]"}>
+      <PickerPopup isOpen={isOpen && !disabled} onClose={closePicker} anchorRef={triggerRef}
+        title={label} closeLabel={arabic ? "إغلاق" : english ? "Close" : "داخستن"}
+        width={dateOnly ? 280 : 440} align="start" keepAnchorFocus hideHeader>
+        <div className={pickerStyles.calendar} style={{ "--date-accent": accent } as React.CSSProperties}>
+            <div className={dateOnly ? "block" : pickerStyles.dateTimeLayout}>
 
               {/* ── Calendar panel ── */}
               <div className="relative min-w-0">
 
                 {/* Header */}
-                <div className="flex items-center gap-1 border-b border-slate-100 px-2.5 py-2 dark:border-white/[0.07]">
-                  <div className="flex min-w-0 flex-1 items-center">
+                <div className="flex items-center gap-1.5 px-0 py-1">
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setHeaderSelector((c) => c === "month" ? null : "month")}
-                      className="flex min-w-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[0.07]"
+                      className={`${SHARED_SOFT_BUTTON_CLASS} flex min-w-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold  transition hover:bg-slate-100  dark:hover:bg-white/[0.07]`}
                     >
                       <span className="truncate">{monthNames[visibleMonth.getMonth()]}</span>
-                      <ChevronDown className={`h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200 ${headerSelector === "month" ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`h-3 w-3 shrink-0  transition-transform duration-200 ${headerSelector === "month" ? "rotate-180" : ""}`} />
                     </button>
                     <button
                       type="button"
                       onClick={() => setHeaderSelector((c) => c === "year" ? null : "year")}
-                      className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[0.07]"
+                      className={`${SHARED_SOFT_BUTTON_CLASS} flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold  transition hover:bg-slate-100  dark:hover:bg-white/[0.07]`}
                     >
                       {/* Full 4-digit year */}
                       {visibleMonth.getFullYear()}
-                      <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform duration-200 ${headerSelector === "year" ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`h-3 w-3  transition-transform duration-200 ${headerSelector === "year" ? "rotate-180" : ""}`} />
                     </button>
                   </div>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
                       disabled={atFirstAllowedMonth}
                       onClick={() => setVisibleMonth((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
                       aria-label={arabic ? "الشهر السابق" : english ? "Previous month" : "مانگی پێشوو"}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]"
+                      className={`${SHARED_SOFT_BUTTON_CLASS} flex h-7 w-7 items-center justify-center rounded-lg  transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]`}
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                     </button>
@@ -509,7 +450,7 @@ export function DateTimeInput({
                       disabled={atLastAllowedMonth}
                       onClick={() => setVisibleMonth((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))}
                       aria-label={arabic ? "الشهر التالي" : english ? "Next month" : "مانگی داهاتوو"}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]"
+                      className={`${SHARED_SOFT_BUTTON_CLASS} flex h-7 w-7 items-center justify-center rounded-lg  transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-white/[0.07]`}
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
                     </button>
@@ -517,7 +458,7 @@ export function DateTimeInput({
                       type="button"
                       onClick={() => setIsOpen(false)}
                       aria-label={arabic ? "إغلاق" : english ? "Close" : "داخستن"}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/[0.07] dark:hover:text-slate-300"
+                      className={`${SHARED_SOFT_BUTTON_CLASS} flex h-7 w-7 items-center justify-center rounded-lg  transition hover:bg-slate-100  dark:hover:bg-white/[0.07] `}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -527,8 +468,8 @@ export function DateTimeInput({
                 {/* Month / Year overlay */}
                 {headerSelector && (
                   <div
-                    className="absolute left-0 right-0 top-[45px] z-20 border-b bg-white/98 shadow-lg backdrop-blur-sm dark:bg-[#1c222b]/98"
-                    style={{ borderColor: `color-mix(in srgb, ${accent} 18%, transparent)` }}
+                    className="absolute inset-x-0 top-10 z-20 rounded-xl p-1 shadow-sm"
+                    style={{ background: "var(--picker-surface)" }}
                   >
                     {headerSelector === "month" ? (
                       <div className="grid grid-cols-4 gap-1 p-2.5">
@@ -545,12 +486,8 @@ export function DateTimeInput({
                                   setVisibleMonth((c) => new Date(c.getFullYear(), i, 1));
                                   setHeaderSelector(null);
                                 }}
-                                className={`rounded-lg px-1 py-2 text-center text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer ${
-                                  sel
-                                    ? "text-white shadow-sm"
-                                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.07]"
-                                }`}
-                                style={sel ? { background: "var(--date-accent)" } : undefined}
+                                className={`${SHARED_SOFT_BUTTON_CLASS} px-1 py-2 text-center text-[10px] disabled:cursor-not-allowed disabled:opacity-30`}
+                                aria-pressed={sel}
                               >
                                 {arabic ? name : MONTH_SHORT[i]}
                               </button>
@@ -559,39 +496,24 @@ export function DateTimeInput({
                         })}
                       </div>
                     ) : (
-                      <div ref={yearScrollRef} className="theme-custom-scrollbar max-h-44 overflow-y-auto p-2.5">
+                      <div ref={yearScrollRef} className={`theme-custom-scrollbar max-h-44 overflow-y-auto p-2.5`}>
                         <div className="grid grid-cols-4 gap-1">
                           {ALL_YEARS.map((year) => {
                             const dis = isYearDisabled(year);
                             const sel = visibleMonth.getFullYear() === year;
-                            const isCurrent = year === THIS_YEAR;
                             return (
                               <button
                                 key={year}
                                 type="button"
                                 data-selected={sel}
+                                aria-pressed={sel}
                                 disabled={dis}
                                 onClick={() => {
                                   setVisibleMonth((c) => new Date(year, c.getMonth(), 1));
                                   setHeaderSelector(null);
                                 }}
-                                className={`rounded-lg px-1 py-2 text-center text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-30 ${
-                                  sel
-                                    ? "text-white shadow-sm"
-                                    : isCurrent
-                                    ? ""
-                                    : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/[0.07]"
-                                }`}
-                                style={
-                                  sel
-                                    ? { background: "var(--date-accent)" }
-                                    : isCurrent
-                                    ? {
-                                        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 40%, transparent)`,
-                                        color: "var(--date-accent)",
-                                      }
-                                    : undefined
-                                }
+                                className={`${SHARED_SOFT_BUTTON_CLASS} px-1 py-2 text-center text-[10px] disabled:cursor-not-allowed disabled:opacity-30`}
+
                               >
                                 {year}
                               </button>
@@ -604,19 +526,18 @@ export function DateTimeInput({
                 )}
 
                 {/* Weekday headers */}
-                <div className="grid grid-cols-7 px-2.5 pt-3 pb-1">
+                <div className={`grid grid-cols-7 pt-2 pb-1`}>
                   {weekdayNames.map((day, i) => (
-                    <span key={`${day}-${i}`} className="flex h-7 items-center justify-center text-[9px] font-bold text-slate-400 dark:text-slate-500">
+                    <span key={`${day}-${i}`} className="flex h-7 items-center justify-center text-[9px] font-bold  ">
                       {day}
                     </span>
                   ))}
                 </div>
 
                 {/* Calendar days */}
-                <div className="grid grid-cols-7 gap-y-0.5 px-2.5 pb-2">
+                <div className="grid grid-cols-7 gap-1 pb-2">
                   {calendarDays.map((day) => {
                     const isSelected = !!selectedDate && sameDay(day, selectedDate);
-                    const isToday = sameDay(day, todayDate);
                     const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
                     const isDisabled =
                       (!!minimum && startOfDay(day) < startOfDay(minimum)) ||
@@ -624,25 +545,12 @@ export function DateTimeInput({
                     return (
                       <button
                         key={day.toISOString()}
+                        aria-pressed={isSelected}
                         type="button"
                         disabled={isDisabled}
                         onClick={() => chooseDay(day)}
-                        className={`flex h-8 items-center justify-center rounded-lg text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-20 ${
-                          isSelected
-                            ? "font-bold text-white shadow-sm"
-                            : isToday && isCurrentMonth
-                            ? "font-bold"
-                            : isCurrentMonth
-                            ? "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-white/[0.07]"
-                            : "text-slate-300 hover:bg-slate-50 dark:text-slate-600 dark:hover:bg-white/[0.03]"
-                        }`}
-                        style={
-                          isSelected
-                            ? { background: "var(--date-accent)" }
-                            : isToday && isCurrentMonth
-                            ? { color: "var(--date-accent)" }
-                            : undefined
-                        }
+                        className={`${SHARED_SOFT_BUTTON_CLASS} ${pickerStyles.day} flex h-7 items-center justify-center text-[11px] tabular-nums disabled:cursor-not-allowed disabled:opacity-20 ${isCurrentMonth ? "" : "opacity-40"}`}
+
                       >
                         {day.getDate()}
                       </button>
@@ -651,7 +559,7 @@ export function DateTimeInput({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between border-t border-slate-100 px-2.5 py-2 dark:border-white/[0.07]">
+                <div className={`flex items-center justify-between gap-2 pt-1`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -660,7 +568,7 @@ export function DateTimeInput({
                       setValidationError(null);
                       setIsOpen(false);
                     }}
-                    className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/[0.07] dark:hover:text-slate-300"
+                    className={`${SHARED_SOFT_BUTTON_CLASS} rounded-lg px-2.5 py-1.5 text-[10px] font-bold   transition hover:bg-slate-100  dark:hover:bg-white/[0.07] `}
                   >
                     {arabic ? "مسح" : english ? "Clear" : "پاککردنەوە"}
                   </button>
@@ -672,7 +580,7 @@ export function DateTimeInput({
                       commit(now);
                       setVisibleMonth(new Date(now.getFullYear(), now.getMonth(), 1));
                     }}
-                    className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[color-mix(in_srgb,var(--date-accent)_10%,transparent)]"
+                    className={`${SHARED_SOFT_BUTTON_CLASS} rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[color-mix(in_srgb,var(--date-accent)_10%,transparent)]`}
                     style={{ color: "var(--date-accent)" }}
                   >
                     {arabic ? "اليوم" : english ? "Today" : "ئەمڕۆ"}
@@ -682,8 +590,9 @@ export function DateTimeInput({
 
               {/* ── Time panel (datetime mode only) ── */}
               {!dateOnly && (
-                <div className="grid min-w-0 grid-cols-3 gap-2 border-l border-slate-100 bg-slate-50/60 p-3 dark:border-white/[0.07] dark:bg-black/10">
+                <div className="grid min-w-0 grid-cols-3 gap-1.5 p-2">
                   <TimeColumn
+                    label={english ? "Hour" : arabic ? "الساعة" : "کاتژمێر"}
                     accent={accent}
                     accentInk="var(--theme-ink, #ffffff)"
                     selected={String(hour12).padStart(2, "0")}
@@ -691,6 +600,7 @@ export function DateTimeInput({
                     onSelect={(next) => setHour(Number(next))}
                   />
                   <TimeColumn
+                    label={english ? "Minute" : arabic ? "الدقيقة" : "خولەک"}
                     accent={accent}
                     accentInk="var(--theme-ink, #ffffff)"
                     selected={String(draft.getMinutes()).padStart(2, "0")}
@@ -698,6 +608,7 @@ export function DateTimeInput({
                     onSelect={(next) => setMinute(Number(next))}
                   />
                   <TimeColumn
+                    label={english ? "Period" : arabic ? "الفترة" : "بەشی ڕۆژ"}
                     accent={accent}
                     accentInk="var(--theme-ink, #ffffff)"
                     selected={period}
@@ -707,9 +618,8 @@ export function DateTimeInput({
                 </div>
               )}
             </div>
-          </section>,
-          document.body,
-        )}
+        </div>
+      </PickerPopup>
     </div>
   );
 }

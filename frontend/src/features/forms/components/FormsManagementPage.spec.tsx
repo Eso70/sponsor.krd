@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { DashboardRefreshTestShell } from "@/test-utils/DashboardRefreshTestShell";
 import {
   act,
   fireEvent,
@@ -15,10 +15,19 @@ import { createForm, createQuestion } from "../forms-model";
 import { formsCopy } from "../forms-copy";
 
 import { formsApi } from "../api";
+import { apiRequest } from "@/lib/api/request";
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/api/request", async (original) => ({
+  ...(await original<typeof import("@/lib/api/request")>()),
+  apiRequest: vi.fn(async (url: string) => ({
+    slug: new URL(url, "http://localhost").searchParams.get("slug") ?? "copy",
+    available: true,
+  })),
+}));
 vi.mock("../api", () => ({
   formsApi: {
     list: vi.fn(),
+    selection: vi.fn(),
     titleAvailability: vi.fn(),
     get: vi.fn(),
     stats: vi.fn(),
@@ -27,6 +36,7 @@ vi.mock("../api", () => ({
     status: vi.fn(),
     archive: vi.fn(),
     duplicate: vi.fn(),
+    duplicateOptions: vi.fn(),
     remove: vi.fn(),
     submissions: vi.fn(),
   },
@@ -53,11 +63,254 @@ beforeEach(() => {
   });
 });
 function startForm() {
-  fireEvent.click(screen.getByRole("button", { name: "Create form" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create" }));
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
 }
 
 describe("Forms frontend workspace", () => {
+  for (const scope of ["business", "platform"] as const)
+    it.each(["grid", "table"] as const)(
+      `paginates ${scope} forms in %s view at fifteen items`,
+      async (view) => {
+        const items = Array.from({ length: 16 }, (_, index) => ({
+          ...createForm("en"),
+          id: `form-${index}`,
+          name: `Form ${index}`,
+          slug: `form-${index}`,
+        }));
+        vi.mocked(formsApi.list).mockImplementation(
+          async (_scope, page = 0) => ({
+            items: items.slice(page * 15, (page + 1) * 15),
+            total: 16,
+          }),
+        );
+        render(<FormsManagementPage scope={scope} locale="en" />);
+        expect(screen.getByRole("button", { name: "Grid" })).toHaveClass(scope === "platform" ? "sa-gradient" : "theme-fill");
+        expect(await screen.findByText("1–15 of 16")).toBeInTheDocument();
+        if (view === "table")
+          fireEvent.click(screen.getByRole("button", { name: "Table" }));
+        fireEvent.click(screen.getByRole("button", { name: "Next" }));
+        expect(await screen.findByText("16–16 of 16")).toBeInTheDocument();
+        expect(formsApi.list).toHaveBeenLastCalledWith(
+          scope,
+          1,
+          "",
+          "active",
+          expect.any(AbortSignal),
+        );
+      },
+    );
+  it.each(["business", "platform"] as const)(
+    "refreshes %s Forms from the header without resetting the current view, archive filter or page",
+    async (scope) => {
+      const forms = Array.from({ length: 16 }, (_, index) => ({
+        ...createForm("en"),
+        id: `saved-${index}`,
+        name: `Saved ${index}`,
+        slug: `saved-${index}`,
+      }));
+      vi.mocked(formsApi.list).mockImplementation(async (_scope, page = 0) => ({
+        items: forms.slice(page * 15, (page + 1) * 15),
+        total: 16,
+      }));
+      const shared = vi.fn();
+      const { container } = render(
+        <DashboardRefreshTestShell onSharedRefresh={shared}>
+          <FormsManagementPage scope={scope} locale="en" />
+        </DashboardRefreshTestShell>,
+      );
+      await screen.findByText("1–15 of 16");
+      fireEvent.click(screen.getByRole("button", { name: "Table" }));
+      fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+      await waitFor(() =>
+        expect(formsApi.list).toHaveBeenLastCalledWith(
+          scope,
+          0,
+          "",
+          "archived",
+          expect.any(AbortSignal),
+        ),
+      );
+      await screen.findByText("1–15 of 16");
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+      await screen.findByText("16–16 of 16");
+      vi.mocked(formsApi.list).mockClear();
+      expect(
+        within(
+          container.querySelector(
+            "[data-page-management-toolbar]",
+          ) as HTMLElement,
+        ).queryByRole("button", { name: "Refresh" }),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() =>
+        expect(formsApi.list).toHaveBeenCalledWith(
+          scope,
+          1,
+          "",
+          "archived",
+          expect.any(AbortSignal),
+        ),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled(),
+      );
+      expect(shared).toHaveBeenCalledOnce();
+      expect(
+        screen.getByRole("button", { name: "Table" }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Archived" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByText("2 / 2")).toBeInTheDocument();
+    },
+  );
+  it("returns a pinned form from a later server page to the first page", async () => {
+    const first = {
+      ...createForm("en"),
+      id: "first",
+      name: "First form",
+      slug: "first",
+    };
+    const later = {
+      ...createForm("en"),
+      id: "later",
+      name: "Later form",
+      slug: "later",
+    };
+    let pinned = false;
+    vi.mocked(formsApi.list).mockImplementation(async (_scope, page) => ({
+      items:
+        page === 0
+          ? pinned
+            ? [{ ...later, isPinned: true }, first]
+            : [first]
+          : [later],
+      total: 21,
+    }));
+    render(<FormsManagementPage locale="en" />);
+    await screen.findByText("First form");
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Later form");
+    expect(screen.getByText("2 / 2")).toBeInTheDocument();
+    pinned = true;
+    fireEvent.click(screen.getByRole("button", { name: "Pin" }));
+    await screen.findByRole("button", { name: "Unpin" });
+    expect(screen.getByText("1 / 2")).toBeInTheDocument();
+    expect(formsApi.list).toHaveBeenLastCalledWith(
+      "business",
+      0,
+      "",
+      "active",
+      expect.any(AbortSignal),
+    );
+  });
+
+  it.each(["business", "platform"] as const)(
+    "persists and reloads pins in the %s collection",
+    async (scope) => {
+      const saved = { ...createForm("en"), slug: "saved", isPinned: false };
+      vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
+      render(<FormsManagementPage locale="en" scope={scope} />);
+      const button = await screen.findByRole("button", { name: "Pin" });
+      vi.mocked(formsApi.list).mockResolvedValue({
+        items: [{ ...saved, isPinned: true }],
+        total: 1,
+      });
+      fireEvent.click(button);
+      await screen.findByRole("button", { name: "Unpin" });
+      expect(apiRequest).toHaveBeenCalledWith(
+        `${scope === "platform" ? "/api/platform/forms" : "/api/forms"}/${saved.id}/pin`,
+        { method: "PATCH", json: { isPinned: true } },
+      );
+    },
+  );
+
+  it.each(["business", "platform"] as const)(
+    "customizes a saved copy inside the %s drawer and restores the source draft",
+    async (scope) => {
+      const saved = {
+        ...createForm("en"),
+        name: "Saved source",
+        slug: "saved-source",
+        headline: "Saved headline",
+        banner: "/images/upload/banner.png",
+        logo: "/images/upload/logo.png",
+      };
+      vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
+      vi.mocked(formsApi.get).mockResolvedValue(saved);
+      vi.mocked(formsApi.duplicateOptions).mockResolvedValue({
+        form: saved,
+        name: "Saved source (copy)",
+        slug: "saved-source-copy",
+        available: true,
+      });
+      vi.mocked(formsApi.duplicate).mockResolvedValue({
+        ...saved,
+        id: "duplicate",
+        name: "Different copy",
+      });
+      render(<FormsManagementPage locale="en" scope={scope} />);
+      fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+      const drawer = await screen.findByRole("dialog");
+      fireEvent.change(screen.getByRole("textbox", { name: "Form title" }), {
+        target: { value: "Unsaved source" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+      await screen.findByRole("dialog", { name: "Duplicate page" });
+      expect(screen.getByRole("dialog")).toBe(drawer);
+      expect(screen.getByRole("textbox", { name: "Form title" })).toHaveValue(
+        "Saved source (copy)",
+      );
+      expect(screen.getByText("/form/saved-source-copy")).toBeInTheDocument();
+      expect(screen.getAllByText("Saved headline").length).toBeGreaterThan(0);
+      expect(formsApi.duplicate).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByRole("textbox", { name: "Link slug" }), {
+        target: { value: "custom-copy" },
+      });
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Duplicate" })).toBeEnabled(),
+      );
+      fireEvent.change(screen.getByRole("textbox", { name: "Form title" }), {
+        target: { value: "Different copy" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+      await waitFor(() =>
+        expect(formsApi.duplicate).toHaveBeenCalledWith(
+          scope,
+          saved.id,
+          expect.objectContaining({
+            name: "Different copy",
+            headline: "Saved headline",
+            banner: saved.banner,
+            logo: saved.logo,
+            status: "paused",
+            submissionCount: 0,
+          }),
+          "custom-copy",
+        ),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("textbox", { name: "Form title" })).toHaveValue(
+          "Unsaved source",
+        ),
+      );
+      expect(formsApi.save).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+      await screen.findByRole("dialog", { name: "Duplicate page" });
+      fireEvent.change(screen.getByRole("textbox", { name: "Form title" }), {
+        target: { value: "Discard copy" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(screen.getByRole("textbox", { name: "Form title" })).toHaveValue(
+        "Unsaved source",
+      );
+      expect(formsApi.duplicate).toHaveBeenCalledTimes(1);
+      expect(saved.name).toBe("Saved source");
+    },
+  );
   for (const scope of ["business", "platform"] as const)
     for (const currentStatus of ["active", "paused"] as const) {
       it(`${scope} archives and restores ${currentStatus} forms without changing their status`, async () => {
@@ -83,38 +336,22 @@ describe("Forms frontend workspace", () => {
             return form;
           },
         );
+        vi.mocked(formsApi.get).mockImplementation(async () => form);
         render(<FormsManagementPage locale="en" scope={scope} />);
         await screen.findByRole("heading", { name: form.name });
-        if (currentStatus === "paused") fireEvent.click(button("Table view"));
-        fireEvent.click(button("More actions"));
+        if (currentStatus === "paused") fireEvent.click(button("Table"));
+        fireEvent.click(button("Edit"));
+        await screen.findByRole("button", { name: "Duplicate" });
         fireEvent.click(button("Archive"));
         await waitFor(() =>
           expect(formsApi.archive).toHaveBeenCalledWith(scope, form.id, true),
         );
-        await screen.findByText("No forms yet");
-        expect(toast.success).toHaveBeenCalledWith(formsCopy("en").notifications.archived);
-        fireEvent.click(button("Archived"));
-        await screen.findAllByText(form.name);
-        fireEvent.click(button("More actions"));
-        await screen.findAllByRole("button", { name: "Restore" });
-        expect(
-          button(currentStatus === "active" ? "Pause" : "Activate"),
-        ).toBeEnabled();
-        expect(button("Edit")).toBeEnabled();
         fireEvent.click(button("Restore"));
         await waitFor(() =>
           expect(formsApi.archive).toHaveBeenCalledWith(scope, form.id, false),
         );
         expect(formsApi.status).not.toHaveBeenCalled();
         expect(form.status).toBe(currentStatus);
-        await screen.findByText("No archived forms");
-        expect(toast.success).toHaveBeenCalledWith(formsCopy("en").notifications.restored);
-        fireEvent.click(button("Active"));
-        await screen.findAllByText(form.name);
-        fireEvent.click(button("More actions"));
-        await screen.findAllByRole("button", {
-          name: currentStatus === "active" ? "Pause" : "Activate",
-        });
       });
     }
 
@@ -132,13 +369,13 @@ describe("Forms frontend workspace", () => {
       );
       expect(
         screen.getAllByRole("status", { name: formsCopy("en").loading }),
-      ).toHaveLength(2);
+      ).toHaveLength(7);
       expect(
         container.querySelectorAll("[data-skeleton]").length,
       ).toBeGreaterThan(20);
       expect(screen.queryByText("0%")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-      expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
+      fireEvent.click(screen.getByRole("button", { name: "Table" }));
+      expect(container.querySelectorAll("[data-skeleton-table-row]")).toHaveLength(6);
       await act(async () => finish({ items: [], total: 0 }));
       expect(
         screen.queryByRole("status", { name: formsCopy("en").loading }),
@@ -155,6 +392,7 @@ describe("Forms frontend workspace", () => {
         slug: "stable-editor",
       };
       vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
+      vi.mocked(formsApi.get).mockResolvedValue(saved);
       let finish!: (value: Awaited<ReturnType<typeof formsApi.get>>) => void;
       vi.mocked(formsApi.get).mockImplementationOnce(
         () =>
@@ -177,7 +415,7 @@ describe("Forms frontend workspace", () => {
         }),
       ).not.toBeInTheDocument();
       expect(
-        within(surface).getByRole("button", { name: "Save form" }),
+        within(surface).getByRole("button", { name: "Save" }),
       ).toBeEnabled();
     },
   );
@@ -249,6 +487,7 @@ describe("Forms frontend workspace", () => {
         slug: "saved-contact",
         status: "active" as const,
       };
+      vi.mocked(formsApi.get).mockResolvedValue(saved);
       vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
       vi.mocked(formsApi.status).mockResolvedValue({
         ...saved,
@@ -262,11 +501,12 @@ describe("Forms frontend workspace", () => {
       expect(
         await screen.findByRole("heading", { name: "Saved contact" }),
       ).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-      fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
       await waitFor(() =>
         expect(formsApi.status).toHaveBeenCalledWith(scope, saved.id, "paused"),
       );
+      fireEvent.click(screen.getByRole("button", { name: "Close" }));
       await waitFor(() =>
         expect(screen.getByRole("button", { name: "Analytics" })).toBeEnabled(),
       );
@@ -290,8 +530,7 @@ describe("Forms frontend workspace", () => {
       />,
     );
     await screen.findByRole("heading", { name: "Read only" });
-    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-    for (const label of ["Create form", "Edit", "Archive", "Delete"])
+    for (const label of ["Create", "Edit", "Delete"])
       expect(screen.getByRole("button", { name: label })).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "Preview" }),
@@ -309,12 +548,11 @@ describe("Forms frontend workspace", () => {
     };
     vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
     vi.mocked(formsApi.status).mockRejectedValueOnce(new Error("incomplete"));
+    vi.mocked(formsApi.get).mockResolvedValue(saved);
     render(<FormsManagementPage locale="en" />);
-    fireEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Activate" }));
+    expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(
       "Complete the questions and final-page button links",
     );
     expect(
@@ -323,7 +561,7 @@ describe("Forms frontend workspace", () => {
   });
   it("opens the card builder with compact Back/Create controls and no Cancel", async () => {
     render(<FormsManagementPage locale="en" />);
-    fireEvent.click(screen.getByRole("button", { name: "Create form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(screen.getByRole("radio", { name: "Form layout" })).toBeChecked();
     fireEvent.click(screen.getByRole("radio", { name: "Card layout" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -336,8 +574,8 @@ describe("Forms frontend workspace", () => {
     expect(
       controls.queryByRole("button", { name: "Cancel" }),
     ).not.toBeInTheDocument();
-    expect(controls.getByRole("button", { name: "Create form" })).toBeEnabled();
-    fireEvent.click(controls.getByRole("button", { name: "Create form" }));
+    expect(controls.getByRole("button", { name: "Create" })).toBeEnabled();
+    fireEvent.click(controls.getByRole("button", { name: "Create" }));
     expect(
       controls.getByRole("textbox", { name: "Form title" }),
     ).toHaveAttribute("aria-invalid", "true");
@@ -345,7 +583,7 @@ describe("Forms frontend workspace", () => {
     fireEvent.change(controls.getByRole("textbox", { name: "Headline" }), {
       target: { value: "Contact" },
     });
-    expect(controls.getByRole("button", { name: "Create form" })).toBeEnabled();
+    expect(controls.getByRole("button", { name: "Create" })).toBeEnabled();
     fireEvent.click(controls.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("radio", { name: "Card layout" })).toBeChecked();
   });
@@ -368,7 +606,7 @@ describe("Forms frontend workspace", () => {
     vi.mocked(formsApi.list).mockResolvedValue({ items: [saved], total: 1 });
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Create form",
+        name: "Create",
       }),
     );
     await waitFor(() =>
@@ -387,8 +625,12 @@ describe("Forms frontend workspace", () => {
       screen.getByRole("heading", { name: "Contact" }),
     ).toBeInTheDocument();
   });
-  it("retains six stats and shared active/archive, grid/table, search and refresh controls", async () => {
-    render(<FormsManagementPage locale="en" />);
+  it("retains six stats and shared controls with refresh only in the header", async () => {
+    render(
+      <DashboardRefreshTestShell>
+        <FormsManagementPage locale="en" />
+      </DashboardRefreshTestShell>,
+    );
     for (const label of [
       "Total forms",
       "Views",
@@ -398,20 +640,26 @@ describe("Forms frontend workspace", () => {
       "Completion rate",
     ])
       await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-    expect(screen.getByRole("button", { name: "Table view" })).toHaveAttribute(
+    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    expect(screen.getByRole("button", { name: "Table" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     fireEvent.click(screen.getByRole("button", { name: "Archived" }));
     expect(await screen.findByText("No archived forms")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Refresh list" }));
-    fireEvent.click(screen.getByRole("button", { name: "Search forms" }));
-    const search = within(screen.getByRole("dialog", { name: "Search forms" }));
-    fireEvent.change(search.getByRole("textbox"), {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    const search = within(
+      await screen.findByRole("dialog", { name: "Search" }),
+    );
+    fireEvent.change(search.getByRole("searchbox"), {
       target: { value: "test" },
     });
-    expect(search.getByText(/No matching forms/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(search.getByText(/No matching forms/)).toBeInTheDocument(),
+    );
   });
   it("preserves existing form data when returning to change layout and save", async () => {
     const save = vi.fn();
@@ -432,7 +680,7 @@ describe("Forms frontend workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     fireEvent.click(screen.getByRole("radio", { name: "Card layout" }));
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save form" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -508,4 +756,130 @@ describe("Form preview", () => {
     );
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
+});
+
+
+describe.each(["business", "platform"] as const)("Form analytics selection in %s", (scope) => {
+  it.each(["grid", "table"] as const)("deletes only selected analytics from %s while retaining forms", async (view) => {
+    const saved = [0, 1].map((index) => ({ ...createForm("en"), id: `select-${index}`, name: `Selected form ${index}`, slug: `select-${index}` }));
+    vi.mocked(formsApi.list).mockResolvedValue({ items: saved, total: 2 });
+    render(<FormsManagementPage scope={scope} locale="en" />);
+    await screen.findByText(saved[0].name);
+    if (view === "table") fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    expect(screen.queryByRole("button", { name: "Delete analytics" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("checkbox", { name: `Select form: ${saved[0].name}` })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Delete analytics" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/submitted answers and contact details will remain/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete analytics" }));
+    const base = scope === "platform" ? "/api/platform/forms" : "/api/forms";
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(`${base}/${saved[0].id}/analytics`, { method: "DELETE" }));
+    expect(apiRequest).not.toHaveBeenCalledWith(`${base}/${saved[1].id}/analytics`, expect.anything());
+    expect(apiRequest).not.toHaveBeenCalledWith(expect.stringContaining('/submissions'), expect.anything());
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Delete analytics" })).not.toBeInTheDocument());
+    expect(formsApi.stats).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText(saved[0].name).length).toBeGreaterThan(0);
+  });
+
+  it("selects all matching forms beyond the current server page and preserves selection while paging", async () => {
+    const saved = Array.from({ length: 16 }, (_, index) => ({ ...createForm("en"), id: `all-${index}`, name: `All form ${index}`, slug: `all-${index}` }));
+    vi.mocked(formsApi.list).mockImplementation(async (_scope, page = 0) => ({ items: saved.slice(page * 15, (page + 1) * 15), total: 16 }));
+    vi.mocked(formsApi.selection).mockResolvedValue(saved.map((form) => form.id));
+    render(<FormsManagementPage scope={scope} locale="en" />);
+    await screen.findByText("1–15 of 16");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select form: All form 0" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+    await screen.findByRole("group", { name: "16 selected" });
+    expect(formsApi.selection).toHaveBeenCalledWith(scope, "", "active", expect.any(AbortSignal));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("checkbox", { name: "Select form: All form 15" })).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    expect(screen.queryByRole("button", { name: "Delete analytics" })).not.toBeInTheDocument();
+  });
+
+  it("does not expose selection without the delete capability", async () => {
+    vi.mocked(formsApi.list).mockResolvedValue({ items: [{ ...createForm("en"), id: "read-only", name: "Read only" }], total: 1 });
+    render(<FormsManagementPage scope={scope} locale="en" capabilities={{ create: false, update: false, remove: false }} />);
+    await screen.findByText("Read only");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});
+
+
+it("ignores a stale select-all result after the form archive filter changes", async () => {
+  let resolveSelection!: (ids: string[]) => void;
+  const selected = new Promise<string[]>((resolve) => { resolveSelection = resolve; });
+  vi.mocked(formsApi.selection).mockReturnValue(selected);
+  const form = { ...createForm("en"), id: "stale", name: "Stale form" };
+  vi.mocked(formsApi.list).mockResolvedValue({ items: [form], total: 1 });
+  render(<FormsManagementPage scope="business" locale="en" />);
+  await screen.findByText("Stale form");
+  fireEvent.click(screen.getByRole("checkbox", { name: "Select form: Stale form" }));
+  fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+  fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+  await act(async () => { resolveSelection(["stale"]); await selected; });
+  expect(screen.queryByRole("button", { name: "Delete analytics" })).not.toBeInTheDocument();
+  expect(formsApi.selection).toHaveBeenCalledWith("business", "", "active", expect.objectContaining({ aborted: true }));
+});
+
+
+it.each(["business", "platform"] as const)("keeps all six %s form stats pending until list and summary both arrive", async (scope) => {
+  let resolveList!: (value: Awaited<ReturnType<typeof formsApi.list>>) => void;
+  let resolveStats!: (value: Awaited<ReturnType<typeof formsApi.stats>>) => void;
+  vi.mocked(formsApi.list).mockReturnValue(new Promise((resolve) => { resolveList = resolve; }));
+  vi.mocked(formsApi.stats).mockReturnValue(new Promise((resolve) => { resolveStats = resolve; }));
+  const { container } = render(<FormsManagementPage scope={scope} locale="en" />);
+  expect(container.querySelectorAll('[data-stat-card][data-state="ready"]')).toHaveLength(0);
+  await act(async () => { resolveList({ items: [], total: 7 }); });
+  expect(container.querySelectorAll('[data-stat-card][data-state="ready"]')).toHaveLength(0);
+  await act(async () => { resolveStats({ totalForms: 7, views: 15, visitors: 8, starts: 4, submissions: 2 }); });
+  await waitFor(() => expect(container.querySelectorAll('[data-stat-card][data-state="ready"]')).toHaveLength(6));
+});
+
+it("shows unavailable form statistics after a failed fetch instead of invented zero counts", async () => {
+  vi.mocked(formsApi.stats).mockRejectedValue(new Error("Offline"));
+  render(<FormsManagementPage scope="business" locale="en" />);
+  await waitFor(() => expect(screen.getAllByText("—")).toHaveLength(6));
+});
+
+describe.each(["business", "platform"] as const)("selected form deletion in %s", (scope) => {
+  it.each(["grid", "table"] as const)("deletes only selected records from %s after confirmation", async (view) => {
+    const saved = [0, 1].map((index) => ({ ...createForm("en"), id: `bulk-${index}`, name: `Bulk form ${index}`, slug: `bulk-${index}` }));
+    vi.mocked(formsApi.list).mockResolvedValue({ items: saved, total: 2 });
+    render(<FormsManagementPage scope={scope} locale="en" />);
+    await screen.findByText(saved[0].name);
+    if (view === "table") fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    expect(screen.queryByRole("button", { name: "Delete forms" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("checkbox", { name: `Select form: ${saved[0].name}` })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Delete forms" }));
+    const base = scope === "platform" ? "/api/platform/forms" : "/api/forms";
+    expect(apiRequest).not.toHaveBeenCalledWith(`${base}/${saved[0].id}`, expect.anything());
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("submitted answers and contact details");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete forms" }));
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(`${base}/${saved[0].id}`, { method: "DELETE" }));
+    expect(apiRequest).not.toHaveBeenCalledWith(`${base}/${saved[1].id}`, expect.anything());
+    expect(apiRequest).not.toHaveBeenCalledWith(expect.stringContaining("/analytics"), expect.anything());
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(formsApi.stats).toHaveBeenCalledTimes(2);
+  });
+});
+
+it("moves to an available page after bulk deletion empties the final form page", async () => {
+  let removed = false;
+  const saved = Array.from({ length: 16 }, (_, index) => ({ ...createForm("en"), id: `last-${index}`, name: `Last form ${index}`, slug: `last-${index}` }));
+  vi.mocked(formsApi.list).mockImplementation(async (_scope, page = 0) => {
+    const items = removed ? saved.slice(0, 15) : saved;
+    return { items: items.slice(page * 15, (page + 1) * 15), total: items.length };
+  });
+  vi.mocked(apiRequest).mockImplementationOnce(async () => { removed = true; return {} as never; });
+  render(<FormsManagementPage locale="en" />);
+  await screen.findByText("1–15 of 16");
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  fireEvent.click(await screen.findByRole("checkbox", { name: "Select form: Last form 15" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete forms" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete forms" }));
+  await screen.findByRole("checkbox", { name: "Select form: Last form 0" });
+  expect(screen.queryByRole("checkbox", { name: "Select form: Last form 15" })).not.toBeInTheDocument();
+  expect(formsApi.list).toHaveBeenLastCalledWith("business", 0, "", "active", expect.any(AbortSignal));
 });

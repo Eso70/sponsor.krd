@@ -41,6 +41,78 @@ const definition = (): FormDraft => ({
   actionsEnabled: false,
 });
 describe('authoritative product prices', () => {
+  const volumeQuestion = (): FormQuestion => ({
+    ...product,
+    productSelection: {
+      currency: 'IQD',
+      items: [
+        {
+          id: 'item',
+          name: 'Product',
+          unit: 'piece',
+          unitPrice: 8000,
+          priceBreaks: [
+            { minimumQuantity: 2, unitPrice: 7500 },
+            { minimumQuantity: 3, unitPrice: 7000 },
+          ],
+        },
+      ],
+    },
+  });
+  it('validates and applies the published volume price to all units and snapshots discounts', () => {
+    const form = validateDefinition(
+      { ...definition(), questions: [volumeQuestion()] },
+      true,
+    );
+    const answer = priceProductAnswer(form.questions[0], '{"item":"2"}');
+    expect(answer).toMatchObject({
+      currency: 'IQD',
+      total: 15000,
+      items: [
+        {
+          unitPrice: 7500,
+          baseUnitPrice: 8000,
+          discount: 1000,
+          priceBreakMinimum: 2,
+          lineTotal: 15000,
+        },
+      ],
+    });
+    expect(priceProductAnswer(form.questions[0], '{"item":"3"}').total).toBe(
+      21000,
+    );
+    form.questions[0].productSelection!.items[0].priceBreaks![0].unitPrice = 6000;
+    expect(answer.items[0].lineTotal).toBe(15000);
+  });
+  it.each([
+    [{ minimumQuantity: 2, unitPrice: 9000 }],
+    [
+      { minimumQuantity: 2, unitPrice: 7000 },
+      { minimumQuantity: 2, unitPrice: 6000 },
+    ],
+    [
+      { minimumQuantity: 3, unitPrice: 7000 },
+      { minimumQuantity: 2, unitPrice: 6000 },
+    ],
+    [{ minimumQuantity: 2, unitPrice: 7000.001 }],
+    [{ minimumQuantity: 2, unitPrice: -1 }],
+    Array.from({ length: 11 }, (_, i) => ({
+      minimumQuantity: i + 2,
+      unitPrice: 7000,
+    })),
+  ])('rejects malformed or increasing discounts %#', (...priceBreaks) => {
+    const question = volumeQuestion();
+    question.productSelection!.items[0].priceBreaks = priceBreaks;
+    expect(() =>
+      validateDefinition({ ...definition(), questions: [question] }, true),
+    ).toThrow();
+  });
+  it('rejects client-supplied prices even with volume pricing', () => {
+    expect(() =>
+      priceProductAnswer(volumeQuestion(), '{"item":"2","unitPrice":"1"}'),
+    ).toThrow();
+  });
+
   it('validates published product definitions and stores a server-built answer snapshot', () => {
     const form = validateDefinition(definition(), true);
     const result = validateSubmission(

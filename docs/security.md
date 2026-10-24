@@ -21,6 +21,13 @@ See [SEO architecture](seo.md).
 
 ## Marketing tracking ownership and consent
 
+Public Linktree analytics may record contact intent, but cannot claim confirmed
+leads, submissions or completed orders. Only trusted server transactions can
+record confirmed outcomes and monetary value with an explicit currency. The
+registered action supplies the Events API event name; browser claims do not
+override it. Active-time measurements contain bounded durations and view IDs,
+never interaction coordinates, answers or contact identities.
+
 TikTok destinations are owner-scoped. A customer public page can resolve only
 that customer's active Pixel group and live entitlement; a platform-owned page
 can resolve only the internal platform workspace group. Owner ids for Platform
@@ -117,16 +124,18 @@ OAuth session cookie uses `SameSite=Lax` so it survives Google's top-level
 callback; single-use state and PKCE protect that callback from login CSRF.
 
 - Platform Google starts are Redis-rate-limited to five attempts per IP per
-  five minutes. Google and email login accept the same explicit private-device
-  choice; it changes session lifetime only and never bypasses identity checks.
+  five minutes. Google and email login use the same server-owned remembered-device policy;
+  there is no browser checkbox or client-selected session lifetime. Cached clients
+  may send the retired boolean field, which is accepted but ignored. Identity
+  checks remain unchanged.
 - Successful Google login creates a durable platform session, caches it in
   Redis, and revokes every older platform session.
 - Sessions are stored durably in Postgres (`business_sessions` /
   `platform_admin_sessions`) and cached in Redis with a cache-aside pattern: a
   Redis miss falls back to Postgres and re-populates the cache.
-- Business session TTL is 12 hours normally or 30 days when remembered. Up to
+- Normal Google/email business sign-in uses a remembered 30-day session. Up to
   five sessions may coexist and each non-current session can be revoked.
-- Platform session TTL is 30 minutes normally or 7 days when remembered. A new
+- Normal Google/email platform sign-in uses a remembered 7-day session. A new
   platform session still revokes every older platform session.
 - Cookies are `httpOnly`, host-only (no `domain` attribute), and become
   `secure` automatically over HTTPS. The business cookie (`business_session`)
@@ -603,3 +612,65 @@ Forms never accept a client owner identifier. Guards enforce business/platform c
 Response export uses the authenticated, owner-scoped Forms read endpoints with validated filters and bounded batches. Excel and CSV share the same response projection; neither includes raw IPs, visitor/session identities or TikTok ad identifiers. CSV headers and values escape quotes and neutralize spreadsheet formula prefixes, including leading whitespace and control characters. XLSX writes user-authored values as text, never formula or hyperlink objects. Downloads use a temporary Blob URL that is revoked; closing the reporting drawer cancels outstanding export requests. Public form routes cannot read or export submitted answers. Title availability is owner-scoped, verifies edited form ownership and cannot bypass transaction-level URL uniqueness. See [Forms response reporting](forms.md).
 
 Public product selections are validated against the locked published form definition. Visitors submit quantities only; unknown IDs, invalid amounts and forged price fields are rejected. Totals use integer arithmetic, snapshots retain historical prices, and product selections remain excluded from marketing payloads.
+
+
+Canonical Linktree field names are aliases of the existing permission fields.
+Authorization and the access simulator resolve Headline/name, Slogan/subtitle,
+Slogan color/subtitle_color and Logo/image through one shared resolver. Existing
+field-level denials and approval requirements remain effective after the content
+migration; explicit canonical policy settings apply consistently to legacy clients.
+No tenant scope, authentication rule or permission grant is added by the rename.
+
+Versioned SEO writes are guarded by the existing template_config field policy,
+including approval execution. Shared validation permits stable catalog IDs,
+bounded plain text and owned uploaded social images; arbitrary canonical hosts,
+remote image fetches and data URLs are not persisted. Noindex never bypasses
+availability or ownership. Uploaded-media claiming cannot transfer a previously
+owned asset to another business. Public JSON-LD escapes script terminators.
+
+## Shared analytics access
+
+A share URL contains a random UUID and additionally requires a cryptographically
+random six-digit code. Authentication uses an HMAC keyed by the application
+encryption/session secret and bound to that share. New links also keep an AES-GCM
+encrypted, share-bound recovery copy for one additional owner-only reveal. The
+reveal transaction locks the owner/page grant row, decrypts, and clears that copy
+before committing. Concurrent/repeated reveals cannot recover it again. Disable
+clears the recovery copy; deletion removes the grant. Existing hash-only grants
+cannot recover their old code. The decrypted code stays in drawer memory only.
+Codes never appear in URLs, listings or logs. Send the code separately from the URL.
+
+Unlock attempts are atomically rate-limited in Redis: 20 per IP per 15 minutes,
+5 per share/IP per 15 minutes and 50 per share per day;
+Redis failure denies access. A successful unlock sets a random, HttpOnly,
+SameSite=Strict, production-Secure cookie scoped to that share's API path for at
+most 15 minutes. Redis stores only a session-token hash. No-expiry links still
+require another code entry when the short viewer session expires.
+
+Every report request rechecks the grant, active owner, page ownership/existence,
+manual disable, deletion and optional expiry; checks repeat before returning
+statistics. Existing viewer sessions cannot bypass revocation. The report polls
+while visible and clears data when hidden or when access fails. Only aggregate
+insights and the public page's action labels/destinations/counts are exposed by default,
+matching the owner drawer through explicit field projections. No raw tracking records
+or arbitrary action metadata are forwarded. An explicit
+`includeSubmissions` grant on a newly created Form share also exposes paginated
+submitted answers and contact details. Existing grants remain analytics-only.
+The response reader reuses owner-scoped FormsService; completion duration and the
+same source/attribution fields used by the response table/CSV are explicitly projected.
+Answer summaries are shared only with the same includeSubmissions grant.
+Search matches submitted answers only. Every
+filtered/export page revalidates the session and live grant before and after
+reading. Visitor/session identifiers, IP addresses and advertising credentials are
+never exposed. Date ranges cannot override the grant's owner or page scope. Reports have no marketing tracker, no-referrer/no-store headers and
+noindex metadata. Business reports live on their owner's canonical tenant domain;
+unlock, report and response reads compare the trusted resolved subdomain to the
+grant's owner. Platform-owned reports remain on the root domain. A public,
+rate-limited branding projection exposes only business name/logo/favicon/color
+and canonical origin for live grants. Legacy root links redirect to that origin;
+other tenant domains cannot resolve the grant. Managers require both page
+read and update capabilities, and every grant write also scopes owner and page.
+
+## Public icon derivatives
+
+The public branding icon endpoint reads only strict `/images/upload/` asset paths through StorageService. It does not fetch client-provided URLs or disclose private files. Conversion is bounded, rate limited and cached with ETags. It returns only ICO bytes and safe MIME headers; rejected requests retain private/no-store responses through the frontend proxy. Host-level browser metadata resolves existing verified business domain mappings and never accepts an owner ID from the browser.

@@ -1,3 +1,4 @@
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
 import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
@@ -414,6 +415,7 @@ export class AuthService {
     default_footer_phone?: string | null;
     default_template?: string | null;
     default_background_color?: string | null;
+    default_background_pattern?: string | null;
     default_footer_hidden?: boolean;
     default_whatsapp_enabled?: boolean;
     onboarding_step?: number;
@@ -434,6 +436,7 @@ export class AuthService {
       default_footer_phone: string | null;
       default_template: string | null;
       default_background_color: string | null;
+      default_background_pattern?: string | null;
       default_footer_hidden: boolean;
       default_whatsapp_enabled: boolean;
       onboarding_step: number;
@@ -447,7 +450,7 @@ export class AuthService {
               COALESCE(owner_account.display_name, a.name) AS "ownerName",
               b.logo, b.favicon, b.website_color, b.default_avatar,
               d.footer_text AS default_footer_text, d.footer_phone AS default_footer_phone,
-              d.template_key AS default_template, d.background_color AS default_background_color,
+              d.template_key AS default_template, d.background_color AS default_background_color, d.background_pattern AS default_background_pattern,
               d.footer_hidden AS default_footer_hidden, d.whatsapp_enabled AS default_whatsapp_enabled
        FROM businesses a
        LEFT JOIN business_branding b ON b.business_id = a.id
@@ -480,7 +483,7 @@ export class AuthService {
               COALESCE(owner_account.email, a.email) AS email,
               COALESCE(owner_account.display_name, a.name) AS "ownerName",
               d.footer_text AS default_footer_text, d.footer_phone AS default_footer_phone,
-              d.template_key AS default_template, d.background_color AS default_background_color,
+              d.template_key AS default_template, d.background_color AS default_background_color, d.background_pattern AS default_background_pattern,
               d.footer_hidden AS default_footer_hidden, d.whatsapp_enabled AS default_whatsapp_enabled,
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
                 'id', pixel.id,
@@ -771,8 +774,15 @@ export class AuthService {
       await this.redisService.clearBusinessSessions(businessId);
     } else if (section === 'defaults') {
       await this.databaseService.query(
-        `INSERT INTO business_defaults (business_id,footer_text,footer_phone,template_key,background_color,footer_hidden,whatsapp_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7)
-        ON CONFLICT (business_id) DO UPDATE SET footer_text=EXCLUDED.footer_text,footer_phone=EXCLUDED.footer_phone,template_key=EXCLUDED.template_key,background_color=EXCLUDED.background_color,footer_hidden=EXCLUDED.footer_hidden,whatsapp_enabled=EXCLUDED.whatsapp_enabled,updated_at=NOW()`,
+        `INSERT INTO business_defaults (business_id,footer_text,footer_phone,template_key,background_color,footer_hidden,whatsapp_enabled,background_pattern) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        ON CONFLICT (business_id) DO UPDATE SET
+          footer_text=CASE WHEN $9 THEN EXCLUDED.footer_text ELSE business_defaults.footer_text END,
+          footer_phone=CASE WHEN $10 THEN EXCLUDED.footer_phone ELSE business_defaults.footer_phone END,
+          template_key=CASE WHEN $11 THEN EXCLUDED.template_key ELSE business_defaults.template_key END,
+          background_color=CASE WHEN $12 THEN EXCLUDED.background_color ELSE business_defaults.background_color END,
+          footer_hidden=CASE WHEN $13 THEN EXCLUDED.footer_hidden ELSE business_defaults.footer_hidden END,
+          whatsapp_enabled=CASE WHEN $14 THEN EXCLUDED.whatsapp_enabled ELSE business_defaults.whatsapp_enabled END,
+          background_pattern=CASE WHEN $15 THEN EXCLUDED.background_pattern ELSE business_defaults.background_pattern END,updated_at=NOW()`,
         [
           businessId,
           body.default_footer_text || null,
@@ -781,6 +791,16 @@ export class AuthService {
           body.default_background_color || DEFAULT_LINKTREE_BACKGROUND_COLOR,
           !!body.default_footer_hidden,
           !!body.default_whatsapp_enabled,
+          resolveNewPagePattern(body.default_background_pattern),
+          ...[
+            'default_footer_text',
+            'default_footer_phone',
+            'default_template',
+            'default_background_color',
+            'default_footer_hidden',
+            'default_whatsapp_enabled',
+            'default_background_pattern',
+          ].map((key) => Object.hasOwn(body, key)),
         ],
       );
     } else {

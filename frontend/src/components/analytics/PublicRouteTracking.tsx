@@ -7,8 +7,6 @@ import { createPageTracker } from "@/features/analytics/page-tracking";
 
 function routeKey(pathname: string): string | null {
   if (pathname === "/") return "home";
-  if (pathname === "/advertising") return "advertising";
-  if (pathname === "/advertising/video-code") return "advertising-video-code";
   if (pathname === "/join") return "join";
   if (pathname === "/join/application") return "join-application";
   return null;

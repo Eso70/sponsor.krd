@@ -11,7 +11,10 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorPagePanel } from "@/components/error-pages/ErrorPage";
 import { ERROR_PAGE_COPY } from "@/components/error-pages/copy";
 import { SPONSOR_KRD_ERROR_THEME } from "@/components/error-pages/error-theme";
-import { RootPublicLanguageToggle, useRootPublicLocale } from "@/features/public-site/RootPublicLocaleProvider";
+import {
+  RootPublicLanguageToggle,
+  useRootPublicLocale,
+} from "@/features/public-site/RootPublicLocaleProvider";
 import { rootOnboardingCopy } from "../root-onboarding-copy";
 
 export function InvitationEntryPage() {
@@ -49,9 +52,42 @@ export function InvitationEntryPage() {
 
   if (state === "expired") {
     return (
-      <AuthenticationShell brandDescription={copy.brand} previewTitle={copy.preview} backLabel={copy.back} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
+      <AuthenticationShell
+        brandDescription={copy.brand}
+        previewTitle={copy.preview}
+        backLabel={copy.back}
+        themeCopy={copy.theme}
+        language={locale}
+        headerAction={<RootPublicLanguageToggle />}
+      >
         <ErrorPagePanel
-          {...(locale === "ar" ? { code: "410", title: "انتهت صلاحية الدعوة", description: "انتهت المدة الآمنة لهذه الدعوة. اطلب دعوة جديدة من مسؤول Sponsor.krd.", language: "ar", copy: { retry: "حاول مرة أخرى", home: "الصفحة الرئيسية", errorCode: "رمز الخطأ" } } : locale === "en" ? { code: "410", title: "Invitation expired", description: "This invitation's secure period has ended. Request a new invitation from a Sponsor.krd administrator.", language: "en", copy: { retry: "Try again", home: "Home page", errorCode: "Error code" } } : ERROR_PAGE_COPY.invitationExpired)}
+          {...(locale === "ar"
+            ? {
+                code: "410",
+                title: "انتهت صلاحية الدعوة",
+                description:
+                  "انتهت المدة الآمنة لهذه الدعوة. اطلب دعوة جديدة من مسؤول Sponsor.krd.",
+                language: "ar",
+                copy: {
+                  retry: "حاول مرة أخرى",
+                  home: "الصفحة الرئيسية",
+                  errorCode: "رمز الخطأ",
+                },
+              }
+            : locale === "en"
+              ? {
+                  code: "410",
+                  title: "Invitation expired",
+                  description:
+                    "This invitation's secure period has ended. Request a new invitation from a Sponsor.krd administrator.",
+                  language: "en",
+                  copy: {
+                    retry: "Try again",
+                    home: "Home page",
+                    errorCode: "Error code",
+                  },
+                }
+              : ERROR_PAGE_COPY.invitationExpired)}
           theme={SPONSOR_KRD_ERROR_THEME}
           homeHref="/"
         />
@@ -60,7 +96,14 @@ export function InvitationEntryPage() {
   }
 
   return (
-    <AuthenticationShell brandDescription={copy.brand} previewTitle={copy.preview} backLabel={copy.back} themeCopy={copy.theme} language={locale} headerAction={<RootPublicLanguageToggle />}>
+    <AuthenticationShell
+      brandDescription={copy.brand}
+      previewTitle={copy.preview}
+      backLabel={copy.back}
+      themeCopy={copy.theme}
+      language={locale}
+      headerAction={<RootPublicLanguageToggle />}
+    >
       <AuthenticationCard
         title={copy.title}
         description={copy.entryDescription}
@@ -97,7 +140,7 @@ export function InvitationEntryPage() {
             />
             <p
               className="text-center text-xs leading-5 text-slate-400"
-              dir="rtl"
+              dir="ltr"
             >
               {copy.consentBefore}{" "}
               <Link

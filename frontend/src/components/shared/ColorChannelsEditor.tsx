@@ -34,7 +34,7 @@ export function ColorChannelsEditor({
   const hsl = lastHsl.hex === value ? lastHsl.channels : hexToHsl(value);
   const rgb = hexToRgb(value);
   return (
-    <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 dark:border-white/10 dark:bg-[#161b22]">
+    <div data-picker-channels className="space-y-2 rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 dark:border-white/10 dark:bg-[#161b22]">
       {mode === "rgb"
         ? (["r", "g", "b"] as const).map((channel) => {
             const from = { ...rgb, [channel]: 0 };

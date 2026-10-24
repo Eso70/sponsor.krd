@@ -1,8 +1,15 @@
 "use client";
 
 import { forwardRef, type ReactNode } from "react";
-import { motion, useReducedMotion, type HTMLMotionProps } from "motion/react";
+import {
+  motion,
+  useReducedMotion,
+  useWillChange,
+  type HTMLMotionProps,
+} from "motion/react";
 import { cn } from "@/lib/utils";
+import { APP_MOTION_EASE } from "./AppMotionProvider";
+import { DRAWER_MOTION } from "./drawer-motion";
 
 type MotionDivProps = Omit<
   HTMLMotionProps<"div">,
@@ -136,14 +143,17 @@ export const MotionReveal = forwardRef<HTMLDivElement, MotionDivProps>(
 
 export const MotionFade = forwardRef<
   HTMLDivElement,
-  MotionDivProps & { duration?: number }
->(function MotionFade({ className, duration, ...props }, ref) {
+  MotionDivProps & { duration?: number; skipInitialAnimation?: boolean }
+>(function MotionFade(
+  { className, duration, skipInitialAnimation = false, ...props },
+  ref,
+) {
   const reduced = useReducedMotion();
   return (
     <motion.div
       ref={ref}
       className={className}
-      initial={{ opacity: reduced ? 1 : 0 }}
+      initial={{ opacity: reduced || skipInitialAnimation ? 1 : 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={
@@ -157,20 +167,36 @@ export const MotionFade = forwardRef<
 });
 
 /** Edge-mounted panels enter horizontally without the modal's zoom effect. */
-export const MotionSlide = forwardRef<HTMLDivElement, MotionDivProps>(
-  function MotionSlide({ className, ...props }, ref) {
-    const reduced = useReducedMotion();
-    return (
-      <motion.div
-        ref={ref}
-        className={className}
-        initial={{ x: reduced ? 0 : "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: reduced ? 0 : "100%" }}
-        transition={{ duration: reduced ? 0 : 0.9, ease: [0.4, 0, 0.2, 1] }}
-        style={{ willChange: "transform" }}
-        {...props}
-      />
-    );
-  },
-);
+export const MotionSlide = forwardRef<
+  HTMLDivElement,
+  MotionDivProps & { skipInitialAnimation?: boolean }
+>(function MotionSlide(
+  { className, skipInitialAnimation = false, ...props },
+  ref,
+) {
+  const reduced = useReducedMotion();
+  const willChange = useWillChange();
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={skipInitialAnimation ? false : { x: reduced ? 0 : "100%" }}
+      animate={{
+        x: 0,
+        transition: {
+          duration: reduced ? 0 : DRAWER_MOTION.enter,
+          ease: APP_MOTION_EASE,
+        },
+      }}
+      exit={{
+        x: reduced ? 0 : "100%",
+        transition: {
+          duration: reduced ? 0 : DRAWER_MOTION.exit,
+          ease: DRAWER_MOTION.exitEase,
+        },
+      }}
+      style={{ willChange }}
+      {...props}
+    />
+  );
+});

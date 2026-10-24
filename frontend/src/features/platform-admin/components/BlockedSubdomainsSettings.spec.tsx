@@ -1,3 +1,4 @@
+import { DashboardRefreshTestShell } from "@/test-utils/DashboardRefreshTestShell";
 import {
   fireEvent,
   render,
@@ -22,9 +23,11 @@ vi.mock("@/features/subdomains/api", () => ({
 }));
 function mount(locale: "en" | "ar" | "ckb" = "en") {
   render(
+    <DashboardRefreshTestShell>
     <PlatformLocaleProvider initialLocale={locale}>
       <BlockedSubdomainsSettings />
-    </PlatformLocaleProvider>,
+    </PlatformLocaleProvider>
+    </DashboardRefreshTestShell>,
   );
 }
 async function openAdd() {
@@ -161,6 +164,7 @@ describe("blocked subdomain settings", () => {
     expect(
       screen.getByRole("button", { name: "Add subdomain" }),
     ).toBeDisabled();
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     finish({ system: ["www", "api"], custom: [] });
     await waitFor(() =>
       expect(screen.queryByText("support")).not.toBeInTheDocument(),

@@ -1,28 +1,8 @@
 "use client";
 
-import { Skeleton } from "@/components/shared/Skeleton";
+import { StatCardGrid } from "@/components/shared/StatCardGrid";
+import { Skeleton, SkeletonStatCard } from "@/components/shared/Skeleton";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
-
-function MetricRows({ count }: { count: number }) {
-  return (
-    <div
-      className={`grid gap-3 sm:grid-cols-2 ${count === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
-    >
-      {Array.from({ length: count }).map((_, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-3 rounded-xl border border-slate-200 p-4 dark:border-white/10"
-        >
-          <Skeleton className="size-9 shrink-0" rounded="rounded-xl" />
-          <div className="flex-1">
-            <Skeleton className="mb-2 h-4 w-16" rounded="rounded-md" />
-            <Skeleton className="h-3 w-24" rounded="rounded-md" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function SkeletonRetentionSettings() {
   const { locale } = usePlatformLocale();
@@ -30,10 +10,18 @@ export function SkeletonRetentionSettings() {
     <div
       role="status"
       aria-busy="true"
-      aria-label={locale === "ar" ? "جارٍ تحميل إعدادات الاحتفاظ بالبيانات" : locale === "en" ? "Loading retention settings" : "ڕێکخستنەکانی ماوەی هەڵگرتن بار دەکرێن"}
+      aria-label={
+        locale === "ar"
+          ? "جارٍ تحميل إعدادات الاحتفاظ بالبيانات"
+          : locale === "en"
+            ? "Loading retention settings"
+            : "ڕێکخستنەکانی ماوەی هەڵگرتن بار دەکرێن"
+      }
       className="space-y-6"
     >
-      <MetricRows count={3} />
+      <StatCardGrid columns={1}>
+        <SkeletonStatCard compact color="theme" />
+      </StatCardGrid>
       <Skeleton className="h-14 w-full" rounded="rounded-xl" />
       <div className="grid gap-5 sm:grid-cols-2">
         {Array.from({ length: 3 }).map((_, index) => (
@@ -64,10 +52,20 @@ export function SkeletonMediaSettings() {
     <div
       role="status"
       aria-busy="true"
-      aria-label={locale === "ar" ? "جارٍ تحميل إعدادات الوسائط" : locale === "en" ? "Loading media settings" : "ڕێکخستنەکانی میدیا بار دەکرێن"}
+      aria-label={
+        locale === "ar"
+          ? "جارٍ تحميل إعدادات الوسائط"
+          : locale === "en"
+            ? "Loading media settings"
+            : "ڕێکخستنەکانی میدیا بار دەکرێن"
+      }
       className="space-y-6"
     >
-      <MetricRows count={4} />
+      <StatCardGrid columns={4}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <SkeletonStatCard compact color="theme" key={index} />
+        ))}
+      </StatCardGrid>
       <div>
         <Skeleton className="mb-3 h-3 w-40" rounded="rounded-md" />
         <div className="grid gap-3 sm:grid-cols-3">

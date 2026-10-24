@@ -1,3 +1,5 @@
+import { DateTimeInput } from "@/components/shared/DateTimeInput";
+import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { EditorField } from "@/components/shared/EditorField";
 import { NumberInput } from "@/components/shared/NumberInput";
 import { modalInputClass } from "@/features/link-editor/modal-input-styles";
@@ -40,6 +42,7 @@ export function CampaignBudgetScheduleStep({
   onEndDateChange: (value: string) => void;
 }) {
   const t = useCampaignText();
+  const { locale } = usePlatformLocale();
   return (
     <div className="space-y-5">
       <CampaignStepIntro
@@ -75,21 +78,12 @@ export function CampaignBudgetScheduleStep({
       {scheduleType === "DATE_RANGE" ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <EditorField label={t("Start date")} required>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => onStartDateChange(event.target.value)}
-              className={modalInputClass()}
-            />
+            <DateTimeInput label={t("Start date")} hideLabel required dateOnly locale={locale}
+              value={startDate} onChange={onStartDateChange} />
           </EditorField>
           <EditorField label={t("End date")} required>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate || undefined}
-              onChange={(event) => onEndDateChange(event.target.value)}
-              className={modalInputClass()}
-            />
+            <DateTimeInput label={t("End date")} hideLabel required dateOnly locale={locale}
+              value={endDate} min={startDate || undefined} onChange={onEndDateChange} />
           </EditorField>
         </div>
       ) : null}

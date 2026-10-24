@@ -7,6 +7,7 @@ import { FormPreview } from "./FormPreview";
 import { FormProductSelectionEditor } from "./FormProductSelectionEditor";
 import { productMoney, productLineTotal } from "../product-selection";
 import { formEditorIssues } from "../form-editor-validation";
+import { productSelectionCopy } from "../product-selection-copy";
 import { formsCopy } from "../forms-copy";
 
 function product(): FormQuestion {
@@ -34,6 +35,36 @@ function Editor() {
 }
 
 describe("product selection", () => {
+  it("edits optional quantity prices with shared controls", () => {
+    render(<Editor />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Add price break" })[0]);
+    expect(screen.getByRole("textbox", { name: "Minimum quantity 1" })).toHaveValue("2");
+    fireEvent.change(screen.getByRole("textbox", { name: "Unit price 1" }), { target: { value: "6.5" } });
+    expect(screen.getByRole("textbox", { name: "Unit price 1" })).toHaveValue("6.5");
+    fireEvent.click(screen.getAllByRole("button", { name: "Add price break" })[0]);
+    expect(screen.getByRole("textbox", { name: "Minimum quantity 2" })).toHaveValue("3");
+    fireEvent.click(screen.getByRole("button", { name: "Remove price break 2" }));
+    expect(screen.queryByRole("textbox", { name: "Minimum quantity 2" })).not.toBeInTheDocument();
+  });
+  it.each(["en", "ckb", "ar"] as const)("shows the same volume quote and saving publicly and in preview in %s", (language) => {
+    const question = { ...product(), productSelection: { currency: "IQD" as const, items: [{ id: "item", name: "Product", unit: "piece", unitPrice: 8000, priceBreaks: [{ minimumQuantity: 2, unitPrice: 7500 }, { minimumQuantity: 3, unitPrice: 7000 }] }] } };
+    const form = { ...createForm(language), questions: [question] };
+    const copy = productSelectionCopy(language);
+    const view = render(<FormPreview form={form} />);
+    for (const presentation of ["preview", "public"] as const) {
+      view.rerender(<FormPreview form={form} presentation={presentation} />);
+      expect(screen.queryByRole("list", { name: copy.quantityPricing })).not.toBeInTheDocument();
+      const quantity = screen.getByRole("spinbutton", { name: `${copy.quantity}: Product` });
+      fireEvent.change(quantity, { target: { value: "2" } });
+      expect(screen.getAllByText("IQD 15,000").length).toBeGreaterThan(0);
+      expect(screen.getByText(copy.savings)).toBeInTheDocument();
+      expect(screen.getByText("IQD 1,000")).toBeInTheDocument();
+      fireEvent.change(quantity, { target: { value: "3" } });
+      expect(screen.getAllByText("IQD 21,000").length).toBeGreaterThan(0);
+      expect(screen.getByText("IQD 3,000")).toBeInTheDocument();
+    }
+  });
+
   it.each(["form", "card"] as const)(
     "calculates quantities, line totals and a mock completion in %s",
     (layout) => {

@@ -26,6 +26,16 @@ describe('new-page defaults isolation', () => {
     const query = jest
       .fn<Promise<{ rows: unknown[] }>, [string, unknown[]?]>()
       .mockImplementation((sql: string) => {
+        if (sql.includes('SELECT d.background_color'))
+          return Promise.resolve({
+            rows: [
+              {
+                default_background_color: '#abcdef',
+                default_background_pattern: 'dots',
+                default_template: 'spectrum',
+              },
+            ],
+          });
         if (
           sql.includes('UPDATE linktrees') ||
           sql.includes('INSERT INTO linktrees')
@@ -48,8 +58,13 @@ describe('new-page defaults isolation', () => {
             ],
           });
         }
+        if (sql.includes(' AS allowed FROM businesses'))
+          return Promise.resolve({ rows: [{ allowed: true }] });
+        if (sql.includes('SELECT subdomain FROM businesses'))
+          return Promise.resolve({ rows: [{ subdomain: 'business' }] });
         return Promise.resolve({ rows: [] });
       });
+    const redis = { del: jest.fn() };
     const service = new LinktreesService(
       {
         query,
@@ -57,8 +72,8 @@ describe('new-page defaults isolation', () => {
           work: (client: { query: typeof query }) => Promise<unknown>,
         ) => work({ query }),
       } as never,
-      { del: jest.fn() } as never,
-      {} as never,
+      redis as never,
+      { getInteger: jest.fn().mockResolvedValue(100) } as never,
       { assertAllowed: jest.fn() } as never,
       {
         claimBusinessAssets: jest.fn(),
@@ -67,8 +82,79 @@ describe('new-page defaults isolation', () => {
       { syncLinks: jest.fn() } as never,
       {} as never,
     );
-    return { service, query };
+    return { service, query, redis };
   }
+
+  it.each(['business', 'platform'] as const)(
+    'new pages inherit preferences and retain explicit none through %s',
+    async (scope) => {
+      for (const selected of [undefined, 'none']) {
+        const { service, query } = setup();
+        await service.createLinktree(
+          {
+            headline: 'New page',
+            slug: 'new-page',
+            template_config: selected
+              ? { background_pattern: selected }
+              : undefined,
+          },
+          'business-1',
+          scope,
+        );
+        const insert = query.mock.calls.find(([sql]) =>
+          sql.includes('INSERT INTO linktrees'),
+        );
+        expect(insert?.[1]?.[5]).toBe('#abcdef');
+        expect(JSON.parse(insert?.[1]?.[7] as string)).toHaveProperty(
+          'background_pattern',
+          selected ?? 'dots',
+        );
+        expect(insert?.[1]?.[12]).toBe('business-1');
+      }
+    },
+  );
+
+  it.each(['business', 'platform'] as const)(
+    'persists versioned SEO and purges cached public metadata through %s',
+    async (scope) => {
+      const { service, query, redis } = setup();
+      jest
+        .spyOn(service, 'getLinktreeById')
+        .mockResolvedValue(
+          row as Awaited<ReturnType<LinktreesService['getLinktreeById']>>,
+        );
+      const seo = {
+        version: 1,
+        category: 'food',
+        businessType: 'restaurant',
+        title: 'Authored search title',
+        indexing: 'noindex',
+        language: 'ar',
+      };
+      await service.updateLinktree(
+        row.id,
+        { template_config: { templateKey: 'spectrum', seo } },
+        'business-1',
+        scope,
+      );
+      const update = query.mock.calls.find(([sql]) =>
+        sql.includes('UPDATE linktrees'),
+      );
+      expect(update?.[0]).toContain('updated_at = NOW()');
+      expect(update?.[1]?.[6]).toEqual(
+        expect.stringContaining('"category":"food"'),
+      );
+      expect(JSON.parse(update?.[1]?.[6] as string) as unknown).toMatchObject({
+        seo,
+      });
+      expect(redis.del).toHaveBeenCalledWith(
+        'cache:linktree:uid:business:sub:business',
+      );
+      expect(redis.del).toHaveBeenCalledWith(
+        'cache:platform-linktree:business',
+      );
+    },
+  );
 
   it.each(['business', 'platform'] as const)(
     'editing a default page through %s does not overwrite new-page defaults',

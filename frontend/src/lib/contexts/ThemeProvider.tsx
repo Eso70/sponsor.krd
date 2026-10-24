@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { createContext, useContext, useEffect, useMemo } from "react";
+import { createCursorVariables } from "@/lib/utils/default-cursor";
+import { createContext, useContext, useEffect, useMemo, type CSSProperties } from "react";
 import {
   parseWebsiteColor,
   readableInk,
@@ -36,6 +37,7 @@ export function ThemeProvider({
 
   const cssVars = useMemo(
     () => ({
+      ...createCursorVariables(color.primary),
       "--theme-primary": color.primary,
       "--theme-css": color.css,
       "--theme-type": color.type,
@@ -97,9 +99,15 @@ export function ThemeProvider({
     };
   }, [color.primary, cssVars, documentTheme]);
 
+  const value = useMemo(() => ({ color, cssVars }), [color, cssVars]);
+
   return (
-    <ThemeContext.Provider value={{ color, cssVars }}>
-      {children}
+    <ThemeContext.Provider value={value}>
+      {/* Inline variables survive server rendering and loading boundaries.
+          Root variables still serve portals outside this DOM scope. */}
+      <div data-theme-scope style={{ display: "contents", ...cssVars } as CSSProperties}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

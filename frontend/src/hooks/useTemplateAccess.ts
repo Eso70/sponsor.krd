@@ -1,13 +1,17 @@
 "use client";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
 import { useCallback, useEffect, useState } from "react";
 
 export function useTemplateAccess(enabled = true) {
+  const startRequest = useLatestRequest();
+  const [unavailable, setUnavailable] = useState(false);
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(() => new Set());
   const [isLoading, setIsLoading] = useState(enabled);
 
   const refresh = useCallback(
     async (options?: { rethrow?: boolean; signal?: AbortSignal }) => {
       if (!enabled) return;
+      const current = startRequest();
       try {
         const response = await fetch("/api/auth/template-access", {
           credentials: "include",
@@ -17,6 +21,9 @@ export function useTemplateAccess(enabled = true) {
         if (!response.ok) throw new Error("Unable to load template access");
         const result = await response.json();
         const keys = result?.data?.template_keys;
+        if (!Array.isArray(keys)) throw new Error("Invalid template access");
+        if (options?.signal?.aborted || !current()) return;
+        setUnavailable(false);
         setLoadedKeys(
           Array.isArray(keys)
             ? new Set(
@@ -25,12 +32,12 @@ export function useTemplateAccess(enabled = true) {
             : new Set(),
         );
       } catch (error) {
-        if (options?.signal?.aborted) return;
-        setLoadedKeys(new Set());
+        if (options?.signal?.aborted || !current()) return;
+        setUnavailable(true);
         if (options?.rethrow) throw error;
       }
     },
-    [enabled],
+    [enabled, startRequest],
   );
 
   useEffect(() => {
@@ -53,6 +60,7 @@ export function useTemplateAccess(enabled = true) {
 
   return {
     allowedKeys,
+    unavailable: enabled && unavailable,
     isLoading: enabled && isLoading,
     refresh,
     isTemplateAllowed: (key: string) =>

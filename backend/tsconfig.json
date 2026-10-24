@@ -21,5 +21,6 @@
     // comes from tsconfig.base.json.
     "strictPropertyInitialization": false,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "exclude": ["node_modules", "dist", "dist-seo-verify"]
 }

@@ -17,6 +17,13 @@ describe('form response HTTP pagination', () => {
   let app: NestFastifyApplication;
   const id = 'b010aa10-cc32-4eb4-91db-2d27315e0831';
   const forms = {
+    selectionIds: jest.fn().mockResolvedValue([id]),
+    clearAnalytics: jest.fn().mockResolvedValue(undefined),
+    pin: jest.fn().mockResolvedValue({ id, isPinned: true }),
+    duplicate: jest.fn().mockResolvedValue({ id: 'new-id' }),
+    duplicateOptions: jest
+      .fn()
+      .mockResolvedValue({ slug: 'contact-copy', available: true }),
     titleAvailability: jest
       .fn()
       .mockResolvedValue({ slug: 'new-title', available: true }),
@@ -62,6 +69,85 @@ describe('form response HTTP pagination', () => {
     await app.getHttpAdapter().getInstance().ready();
   });
   afterAll(async () => app.close());
+  it.each([
+    ['/api/forms', 'business-owner'],
+    ['/api/platform/forms', 'platform-owner'],
+  ])(
+    'validates pin values and resolves the owner at %s',
+    async (base, owner) => {
+      forms.pin.mockClear();
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `${base}/${id}/pin`,
+        payload: { isPinned: true },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(forms.pin).toHaveBeenCalledWith(owner, id, true);
+      forms.pin.mockClear();
+      for (const payload of [
+        { isPinned: 'true' },
+        { isPinned: 1 },
+        {},
+        { isPinned: true, businessId: 'another-owner' },
+      ]) {
+        const invalid = await app.inject({
+          method: 'PATCH',
+          url: `${base}/${id}/pin`,
+          payload,
+        });
+        expect(invalid.statusCode).toBe(400);
+      }
+      expect(forms.pin).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    ['/api/forms', 'business-owner'],
+    ['/api/platform/forms', 'platform-owner'],
+  ])(
+    'validates and owner-scopes editable duplication in %s',
+    async (base, owner) => {
+      const options = await app.inject({
+        method: 'GET',
+        url: `${base}/${id}/duplicate-options?slug=custom-copy`,
+      });
+      expect(options.statusCode).toBe(200);
+      expect(forms.duplicateOptions).toHaveBeenLastCalledWith(
+        owner,
+        id,
+        'custom-copy',
+      );
+      const input = {
+        definition: { name: 'Custom copy' },
+        slug: 'custom-copy',
+      };
+      const response = await app.inject({
+        method: 'POST',
+        url: `${base}/${id}/duplicate`,
+        payload: input,
+      });
+      expect(response.statusCode).toBe(201);
+      expect(forms.duplicate).toHaveBeenLastCalledWith(
+        owner,
+        id,
+        expect.objectContaining(input),
+      );
+      for (const invalid of [
+        { ...input, slug: '-invalid' },
+        { ...input, slug: '../unsafe' },
+        { ...input, owner: 'other-owner' },
+        { ...input, definition: 'unsafe' },
+      ]) {
+        forms.duplicate.mockClear();
+        const rejected = await app.inject({
+          method: 'POST',
+          url: `${base}/${id}/duplicate`,
+          payload: invalid,
+        });
+        expect(rejected.statusCode).toBe(400);
+        expect(forms.duplicate).not.toHaveBeenCalled();
+      }
+    },
+  );
   beforeEach(() => jest.clearAllMocks());
   it.each([
     ['/api/forms', 'business-owner'],
@@ -188,6 +274,45 @@ describe('form response HTTP pagination', () => {
       });
       expect(invalid.statusCode).toBe(400);
       expect(forms.deleteSubmissions).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['/api/forms', '/api/platform/forms'])(
+    'selects and clears analytics safely through %s',
+    async (base) => {
+      const owner = base.includes('platform')
+        ? 'platform-owner'
+        : 'business-owner';
+      const selected = await app.inject({
+        method: 'GET',
+        url: `${base}/selection?q=contact&filter=archived`,
+      });
+      expect(selected.statusCode).toBe(200);
+      expect(forms.selectionIds).toHaveBeenLastCalledWith(
+        owner,
+        'contact',
+        true,
+      );
+      const cleared = await app.inject({
+        method: 'DELETE',
+        url: `${base}/${id}/analytics`,
+      });
+      expect(cleared.statusCode).toBe(200);
+      expect(forms.clearAnalytics).toHaveBeenLastCalledWith(owner, id);
+      expect(forms.deleteSubmissions).not.toHaveBeenCalled();
+      forms.clearAnalytics.mockClear();
+      const invalid = await app.inject({
+        method: 'DELETE',
+        url: `${base}/invalid/analytics`,
+      });
+      expect(invalid.statusCode).toBe(400);
+      expect(forms.clearAnalytics).not.toHaveBeenCalled();
+      forms.selectionIds.mockClear();
+      const injectedOwner = await app.inject({
+        method: 'GET',
+        url: `${base}/selection?owner=other`,
+      });
+      expect(injectedOwner.statusCode).toBe(400);
+      expect(forms.selectionIds).not.toHaveBeenCalled();
     },
   );
 });

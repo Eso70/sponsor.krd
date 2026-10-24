@@ -4,9 +4,8 @@ import { buildPlatformLinktreePayload } from "./platform-linktrees";
 describe("buildPlatformLinktreePayload", () => {
   it("sends only fields accepted by CreateLinktreeDto", () => {
     const payload = buildPlatformLinktreePayload({
-      name: " Campaign ",
-      slug: "campaign",
-      image: null,
+      headline: " Campaign ",
+      logo: null,
       background_color: "#ffffff",
       templateKey: "spectrum",
       templateConfig: {},
@@ -15,8 +14,7 @@ describe("buildPlatformLinktreePayload", () => {
     });
 
     expect(payload).toMatchObject({
-      name: "Campaign",
-      seo_name: "campaign",
+      headline: "Campaign",
       background_color: "#ffffff",
       platforms: ["website"],
       links: { website: ["https://example.com"] },
@@ -24,7 +22,11 @@ describe("buildPlatformLinktreePayload", () => {
     expect(payload).not.toHaveProperty("templateKey");
     expect(payload).not.toHaveProperty("templateConfig");
     expect(payload).not.toHaveProperty("slug");
-    expect(payload.image).toBeUndefined();
+    expect(payload).not.toHaveProperty("seo_name");
+    expect(payload.logo).toBeNull();
     expect(payload).toHaveProperty("template_config");
+    expect(payload).not.toHaveProperty("footer_text");
+    expect(payload).not.toHaveProperty("footer_phone");
+    expect(payload).not.toHaveProperty("footer_hidden");
   });
 });

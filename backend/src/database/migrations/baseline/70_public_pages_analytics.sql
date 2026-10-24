@@ -16,14 +16,9 @@ CREATE TABLE public.public_pages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
   page_type varchar(20) NOT NULL CONSTRAINT public_pages_page_type_check
-    CHECK (page_type IN ('linktree','advertising','route','form')),
+    CHECK (page_type IN ('linktree','route','form')),
   source_form_id uuid UNIQUE REFERENCES public.forms(id) ON DELETE CASCADE,
   source_linktree_id uuid UNIQUE REFERENCES public.linktrees(id) ON DELETE CASCADE,
-  -- The advertising page is a per-business singleton at a fixed route, but it
-  -- takes a public_pages identity like the others so its conversions reach the
-  -- same action, visitor, session, event, CRM and marketing pipeline. Its slug
-  -- is the literal 'advertising'; nothing routes by it.
-  source_advertising_page_id uuid UNIQUE REFERENCES public.advertising_pages(id) ON DELETE CASCADE,
   name varchar(255) NOT NULL CHECK (length(btrim(name)) BETWEEN 2 AND 255),
   slug varchar(255) NOT NULL CHECK (slug ~ '^[a-z0-9][a-z0-9-]*$'),
   status varchar(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','paused','archived')),
@@ -37,17 +32,12 @@ CREATE TABLE public.public_pages (
   updated_at timestamptz NOT NULL DEFAULT now(),
   -- Specialized pages have exactly one matching source. Fixed routes have no source.
   CONSTRAINT public_pages_source_check CHECK (
-    (page_type = 'linktree' AND source_linktree_id IS NOT NULL
-      AND source_advertising_page_id IS NULL AND source_form_id IS NULL)
-    OR
-    (page_type = 'advertising' AND source_advertising_page_id IS NOT NULL
-      AND source_linktree_id IS NULL AND source_form_id IS NULL)
+    (page_type = 'linktree' AND source_linktree_id IS NOT NULL AND source_form_id IS NULL)
     OR
     (page_type = 'form' AND source_form_id IS NOT NULL
-      AND source_linktree_id IS NULL AND source_advertising_page_id IS NULL)
+      AND source_linktree_id IS NULL)
     OR
-    (page_type = 'route' AND source_linktree_id IS NULL
-      AND source_advertising_page_id IS NULL AND source_form_id IS NULL)
+    (page_type = 'route' AND source_linktree_id IS NULL AND source_form_id IS NULL)
   ),
   UNIQUE (business_id, page_type, slug)
 );
@@ -57,7 +47,7 @@ CREATE TABLE public.public_pages (
 -- page content and analytics are not retained here.
 CREATE TABLE public.public_page_tombstones (
   business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
-  page_type varchar(20) NOT NULL CHECK (page_type IN ('linktree','advertising')),
+  page_type varchar(20) NOT NULL CHECK (page_type IN ('linktree')),
   public_identifier varchar(255) NOT NULL,
   slug varchar(255) NOT NULL,
   deleted_at timestamptz NOT NULL DEFAULT now(),
@@ -324,28 +314,6 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.fn_sync_advertising_public_page() RETURNS trigger
-LANGUAGE plpgsql AS $$
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    DELETE FROM public.public_pages WHERE source_advertising_page_id = OLD.id;
-    RETURN OLD;
-  END IF;
-  INSERT INTO public.public_pages (
-    business_id, page_type, source_advertising_page_id, name, slug, status,
-    current_version, published_at
-  ) VALUES (
-    NEW.business_id, 'advertising', NEW.id, 'Advertising', 'advertising',
-    NEW.status, NEW.current_version, NEW.published_at
-  )
-  ON CONFLICT (source_advertising_page_id) DO UPDATE SET
-    status = EXCLUDED.status,
-    current_version = EXCLUDED.current_version,
-    published_at = EXCLUDED.published_at,
-    updated_at = now();
-  RETURN NEW;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION public.fn_sync_link_public_action() RETURNS trigger
 LANGUAGE plpgsql AS $$
@@ -449,9 +417,6 @@ CREATE TRIGGER trg_linktree_public_page_sync
 AFTER INSERT OR UPDATE OR DELETE ON public.linktrees
 FOR EACH ROW EXECUTE FUNCTION public.fn_sync_linktree_public_page();
 
-CREATE TRIGGER trg_advertising_public_page_sync
-AFTER INSERT OR UPDATE OR DELETE ON public.advertising_pages
-FOR EACH ROW EXECUTE FUNCTION public.fn_sync_advertising_public_page();
 
 CREATE TRIGGER trg_link_public_action_archive
 BEFORE DELETE ON public.links
@@ -493,8 +458,7 @@ BEGIN
     INSERT INTO public.public_pages
       (business_id, page_type, name, slug, status, published_at)
     VALUES
-      (NEW.id, 'route', NEW.name || ' Home', 'home', 'published', NOW()),
-      (NEW.id, 'route', 'Advertising Video Code', 'advertising-video-code', 'published', NOW())
+      (NEW.id, 'route', NEW.name || ' Home', 'home', 'published', NOW())
     ON CONFLICT (business_id, page_type, slug) DO NOTHING;
   END IF;
   RETURN NEW;

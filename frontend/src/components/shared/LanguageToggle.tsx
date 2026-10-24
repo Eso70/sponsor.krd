@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardHeaderActionButton } from "./DashboardHeaderActionButton";
+import { HEADER_ACTION_SIZE_CLASS } from "./shared-control-styles";
 import { Tooltip } from "./Tooltip";
 
 export type LanguageToggleLocale = "ckb" | "ar" | "en";
@@ -32,7 +33,7 @@ export function LanguageToggle({
     <Tooltip content={label} side="bottom">
       <DashboardHeaderActionButton
         data-language-toggle={locale}
-        className={`${size === "dashboard" ? "" : size === "compact" ? "!size-9 !p-0" : "!size-10 !p-0"} shrink-0 cursor-pointer text-xs font-bold tracking-wide`}
+        className={`${size === "dashboard" ? "" : size === "compact" ? "!size-9 !p-0" : HEADER_ACTION_SIZE_CLASS} shrink-0 cursor-pointer text-xs font-bold tracking-wide`}
         aria-label={label}
         aria-busy={busy || undefined}
         disabled={disabled || busy}

@@ -47,6 +47,7 @@ export interface PlatformBusinessDetail extends PlatformBusinessSummary {
   default_footer_phone: string | null;
   default_template: string | null;
   default_background_color: string | null;
+  default_background_pattern?: string | null;
   default_footer_hidden: boolean;
   default_whatsapp_enabled: boolean;
   default_links: BusinessDefaultLink[];
@@ -69,6 +70,7 @@ export type PlatformBusiness = PlatformBusinessSummary &
       | "default_footer_phone"
       | "default_template"
       | "default_background_color"
+      | "default_background_pattern"
       | "default_footer_hidden"
       | "default_whatsapp_enabled"
       | "default_links"

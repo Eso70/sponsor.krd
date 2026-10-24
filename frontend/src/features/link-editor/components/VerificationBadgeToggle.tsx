@@ -2,6 +2,7 @@
 
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 
 export function VerificationBadgeToggle({ enabled, onChange, label }: {
   enabled: boolean;
@@ -15,9 +16,9 @@ export function VerificationBadgeToggle({ enabled, onChange, label }: {
       aria-label={label}
       aria-pressed={enabled}
       onClick={() => onChange(!enabled)}
-      className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+      className={`${SHARED_SOFT_BUTTON_CLASS} flex size-10 shrink-0 cursor-pointer items-center justify-center`}
     >
-      <VerificationBadge muted={!enabled} className="h-6 w-6" />
+      <VerificationBadge muted={!enabled} className="size-5" />
     </button>
     </Tooltip>
   );
