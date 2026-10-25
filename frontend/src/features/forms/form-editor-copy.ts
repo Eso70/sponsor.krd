@@ -207,7 +207,7 @@ const labels = {
   privacy: ["Privacy", "تایبەتمەندی", "الخصوصية"],
   enabled: ["Enabled", "چالاک", "مفعّل"],
   image: ["Image", "وێنە", "صورة"],
-  carousel: ["Carousel", "وێنەی خولەیی", "صور متتابعة"],
+  carousel: ["Carousel", "فرە وێنە", "صور متتابعة"],
   updateImage: ["Update", "گۆڕینی وێنە", "تحديث"],
   slogan: ["Promotion slogan", "درووشمی بانگەشە", "الشعار الترويجي"],
   optional: ["Optional", "ئارەزوومەندانە", "اختياري"],
@@ -220,11 +220,6 @@ const labels = {
     "Introduce your business or invite people to respond",
     "بزنسەکەت بناسێنە یان داوای وەڵام بدە",
     "عرّف بنشاطك أو ادعُ الناس للرد",
-  ],
-  descriptionHint: [
-    "Explain the main benefits or important details",
-    "سوودەکان یان وردەکارییە گرنگەکان بنووسە",
-    "اشرح المزايا أو التفاصيل المهمة",
   ],
   sloganHint: [
     "Write a short promotional sentence",

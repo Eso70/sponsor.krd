@@ -54,7 +54,7 @@ that metadata too, preventing media engagement from becoming Events API
 conversions even though each event resolves to a registered action. Drawer
 previews have no media tracker callback.
 Carousel autoplay is presentation only and never reports `page:banner-change`.
-Manual arrows and horizontal touch swipes continue reporting that registered
+Manual pagination dots, mouse drags and horizontal touch swipes continue reporting that registered
 engagement action through the same shared callback.
 
 Every reportable public action has a `public_page_actions` row. The row binds:

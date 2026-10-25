@@ -85,7 +85,9 @@ describe("Forms frontend workspace", () => {
           }),
         );
         render(<FormsManagementPage scope={scope} locale="en" />);
-        expect(screen.getByRole("button", { name: "Grid" })).toHaveClass(scope === "platform" ? "sa-gradient" : "theme-fill");
+        const grid = screen.getByRole("button", { name: "Grid" });
+        expect(grid).toHaveAttribute("aria-pressed", "true");
+        expect(grid.querySelector("[data-navigation-highlight]")).toBeInTheDocument();
         expect(await screen.findByText("1–15 of 16")).toBeInTheDocument();
         if (view === "table")
           fireEvent.click(screen.getByRole("button", { name: "Table" }));

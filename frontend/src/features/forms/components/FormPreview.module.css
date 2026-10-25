@@ -11,8 +11,16 @@
   --theme-css: var(--preview-accent-fill);
   --theme-ink: var(--preview-accent-ink);
   --checkbox-border: var(--preview-border);
-  --shared-control-surface: color-mix(in srgb, var(--preview-text) 4%, var(--preview-surface));
-  --shared-control-hover: color-mix(in srgb, var(--preview-text) 7%, var(--preview-surface));
+  --shared-control-surface: color-mix(
+    in srgb,
+    var(--preview-text) 4%,
+    var(--preview-surface)
+  );
+  --shared-control-hover: color-mix(
+    in srgb,
+    var(--preview-text) 7%,
+    var(--preview-surface)
+  );
   --shared-control-text: var(--preview-text);
   --shared-control-muted: var(--preview-muted);
   --shared-control-radius: var(--ui-radius-control, 18px);
@@ -31,7 +39,11 @@
   --preview-text: #e2e8f0;
   --preview-muted: #94a3b8;
   --preview-border: #475569;
-  --shared-control-error: color-mix(in srgb, #ef4444 12%, var(--preview-surface));
+  --shared-control-error: color-mix(
+    in srgb,
+    #ef4444 12%,
+    var(--preview-surface)
+  );
   --shared-control-error-text: #fca5a5;
   color-scheme: dark;
 }
@@ -43,7 +55,8 @@
   border-color: transparent !important;
 }
 
-.surface[data-form-preview][data-appearance] :global(.modal-standard-input-error) {
+.surface[data-form-preview][data-appearance]
+  :global(.modal-standard-input-error) {
   background: var(--shared-control-error) !important;
 }
 
@@ -62,20 +75,52 @@
   color: var(--preview-accent-ink) !important;
 }
 .surface[data-form-preview][data-appearance] :global(.theme-fill),
-.surface[data-form-preview][data-appearance] :global(.theme-fill) :is(span, svg) {
+.surface[data-form-preview][data-appearance]
+  :global(.theme-fill)
+  :is(span, svg) {
   color: #fff !important;
 }
 .productRow,
 .productTotal {
   border-radius: var(--shared-control-radius);
-  background: color-mix(in srgb, var(--preview-text) 3%, var(--preview-surface));
+  background: color-mix(
+    in srgb,
+    var(--preview-text) 3%,
+    var(--preview-surface)
+  );
 }
 .productSubtotal {
   border-top: 1px solid color-mix(in srgb, var(--preview-text) 8%, transparent);
 }
+.discountBadge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #047857;
+  opacity: 0.75;
+  background: color-mix(in srgb, #10b981 5%, var(--preview-surface));
+}
+.surface[data-appearance="dark"] .discountBadge {
+  color: #6ee7b7;
+  background: color-mix(in srgb, #10b981 7%, var(--preview-surface));
+}
 .productQuantity {
-  --shared-control-surface: color-mix(in srgb, var(--preview-text) 9%, var(--preview-surface));
-  --shared-control-hover: color-mix(in srgb, var(--preview-text) 12%, var(--preview-surface));
+  --shared-control-surface: color-mix(
+    in srgb,
+    var(--preview-text) 9%,
+    var(--preview-surface)
+  );
+  --shared-control-hover: color-mix(
+    in srgb,
+    var(--preview-text) 12%,
+    var(--preview-surface)
+  );
 }
 .productContent {
   text-align: start;
@@ -84,8 +129,13 @@
   text-align: right;
 }
 .productTotal {
-  background: color-mix(in srgb, var(--preview-accent) 9%, var(--preview-surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--preview-accent) 10%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--preview-accent) 9%,
+    var(--preview-surface)
+  );
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--preview-accent) 10%, transparent);
 }
 
 .logo {
@@ -287,8 +337,12 @@
     padding-inline: 1rem !important;
   }
 }
-.publicSurface [data-date-field] { padding-inline: 0 !important; }
-.publicSurface [data-date-field] input { font-size: 16px; }
+.publicSurface [data-date-field] {
+  padding-inline: 0 !important;
+}
+.publicSurface [data-date-field] input {
+  font-size: 16px;
+}
 .publicSurface input[type="radio"] {
   width: 20px;
   height: 20px;

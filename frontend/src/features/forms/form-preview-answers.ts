@@ -1,3 +1,4 @@
+import { normalizePhoneNumber } from "@linktree/types/phone-number.cjs";
 import {
   isProductConfigured,
   productQuantities,
@@ -105,13 +106,7 @@ export function canSubmitQuestions(
       if (question.type === "email")
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
       if (question.type === "phone") {
-        const code = phoneCountryCodes[question.id] || "964";
-        let digits = value.replace(/[\s()-]/g, "");
-        if (digits.startsWith("+")) {
-          if (!digits.startsWith(`+${code}`)) return false;
-          digits = digits.slice(code.length + 1);
-        } else if (code === "964") digits = digits.replace(/^0/, "");
-        return /^\d{4,14}$/.test(digits) && code.length + digits.length <= 15;
+        return normalizePhoneNumber(value, phoneCountryCodes[question.id] || "964") !== null;
       }
       if (question.type === "date")
         return (

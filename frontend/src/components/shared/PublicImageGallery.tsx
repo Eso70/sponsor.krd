@@ -1,8 +1,9 @@
 "use client";
+import styles from "./PublicImageGallery.module.css";
 import { Tooltip } from "@/components/shared/Tooltip";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { isLocalRasterImage as isFormImage } from "@/lib/images/local-raster-image";
 import type { ImageMediaCopy } from "./image-media-copy";
 import { FullscreenImageViewer } from "@/components/shared/FullscreenImageViewer";
@@ -22,6 +23,8 @@ export function PublicImageGallery({
   imageTitle,
   banner = false,
   eager = false,
+  cover = false,
+  compact = false,
   copy,
   onImageOpen,
   onSlideChange,
@@ -36,15 +39,22 @@ export function PublicImageGallery({
   imageTitle?: string;
   banner?: boolean;
   eager?: boolean;
+  cover?: boolean;
+  compact?: boolean;
   copy: ImageMediaCopy;
   onImageOpen?: (index: number) => void;
   onSlideChange?: (index: number) => void;
 }) {
   const [position, setPosition] = useState(0);
+  const [snapping, setSnapping] = useState(false);
+  const [failedImages, setFailedImages] = useState<string[]>([]);
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [touching, setTouching] = useState(false);
+  const [mouseDragging, setMouseDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const mouseStart = useRef<{ x: number; y: number; id: number } | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
   const logoSize = avatar
@@ -60,24 +70,53 @@ export function PublicImageGallery({
   const imageLabel =
     imageTitle ?? (logo ? copy.logo : option ? copy.options : copy.banner);
   logo = logo || avatar;
-  const safeImages = (banner && !carousel ? images.slice(0, 1) : images).filter(isFormImage);
+  const safeImages = (banner && !carousel ? images.slice(0, 1) : images).filter(
+    (source) => isFormImage(source) && !failedImages.includes(source),
+  );
   const current = carousel
-    ? Math.min(position, Math.max(0, safeImages.length - 1))
+    ? ((position % (safeImages.length || 1)) + safeImages.length) %
+      (safeImages.length || 1)
     : 0;
   const canMove = carousel && safeImages.length > 1;
   const move = (offset: number) => {
-    if (!canMove) return;
+    if (!canMove || position < 0 || position >= safeImages.length) return;
     const next = (current + offset + safeImages.length) % safeImages.length;
-    setPosition(next);
+    setPosition(current + offset);
     onSlideChange?.(next);
   };
+  // Edge clones continue the same movement in either direction. Once the
+  // transition finishes, jump invisibly to the matching real slide.
   useEffect(() => {
-    if (!banner || !canMove || openedIndex !== null || hovered || focused || touching) return;
+    if (!canMove || (position >= 0 && position < safeImages.length)) return;
+    const timer = setTimeout(() => {
+      setSnapping(true);
+      setPosition(current);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [canMove, position, current, safeImages.length]);
+  useEffect(() => {
+    if (!snapping) return;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setSnapping(false));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [snapping]);
+  useEffect(() => {
+    if (
+      !banner ||
+      !canMove ||
+      openedIndex !== null ||
+      hovered ||
+      focused ||
+      touching ||
+      mouseDragging
+    )
+      return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
       clearTimeout(timer);
       if (document.hidden) return;
-      timer = setTimeout(() => setPosition((current + 1) % safeImages.length), 3000);
+      timer = setTimeout(() => setPosition(current + 1), 3000);
     };
     schedule();
     document.addEventListener("visibilitychange", schedule);
@@ -85,11 +124,21 @@ export function PublicImageGallery({
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", schedule);
     };
-  }, [banner, canMove, current, safeImages.length, openedIndex, hovered, focused, touching]);
+  }, [
+    banner,
+    canMove,
+    current,
+    safeImages.length,
+    openedIndex,
+    hovered,
+    focused,
+    touching,
+    mouseDragging,
+  ]);
   if (!safeImages.length && !placeholder) return null;
-  const image = safeImages.length ? (
+  const renderImage = (source: string, active = true) => (
     <Image
-      unoptimized={safeImages[current].startsWith("data:")}
+      unoptimized={source.startsWith("data:")}
       sizes={
         option
           ? "56px"
@@ -99,23 +148,31 @@ export function PublicImageGallery({
               ? "100vw"
               : "(min-width: 960px) 896px, 100vw"
       }
-      loading={eager ? "eager" : "lazy"}
-      fetchPriority={eager ? "high" : "auto"}
-      src={safeImages[current]}
+      loading={eager && active ? "eager" : "lazy"}
+      fetchPriority={eager && active ? "high" : "auto"}
+      src={source}
       width={option ? 56 : logo ? logoSize : 400}
       height={option ? 56 : logo ? logoSize : banner ? 144 : 112}
+      onError={() =>
+        setFailedImages((failed) =>
+          failed.includes(source) ? failed : [...failed, source],
+        )
+      }
+      draggable={false}
       alt=""
       className={
         option
           ? "size-14 object-cover"
           : logo
             ? `${logoClass} object-cover`
-            : banner
-              ? "block h-auto w-full object-contain"
-              : "h-28 w-full object-cover"
+            : cover
+              ? "block h-full w-full object-cover"
+              : banner
+                ? "block h-auto w-full object-contain"
+                : "h-28 w-full object-cover"
       }
     />
-  ) : null;
+  );
   return (
     <div
       data-form-media={
@@ -129,15 +186,23 @@ export function PublicImageGallery({
                 ? "option"
                 : "image"
       }
-      className={`relative overflow-hidden ${option ? "size-14 shrink-0 rounded-lg" : logo ? `${logoClass} rounded-full border border-slate-400/20` : "w-full"}`}
+      className={`relative overflow-hidden ${cover ? (compact ? "h-12 w-20 shrink-0 rounded-lg" : "aspect-[3/1] w-full") : option ? "size-14 shrink-0 rounded-lg" : logo ? `${logoClass} rounded-full border border-slate-400/20` : "w-full"}`}
       style={canMove ? { touchAction: "pan-y pinch-zoom" } : undefined}
-      onPointerEnter={(event) => { if (event.pointerType === "mouse") setHovered(true); }}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setHovered(true);
+      }}
       onPointerLeave={() => setHovered(false)}
       onFocusCapture={() => setFocused(true)}
-      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false); }}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setFocused(false);
+      }}
       onTouchStart={(event) => {
         swiped.current = false;
-        if (!canMove || event.touches.length !== 1) { touchStart.current = null; return; }
+        if (!canMove || event.touches.length !== 1) {
+          touchStart.current = null;
+          return;
+        }
         const touch = event.touches[0];
         touchStart.current = { x: touch.clientX, y: touch.clientY };
         setTouching(true);
@@ -148,32 +213,128 @@ export function PublicImageGallery({
         setTouching(false);
         const touch = event.changedTouches[0];
         if (!start || !touch) return;
-        const dx = touch.clientX - start.x, dy = touch.clientY - start.y;
+        const dx = touch.clientX - start.x,
+          dy = touch.clientY - start.y;
         if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.25) {
           swiped.current = true;
           move(dx < 0 ? 1 : -1);
         }
       }}
-      onTouchCancel={() => { touchStart.current = null; swiped.current = false; setTouching(false); }}
+      onTouchCancel={() => {
+        touchStart.current = null;
+        swiped.current = false;
+        setTouching(false);
+      }}
       onClickCapture={(event) => {
         if (!swiped.current) return;
         swiped.current = false;
-        event.preventDefault(); event.stopPropagation();
+        event.preventDefault();
+        event.stopPropagation();
       }}
     >
       {safeImages.length ? (
-        <Tooltip content={`${copy.preview}: ${imageLabel}`}><button
-          data-image-preview-trigger
-          type="button"
-          aria-label={`${copy.preview}: ${imageLabel}`}
-          onClick={() => { setOpenedIndex(current); onImageOpen?.(current); }}
-          className="block w-full cursor-zoom-in"
-        >
-          {image}
-        </button></Tooltip>
+        <Tooltip content={`${copy.preview}: ${imageLabel}`}>
+          <button
+            data-image-preview-trigger
+            type="button"
+            aria-label={`${copy.preview}: ${imageLabel}`}
+            onClick={() => {
+              setOpenedIndex(current);
+              onImageOpen?.(current);
+            }}
+            draggable={false}
+            onPointerDown={(event) => {
+              swiped.current = false;
+              if (
+                !canMove ||
+                position < 0 ||
+                position >= safeImages.length ||
+                event.pointerType !== "mouse" ||
+                event.button !== 0
+              )
+                return;
+              mouseStart.current = {
+                x: event.clientX,
+                y: event.clientY,
+                id: event.pointerId,
+              };
+              setMouseDragging(true);
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              const start = mouseStart.current;
+              if (!start || start.id !== event.pointerId) return;
+              const dx = event.clientX - start.x;
+              const dy = event.clientY - start.y;
+              if (Math.abs(dx) > 5 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+                swiped.current = true;
+                setDragOffset(dx);
+                event.preventDefault();
+              }
+            }}
+            onPointerUp={(event) => {
+              const start = mouseStart.current;
+              if (!start || start.id !== event.pointerId) return;
+              mouseStart.current = null;
+              setMouseDragging(false);
+              setDragOffset(0);
+              const dx = event.clientX - start.x;
+              const dy = event.clientY - start.y;
+              if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+                swiped.current = true;
+                move(dx < 0 ? 1 : -1);
+              }
+              if (event.currentTarget.hasPointerCapture?.(event.pointerId))
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onLostPointerCapture={() => {
+              mouseStart.current = null;
+              setMouseDragging(false);
+              setDragOffset(0);
+            }}
+            onPointerCancel={() => {
+              mouseStart.current = null;
+              swiped.current = false;
+              setMouseDragging(false);
+              setDragOffset(0);
+            }}
+            className={`block w-full ${cover ? "h-full" : ""} ${canMove ? (mouseDragging ? "cursor-grabbing select-none" : "cursor-grab select-none") : "cursor-zoom-in"}`}
+          >
+            {canMove ? (
+              <span
+                className={`relative block overflow-hidden ${cover ? "h-full" : ""}`}
+                dir="ltr"
+              >
+                {[
+                  safeImages[safeImages.length - 1],
+                  ...safeImages,
+                  safeImages[0],
+                ].map((source, index) => (
+                  <span
+                    key={`${source}-${index}`}
+                    data-current-slide={index === position + 1}
+                    aria-hidden={index !== position + 1}
+                    className={`${styles.slide} ${cover ? styles.coverSlide : ""} ${mouseDragging || snapping ? styles.draggingSlide : ""}`}
+                    style={{
+                      position:
+                        index === position + 1 ? "relative" : "absolute",
+                      transform: dragOffset
+                        ? `translateX(calc(${(index - position - 1) * 100}% + ${dragOffset}px))`
+                        : `translateX(${(index - position - 1) * 100}%)`,
+                    }}
+                  >
+                    {renderImage(source, index === position + 1)}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              renderImage(safeImages[current])
+            )}
+          </button>
+        </Tooltip>
       ) : (
         <div
-          className={`flex items-center justify-center bg-slate-400/10 ${logo ? logoClass : banner ? "h-36" : "h-28"}`}
+          className={`flex items-center justify-center bg-slate-400/10 ${cover ? "h-full" : logo ? logoClass : banner ? "h-36" : "h-28"}`}
         >
           <ImageIcon
             className={`${logo ? "size-5" : "size-10"} opacity-30`}
@@ -181,30 +342,30 @@ export function PublicImageGallery({
           />
         </div>
       )}
-      {carousel && safeImages.length > 1 && (
-        <div
-          className="pointer-events-none absolute inset-x-2 top-1/2 flex -translate-y-1/2 items-center justify-between text-white"
+      {canMove && (
+        <span
+          className={`absolute inset-x-0 flex items-center justify-center ${cover && !compact ? "top-1" : "bottom-1"}`}
           dir="ltr"
         >
-          <Tooltip content={copy.back}><button
-            data-media-control
-            type="button"
-            aria-label={copy.back}
-            onClick={() => move(-1)}
-            className="pointer-events-auto flex size-7 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60"
-          >
-            <ChevronLeft className="size-4" />
-          </button></Tooltip>
-          <Tooltip content={copy.next}><button
-            data-media-control
-            type="button"
-            aria-label={copy.next}
-            onClick={() => move(1)}
-            className="pointer-events-auto flex size-7 items-center justify-center rounded-full bg-black/40 transition hover:bg-black/60"
-          >
-            <ChevronRight className="size-4" />
-          </button></Tooltip>
-        </div>
+          {safeImages.map((source, index) => (
+            <button
+              key={`${source}-${index}`}
+              data-media-control
+              type="button"
+              aria-label={`${imageLabel} ${index + 1} / ${safeImages.length}`}
+              aria-current={index === current ? "true" : undefined}
+              onClick={() => {
+                if (index !== current) move(index - current);
+              }}
+              className="flex size-7 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <span
+                aria-hidden
+                className={`${styles.dot} ${index === current ? styles.activeDot : ""}`}
+              />
+            </button>
+          ))}
+        </span>
       )}
       {openedIndex !== null && safeImages.length > 0 && (
         <FullscreenImageViewer

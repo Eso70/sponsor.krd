@@ -137,6 +137,26 @@ describe('form configuration and response validation', () => {
       ),
     ).toThrow();
   });
+  it.each(['750123456', '75012345678', '075012345678'])(
+    'rejects an incorrect Iraqi mobile length on the server (%s)',
+    (phone) => {
+      expect(() =>
+        validateSubmission({ ...input(), answers: { phone } }, form()),
+      ).toThrow('Invalid phone number');
+    },
+  );
+  it('uses the selected international country rules when accepting a response', () => {
+    expect(
+      validateSubmission(
+        {
+          ...input(),
+          answers: { phone: '0612345678' },
+          phoneCountryCodes: { phone: '39' },
+        },
+        form(),
+      ).answers[0].value,
+    ).toBe('+390612345678');
+  });
   it('requires a fresh privacy acknowledgement and preserves structural fields', () => {
     expect(() =>
       validateSubmission({ ...input(), privacyVersion: '2020-01-01' }, form()),

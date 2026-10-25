@@ -13,13 +13,22 @@ import { formsCopy } from "../forms-copy";
 describe("form loading placeholders", () => {
   it("matches the table view without interactive placeholder controls", () => {
     const { container } = render(
-      <PageManagementCollection loading loadingLabel="Loading" viewMode="table" columns={7}>{null}</PageManagementCollection>,
+      <PageManagementCollection
+        loading
+        loadingLabel="Loading"
+        viewMode="table"
+        columns={7}
+      >
+        {null}
+      </PageManagementCollection>,
     );
     expect(screen.getByRole("status", { name: "Loading" })).toHaveAttribute(
       "aria-busy",
       "true",
     );
-    expect(container.querySelectorAll("[data-skeleton-table-row]")).toHaveLength(6);
+    expect(
+      container.querySelectorAll("[data-skeleton-table-row]"),
+    ).toHaveLength(6);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
   for (const locale of ["en", "ar", "ckb"] as const) {
@@ -55,7 +64,9 @@ describe("form loading placeholders", () => {
         <FormsStatsSkeleton copy={copy} compact label={copy.loading} />,
       );
       expect(screen.queryByText(copy.interactions)).not.toBeInTheDocument();
-      expect(stats.container.querySelectorAll("[data-stat-card]")).toHaveLength(6);
+      expect(stats.container.querySelectorAll("[data-stat-card]")).toHaveLength(
+        6,
+      );
       expect(screen.queryByText(copy.total)).not.toBeInTheDocument();
       stats.unmount();
       render(<FormResponsesSkeleton copy={copy} />);
@@ -79,22 +90,64 @@ describe("form loading placeholders", () => {
   });
 });
 
-
-it.each(["grid", "table"] as const)("shares the %s loading layout with Pages and contains no fake buttons", (viewMode) => {
-  const { container } = render(<PageManagementCollection loading loadingLabel="Loading forms" viewMode={viewMode} selectable columns={8}>{null}</PageManagementCollection>);
-  expect(screen.getAllByRole("status")).toHaveLength(1);
-  expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-  if (viewMode === "grid") expect(container.querySelectorAll("article:not([data-stat-card])")).toHaveLength(6);
-  else expect(container.querySelectorAll("[data-skeleton-table-row]")).toHaveLength(6);
-});
+it.each(["grid", "table"] as const)(
+  "shares the %s loading layout with Pages and contains no fake buttons",
+  (viewMode) => {
+    const { container } = render(
+      <PageManagementCollection
+        loading
+        loadingLabel="Loading forms"
+        viewMode={viewMode}
+        selectable
+        columns={8}
+      >
+        {null}
+      </PageManagementCollection>,
+    );
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    if (viewMode === "grid")
+      expect(
+        container.querySelectorAll("article:not([data-stat-card])"),
+      ).toHaveLength(6);
+    else
+      expect(
+        container.querySelectorAll("[data-skeleton-table-row]"),
+      ).toHaveLength(6);
+  },
+);
 
 it("uses one management-page loading announcement with the matching six statistic cards", () => {
   const copy = formsCopy("en");
   const { container } = render(<FormsPageSkeleton copy={copy} />);
   expect(screen.getAllByRole("status")).toHaveLength(1);
-  expect(screen.getByRole("status", { name: copy.loading })).toBeInTheDocument();
+  expect(
+    screen.getByRole("status", { name: copy.loading }),
+  ).toBeInTheDocument();
   expect(container.querySelectorAll("[data-stat-card]")).toHaveLength(6);
-  expect(container.querySelectorAll("article:not([data-stat-card])")).toHaveLength(6);
+  expect(
+    container.querySelectorAll("article:not([data-stat-card])"),
+  ).toHaveLength(6);
   expect(screen.queryByRole("button")).not.toBeInTheDocument();
+});
+
+it("reserves compact banner space for Form table loading", () => {
+  const { container } = render(
+    <PageManagementCollection
+      showTableBanner
+      loading
+      loadingLabel="Loading forms"
+      viewMode="table"
+      selectable
+      columns={8}
+    >
+      {null}
+    </PageManagementCollection>,
+  );
+  for (const row of container.querySelectorAll(
+    "[data-skeleton-table-row], [data-skeleton-mobile-row]",
+  )) {
+    expect(row.querySelector(".h-12.w-20")).not.toBeNull();
+  }
 });

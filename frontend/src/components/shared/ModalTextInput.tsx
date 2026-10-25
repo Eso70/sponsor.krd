@@ -3,6 +3,7 @@
 import { useId, type InputHTMLAttributes, type ReactNode } from "react";
 import { modalInputClass } from "@/components/shared/modal-input-styles";
 import { SHARED_CONTROL_CLASS, SHARED_CONTROL_ERROR_CLASS } from "./shared-control-styles";
+import { inputMaxLength } from "./input-limits";
 import { FieldInputError } from "./FieldInputError";
 import errorStyles from "./FieldInputError.module.css";
 
@@ -29,6 +30,7 @@ export function ModalTextInput({
   const input = (
     <input
       {...props}
+      maxLength={inputMaxLength(props.type, props.maxLength)}
       className={modalInputClass(
         invalid,
         `${suffix ? "min-w-0 rounded-e-none! sm:rounded-e-none! border-e-0" : ""} ${className} ${endAction ? "!pe-32" : ""} ${error && hasValue ? errorStyles.withMessage : ""}`,

@@ -674,67 +674,9 @@ export class LinktreesService {
           [businessId],
         );
         if (existingDefault.rows.length > 0) {
-          const defaultId = existingDefault.rows[0].id;
-          const nextSeoName = seoName || existingDefault.rows[0].seo_name;
-          const updRes = await client.query<LinktreeRow>(
-            `UPDATE linktrees SET
-              headline = $1, slogan = $2, slogan_color = $15, description = $14, logo = $3, background_color = $4,
-              template_key = $5, template_config = $6::jsonb, whatsapp_modal_enabled = $7,
-              footer_text = $8, footer_phone = $9, footer_hidden = $10,
-              seo_name = $13, updated_at = NOW()
-             WHERE id = $11 AND business_id = $12
-             RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
-                       template_key, template_config, whatsapp_modal_enabled,
-                       footer_text, footer_phone, footer_hidden, status, is_default, created_at, updated_at`,
-            [
-              data.name,
-              data.subtitle || null,
-              data.image || null,
-              data.background_color || '#0f121d',
-              config.templateKey,
-              JSON.stringify(config),
-              whatsappEnabled,
-              data.footer_text || '',
-              data.footer_phone || null,
-              data.footer_hidden ?? false,
-              defaultId,
-              businessId,
-              nextSeoName,
-              data.description || null,
-              data.subtitle_color || null,
-            ],
+          throw new ConflictException(
+            'A default page already exists. Edit the existing page instead.',
           );
-          const updated = updRes.rows[0];
-          await client.query(
-            'DELETE FROM whatsapp_questions WHERE linktree_id = $1',
-            [defaultId],
-          );
-          await client.query('DELETE FROM links WHERE linktree_id = $1', [
-            defaultId,
-          ]);
-          for (let i = 0; i < linksToCreate.length; i++) {
-            const link = linksToCreate[i];
-            await client.query(
-              `INSERT INTO links (linktree_id, business_id, platform, url, display_name, description, default_message, display_order, original_input, country_code, gps_lat, gps_lng, custom_color, custom_icon) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-              [
-                defaultId,
-                businessId,
-                link.platform,
-                link.url,
-                link.display_name,
-                link.description,
-                link.default_message,
-                i,
-                link.original_input,
-                link.country_code,
-                link.gps_lat,
-                link.gps_lng,
-                link.custom_color,
-                link.custom_icon,
-              ],
-            );
-          }
-          return { ...updated, template_config: config };
         }
       }
 
@@ -1618,8 +1560,11 @@ export class LinktreesService {
     return mapped;
   }
 
-  async getDefaultLinktree(businessId: string) {
-    const res = await this.databaseService.query<LinktreeRow>(
+  async getDefaultLinktree(
+    businessId: string,
+    reader: Queryable = this.databaseService,
+  ) {
+    const res = await reader.query<LinktreeRow>(
       `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
               lt.template_key, lt.template_config, lt.whatsapp_modal_enabled,
               lt.footer_text, lt.footer_phone, lt.footer_hidden, lt.status, lt.is_pinned, lt.is_archived, lt.archived_at, lt.is_default,
@@ -1631,7 +1576,7 @@ export class LinktreesService {
       [businessId],
     );
     if (!res.rows || res.rows.length === 0) return null;
-    return this.mapLinktreeRow(this.databaseService, res.rows[0]);
+    return this.mapLinktreeRow(reader, res.rows[0]);
   }
 
   /**
@@ -1653,13 +1598,14 @@ export class LinktreesService {
     businessId: string,
     subdomain: string | null | undefined,
     name: string | null | undefined,
+    reader: Queryable = this.databaseService,
   ): Promise<string> {
     const candidate =
       slugifyLinktreeName(subdomain) ||
       slugifyLinktreeName(name) ||
       `default-${businessId.slice(0, 8)}`;
 
-    const taken = await this.databaseService.query<{ seo_name: string }>(
+    const taken = await reader.query<{ seo_name: string }>(
       `SELECT seo_name FROM linktrees
         WHERE business_id = $1 AND seo_name LIKE $2 || '%'`,
       [businessId, candidate],
@@ -1678,37 +1624,51 @@ export class LinktreesService {
     const existing = await this.getDefaultLinktree(businessId);
     if (existing) return existing;
 
-    const businessRes = await this.databaseService.query<{
-      name: string;
-      phone: string | null;
-      subdomain: string | null;
-      logo: string | null;
-    }>(
-      `SELECT a.name, a.phone, a.subdomain, b.logo
+    return this.databaseService.transaction(async (client) => {
+      // Share the creation lock with ordinary/default create requests. Repeated
+      // requests return the saved page, never seed over it or its contact links.
+      await client.query(
+        'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+        [businessId],
+      );
+      const saved = await this.getDefaultLinktree(businessId, client);
+      if (saved) return saved;
+
+      const businessRes = await client.query<{
+        name: string;
+        phone: string | null;
+        subdomain: string | null;
+        logo: string | null;
+      }>(
+        `SELECT a.name, a.phone, a.subdomain, b.logo
        FROM businesses a
        LEFT JOIN business_branding b ON b.business_id = a.id
        WHERE a.id = $1`,
-      [businessId],
-    );
-    const b = businessRes.rows[0];
-    if (!b) throw new NotFoundException('Business not found');
+        [businessId],
+      );
+      const b = businessRes.rows[0];
+      if (!b) throw new NotFoundException('Business not found');
 
-    const uid = this.generateUid();
-    const seoName = await this.defaultPageSlug(businessId, b.subdomain, b.name);
-    const config = this.normalizeTemplateConfig(
-      null,
-      DEFAULT_LINKTREE_TEMPLATE_KEY,
-    );
-    // Same wording the editor puts on a hand-made page; the normalizer's
-    // English placeholders are only there for rows that predate it.
-    config.whatsapp_modal = {
-      ...config.whatsapp_modal,
-      enabled: DEFAULT_LINKTREE_WHATSAPP_ENABLED,
-      title: DEFAULT_LINKTREE_WHATSAPP_MODAL_TITLE,
-      subtitle: DEFAULT_LINKTREE_WHATSAPP_MODAL_SUBTITLE,
-    };
+      const uid = this.generateUid();
+      const seoName = await this.defaultPageSlug(
+        businessId,
+        b.subdomain,
+        b.name,
+        client,
+      );
+      const config = this.normalizeTemplateConfig(
+        null,
+        DEFAULT_LINKTREE_TEMPLATE_KEY,
+      );
+      // Same wording the editor puts on a hand-made page; the normalizer's
+      // English placeholders are only there for rows that predate it.
+      config.whatsapp_modal = {
+        ...config.whatsapp_modal,
+        enabled: DEFAULT_LINKTREE_WHATSAPP_ENABLED,
+        title: DEFAULT_LINKTREE_WHATSAPP_MODAL_TITLE,
+        subtitle: DEFAULT_LINKTREE_WHATSAPP_MODAL_SUBTITLE,
+      };
 
-    const row = await this.databaseService.transaction(async (client) => {
       const ltRes = await client.query<LinktreeRow>(
         `INSERT INTO linktrees (
           business_id, headline, slogan, description, seo_name, uid, logo, background_color,
@@ -1754,15 +1714,17 @@ export class LinktreesService {
           [created.id, question.text, question.message, order],
         );
       }
-      return created;
+      // Seed contact buttons before committing, so no later seeding request can
+      // replace links authored immediately after the page becomes visible.
+      for (const [order, link] of defaultContactLinks(b.phone).entries()) {
+        await client.query(
+          `INSERT INTO links (linktree_id, business_id, platform, url, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [created.id, businessId, link.platform, link.url, order],
+        );
+      }
+      return this.mapLinktreeRow(client, created);
     });
-
-    const contactLinks = defaultContactLinks(b.phone);
-    if (contactLinks.length) {
-      await this.linksService.syncLinks(row.id, contactLinks, businessId);
-    }
-
-    return this.mapLinktreeRow(this.databaseService, row);
   }
 
   async deleteLinktree(

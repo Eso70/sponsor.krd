@@ -124,7 +124,7 @@ banners advance every 3 seconds, pause during hover/focus/touch or full-image
 viewing, and stop while the document is hidden. Horizontal touch swipes move
 one image and wrap around; vertical scrolling and pinch zoom remain native.
 Swipes suppress the following image-open click. Automatic changes do not report
-engagement; manual arrows/swipes use the existing media action callback.
+engagement; manual dots/swipes use the existing media action callback.
 EditorBannerControls keeps carousel thumbnails unobstructed, with replace/crop/
 remove actions below each image and no visible drag grip. Holding the image for
 250 ms starts mouse/touch ordering; ordinary clicks open its preview. The shared
@@ -1141,7 +1141,7 @@ Forms and Linktrees use `features/shared/i18n/page-action-copy.ts` for common ac
 
 Shared report header contents align with the centered report width. Its solid background matches the report body in both themes; only the divider separates them.
 
-Form and Linktree collection cards use ManagementCard media for an edge-to-edge saved banner above their existing details. PageListBanner serves Business and Platform grid covers only; desktop and mobile tables omit banners. It shows the first enabled banner image in saved order, never autoplays, and uses the same neutral tenant-tinted placeholder for absent, disabled or failed images. Grid loading cards reserve the same cover ratio. LinktreeListBanner adapts saved Linktree configuration to the same PageListBanner surface; PageListCardHeader centers the logo halfway over the lower banner edge and centers the title, badges and description beneath it. Grid traffic cells share the same centered alignment. Existing Linktree table logos remain visible.
+Form and Linktree collection cards use ManagementCard media for an edge-to-edge saved banner above their existing details. PageListBanner supplies static covers and missing-image fallbacks; Linktree desktop and mobile tables omit banners. Forms use FormCollectionBanner for both grid and compact table media, including the shared carousel. Static covers show the first enabled banner image in saved order, never autoplay, and uses the same neutral tenant-tinted placeholder for absent, disabled or failed images. Grid loading cards reserve the same cover ratio. LinktreeListBanner adapts saved Linktree configuration to the same PageListBanner surface; PageListCardHeader centers the logo halfway over the lower banner edge and centers the title, badges and description beneath it. Grid traffic cells share the same centered alignment. Existing Linktree table logos remain visible.
 
 Linktree and Form collection grids, tables and mobile cards omit blank optional text (including whitespace-only slogans/descriptions) instead of rendering dash placeholders. Text blocks and their spacing disappear; table cells remain aligned with their headers. Missing optional creation dates omit their card metadata label and leave table cells empty. Real zero traffic values remain visible.
 
@@ -1481,3 +1481,31 @@ equal-width buttons and white active text/icons. Compact toolbar choices retain
 their fitted group width and scale down on mobile. Keyboard Home/End and direction-aware arrow navigation remain intact.
 Sidebar page navigation uses the unframed vertical variant and moving selection
 in both dashboards, with a matching loading layout; it has no surrounding background. Footer actions remain separate.
+
+EditorSection is the shared accordion for Linktree, Form and Card editors in
+Business and Platform drawers. Meaningful section icons come from explicit typed
+props; form content blocks reuse the same icon catalogue as the component picker.
+The entire expanded section has one soft tenant tint across its header and content,
+with a logical-start accent line in the header. Closed sections stay neutral.
+Collapsed headers show bounded live summaries (counts, entered titles or off/empty
+states) in the editor language. Summaries are descriptions, so accessible toggle
+names remain stable. Headers wrap titles and constrain summaries on narrow screens;
+section groups have 16px mobile/20px desktop spacing. A single expanded section is
+maintained by each editor. Switches, drag handles and delete actions remain sibling
+controls outside the full-width expand button and never toggle a section implicitly.
+
+PublicImageGallery also supports primary-button mouse dragging with pointer capture
+and live horizontal movement. Vertical motion and ordinary image-preview clicks
+remain available; completed drags suppress image opening. Its pagination dots
+use the theme accent at 4px (10px active width), retaining larger click targets.
+
+Form collection grids and tables use FormCollectionBanner in both dashboards.
+The owner-scoped summary projects saved banner mode and images without fetching
+full definitions per row. Enabled carousels reuse PublicImageGallery with a
+three-second interval, theme dots, touch swipes and mouse dragging. Grid covers
+retain their 3:1 geometry; table rows and mobile cards use compact 80×48 media.
+Table loading placeholders reserve the same media space. Missing or failed
+images retain a shared fallback; disabled banners never expose saved media.
+PublicImageGallery uses edge clones for seamless forward and backward wrapping,
+then resets to the identical real slide without animating the reset. Automatic
+changes remain presentation only and dashboard collections have no tracker.

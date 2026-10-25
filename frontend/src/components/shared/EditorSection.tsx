@@ -2,13 +2,15 @@
 
 import { SHARED_CARD_CLASS } from "./shared-surface-styles";
 import { useId, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import styles from "./EditorSection.module.css";
 import { VisibilitySwitch } from "@/components/shared/VisibilitySwitch";
 
 /** Compact accordion shared by dashboard editors. */
 export function EditorSection({
   title,
+  icon: Icon,
+  summary,
   disabled = false,
   open,
   onToggle,
@@ -23,6 +25,8 @@ export function EditorSection({
   reorderGroup,
 }: {
   title: string;
+  icon?: LucideIcon;
+  summary?: string;
   disabled?: boolean;
   open: boolean;
   onToggle: () => void;
@@ -39,45 +43,47 @@ export function EditorSection({
   const id = useId();
   return (
     <section
+      data-open={open}
       data-reorder-id={reorderId}
       data-reorder-group={reorderGroup}
       className={`${styles.section} ${SHARED_CARD_CLASS} overflow-hidden`}
     >
-      <div className="relative flex items-center gap-3 bg-slate-50/70 px-4 dark:bg-white/[0.03]">
+      <div className={styles.header}>
         {leading}
         <button
           type="button"
           disabled={disabled}
+          data-has-icon={!!(Icon || step) || undefined}
           aria-expanded={open}
           aria-controls={id}
+          aria-describedby={!open && summary ? `${id}-summary` : undefined}
           onClick={onToggle}
-          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 py-4 text-start text-sm font-bold text-slate-700 dark:text-slate-200"
+          className={styles.toggle}
         >
-          <span
-            className={`flex min-w-0 items-center gap-3 ${actions ? "pe-8" : ""}`}
-          >
-            {step && (
-              <span
-                aria-hidden
-                className="theme-soft flex size-7 shrink-0 items-center justify-center rounded-lg text-xs"
-              >
-                {step}
+          <span className={styles.identity}>
+            {(Icon || step) && (
+              <span aria-hidden="true" className={styles.icon}>
+                {Icon ? <Icon className="size-[18px]" /> : step}
               </span>
             )}
-            <span className="truncate">{title}</span>
+            <span className={styles.title}>{title}</span>
           </span>
-          <ChevronDown
-            aria-hidden
-            className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-          />
+          <span className={styles.trailing}>
+            {!open && summary && (
+              <span
+                id={`${id}-summary`}
+                aria-hidden="true"
+                className={styles.summary}
+              >
+                {summary}
+              </span>
+            )}
+            <span aria-hidden="true" className={styles.chevron}>
+              <ChevronDown className="size-4" />
+            </span>
+          </span>
         </button>
-        {actions && (
-          <div
-            className={`${styles.actions} absolute end-11 top-1/2 -translate-y-1/2`}
-          >
-            {actions}
-          </div>
-        )}
+        {actions && <div className={styles.actions}>{actions}</div>}
         {onEnabled && (
           <VisibilitySwitch
             compact
@@ -87,11 +93,7 @@ export function EditorSection({
           />
         )}
       </div>
-      <div
-        id={id}
-        hidden={!open}
-        className="space-y-4 border-t border-slate-200/60 p-4 dark:border-white/[0.06]"
-      >
+      <div id={id} hidden={!open} className={`${styles.body} space-y-4`}>
         {children}
       </div>
     </section>

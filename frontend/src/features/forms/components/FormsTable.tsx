@@ -1,4 +1,8 @@
-import { PageSelectionCheckbox, usePageSelection } from "@/components/shared/PageSelection";
+import { FormCollectionBanner } from "./FormCollectionBanner";
+import {
+  PageSelectionCheckbox,
+  usePageSelection,
+} from "@/components/shared/PageSelection";
 import { PageListMobileCard } from "@/components/shared/PageListMobileCard";
 import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 import { PageListUrl } from "@/components/shared/PageListUrl";
@@ -46,7 +50,17 @@ export function FormsTable({
         next: copy.next,
       }}
       columns={[
-        ...(selection ? [{ key: "selection", header: <span className="sr-only">{selection.selectLabel}</span>, width: "w-12" }] : []),
+        ...(selection
+          ? [
+              {
+                key: "selection",
+                header: (
+                  <span className="sr-only">{selection.selectLabel}</span>
+                ),
+                width: "w-12",
+              },
+            ]
+          : []),
         { key: "name", header: copy.name, width: "w-32 sm:w-40" },
         {
           key: "description",
@@ -92,8 +106,15 @@ export function FormsTable({
           className={MANAGEMENT_TABLE_ROW_CLASS}
           style={{ contentVisibility: "auto", containIntrinsicSize: "80px" }}
         >
-          {selection && <td className="px-2 py-3"><PageSelectionCheckbox id={form.id} name={form.name} /></td>}
+          {selection && (
+            <td className="px-2 py-3">
+              <PageSelectionCheckbox id={form.id} name={form.name} />
+            </td>
+          )}
           <td className="px-2 py-3 sm:px-3">
+            <div className="mb-2">
+              <FormCollectionBanner form={form} locale={locale} compact />
+            </div>
             <span
               className="mb-1 block wrap-break-word text-xs font-semibold text-gray-900 sm:text-sm"
               dir="auto"
@@ -141,14 +162,36 @@ export function FormsTable({
         </tr>
       )}
       renderCard={(form) => (
-        <PageListMobileCard title={form.name}
+        <PageListMobileCard
+          title={form.name}
+          image={<FormCollectionBanner form={form} locale={locale} compact />}
           selection={<PageSelectionCheckbox id={form.id} name={form.name} />}
           badges={<FormCollectionBadges form={form} copy={copy} />}
-          description={form.description?.trim() ? <p className="line-clamp-2 text-xs text-gray-600 [overflow-wrap:anywhere]" dir="auto">{form.description.trim()}</p> : undefined}
+          description={
+            form.description?.trim() ? (
+              <p
+                className="line-clamp-2 text-xs text-gray-600 [overflow-wrap:anywhere]"
+                dir="auto"
+              >
+                {form.description.trim()}
+              </p>
+            ) : undefined
+          }
           actions={<FormRowActions form={form} copy={copy} actions={actions} />}
         >
-          {form.slug && <PageListUrl url={getAbsoluteUrl(form.slug, "/form")} displayUrl={`/form/${form.slug}`} labels={copy} />}
-          <PageListTraffic views={form.views ?? 0} interactions={form.interactions ?? 0} labels={copy} compact />
+          {form.slug && (
+            <PageListUrl
+              url={getAbsoluteUrl(form.slug, "/form")}
+              displayUrl={`/form/${form.slug}`}
+              labels={copy}
+            />
+          )}
+          <PageListTraffic
+            views={form.views ?? 0}
+            interactions={form.interactions ?? 0}
+            labels={copy}
+            compact
+          />
         </PageListMobileCard>
       )}
     />

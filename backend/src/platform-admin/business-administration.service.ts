@@ -276,16 +276,6 @@ export class BusinessAdministrationService {
     return trimmed || fallback;
   }
 
-  private defaultTemplateConfig(templateKey?: string | null) {
-    return {
-      templateKey: templateKey || 'spectrum',
-      type: 'simple',
-      buttonStyle: 'pill',
-      buttonGradient: true,
-      whatsapp_modal: { enabled: false, questions: [] },
-    };
-  }
-
   /**
    * Produces a valid PostgreSQL UUID whose first group identifies the owning
    * business. The fingerprint comes from the full immutable business UUID, never a
@@ -849,74 +839,8 @@ export class BusinessAdministrationService {
 
         await this.replaceNormalizedTikTok(client, id, resolved.tiktok_configs);
 
-        const templateConfig = this.defaultTemplateConfig(
-          resolved.default_template,
-        );
-        templateConfig.whatsapp_modal.enabled =
-          resolved.default_whatsapp_enabled ?? false;
-
-        await client.query(
-          `UPDATE linktrees
-         SET headline = COALESCE($1, headline), logo = $2, background_color = $3,
-             template_key = $4, template_config = $5::jsonb,
-             whatsapp_modal_enabled = $6, footer_text = $7, footer_phone = $8,
-             footer_hidden = $9, updated_at = NOW()
-         WHERE business_id = $10 AND is_default = true`,
-          [
-            resolved.name,
-            resolved.logo || null,
-            resolved.default_background_color ||
-              resolved.website_color ||
-              '#0f121d',
-            resolved.default_template || 'spectrum',
-            JSON.stringify(templateConfig),
-            resolved.default_whatsapp_enabled ?? false,
-            resolved.default_footer_text || null,
-            resolved.default_footer_phone || null,
-            resolved.default_footer_hidden ?? false,
-            id,
-          ],
-        );
-
-        if (data.links && Array.isArray(data.links)) {
-          const ltRes = await client.query<{ id: string }>(
-            `SELECT id FROM linktrees WHERE business_id = $1 AND is_default = true LIMIT 1`,
-            [id],
-          );
-          if (ltRes.rows.length > 0) {
-            const linktreeId = ltRes.rows[0].id;
-            await client.query(`DELETE FROM links WHERE linktree_id = $1`, [
-              linktreeId,
-            ]);
-            for (let i = 0; i < data.links.length; i++) {
-              const link = data.links[i];
-              await client.query(
-                `INSERT INTO links (
-                 linktree_id, business_id, platform, url, display_name, display_order,
-                 original_input, country_code, gps_lat, gps_lng, custom_color, custom_icon
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-                [
-                  linktreeId,
-                  id,
-                  link.platform,
-                  link.url,
-                  link.display_name || null,
-                  i,
-                  link.metadata?.original_input || null,
-                  link.metadata?.country_code || null,
-                  link.metadata?.gps_lat !== undefined
-                    ? Number(link.metadata.gps_lat)
-                    : null,
-                  link.metadata?.gps_lng !== undefined
-                    ? Number(link.metadata.gps_lng)
-                    : null,
-                  link.metadata?.custom_color || null,
-                  link.metadata?.custom_icon || null,
-                ],
-              );
-            }
-          }
-        }
+        // Business identity and new-page preferences never rewrite authored pages.
+        // Existing Linktrees are edited through their owner-scoped page endpoints.
 
         if (data.subscriptionPlanId) {
           const planRes = await client.query<SubscriptionPlanLookupRow>(

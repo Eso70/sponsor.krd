@@ -48,3 +48,28 @@ describe("submission readiness for dependent answers", () => {
     expect(ready(["Erbil", "One"])).toBe(true);
   });
 });
+
+describe("country-specific phone readiness", () => {
+  const question = { ...createQuestion("phone"), id: "phone", required: true };
+  it.each(["7501234567", "07501234567"])("accepts Iraqi mobile %s", (value) => {
+    expect(
+      canSubmitQuestions([question], { phone: value }, { phone: "964" }),
+    ).toBe(true);
+  });
+  it.each(["750123456", "75012345678", "075012345678"])(
+    "blocks the wrong Iraqi mobile length %s",
+    (value) => {
+      expect(
+        canSubmitQuestions([question], { phone: value }, { phone: "964" }),
+      ).toBe(false);
+    },
+  );
+  it("validates using the currently selected country", () => {
+    expect(
+      canSubmitQuestions([question], { phone: "0612345678" }, { phone: "39" }),
+    ).toBe(true);
+    expect(
+      canSubmitQuestions([question], { phone: "0612345678" }, { phone: "964" }),
+    ).toBe(false);
+  });
+});

@@ -4,7 +4,7 @@ import { PAGE_MANAGEMENT_PAGE_SIZE } from "@/components/shared/page-management";
 import { PageListCardMedia } from "@/components/shared/PageListCardMedia";
 import { pageListLogo } from "@/components/shared/page-list-logo";
 import { PageListCardHeader } from "@/components/shared/PageListCardHeader";
-import { PageListBanner } from "@/components/shared/PageListBanner";
+import { FormCollectionBanner } from "./FormCollectionBanner";
 import { ClipboardList } from "lucide-react";
 import { PagePinButton } from "@/components/shared/PagePinButton";
 import { ManagementGrid } from "@/components/shared/ManagementGrid";
@@ -71,7 +71,9 @@ export function FormsGrid({
           className="text-center"
           media={
             <PageListCardMedia
-              selection={<PageSelectionCheckbox id={form.id} name={form.name} />}
+              selection={
+                <PageSelectionCheckbox id={form.id} name={form.name} />
+              }
               action={
                 <PagePinButton
                   iconOnly
@@ -86,7 +88,7 @@ export function FormsGrid({
                 />
               }
             >
-              <PageListBanner src={form.banner} />
+              <FormCollectionBanner form={form} locale={locale} />
             </PageListCardMedia>
           }
         >
@@ -127,12 +129,12 @@ export function FormsGrid({
             interactions={form.interactions ?? 0}
             labels={copy}
           />
-            <FormRowActions
-              form={form}
-              copy={copy}
-              actions={actions}
-              variant="grid"
-            />
+          <FormRowActions
+            form={form}
+            copy={copy}
+            actions={actions}
+            variant="grid"
+          />
         </ManagementCard>
       )}
     />

@@ -23,7 +23,14 @@ export type FormTextKey =
   | "app"
   | "viewContent";
 export type QuestionType =
-  "short" | "email" | "phone" | "choice" | "conditional" | "date" | "image" | "product";
+  | "short"
+  | "email"
+  | "phone"
+  | "choice"
+  | "conditional"
+  | "date"
+  | "image"
+  | "product";
 export interface ProductPriceBreak {
   minimumQuantity: number | null;
   unitPrice: number | null;
@@ -192,13 +199,28 @@ export interface FormSubmission {
   };
   id: string;
   createdAt: string;
-  answers: { questionId: string; label: string; value: string; products?: FormProductAnswer }[];
+  answers: {
+    questionId: string;
+    label: string;
+    value: string;
+    products?: FormProductAnswer;
+  }[];
   consent: boolean;
   revision: number;
 }
 export interface FormProductAnswer {
   currency: "IQD" | "USD" | "EUR";
-  items: { id: string; name: string; unit: string; quantity: number; unitPrice: number; lineTotal: number; baseUnitPrice?: number; discount?: number; priceBreakMinimum?: number }[];
+  items: {
+    id: string;
+    name: string;
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    baseUnitPrice?: number;
+    discount?: number;
+    priceBreakMinimum?: number;
+  }[];
   total: number;
 }
 export interface FormSubmissionsPage {
@@ -279,7 +301,10 @@ export type FormSummary = Pick<
   | "revision"
   | "submissionCount"
 > & {
-  /** First enabled saved banner image for collection thumbnails. */
+  bannerEnabled?: boolean;
+  bannerMode?: "image" | "carousel";
+  bannerImages?: string[];
+  /** First enabled saved banner image for legacy collection clients. */
   banner?: string | null;
   questionCount?: number;
   questions?: FormQuestion[];

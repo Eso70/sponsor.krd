@@ -1,5 +1,7 @@
 "use client";
+import { formSectionCopy } from "../form-section-copy";
 import { useFormValidation } from "./FormValidationContext";
+import { Contact, ListChecks, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import type { FormDraft } from "../types";
 import type { FormsCopy } from "../forms-copy";
@@ -20,6 +22,7 @@ export function FormCardContentEditor({
   copy: FormsCopy;
   labels: FormEditorCopy;
 }) {
+  const details = formSectionCopy(copy);
   const [open, setOpen] = useState<string | null>("welcome");
   const validation = useFormValidation();
   const activeSection = validation.selected
@@ -40,9 +43,11 @@ export function FormCardContentEditor({
   });
   const background = form.bannerImages?.[0] || form.banner;
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 sm:space-y-5">
       <FormEditorSection
         title={labels.welcome}
+        icon={Contact}
+        summary={form.headline.trim() || details.empty}
         step={1}
         {...section("welcome")}
       >
@@ -65,6 +70,11 @@ export function FormCardContentEditor({
       </FormEditorSection>
       <FormEditorSection
         title={`${copy.questions} (${form.questions.length})`}
+        icon={ListChecks}
+        summary={details.count(
+          "required",
+          form.questions.filter((question) => question.required).length,
+        )}
         step={2}
         {...section("questions")}
       >
@@ -77,6 +87,8 @@ export function FormCardContentEditor({
       </FormEditorSection>
       <FormEditorSection
         title={labels.privacy}
+        icon={ShieldCheck}
+        summary={form.consentRequired ? details.required : details.automatic}
         step={3}
         {...section("privacy")}
       >

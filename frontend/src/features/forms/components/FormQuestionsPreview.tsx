@@ -1,4 +1,5 @@
 "use client";
+import { plainIntegerInput } from "@/lib/utils/numeric-input";
 import { FORM_QUESTION_INPUT_CLASS } from "../form-question-input-styles";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { PhoneNumberInput } from "@/components/shared/PhoneNumberInput";
@@ -148,14 +149,35 @@ export function FormQuestionsPreview({
                 />
               ) : question.type === "choice" ? (
                 question.options.map((option, index) => (
-                  <RadioField key={index} label={option || `${copy.options} ${index + 1}`}
-                    name={`${id}-${question.id}`} value={option}
-                    checked={answers[question.id] === option} required={question.required}
-                    aria-describedby={question.description ? `${id}-${question.id}-description` : undefined}
-                    onChange={(event) => setAnswers((current) => ({ ...current, [question.id]: event.target.value }))}
-                    media={isFormImage(question.optionImages?.[index] ?? "") ?
-                      <FormMediaPreview option imageTitle={option || `${copy.options} ${index + 1}`}
-                        images={[question.optionImages![index]]} copy={copy} /> : undefined} />
+                  <RadioField
+                    key={index}
+                    label={option || `${copy.options} ${index + 1}`}
+                    name={`${id}-${question.id}`}
+                    value={option}
+                    checked={answers[question.id] === option}
+                    required={question.required}
+                    aria-describedby={
+                      question.description
+                        ? `${id}-${question.id}-description`
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      setAnswers((current) => ({
+                        ...current,
+                        [question.id]: event.target.value,
+                      }))
+                    }
+                    media={
+                      isFormImage(question.optionImages?.[index] ?? "") ? (
+                        <FormMediaPreview
+                          option
+                          imageTitle={option || `${copy.options} ${index + 1}`}
+                          images={[question.optionImages![index]]}
+                          copy={copy}
+                        />
+                      ) : undefined
+                    }
+                  />
                 ))
               ) : question.type === "phone" ? (
                 <PhoneNumberInput
@@ -190,12 +212,28 @@ export function FormQuestionsPreview({
                   }
                 />
               ) : question.type === "date" ? (
-                <DateInput hideLabel locale={language}
-                  label={formText(question.label, question.labelKey, language) || copy.questionLabel}
-                  ariaDescribedBy={question.description ? `${id}-${question.id}-description` : undefined}
-                  value={answers[question.id] || ""} required={question.required}
+                <DateInput
+                  hideLabel
+                  locale={language}
+                  label={
+                    formText(question.label, question.labelKey, language) ||
+                    copy.questionLabel
+                  }
+                  ariaDescribedBy={
+                    question.description
+                      ? `${id}-${question.id}-description`
+                      : undefined
+                  }
+                  value={answers[question.id] || ""}
+                  required={question.required}
                   accent="var(--preview-accent)"
-                  onChange={(value) => setAnswers((current) => ({ ...current, [question.id]: value }))} />
+                  onChange={(value) =>
+                    setAnswers((current) => ({
+                      ...current,
+                      [question.id]: value,
+                    }))
+                  }
+                />
               ) : (
                 <ModalTextInput
                   aria-describedby={
@@ -208,24 +246,18 @@ export function FormQuestionsPreview({
                     formText(question.label, question.labelKey, language) ||
                     copy.questionLabel
                   }
-                  type={
-                    question.type === "email"
-                      ? "email"
-                      : question.labelKey === "age"
-                        ? "number"
-                        : "text"
-                  }
+                  type={question.type === "email" ? "email" : "text"}
                   min={question.labelKey === "age" ? 0 : undefined}
                   step={question.labelKey === "age" ? 1 : undefined}
                   inputMode={
                     question.labelKey === "age" ? "numeric" : undefined
                   }
                   pattern={
-                    question.type === "short" &&
-                    question.required &&
-                    question.labelKey !== "age"
-                      ? ".*\\S.*"
-                      : undefined
+                    question.labelKey === "age"
+                      ? "[0-9]*"
+                      : question.type === "short" && question.required
+                        ? ".*\\S.*"
+                        : undefined
                   }
                   maxLength={1000}
                   placeholder={
@@ -233,12 +265,17 @@ export function FormQuestionsPreview({
                   }
                   required={question.required}
                   value={answers[question.id] || ""}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const next =
+                      question.labelKey === "age"
+                        ? plainIntegerInput(event.target.value)
+                        : event.target.value;
+                    if (next === null) return;
                     setAnswers((current) => ({
                       ...current,
-                      [question.id]: event.target.value,
-                    }))
-                  }
+                      [question.id]: next,
+                    }));
+                  }}
                 />
               )}
             </fieldset>

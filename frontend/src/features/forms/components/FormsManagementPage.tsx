@@ -247,7 +247,7 @@ export function FormsManagementPage({
             }
           />
         )}
-        <PageManagementCollection loading={loading || bulkDelete.deleting} viewMode={viewMode}
+        <PageManagementCollection showTableBanner loading={loading || bulkDelete.deleting} viewMode={viewMode}
           selectable={Boolean(selectionControl)} columns={selectionControl ? 8 : 7}
           loadingLabel={copy.loading}>
           <Collection

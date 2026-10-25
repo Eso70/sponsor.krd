@@ -85,6 +85,8 @@ import { editorDrawerCopy } from "../editor-drawer-copy";
 import { LinktreeEditorLoadingContent } from "./LinktreeEditorLoadingContent";
 import type { LinktreeEditorPreviewDraft } from "../editor-preview";
 import type { BusinessLocale } from "@/features/business/i18n/messages";
+import { Contact, Search, LayoutGrid, Link2, MessageCircle } from "lucide-react";
+import { editorSectionCopy } from "@/components/shared/editor-section-copy";
 import { EditorSection } from "@/components/shared/EditorSection";
 import { debounce } from "@/lib/utils/debounce";
 import { useSubmissionLock } from "@/hooks/useSubmissionLock";
@@ -270,6 +272,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
   });
   const slugValid = (!editData?.linktree.seo_name && !slug) || slugCheck.status === "available";
   const slugCopy = linktreeSlugCopy[locale];
+  const sectionCopy = editorSectionCopy(locale);
   // Explicit edits keep their values even when they happen to match a default.
   const authoredText = useRef(new Set<string>());
   const previousCopy = useRef(copy);
@@ -2069,7 +2072,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 />
               }
             >
-              <div className="space-y-3">
+              <div className="space-y-4 sm:space-y-5">
                 <LinktreeBannerEditor
                   locale={locale}
                   banner={readLinktreeBanner(
@@ -2090,6 +2093,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 />
                 <EditorSection
                   title={copy?.basicStep ?? "زانیارییەکان"}
+                  icon={Contact}
+                  summary={name.trim() || sectionCopy.empty}
                   open={openSection === "basic"}
                   onToggle={() =>
                     setOpenSection(openSection === "basic" ? null : "basic")
@@ -2168,6 +2173,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 {advancedSeoAllowed && (
                   <EditorSection
                     title={linktreeSeoCopy(locale).section}
+                  icon={Search}
+                    summary={seoDraft.title?.trim() || sectionCopy.automatic}
                     open={openSection === "seo"}
                     onToggle={() =>
                       setOpenSection(openSection === "seo" ? null : "seo")
@@ -2187,6 +2194,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 )}
                 <EditorSection
                   title={copy?.selectStep ?? "پلاتفۆڕمەکان"}
+                  icon={LayoutGrid}
+                  summary={sectionCopy.count("platforms", new Set(socialLinks.map((link) => link.platform)).size)}
                   open={openSection === "select"}
                   onToggle={() =>
                     setOpenSection(openSection === "select" ? null : "select")
@@ -2203,6 +2212,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
 
                 <EditorSection
                   title={copy?.linksStep ?? "لینکەکان"}
+                  icon={Link2}
+                  summary={sectionCopy.count("links", socialLinks.length)}
                   open={openSection === "links"}
                   onToggle={() =>
                     setOpenSection(openSection === "links" ? null : "links")
@@ -2229,6 +2240,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                 </EditorSection>
                 <EditorSection
                   title={copy?.whatsappQuestions ?? "پرسیارەکانی واتساپ"}
+                  icon={MessageCircle}
+                  summary={whatsappModalEnabled ? sectionCopy.count("questions", whatsappQuestions.length) : sectionCopy.off}
                   enabled={whatsappModalEnabled}
                   onEnabled={setWhatsappModalEnabled}
                   open={openSection === "questions"}

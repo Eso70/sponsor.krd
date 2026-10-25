@@ -1,5 +1,5 @@
 import { LinktreesService } from './linktrees.service';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
   DEFAULT_LINKTREE_BACKGROUND_COLOR,
   DEFAULT_LINKTREE_TEMPLATE_KEY,
@@ -182,6 +182,99 @@ describe('new-page defaults isolation', () => {
       ).toBe(false);
     },
   );
+
+  it('returns an existing customized default unchanged on repeated seeding requests', async () => {
+    const { service, query } = setup();
+    const customized = {
+      ...row,
+      name: 'Authored page',
+      seo_name: 'saved-address',
+      template_config: { templateKey: 'spectrum', verification_badge: true },
+      background_color: '#112233',
+    };
+    jest
+      .spyOn(service, 'getDefaultLinktree')
+      .mockResolvedValue(customized as never);
+    expect(await service.createDefaultLinktree('business-1')).toEqual(
+      customized,
+    );
+    expect(await service.createDefaultLinktree('business-1')).toEqual(
+      customized,
+    );
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('rechecks after the shared owner lock and preserves a concurrently created default', async () => {
+    const { service, query } = setup();
+    const lookup = jest
+      .spyOn(service, 'getDefaultLinktree')
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(row as never);
+    expect(await service.createDefaultLinktree('business-1')).toEqual(row);
+    expect(query).toHaveBeenCalledWith(
+      'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+      ['business-1'],
+    );
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(lookup.mock.invocationCallOrder[1]).toBeGreaterThan(
+      query.mock.invocationCallOrder[0],
+    );
+    expect(lookup.mock.calls[1][1]).toEqual(expect.objectContaining({ query }));
+  });
+
+  it('rejects create requests targeting an existing default instead of replacing its content or links', async () => {
+    const { service, query } = setup();
+    const original = query.getMockImplementation()!;
+    query.mockImplementation((sql, values) =>
+      sql.includes('SELECT id, seo_name FROM linktrees')
+        ? Promise.resolve({ rows: [{ id: row.id, seo_name: row.seo_name }] })
+        : original(sql, values),
+    );
+    await expect(
+      service.createLinktree(
+        { headline: 'Unexpected replacement', is_default: true },
+        'business-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(
+      query.mock.calls.some(([sql]) =>
+        /(?:UPDATE|INSERT INTO|DELETE FROM) (?:linktrees|links|whatsapp_questions)/.test(
+          sql,
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it('seeds contact buttons in the same transaction and never performs a later link replacement', async () => {
+    const { service, query } = setup();
+    const original = query.getMockImplementation()!;
+    query.mockImplementation((sql, values) =>
+      sql.includes('SELECT a.name, a.phone')
+        ? Promise.resolve({
+            rows: [
+              {
+                name: 'Business',
+                phone: '+9647501234567',
+                subdomain: 'business',
+                logo: null,
+              },
+            ],
+          })
+        : original(sql, values),
+    );
+    jest.spyOn(service, 'getDefaultLinktree').mockResolvedValue(null);
+    await service.createDefaultLinktree('business-1');
+    const inserts = query.mock.calls.filter(([sql]) =>
+      sql.includes('INSERT INTO links'),
+    );
+    expect(inserts.map(([, values]) => values)).toEqual([
+      [row.id, 'business-1', 'whatsapp', 'https://wa.me/9647501234567', 0],
+      [row.id, 'business-1', 'phone', 'tel:+9647501234567', 1],
+    ]);
+    expect(
+      query.mock.calls.some(([sql]) => sql.includes('DELETE FROM links')),
+    ).toBe(false);
+  });
 
   it('creates the business default page independently of new-page starting values', async () => {
     const { service, query } = setup();

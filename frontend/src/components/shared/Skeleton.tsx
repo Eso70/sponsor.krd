@@ -98,10 +98,12 @@ export function SkeletonTable({
   className = "",
   loadingLabel = "Loading table",
   leadingCell = "avatar",
+  mediaColumn,
 }: {
   rows?: number;
   columns?: number;
   leadingCell?: "avatar" | "checkbox" | "text";
+  mediaColumn?: number;
   className?: string;
   loadingLabel?: string;
 }) {
@@ -113,17 +115,30 @@ export function SkeletonTable({
       aria-label={loadingLabel}
       dir="ltr"
     >
-      <div className={`${collectionStyles.frame} divide-y divide-slate-100 dark:divide-white/5 md:hidden`}>
+      <div
+        className={`${collectionStyles.frame} divide-y divide-slate-100 dark:divide-white/5 md:hidden`}
+      >
         {Array.from({ length: Math.min(rows, 4) }).map((_, index) => (
           <div key={index} data-skeleton-mobile-row className="space-y-3 p-4">
             <div className="flex items-center gap-3">
-              {leadingCell === "checkbox" && <Skeleton className="size-5 shrink-0" rounded="rounded-md" />}
+              {leadingCell === "checkbox" && (
+                <Skeleton className="size-5 shrink-0" rounded="rounded-md" />
+              )}
+              {mediaColumn !== undefined && (
+                <Skeleton className="h-12 w-20 shrink-0" rounded="rounded-lg" />
+              )}
               <Skeleton className="h-4 w-3/4" rounded="rounded-md" />
             </div>
             <Skeleton className="h-3 w-1/2" rounded="rounded-md" />
             <Skeleton className="h-3 w-full" rounded="rounded-md" />
             <div className="flex gap-2 border-t border-slate-100 pt-2 dark:border-white/5">
-              {Array.from({ length: 4 }).map((_, action) => <Skeleton key={action} className="size-8" rounded="rounded-lg" />)}
+              {Array.from({ length: 4 }).map((_, action) => (
+                <Skeleton
+                  key={action}
+                  className="size-8"
+                  rounded="rounded-lg"
+                />
+              ))}
             </div>
           </div>
         ))}
@@ -148,20 +163,42 @@ export function SkeletonTable({
               }}
             >
               {Array.from({ length: columns }).map((_, columnIndex) => (
-                <div key={columnIndex} className="flex items-center gap-2">
+                <div
+                  key={columnIndex}
+                  className={`flex gap-2 ${columnIndex === mediaColumn ? "flex-col items-start" : "items-center"}`}
+                >
+                  {columnIndex === mediaColumn && (
+                    <Skeleton className="h-12 w-20" rounded="rounded-lg" />
+                  )}
                   {columnIndex === 0 && leadingCell !== "text" && (
-                    <Skeleton className={leadingCell === "checkbox" ? "size-5 shrink-0" : "size-9 shrink-0"}
-                      rounded={leadingCell === "checkbox" ? "rounded-md" : "rounded-full"} />
+                    <Skeleton
+                      className={
+                        leadingCell === "checkbox"
+                          ? "size-5 shrink-0"
+                          : "size-9 shrink-0"
+                      }
+                      rounded={
+                        leadingCell === "checkbox"
+                          ? "rounded-md"
+                          : "rounded-full"
+                      }
+                    />
                   )}
                   {!(columnIndex === 0 && leadingCell === "checkbox") && (
-                  <Skeleton
-                    className={
-                      columnIndex === columns - 1 ? "h-8 w-20" : "h-3 flex-1"
-                    }
-                    rounded={
-                      columnIndex === columns - 1 ? "rounded-lg" : "rounded-md"
-                    }
-                  />
+                    <Skeleton
+                      className={
+                        columnIndex === columns - 1
+                          ? "h-8 w-20"
+                          : columnIndex === mediaColumn
+                            ? "h-3 w-full"
+                            : "h-3 flex-1"
+                      }
+                      rounded={
+                        columnIndex === columns - 1
+                          ? "rounded-lg"
+                          : "rounded-md"
+                      }
+                    />
                   )}
                 </div>
               ))}
@@ -270,30 +307,55 @@ export function SkeletonManagementPage({
 }
 
 /** Template catalogue loading reuses its real section, grid, cards and phones. */
-export function SkeletonTemplatePage({ loadingLabel = "Loading templates", previewCount = 3 }: { loadingLabel?: string; previewCount?: number } = {}) {
-  return <div className="w-full min-w-0 space-y-4 pb-8 sm:space-y-6 sm:pb-10" role="status" aria-label={loadingLabel} aria-busy="true">
-    <div aria-hidden="true">
-      <StatCardGrid columns={3}>
-        {(["blue", "green", "purple"] as const).map((color) => <SkeletonStatCard key={color} color={color} />)}
-      </StatCardGrid>
-    </div>
-    <SegmentedTabsFrame aria-hidden="true" fullWidth>
-      <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
-      <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
-    </SegmentedTabsFrame>
-    <PageManagementSection loading title="" toolbar={<Skeleton className="h-10 w-full" rounded="rounded-2xl" />}>
+export function SkeletonTemplatePage({
+  loadingLabel = "Loading templates",
+  previewCount = 3,
+}: { loadingLabel?: string; previewCount?: number } = {}) {
+  return (
+    <div
+      className="w-full min-w-0 space-y-4 pb-8 sm:space-y-6 sm:pb-10"
+      role="status"
+      aria-label={loadingLabel}
+      aria-busy="true"
+    >
       <div aria-hidden="true">
-        <ManagementGridLayout desktopColumns={3} items={Array.from({ length: previewCount }, (_, index) => ({
-          key: String(index),
-          content: <ManagementCard intrinsicHeight={730}>
-            <div className="relative flex w-full justify-center">
-              <PhoneMockup ariaLabel="" size="responsive" active={false} />
-            </div>
-          </ManagementCard>,
-        }))} />
+        <StatCardGrid columns={3}>
+          {(["blue", "green", "purple"] as const).map((color) => (
+            <SkeletonStatCard key={color} color={color} />
+          ))}
+        </StatCardGrid>
       </div>
-    </PageManagementSection>
-  </div>;
+      <SegmentedTabsFrame aria-hidden="true" fullWidth>
+        <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
+        <Skeleton className="h-11 flex-1" rounded="rounded-xl" />
+      </SegmentedTabsFrame>
+      <PageManagementSection
+        loading
+        title=""
+        toolbar={<Skeleton className="h-10 w-full" rounded="rounded-2xl" />}
+      >
+        <div aria-hidden="true">
+          <ManagementGridLayout
+            desktopColumns={3}
+            items={Array.from({ length: previewCount }, (_, index) => ({
+              key: String(index),
+              content: (
+                <ManagementCard intrinsicHeight={730}>
+                  <div className="relative flex w-full justify-center">
+                    <PhoneMockup
+                      ariaLabel=""
+                      size="responsive"
+                      active={false}
+                    />
+                  </div>
+                </ManagementCard>
+              ),
+            }))}
+          />
+        </div>
+      </PageManagementSection>
+    </div>
+  );
 }
 /** Public Linktree frame: identity, copy, action links, and footer. */
 export function SkeletonPublicLinktreePage({

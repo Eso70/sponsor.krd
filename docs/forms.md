@@ -83,7 +83,7 @@ Turn the shared Form/Card editor into an owner-scoped publishing and response se
 5. Record accepted submissions and first-party conversions in one database transaction. Expose owner-only response history and real summary statistics.
 6. Verify lifecycle, revision conflicts, tenant isolation, uploads, retries, analytics boundaries and both dashboard configurations. Update legal disclosures and deployment documentation.
 
-Form collection grids show the first enabled saved banner edge-to-edge, with a centered logo overlapping its bottom edge and centered details underneath. Desktop and mobile tables omit banners and retain their compact text presentation. The owner-scoped collection query projects only the first enabled banner image, using the legacy single banner when no carousel image exists. Missing, disabled or failed images use the shared PageListBanner placeholder. Business and Platform dashboards share the same views and matching loading placeholders; full form definitions are still fetched only for editing.
+Form collection grids show the enabled saved banner or carousel edge-to-edge, with a centered logo overlapping its bottom edge and centered details underneath. Desktop and mobile tables show compact saved banner carousels. The owner-scoped collection query projects the enabled saved carousel mode and images, using the legacy single banner when no carousel image exists. Missing, disabled or failed images retain the shared media fallback. Business and Platform dashboards share the same views and matching loading placeholders; full form definitions are still fetched only for editing.
 
 ## Ownership and URLs
 
@@ -332,3 +332,70 @@ The analytics-event foreign key on submissions uses ON DELETE SET NULL, preservi
 response records. Both list and summary reload after success or partial failure.
 These endpoints require deploying the backend with the frontend; no migration or
 production data rewrite is needed.
+
+Phone and age inputs accept digits only in editor previews, templates and public
+forms. Shared numeric input helpers normalize Arabic-Indic and Persian digits to
+ASCII. Pasted international phone numbers move the recognized prefix into the
+existing country selector, leaving only national digits in the field. Age retains
+its existing server-validated range. Prices and quantities accept plain decimals
+(including the Arabic decimal separator), with no letters, signs or exponent
+notation. Fractional product quantities and existing pricing limits remain supported.
+
+
+Country-specific phone validation uses the shared runtime-safe
+`@linktree/types/phone-number.cjs` and pinned `libphonenumber-js/max` metadata on
+both client and server. It enforces valid national lengths and numbering patterns,
+not a universal 4–14 digit range. Iraqi mobile contacts require ten significant
+digits beginning with 7; one domestic 0 is optional. Both forms normalize to
++964 plus ten digits. Other countries retain their own trunk-prefix rules,
+including significant Italian zeros and variable-length numbering plans. Numbers
+are validated locally with no external lookup; validity is a numbering-plan check,
+not proof that a number is assigned or reachable. Update the dependency regularly
+for numbering-plan changes. Shared metadata example tests cover every supported
+region; no database migration or existing response rewrite is needed.
+
+References: [CMC Iraq plan via ITU](https://www.itu.int/dms_pub/itu-t/opb/sp/T-SP-OB.1320-2025-OAS-PDF-E.pdf),
+[maintained validation metadata](https://github.com/catamphetamine/libphonenumber-js).
+
+The Iraqi phone field accepts only a leading 7 or the domestic 07 while typing
+(with an intermediate 0 allowed). The permanent format hint is omitted in all
+languages; invalid/incomplete numbers still receive localized validation errors.
+The shared server validator continues to enforce the same mobile prefix and length.
+
+Phone entry also checks allowed starting digits for every selected country using
+that same full numbering metadata, including all valid number types and countries
+sharing a calling code. Single-digit starts are enforced where applicable;
+multiple allowed starts and domestic trunk prefixes remain available. Prefix
+checks are cached per selected calling code. They guide entry only: complete
+length and pattern validation on the client and server remains authoritative.
+Regional example tests check every partial prefix in both national formats.
+
+Product selection in preview and public forms omits the savings callout while
+retaining the applied unit price, line total and order total. Saved responses
+retain their discount snapshot for reporting.
+
+Discounted product unit prices share FormProductUnitPrice across public and
+preview forms: the original amount has an explicit strike on the isolated money
+text, followed by a vertical divider, the applied amount and a small localized
+discount badge. Badge colors follow the form appearance independently of the
+dashboard theme. Standard prices omit the divider and badge.
+
+The small inline discount badge includes the total discount for the selected
+product quantity, using the shared pricing result and money formatter. Its label
+and amount stay together on one line with reduced visual emphasis; no separate
+savings paragraph is added.
+
+Form collection grids and tables use FormCollectionBanner in both dashboards.
+The owner-scoped summary projects saved banner mode and images without fetching
+full definitions per row. Enabled carousels reuse PublicImageGallery with a
+three-second interval, theme dots, touch swipes and mouse dragging. Grid covers
+retain their 3:1 geometry; table rows and mobile cards use compact 80×48 media.
+Table loading placeholders reserve the same media space. Missing or failed
+images retain a shared fallback; disabled banners never expose saved media.
+PublicImageGallery uses edge clones for seamless forward and backward wrapping,
+then resets to the identical real slide without animating the reset. Automatic
+changes remain presentation only and dashboard collections have no tracker.
+
+New forms start with an empty Introduction description. The shared preview
+header does not substitute sample description text, in either Form or Card
+layout. Authored descriptions continue to render in previews and public pages.

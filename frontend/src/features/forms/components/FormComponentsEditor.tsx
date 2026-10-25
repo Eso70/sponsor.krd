@@ -1,6 +1,8 @@
 "use client";
+import { formSectionCopy, formBlockSummary } from "../form-section-copy";
+import { formContentIcon } from "../form-content-components";
 import { useId, useState, type ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ListChecks } from "lucide-react";
 import { IconActionButton } from "@/components/shared/IconActionButton";
 import { ReorderHandle } from "@/components/shared/ReorderHandle";
 import { createRuntimeId } from "@/lib/utils/random-id";
@@ -30,6 +32,7 @@ export function FormComponentsEditor({
   onSectionChange?: (id: string | null) => void;
   children?: ReactNode;
 }) {
+  const details = formSectionCopy(copy);
   const group = useId();
   const [localOpen, setLocalOpen] = useState<string | null>("questions");
   const open = onSectionChange ? openSection : localOpen;
@@ -40,7 +43,7 @@ export function FormComponentsEditor({
     if (patch) onChange(patch);
   };
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 sm:space-y-5">
       {order.map((id, index) => {
         const block = form.blocks.find((entry) => entry.id === id);
         const title = block
@@ -56,6 +59,16 @@ export function FormComponentsEditor({
           <FormEditorSection
             key={id}
             title={title}
+            icon={block ? formContentIcon(block.type) : ListChecks}
+            summary={
+              block
+                ? formBlockSummary(block, copy)
+                : details.count(
+                    "required",
+                    form.questions.filter((question) => question.required)
+                      .length,
+                  )
+            }
             step={index + 3}
             open={open === id}
             onToggle={() => setOpen(open === id ? null : id)}

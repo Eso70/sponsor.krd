@@ -90,12 +90,4 @@ export class UpdateBusinessDto {
   @IsUUID()
   @IsOptional()
   subscriptionPlanId?: string;
-
-  @IsOptional()
-  links?: Array<{
-    platform: string;
-    url: string;
-    display_name?: string | null;
-    metadata?: Record<string, unknown>;
-  }>;
 }

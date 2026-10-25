@@ -24,6 +24,11 @@ describe('owner-scoped form collection pagination', () => {
       const result = await service.list('owner-id', page, 'contact', true);
       expect(result).toEqual({ items, total: 31 });
       expect(query.mock.calls[0][0]).toContain('LIMIT 15 OFFSET $4');
+      expect(query.mock.calls[0][0]).toContain('AS "bannerImages"');
+      expect(query.mock.calls[0][0]).toContain('AS "bannerMode"');
+      expect(query.mock.calls[0][0]).toContain(
+        "definition->>'bannerEnabled' = 'false'",
+      );
       expect(query.mock.calls[0][1].slice(0, 4)).toEqual([
         'owner-id',
         true,

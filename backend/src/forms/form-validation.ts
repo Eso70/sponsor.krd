@@ -1,3 +1,4 @@
+import { normalizePhoneNumber } from '@linktree/types/phone-number.cjs';
 import { validProductPriceBreaks } from '@linktree/types/form-product-pricing.cjs';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import Joi from 'joi';
@@ -418,20 +419,12 @@ export function validateSubmission(
         throw new BadRequestException('Invalid conditional answer');
     }
     if (q.type === 'phone') {
-      const code = data.phoneCountryCodes[q.id] || '964';
-      const compact = value.replace(/[\s()-]/g, '');
-      // Accept pasted international numbers only when they match the chosen country.
-      let digits = compact;
-      if (compact.startsWith('+')) {
-        if (!compact.startsWith(`+${code}`))
-          throw new BadRequestException('Phone country does not match');
-        digits = compact.slice(code.length + 1);
-      } else if (code === '964') {
-        digits = compact.replace(/^0/, '');
-      }
-      if (!/^\d{4,14}$/.test(digits) || code.length + digits.length > 15)
-        throw new BadRequestException('Invalid phone number');
-      value = `+${code}${digits}`;
+      const normalized = normalizePhoneNumber(
+        value,
+        data.phoneCountryCodes[q.id] || '964',
+      );
+      if (!normalized) throw new BadRequestException('Invalid phone number');
+      value = normalized;
     }
     if (
       q.type === 'date' &&

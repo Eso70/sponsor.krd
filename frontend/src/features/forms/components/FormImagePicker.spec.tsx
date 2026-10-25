@@ -184,7 +184,7 @@ describe("compact banner image picker", () => {
         />,
       );
       if (multiple)
-        fireEvent.click(screen.getByRole("button", { name: copy.next }));
+        fireEvent.click(screen.getByRole("button", { name: "Image 2 / 2" }));
       fireEvent.click(
         screen.getByRole("button", { name: `${copy.preview}: Image` }),
       );
@@ -197,7 +197,7 @@ describe("compact banner image picker", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
   );
-  it("uses side arrows and opens the selected banner image without cropping", async () => {
+  it("uses dots and opens the selected banner image without cropping", async () => {
     render(
       <FormMediaPreview
         images={[image, replacement]}
@@ -207,7 +207,9 @@ describe("compact banner image picker", () => {
       />,
     );
     expect(screen.queryByText("1 / 2")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: copy.next }));
+    fireEvent.click(
+      screen.getByRole("button", { name: `${copy.banner} 2 / 2` }),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: `${copy.preview}: ${copy.banner}` }),
     );
@@ -220,8 +222,12 @@ describe("compact banner image picker", () => {
     const { rerender } = render(
       <FormMediaPreview images={[image, replacement]} carousel copy={copy} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: copy.next }));
-    expect(document.querySelector("img")).toHaveAttribute("src", replacement);
+    fireEvent.click(
+      screen.getByRole("button", { name: `${copy.banner} 2 / 2` }),
+    );
+    expect(
+      document.querySelector("[data-current-slide=true] img"),
+    ).toHaveAttribute("src", replacement);
     rerender(<FormMediaPreview images={[image, replacement]} copy={copy} />);
     expect(document.querySelector("img")).toHaveAttribute("src", image);
   });

@@ -154,10 +154,17 @@ The business default page is independent of `business_defaults`, which stores
 starting values for new ordinary pages. Default-page creation uses shared
 system page constants plus business identity and contact details. Updating
 the default page never writes to `business_defaults`; saving starting values
-never modifies existing Linktrees.
+never modifies existing Linktrees. Platform business-profile, branding, subscription
+and new-page-default updates also never rewrite a saved default page or its links.
+Use the explicit owner-scoped Linktree editor to change existing page content.
+Legacy link replacement is no longer accepted by UpdateBusinessDto.
 
 `POST /linktrees/default` creates the business default page on the server,
-without opening the link editor. It must produce the same page the editor
+without opening the link editor. Repeated requests return the saved page unchanged.
+Creation rechecks under the same owner advisory transaction lock as other page
+creates, and seeds questions/contact buttons before commit. A generic create
+request with is_default=true conflicts when that page already exists; it never
+upserts over authored content. It must produce the same page the editor
 would: name, tagline, helper text, footer credit, WhatsApp modal wording and
 its starter questions.
 

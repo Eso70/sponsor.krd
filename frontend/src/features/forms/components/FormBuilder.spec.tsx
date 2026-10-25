@@ -529,7 +529,7 @@ describe("Form layout builder", () => {
         .closest("[data-appearance]"),
     ).toHaveAttribute("data-appearance", "light");
     expect(screen.getByRole("textbox", { name: "Phone number" })).toHaveValue(
-      "+9647501234567",
+      "7501234567",
     );
     rerender(
       <div className="light">

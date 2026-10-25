@@ -8,7 +8,6 @@ import { requestBranding } from "@/lib/brand/request-branding.server";
 import { brandIcons } from "@/lib/brand/tab-branding";
 import { getAppBaseUrl } from "@/lib/utils/app-url";
 import { AppToaster } from "@/components/shared/AppToaster";
-import { GlobalInputLimits } from "@/components/shared/GlobalInputLimits";
 import { AppMotionProvider } from "@/components/motion/AppMotionProvider";
 import { APP_THEME_COOKIE } from "@/lib/app-theme";
 import {
@@ -117,7 +116,6 @@ export default async function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <AppMotionProvider>
-          <GlobalInputLimits />
           <div
             data-theme-background
             className="relative min-h-screen min-h-[100dvh] w-full overflow-x-clip text-slate-900 dark:text-white"

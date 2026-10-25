@@ -100,9 +100,12 @@ export function FormPreviewHeader({
                   {form.headline || copy.title}
                 </Heading>
               )}
-              {(form.description || placeholders) && (
-                <p className="whitespace-pre-wrap break-words text-xs leading-5 opacity-75">
-                  {form.description || labels.descriptionHint}
+              {form.description.trim() && (
+                <p
+                  data-form-description
+                  className="whitespace-pre-wrap break-words text-xs leading-5 opacity-75"
+                >
+                  {form.description}
                 </p>
               )}
               {form.slogan && (

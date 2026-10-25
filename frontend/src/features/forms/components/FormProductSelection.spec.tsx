@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createForm, createQuestion } from "../forms-model";
 import type { FormQuestion, FormLanguage } from "../types";
 import { FormPreview } from "./FormPreview";
+import { FormProductSelectionPreview } from "./FormProductSelectionPreview";
 import { FormProductSelectionEditor } from "./FormProductSelectionEditor";
 import { productMoney, productLineTotal } from "../product-selection";
 import { formEditorIssues } from "../form-editor-validation";
@@ -37,33 +38,78 @@ function Editor() {
 describe("product selection", () => {
   it("edits optional quantity prices with shared controls", () => {
     render(<Editor />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Add price break" })[0]);
-    expect(screen.getByRole("textbox", { name: "Minimum quantity 1" })).toHaveValue("2");
-    fireEvent.change(screen.getByRole("textbox", { name: "Unit price 1" }), { target: { value: "6.5" } });
-    expect(screen.getByRole("textbox", { name: "Unit price 1" })).toHaveValue("6.5");
-    fireEvent.click(screen.getAllByRole("button", { name: "Add price break" })[0]);
-    expect(screen.getByRole("textbox", { name: "Minimum quantity 2" })).toHaveValue("3");
-    fireEvent.click(screen.getByRole("button", { name: "Remove price break 2" }));
-    expect(screen.queryByRole("textbox", { name: "Minimum quantity 2" })).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add price break" })[0],
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Minimum quantity 1" }),
+    ).toHaveValue("2");
+    fireEvent.change(screen.getByRole("textbox", { name: "Unit price 1" }), {
+      target: { value: "6.5" },
+    });
+    expect(screen.getByRole("textbox", { name: "Unit price 1" })).toHaveValue(
+      "6.5",
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add price break" })[0],
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Minimum quantity 2" }),
+    ).toHaveValue("3");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove price break 2" }),
+    );
+    expect(
+      screen.queryByRole("textbox", { name: "Minimum quantity 2" }),
+    ).not.toBeInTheDocument();
   });
-  it.each(["en", "ckb", "ar"] as const)("shows the same volume quote and saving publicly and in preview in %s", (language) => {
-    const question = { ...product(), productSelection: { currency: "IQD" as const, items: [{ id: "item", name: "Product", unit: "piece", unitPrice: 8000, priceBreaks: [{ minimumQuantity: 2, unitPrice: 7500 }, { minimumQuantity: 3, unitPrice: 7000 }] }] } };
-    const form = { ...createForm(language), questions: [question] };
-    const copy = productSelectionCopy(language);
-    const view = render(<FormPreview form={form} />);
-    for (const presentation of ["preview", "public"] as const) {
-      view.rerender(<FormPreview form={form} presentation={presentation} />);
-      expect(screen.queryByRole("list", { name: copy.quantityPricing })).not.toBeInTheDocument();
-      const quantity = screen.getByRole("spinbutton", { name: `${copy.quantity}: Product` });
-      fireEvent.change(quantity, { target: { value: "2" } });
-      expect(screen.getAllByText("IQD 15,000").length).toBeGreaterThan(0);
-      expect(screen.getByText(copy.savings)).toBeInTheDocument();
-      expect(screen.getByText("IQD 1,000")).toBeInTheDocument();
-      fireEvent.change(quantity, { target: { value: "3" } });
-      expect(screen.getAllByText("IQD 21,000").length).toBeGreaterThan(0);
-      expect(screen.getByText("IQD 3,000")).toBeInTheDocument();
-    }
-  });
+  it.each(["en", "ckb", "ar"] as const)(
+    "shows the same volume quote without savings copy publicly and in preview in %s",
+    (language) => {
+      const question = {
+        ...product(),
+        productSelection: {
+          currency: "IQD" as const,
+          items: [
+            {
+              id: "item",
+              name: "Product",
+              unit: "piece",
+              unitPrice: 8000,
+              priceBreaks: [
+                { minimumQuantity: 2, unitPrice: 7500 },
+                { minimumQuantity: 3, unitPrice: 7000 },
+              ],
+            },
+          ],
+        },
+      };
+      const form = { ...createForm(language), questions: [question] };
+      const copy = productSelectionCopy(language);
+      const view = render(<FormPreview form={form} />);
+      for (const presentation of ["preview", "public"] as const) {
+        view.rerender(<FormPreview form={form} presentation={presentation} />);
+        expect(
+          screen.queryByRole("list", { name: copy.quantityPricing }),
+        ).not.toBeInTheDocument();
+        const quantity = screen.getByRole("textbox", {
+          name: `${copy.quantity}: Product`,
+        });
+        fireEvent.change(quantity, { target: { value: "2" } });
+        expect(screen.getAllByText("IQD 15,000").length).toBeGreaterThan(0);
+        expect(screen.getByText(copy.discount)).toBeInTheDocument();
+        expect(screen.getByText("IQD 8,000")).toHaveClass("line-through");
+        expect(screen.getByText("IQD 8,000").closest("del")).not.toBeNull();
+        expect(screen.getByText("|")).toHaveAttribute("aria-hidden", "true");
+
+        expect(screen.queryByText(copy.savings)).not.toBeInTheDocument();
+        expect(screen.getByText("IQD 1,000")).toBeInTheDocument();
+        fireEvent.change(quantity, { target: { value: "3" } });
+        expect(screen.getAllByText("IQD 21,000").length).toBeGreaterThan(0);
+        expect(screen.getByText("IQD 3,000")).toBeInTheDocument();
+      }
+    },
+  );
 
   it.each(["form", "card"] as const)(
     "calculates quantities, line totals and a mock completion in %s",
@@ -78,11 +124,11 @@ describe("product selection", () => {
       const send = screen.getByRole("button", { name: "Send" });
       expect(send).toBeDisabled();
       fireEvent.change(
-        screen.getByRole("spinbutton", { name: "Quantity: Cement" }),
+        screen.getByRole("textbox", { name: "Quantity: Cement" }),
         { target: { value: "8" } },
       );
       fireEvent.change(
-        screen.getByRole("spinbutton", { name: "Quantity: Steel" }),
+        screen.getByRole("textbox", { name: "Quantity: Steel" }),
         { target: { value: "1.5" } },
       );
       expect(screen.getByText("USD 56")).toBeInTheDocument();
@@ -90,13 +136,13 @@ describe("product selection", () => {
       expect(screen.getByText("USD 59.75")).toBeInTheDocument();
       expect(send).toBeEnabled();
       fireEvent.change(
-        screen.getByRole("spinbutton", { name: "Quantity: Steel" }),
-        { target: { value: "-1" } },
+        screen.getByRole("textbox", { name: "Quantity: Steel" }),
+        { target: { value: "1000000" } },
       );
       expect(send).toBeDisabled();
       expect(screen.getByRole("alert")).toHaveTextContent("Enter a quantity");
       fireEvent.change(
-        screen.getByRole("spinbutton", { name: "Quantity: Steel" }),
+        screen.getByRole("textbox", { name: "Quantity: Steel" }),
         { target: { value: "" } },
       );
       fireEvent.click(send);
@@ -155,4 +201,23 @@ describe("product selection", () => {
     expect(productLineTotal(2.5, "1.5")).toBe(3.75);
     expect(productLineTotal(7, "100001")).toBe(0);
   });
+});
+
+it("accepts plain localized decimal quantities and rejects nonnumeric input", () => {
+  const onChange = vi.fn();
+  render(
+    <FormProductSelectionPreview
+      question={product()}
+      language="en"
+      value=""
+      onChange={onChange}
+    />,
+  );
+  const input = screen.getByRole("textbox", { name: "Quantity: Cement" });
+  fireEvent.change(input, { target: { value: "١٫٥" } });
+  expect(onChange).toHaveBeenLastCalledWith(JSON.stringify({ cement: "1.5" }));
+  onChange.mockClear();
+  for (const value of ["letters", "1e3", "-1", "+2", "1.2.3"])
+    fireEvent.change(input, { target: { value } });
+  expect(onChange).not.toHaveBeenCalled();
 });

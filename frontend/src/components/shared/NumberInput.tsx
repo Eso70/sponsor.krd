@@ -1,5 +1,6 @@
 "use client";
 
+import { plainDecimalInput } from "@/lib/utils/numeric-input";
 import { useState } from "react";
 
 interface NumberInputProps {
@@ -50,7 +51,7 @@ export function NumberInput({
 
   const commit = (raw: string) => {
     const parsed = Number(raw);
-    if (raw.trim() === "" || Number.isNaN(parsed)) return min;
+    if (raw.trim() === "" || !Number.isFinite(parsed)) return min;
     if (decimalOnly) return parsed;
     return Math.min(max ?? Infinity, Math.max(min, parsed));
   };
@@ -58,6 +59,7 @@ export function NumberInput({
   return (
     <input
       type={decimalOnly ? "text" : "number"}
+      maxLength={decimalOnly ? 32 : undefined}
       inputMode={step && !Number.isInteger(step) ? "decimal" : "numeric"}
       min={min}
       max={max}
@@ -76,13 +78,9 @@ export function NumberInput({
       }}
       onChange={(event) => {
         const raw = decimalOnly
-          ? event.target.value
-              .replace(/[٠-٩۰-۹]/g, (digit) =>
-                String(digit.charCodeAt(0) - (digit >= "۰" ? 0x06f0 : 0x0660)),
-              )
-              .replace(/٫/g, ".")
+          ? plainDecimalInput(event.target.value)
           : event.target.value;
-        if (decimalOnly && !/^\d*(?:\.\d*)?$/.test(raw)) return;
+        if (raw === null) return;
         setDraft(raw);
         if (raw === "" && onEmpty) {
           onEmpty();

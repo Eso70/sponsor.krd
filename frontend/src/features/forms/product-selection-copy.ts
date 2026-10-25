@@ -6,6 +6,7 @@ const labels = {
   minimumQuantity: ["Minimum quantity", "کەمترین بڕ", "الحد الأدنى للكمية"],
   removePriceBreak: ["Remove price break", "سڕینەوەی نرخی بڕ", "حذف سعر الكمية"],
   invalidPriceBreaks: ["Use increasing quantities and unit prices no higher than the previous price. Complete every price break (up to 10).", "بڕەکان بەرەو زیادبوون بن و نرخی یەکە لە نرخی پێشوو زیاتر نەبێت. هەموو نرخەکان تەواو بکە (تا ١٠).", "استخدم كميات متزايدة وأسعار وحدة لا تزيد عن السعر السابق. أكمل جميع حدود الأسعار (حتى 10)."],
+  discount: ["Discount", "داشکاندن", "خصم"],
   savings: ["You save", "پاشەکەوت دەکەیت", "توفر"],
 
   invalidPrice: [

@@ -1,4 +1,5 @@
 "use client";
+import { Contact } from "lucide-react";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -362,6 +363,8 @@ export function LinktreeDuplicateWorkspace({
             />
             <EditorSection
               title={editorCopy?.basicStep ?? "زانیارییەکان"}
+              icon={Contact}
+              summary={draft.name}
               open={open === "basic"}
               onToggle={() => setOpen(open === "basic" ? null : "basic")}
             >

@@ -8,8 +8,11 @@ interface CollectionLoadingState {
   selectable: boolean;
   columns: number;
   loadingLabel: string;
+  showTableBanner?: boolean;
 }
-const CollectionLoadingContext = createContext<CollectionLoadingState | null>(null);
+const CollectionLoadingContext = createContext<CollectionLoadingState | null>(
+  null,
+);
 
 /** Lazy collection chunks use the same skeleton as pending requests. */
 export function PageManagementCollectionFallback() {
@@ -19,7 +22,13 @@ export function PageManagementCollectionFallback() {
 
 /** One initial-load and refresh presentation for Forms and Linktree collections. */
 export function PageManagementCollection({
-  loading, viewMode, selectable = false, columns, loadingLabel, children,
+  loading,
+  viewMode,
+  selectable = false,
+  columns,
+  loadingLabel,
+  children,
+  showTableBanner = false,
 }: {
   loading: boolean;
   viewMode: "grid" | "table";
@@ -27,9 +36,12 @@ export function PageManagementCollection({
   columns: number;
   loadingLabel: string;
   children: ReactNode;
+  showTableBanner?: boolean;
 }) {
   return (
-    <CollectionLoadingContext.Provider value={{ viewMode, selectable, columns, loadingLabel }}>
+    <CollectionLoadingContext.Provider
+      value={{ viewMode, selectable, columns, loadingLabel, showTableBanner }}
+    >
       {loading ? <PageManagementCollectionFallback /> : children}
     </CollectionLoadingContext.Provider>
   );

@@ -15,18 +15,24 @@ const image = "data:image/png;base64,YQ==";
 describe("Shared form preview audit", () => {
   for (const layout of ["form", "card"] as const) {
     it.each(["en", "ckb", "ar"] as const)(
-      `${layout} keeps %s sample copy in the editor preview only`,
+      `${layout} leaves the %s introduction description empty until authored`,
       (language) => {
         const form = { ...createForm(language), layout, name: "Internal name" };
         const original = structuredClone(form);
-        const hint = formEditorCopy(language).descriptionHint;
         const view = render(<FormPreview form={form} placeholders />);
-        expect(screen.getByText(hint)).toBeInTheDocument();
+        expect(form.description).toBe("");
+        expect(
+          view.container.querySelector("[data-form-description]"),
+        ).toBeNull();
         view.rerender(
           <FormPreview form={form} placeholders presentation="public" />,
         );
-        expect(screen.queryByText(hint)).not.toBeInTheDocument();
-        expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+        expect(
+          view.container.querySelector("[data-form-description]"),
+        ).toBeNull();
+        expect(
+          screen.queryByRole("heading", { level: 1 }),
+        ).not.toBeInTheDocument();
         expect(form).toEqual(original);
       },
     );
@@ -35,14 +41,34 @@ describe("Shared form preview audit", () => {
         ...createForm("en"),
         layout,
         actionsEnabled: true,
-        actions: [{ id: "website", type: "website" as const, text: "Website", url: "https://example.com" }],
+        actions: [
+          {
+            id: "website",
+            type: "website" as const,
+            text: "Website",
+            url: "https://example.com",
+          },
+        ],
       };
       const hint = formEditorCopy("en").finalDefault;
       const view = render(<FormPreview form={form} placeholders finalPage />);
       expect(screen.getByText(hint)).toBeInTheDocument();
-      view.rerender(<FormPreview form={form} placeholders finalPage presentation="public" />);
+      view.rerender(
+        <FormPreview
+          form={form}
+          placeholders
+          finalPage
+          presentation="public"
+        />,
+      );
       expect(screen.queryByText(hint)).not.toBeInTheDocument();
-      view.rerender(<FormPreview form={{ ...form, finalDescription: "We received your request." }} finalPage presentation="public" />);
+      view.rerender(
+        <FormPreview
+          form={{ ...form, finalDescription: "We received your request." }}
+          finalPage
+          presentation="public"
+        />,
+      );
       expect(screen.getByText("We received your request.")).toBeInTheDocument();
     });
     it(`${layout} keeps the internal name out of the public introduction`, () => {
@@ -57,7 +83,9 @@ describe("Shared form preview audit", () => {
         <FormPreview form={form} placeholders={false} presentation="public" />,
       );
       expect(screen.queryByText(form.name)).not.toBeInTheDocument();
-      expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { level: 1 }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText(form.description)).toBeInTheDocument();
       view.rerender(
         <FormPreview
@@ -207,7 +235,7 @@ describe("Shared form preview audit", () => {
       if (layout === "card")
         fireEvent.click(screen.getByRole("button", { name: "Start" }));
       const name = screen.getByRole("textbox", { name: "Name" });
-      const age = screen.getByRole("spinbutton", { name: "Age" });
+      const age = screen.getByRole("textbox", { name: "Age" });
       fireEvent.change(name, { target: { value: "   " } });
       fireEvent.change(age, { target: { value: "22" } });
       expect(name).toBeInvalid();
@@ -216,14 +244,16 @@ describe("Shared form preview audit", () => {
         screen.queryByText(formsCopy("en").thankYou),
       ).not.toBeInTheDocument();
       fireEvent.change(name, { target: { value: "Person" } });
-      for (const value of ["-1", "1.5"]) {
+      for (const value of ["-1", "1.5", "1e2", "letters"]) {
         fireEvent.change(age, { target: { value } });
-        expect(age).toBeInvalid();
-        fireEvent.click(screen.getByRole("button", { name: "Send" }));
-        expect(
-          screen.queryByText(formsCopy("en").thankYou),
-        ).not.toBeInTheDocument();
+        expect(age).toHaveValue("22");
       }
+      fireEvent.change(age, { target: { value: "131" } });
+      expect(age).toHaveAttribute("inputmode", "numeric");
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      expect(
+        screen.queryByText(formsCopy("en").thankYou),
+      ).not.toBeInTheDocument();
       fireEvent.change(age, { target: { value: "22" } });
       fireEvent.click(screen.getByRole("button", { name: "Send" }));
       expect(screen.getByText(formsCopy("en").thankYou)).toBeInTheDocument();

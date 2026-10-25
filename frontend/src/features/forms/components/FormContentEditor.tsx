@@ -1,5 +1,7 @@
 "use client";
+import { formSectionCopy } from "../form-section-copy";
 import { useFormValidation } from "./FormValidationContext";
+import { Images, Contact, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { EditorBannerControls } from "@/components/shared/EditorBannerControls";
 import type { FormDraft } from "../types";
@@ -23,6 +25,7 @@ export function FormContentEditor({
   copy: FormsCopy;
   labels: FormEditorCopy;
 }) {
+  const details = formSectionCopy(copy);
   const [open, setOpen] = useState<string | null>("questions");
   const validation = useFormValidation();
   const requestCrop = useFormImageCrop();
@@ -48,9 +51,15 @@ export function FormContentEditor({
       ? [form.banner]
       : [];
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 sm:space-y-5">
       <FormEditorSection
         title={labels.banner}
+        icon={Images}
+        summary={
+          form.bannerEnabled !== false
+            ? details.count("images", images.length)
+            : details.off
+        }
         step={1}
         {...section("banner")}
         enabled={form.bannerEnabled}
@@ -73,6 +82,8 @@ export function FormContentEditor({
       </FormEditorSection>
       <FormEditorSection
         title={labels.introduction}
+        icon={Contact}
+        summary={form.headline.trim() || details.empty}
         step={2}
         {...section("introduction")}
       >
@@ -96,6 +107,8 @@ export function FormContentEditor({
       >
         <FormEditorSection
           title={labels.privacy}
+          icon={ShieldCheck}
+          summary={form.consentRequired ? details.required : details.automatic}
           step={formContentOrder(form).length + 3}
           {...section("privacy")}
         >

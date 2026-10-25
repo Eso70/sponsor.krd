@@ -102,7 +102,9 @@ Banner uses shared Image/Carousel segmented tabs and matching square upload tile
 one tile for Image, five for Carousel. Click an empty add tile to upload, click an
 image to replace it, or use its remove action. There is no crop control. Upload
 limits and decoding checks apply to both layouts. The banner retains an enabled toggle.
-Preview carousels use side chevrons without a bottom navigation bar or counter.
+Preview and public carousels use small pagination dots instead of side chevrons,
+with shared sliding transitions and a three-second banner interval. Sliding
+respects reduced-motion preferences.
 Clicking a banner opens the validated image uncropped in the shared ImagePreviewModal,
 which reuses modal keyboard handling, close behavior, and focus restoration.
 Introduction supports a logo, headline, optional description and slogan, with a
@@ -1914,3 +1916,12 @@ the current page. Invalid, taken, pending or failed checks block explicit URL
 changes. A localized warning explains that changing the slug invalidates links
 and QR codes using the previous address. Business and Platform payload adapters
 send the explicit value as `seo_name`, including approval-governed updates.
+
+Shared ModalTextInput/ModalTextArea render default length limits directly in JSX
+through input-limits.ts; explicit field limits take precedence. Decimal NumberInput
+also declares a bound. Do not add DOM-wide input observers: scheduling a frame
+cannot establish that streamed/Suspense descendants have hydrated. The retired
+GlobalInputLimits observer could add maxlength=255 before React hydrated a public
+form quantity input. Native inputs must declare any applicable limit themselves.
+Server-side definition/submission validation remains authoritative. Hydration tests
+compare server and client numeric/text fields with no warning suppression.

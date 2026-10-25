@@ -1,28 +1,9 @@
-import {
-  AlignLeft,
-  ImageIcon,
-  Images,
-  PackageCheck,
-  Quote,
-  ListChecks,
-  Contact,
-  CircleHelp,
-} from "lucide-react";
+import { FORM_CONTENT_COMPONENTS } from "../form-content-components";
 import { CustomSelect } from "@/components/shared/CustomSelect";
 import type { FormContentBlock } from "../types";
 import type { FormEditorCopy } from "../form-editor-copy";
 
 type ComponentType = NonNullable<FormContentBlock["type"]>;
-const components = [
-  { value: "text", icon: AlignLeft },
-  { value: "image", icon: ImageIcon },
-  { value: "carousel", icon: Images },
-  { value: "products", icon: PackageCheck },
-  { value: "testimonials", icon: Quote },
-  { value: "steps", icon: ListChecks },
-  { value: "about", icon: Contact },
-  { value: "faq", icon: CircleHelp },
-] as const;
 
 /** Localized component cards reuse the shared viewport-aware action picker. */
 export function FormComponentPicker({
@@ -46,7 +27,7 @@ export function FormComponentPicker({
       menuLayout="grid"
       minMenuWidth={480}
       maxMenuHeight={460}
-      options={components.map((component) => ({
+      options={FORM_CONTENT_COMPONENTS.map((component) => ({
         ...component,
         label: labels[component.value],
       }))}
