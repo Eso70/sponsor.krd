@@ -175,8 +175,15 @@ Ownership and routing queries use explicit trusted recursive DNS servers rather
 than the host's default resolver. `CUSTOM_DOMAIN_DNS_SERVERS` accepts up to four
 comma-separated DNS-server IPs; the default uses Cloudflare and Google DNS.
 Allow outbound DNS to these addresses, or configure approved reachable resolvers.
-Node uses later servers for DNS query errors/timeouts, not for an authoritative
-negative response; caches at the chosen resolver may still need time to expire.
+Verification queries each configured trusted recursive resolver independently,
+with a separate bounded DNS client per resolver (at most four). A resolver must
+confirm both the exact current TXT proof and allowed A/AAAA routing to succeed;
+proof and routing are never combined across resolvers. This avoids rejecting a
+newly updated record solely because the first resolver caches an older proof or
+negative answer. If no complete result succeeds and any lookup is unavailable,
+verification returns a temporary error and preserves the existing lease. If all
+lookups complete negatively, ownership/routing failure still disconnects the
+domain. DNS caches may still need time to expire when all resolvers are stale.
 No customer-supplied nameservers or HTTP verification fallbacks are used.
 Ownership-failure logs distinguish no returned TXT record from a record that
 does not match the current database claim, without logging token values.

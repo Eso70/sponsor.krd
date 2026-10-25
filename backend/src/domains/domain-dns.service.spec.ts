@@ -43,7 +43,8 @@ describe('domain DNS verification', () => {
   });
   it('accepts a matching ownership proof and exact origin routing', async () => {
     expect(await service.check('wafaye.com', 'token')).toBeNull();
-    expect(setServers).toHaveBeenCalledWith(['1.1.1.1', '8.8.8.8']);
+    expect(setServers).toHaveBeenCalledWith(['1.1.1.1']);
+    expect(setServers).toHaveBeenCalledWith(['8.8.8.8']);
   });
   it('uses configured resolvers for both ownership and address queries', async () => {
     const configured = new DomainDnsService(
@@ -53,7 +54,40 @@ describe('domain DNS verification', () => {
       }),
     );
     expect(await configured.check('wafaye.com', 'token')).toBeNull();
-    expect(setServers).toHaveBeenCalledWith(['9.9.9.9', '2620:fe::fe']);
+    expect(setServers).toHaveBeenCalledWith(['9.9.9.9']);
+    expect(setServers).toHaveBeenCalledWith(['2620:fe::fe']);
+  });
+  it('accepts a complete current result when the first resolver caches an old proof', async () => {
+    txt.mockResolvedValueOnce([['sponsor-verification=old-proof']]);
+    expect(await service.check('alinetwork.net', 'token')).toBeNull();
+    expect(txt).toHaveBeenCalledTimes(2);
+    expect(ipv4).toHaveBeenCalledTimes(1);
+  });
+  it('checks another resolver after an authoritative negative response', async () => {
+    txt.mockRejectedValueOnce({ code: 'ENOTFOUND' });
+    expect(await service.check('alinetwork.net', 'token')).toBeNull();
+  });
+  it('accepts a complete result when the other resolver times out', async () => {
+    txt.mockRejectedValueOnce({ code: 'ETIMEOUT' });
+    expect(await service.check('alinetwork.net', 'token')).toBeNull();
+  });
+  it('checks routing independently when one resolver caches a missing address', async () => {
+    ipv4.mockResolvedValueOnce([]);
+    expect(await service.check('alinetwork.net', 'token')).toBeNull();
+  });
+  it('never combines ownership from one resolver with routing from another', async () => {
+    txt.mockResolvedValueOnce([['sponsor-verification=token']]);
+    txt.mockResolvedValueOnce([['sponsor-verification=other']]);
+    ipv4.mockResolvedValueOnce(['203.0.113.99']);
+    expect(await service.check('alinetwork.net', 'token')).toBe('routing');
+    expect(ipv4).toHaveBeenCalledTimes(1);
+  });
+  it('does not turn a partial lookup outage into revoked ownership', async () => {
+    txt.mockResolvedValueOnce([]);
+    txt.mockRejectedValueOnce({ code: 'ETIMEOUT' });
+    await expect(service.check('alinetwork.net', 'token')).rejects.toThrow(
+      'temporarily unavailable',
+    );
   });
   it('logs missing versus mismatched proofs without logging token values', async () => {
     const warn = jest

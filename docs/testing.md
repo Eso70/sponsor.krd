@@ -301,3 +301,8 @@ disconnected recovery, read-only access and the DNS-to-primary transition. Panel
 and Platform modal integration tests exercise the same records and activation
 action. DNS service regressions distinguish a matching TXT with no A/AAAA from a
 transient address lookup failure; routing logs never include proof tokens.
+
+DNS resolver regressions cover cached stale proofs, authoritative negatives,
+missing addresses, one-resolver timeouts, partial outages and rejection of proof
+and routing assembled from different resolvers. Only configured trusted DNS
+servers participate; a complete proof and routing result is always required.

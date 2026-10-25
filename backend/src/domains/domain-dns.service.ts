@@ -29,13 +29,48 @@ export class DomainDnsService {
     hostname: string,
     token: string,
   ): Promise<'ownership' | 'routing' | null> {
-    // Only DNS queries are issued. Never fetch a customer-controlled URL.
+    const servers = [
+      ...new Set(
+        this.config
+          .get<string>('CUSTOM_DOMAIN_DNS_SERVERS', '1.1.1.1,8.8.8.8')
+          .split(',')
+          .map((server) => server.trim()),
+      ),
+    ];
+    // Node falls back on query errors, not on cached negative/mismatched answers.
+    // Check each configured trust source independently; never combine one
+    // resolver's ownership proof with another resolver's routing addresses.
+    const results = await Promise.allSettled(
+      servers.map((server) => this.checkWithResolver(hostname, token, server)),
+    );
+    if (
+      results.some(
+        (result) => result.status === 'fulfilled' && result.value === null,
+      )
+    )
+      return null;
+    // An unreachable resolver might have the updated records. Do not revoke a
+    // live lease based only on an incomplete set of negative responses.
+    if (results.some((result) => result.status === 'rejected'))
+      throw new ServiceUnavailableException(
+        'DNS verification is temporarily unavailable',
+      );
+    return results.some(
+      (result) => result.status === 'fulfilled' && result.value === 'routing',
+    )
+      ? 'routing'
+      : 'ownership';
+  }
+
+  private async checkWithResolver(
+    hostname: string,
+    token: string,
+    server: string,
+  ): Promise<'ownership' | 'routing' | null> {
+    // Only configured recursive DNS servers are contacted, never customer URLs
+    // or customer-supplied nameservers. Configuration limits this to four servers.
     const resolver = new Resolver({ timeout: 2500, tries: 2 });
-    const servers = this.config
-      .get<string>('CUSTOM_DOMAIN_DNS_SERVERS', '1.1.1.1,8.8.8.8')
-      .split(',')
-      .map((server) => server.trim());
-    resolver.setServers(servers);
+    resolver.setServers([server]);
     async function read<T>(query: Promise<T>, empty: T): Promise<T> {
       try {
         return await query;
@@ -55,7 +90,7 @@ export class DomainDnsService {
       !txt.some((parts) => parts.join('') === `sponsor-verification=${token}`)
     ) {
       this.logger.warn(
-        `TXT ownership check failed for ${hostname} using ${servers.join(',')}: ${txt.length ? 'record does not match the current domain claim' : 'no TXT record returned'}`,
+        `TXT ownership check failed for ${hostname} using ${server}: ${txt.length ? 'record does not match the current domain claim' : 'no TXT record returned'}`,
       );
       return 'ownership';
     }
@@ -75,6 +110,7 @@ export class DomainDnsService {
         JSON.stringify({
           event: 'custom_domain_routing_failed',
           hostname,
+          resolver: server,
           reason:
             ipv4.length || ipv6.length
               ? 'unexpected_address'
