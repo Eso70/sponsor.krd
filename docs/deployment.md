@@ -460,3 +460,23 @@ editing after deployment; create a page without a slug and verify the generated
 URL. Renaming a headline must leave its existing public URL reachable. The
 application preserves legacy response aliases for public renderers and old
 clients; no production data was migrated by editing the source alone.
+
+## Shared phone dependency missing during build
+
+If Turbopack reports missing `libphonenumber-js/max`, `core` or `max/metadata`
+from `packages/types/phone-number.cjs`, refresh the workspace install after
+uploading the changed application, package manifests and lockfile:
+
+```bash
+cd /var/www/sponsor.krd
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+`libphonenumber-js` is a pinned runtime dependency of `@linktree/types`, not
+an optional or globally installed tool. Both application prebuild hooks check
+resolution from that owning package and stop early with this repair command
+when the installation is missing or broken. Keep dependency installation before
+build in every release; building does not automatically install packages. Reload
+PM2 only after a successful build. This repair requires no schema reset or data
+migration.

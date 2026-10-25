@@ -283,3 +283,12 @@ refresh cancellation and nested deletion coverage.
 ## Persisted forms
 
 Forms tests cover guards, validation, normalized uploads, both management scopes and both public layouts. Run `pnpm --filter frontend exec vitest run src/features/forms --maxWorkers=4` and `pnpm --filter backend exec jest --config test/jest-e2e.json test/forms.e2e-spec.ts --runInBand`. The PostgreSQL suite creates/drops only its separate `sponsor_krd_forms_e2e_<pid>` database. See [Forms](forms.md).
+
+## Build dependency preflight
+
+`pnpm test:types` runs the shared runtime dependency checks with Node’s built-in
+test runner. It verifies loading from the owning workspace and uses an isolated
+temporary package without dependencies to check the failure message and nonzero
+exit. Both frontend and backend prebuild hooks invoke that same check. Root
+`pnpm test` and `pnpm verify` include these tests; the check never installs packages
+or changes the lockfile.

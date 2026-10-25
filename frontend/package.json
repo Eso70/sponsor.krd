@@ -5,7 +5,7 @@
   "scripts": {
     "sync:env": "node scripts/sync-env.mjs",
     "predev": "pnpm run sync:env",
-    "prebuild": "pnpm run sync:env",
+    "prebuild": "node ../packages/types/check-runtime.cjs && pnpm run sync:env",
     "prestart": "pnpm run sync:env",
     "prestart:prod": "pnpm run sync:env",
     "dev": "next dev --webpack -p 3011",
