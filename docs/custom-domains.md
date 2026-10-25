@@ -26,9 +26,20 @@ state. Close and Add domain actions sit in the shared footer; DNS and deletion
 dialogs continue to open above this dialog.
 The business grid's globe action uses the same responsive size, rounded border
 and tinted background as its neighboring actions, through a shared grid variant.
-The DNS dialog displays only the TXT record name and ownership value with copy
-controls, plus verification status and the Verify DNS action. Routing records and
-certificate requirements remain enforced by the backend and documented below.
+The shared DNS dialog shows a six-step setup and recovery checklist in English,
+Arabic and Kurdish: select the active DNS provider, add routing records, preserve
+the ownership TXT, save and wait for propagation, verify and make primary, then
+retain the records. Copyable A and AAAA values come from the server's existing
+configuration, never a hard-coded deployment IP. It shows full DNS names and
+explains relative names such as @ and _sponsor-verification in providers that
+append the zone. With no configured IPv6 it explicitly warns to remove stale
+AAAA records. Only the connected hostname is covered, not its www/root sibling.
+The footer offers Verify DNS until verified and Make primary after verification;
+HTTPS readiness is still enforced by the existing backend activation endpoint.
+Read-only access never exposes mutation controls. Missing or incorrect routing
+still disconnects a domain; the checklist cannot prevent external DNS changes.
+Server-only routing diagnostics distinguish missing addresses from unexpected
+addresses without recording the ownership token. No migration is required.
 
 Platform routes under `/api/platform/businesses/:businessId/domains` require
 PlatformAdminGuard and the existing business read/update capabilities. Business

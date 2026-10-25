@@ -175,6 +175,60 @@ describe("shared custom-domain management", () => {
       ).toBeInTheDocument();
     },
   );
+  it.each(["panel", "platform"] as const)(
+    "shows routing instructions and activates from DNS setup through %s",
+    async (surface) => {
+      load.mockResolvedValue({
+        ...data,
+        domains: [{ ...domain, status: "active" }],
+      });
+      action.mockResolvedValue({
+        ...data,
+        domains: [{ ...domain, status: "active", isPrimary: true }],
+      });
+      render(
+        surface === "panel" ? (
+          <BusinessDomainsPanel
+            businessId="wafaye-id"
+            businessName="Wafaye"
+            onClose={vi.fn()}
+            locale="en"
+          />
+        ) : (
+          <PlatformLocaleProvider initialLocale="en">
+            <PlatformBusinessDomainsModal
+              business={{ id: "wafaye-id", name: "Wafaye" }}
+              onClose={vi.fn()}
+            />
+          </PlatformLocaleProvider>
+        ),
+      );
+      await screen.findAllByText("wafaye.com");
+      fireEvent.click(
+        screen.getAllByRole("button", { name: "DNS setup: wafaye.com" })[0],
+      );
+      const modal = within(
+        screen.getByRole("dialog", { name: "DNS setup: wafaye.com" }),
+      );
+      expect(modal.getByDisplayValue("203.0.113.10")).toBeInTheDocument();
+      expect(
+        modal.getByDisplayValue("sponsor-verification=token"),
+      ).toBeInTheDocument();
+      fireEvent.click(modal.getByRole("button", { name: "Make primary" }));
+      await waitFor(() =>
+        expect(action).toHaveBeenCalledWith(
+          "/api/platform/businesses/wafaye-id/domains",
+          "domain-id",
+          "primary",
+        ),
+      );
+      await waitFor(() =>
+        expect(modal.getByRole("status")).toHaveTextContent(
+          "This domain is primary",
+        ),
+      );
+    },
+  );
   it("adds through a shared modal and shows exact ownership records", async () => {
     load.mockResolvedValue({ ...data, domains: [] });
     render(

@@ -292,3 +292,12 @@ temporary package without dependencies to check the failure message and nonzero
 exit. Both frontend and backend prebuild hooks invoke that same check. Root
 `pnpm test` and `pnpm verify` include these tests; the check never installs packages
 or changes the lockfile.
+
+## Custom-domain setup guidance
+
+DomainDnsModal tests cover all three locales, full multi-label hostnames, every
+configured address, IPv4-only/IPv6-only deployments, incomplete configuration,
+disconnected recovery, read-only access and the DNS-to-primary transition. Panel
+and Platform modal integration tests exercise the same records and activation
+action. DNS service regressions distinguish a matching TXT with no A/AAAA from a
+transient address lookup failure; routing logs never include proof tokens.

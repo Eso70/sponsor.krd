@@ -70,8 +70,21 @@ export class DomainDnsService {
       !(ipv4.length || ipv6.length) ||
       ipv4.some((ip) => !allowed4.includes(ip)) ||
       ipv6.some((ip) => !allowed6.includes(normalizedAddress(ip)))
-    )
+    ) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'custom_domain_routing_failed',
+          hostname,
+          reason:
+            ipv4.length || ipv6.length
+              ? 'unexpected_address'
+              : 'missing_address',
+          ipv4,
+          ipv6,
+        }),
+      );
       return 'routing';
+    }
     return null;
   }
 }

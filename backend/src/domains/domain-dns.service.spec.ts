@@ -93,6 +93,35 @@ describe('domain DNS verification', () => {
     ipv4.mockResolvedValue(['203.0.113.10', '203.0.113.11']);
     expect(await service.check('wafaye.com', 'token')).toBe('routing');
   });
+  it('rejects a valid ownership proof without any address records', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
+    try {
+      ipv4.mockRejectedValue({ code: 'ENODATA' });
+      ipv6.mockRejectedValue({ code: 'ENODATA' });
+      expect(await service.check('alinetwork.net', 'token')).toBe('routing');
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('missing_address'),
+      );
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(
+        'sponsor-verification=',
+      );
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('token');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+  it('accepts IPv4-only routing when no AAAA record exists', async () => {
+    ipv6.mockRejectedValue({ code: 'ENODATA' });
+    expect(await service.check('alinetwork.net', 'token')).toBeNull();
+  });
+  it('does not treat an address lookup timeout as a confirmed routing mismatch', async () => {
+    ipv4.mockRejectedValue({ code: 'ETIMEOUT' });
+    await expect(service.check('alinetwork.net', 'token')).rejects.toThrow(
+      'temporarily unavailable',
+    );
+  });
   it('treats missing ownership records as a failed proof', async () => {
     txt.mockRejectedValue({ code: 'ENOTFOUND' });
     expect(await service.check('wafaye.com', 'token')).toBe('ownership');

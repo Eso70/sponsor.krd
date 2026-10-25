@@ -296,6 +296,7 @@ export function BusinessDomainsPanel({
             error={error}
             onClose={() => setSelectedId(null)}
             onVerify={() => void act(selected.id, "verify")}
+            onPrimary={() => void act(selected.id, "primary")}
           />
         )}
         {deleting && (
