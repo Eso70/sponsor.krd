@@ -1596,6 +1596,13 @@ All six Linktree templates share viewport fitting through
 TemplateViewportLayout/useTemplateViewportFit. Mobile top/main spacing is compact;
 the natural content box scales only when necessary, down to 85%, after reserving
 the measured, unscaled sponsor/legal footer. Very long pages remain scrollable.
+The shared banner opts into PublicImageGallery's edge-to-edge mode: its image
+window compensates horizontally for the template fit scale, while an outer box
+retains the original image ratio and height. Images cover that window without
+stretching; a small crop may be needed when fitting. Logo overlap and content
+positions stay unchanged. Stored dimensions reserve the height before loading;
+legacy banners use decoded image dimensions once available. Forms and other
+gallery callers retain their existing sizing and contain behavior.
 The footer is anchored absolutely to that page box, so ancestor containment
 cannot move it to the app shell's bottom. The page height and fit use the owning
 VisualViewport when available, follow browser-bar resizing and ignore pinch

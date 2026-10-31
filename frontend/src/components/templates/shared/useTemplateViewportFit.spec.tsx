@@ -49,6 +49,7 @@ describe("template viewport fitting", () => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { nextFrame = callback; return 1; });
     const { getByTestId } = render(<FitFixture />);
     expect(getByTestId("content").style.transform).toBe("scale(0.9)");
+    expect(getByTestId("content").style.getPropertyValue("--template-fit-scale")).toBe("0.9");
     expect(getByTestId("frame").style.height).toBe("630px");
 
     height = 1200;
@@ -59,6 +60,7 @@ describe("template viewport fitting", () => {
     height = 400;
     act(() => { window.dispatchEvent(new Event("resize")); nextFrame!(0); });
     expect(getByTestId("content").style.transform).toBe("");
+    expect(getByTestId("content").style.getPropertyValue("--template-fit-scale")).toBe("1");
     expect(getByTestId("frame").style.height).toBe("");
   });
 

@@ -29,6 +29,10 @@ cover both dashboard data sources.
 
 Linktree viewport fitting has focused coverage for footer reservation, bounded
 scaling, restoration to full size, resize batching, content changes and cleanup.
+Banner tests cover single/carousel edge-to-edge rendering, preservation of the
+reserved height ratio, removal of the shared maximum-button-width limit and
+decoded dimensions for legacy images. Browser verification checks image bounds
+against the screen width while template scaling is active.
 WhatsApp dialog tests cover native cancellation, reopening, focus return,
 backdrop dismissal and preserved question messages. Tracking tests also assert
 that opening/closing the chooser does not rerender the memoized template.

@@ -27,6 +27,7 @@ export function PublicImageGallery({
   eager = false,
   cover = false,
   compact = false,
+  edgeToEdge = false,
   copy,
   onImageOpen,
   onSlideChange,
@@ -44,6 +45,8 @@ export function PublicImageGallery({
   eager?: boolean;
   cover?: boolean;
   compact?: boolean;
+  /** Fill a fitted template's width while preserving the banner's vertical box. */
+  edgeToEdge?: boolean;
   copy: ImageMediaCopy;
   onImageOpen?: (index: number) => void;
   onSlideChange?: (index: number) => void;
@@ -52,6 +55,7 @@ export function PublicImageGallery({
   const [position, setPosition] = useState(0);
   const [snapping, setSnapping] = useState(false);
   const [failedImages, setFailedImages] = useState<string[]>([]);
+  const [loadedDimensions, setLoadedDimensions] = useState<Record<string, { width: number; height: number }>>({});
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -82,8 +86,9 @@ export function PublicImageGallery({
       (safeImages.length || 1)
     : 0;
   const canMove = carousel && safeImages.length > 1;
-  const firstDimensions = dimensions[safeImages[0]];
+  const firstDimensions = dimensions[safeImages[0]] ?? loadedDimensions[safeImages[0]];
   const reserveBanner = banner && !cover && !!firstDimensions;
+  const fullWidthBanner = edgeToEdge && reserveBanner;
   const move = (offset: number) => {
     if (!canMove || position < 0 || position >= safeImages.length) return;
     const next = (current + offset + safeImages.length) % safeImages.length;
@@ -172,6 +177,11 @@ export function PublicImageGallery({
           failed.includes(source) ? failed : [...failed, source],
         )
       }
+      onLoad={(event) => {
+        if (!edgeToEdge || !banner || cover || source !== safeImages[0] || dimensions[source]) return;
+        const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+        if (width > 0 && height > 0) setLoadedDimensions(previous => previous[source] ? previous : { ...previous, [source]: { width, height } });
+      }}
       draggable={false}
       alt=""
       className={
@@ -179,7 +189,7 @@ export function PublicImageGallery({
           ? "size-14 object-cover"
           : logo
             ? `${logoClass} object-cover`
-            : cover
+            : cover || fullWidthBanner
               ? "block h-full w-full object-cover"
               : banner
                 ? `block ${reserveBanner ? "h-full" : "h-auto"} w-full object-contain`
@@ -200,8 +210,8 @@ export function PublicImageGallery({
                 ? "option"
                 : "image"
       }
-      className={`relative overflow-hidden ${cover ? (compact ? "h-12 w-20 shrink-0 rounded-lg" : "aspect-[3/1] w-full") : option ? "size-14 shrink-0 rounded-lg" : logo ? `${logoClass} rounded-full border border-slate-400/20` : "w-full"}`}
-      style={canMove ? { touchAction: "pan-y pinch-zoom" } : undefined}
+      className={`relative ${fullWidthBanner ? "overflow-visible" : "overflow-hidden"} ${cover ? (compact ? "h-12 w-20 shrink-0 rounded-lg" : "aspect-[3/1] w-full") : option ? "size-14 shrink-0 rounded-lg" : logo ? `${logoClass} rounded-full border border-slate-400/20` : "w-full"}`}
+      style={{ ...(canMove ? { touchAction: "pan-y pinch-zoom" as const } : {}), ...(fullWidthBanner ? { aspectRatio: `${firstDimensions.width} / ${firstDimensions.height}` } : {}) }}
       onPointerEnter={(event) => {
         if (event.pointerType === "mouse") setHovered(true);
       }}
@@ -316,6 +326,10 @@ export function PublicImageGallery({
               reserveBanner
                 ? {
                     aspectRatio: `${firstDimensions.width} / ${firstDimensions.height}`,
+                    ...(fullWidthBanner ? {
+                      position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+                      width: "calc(100% / var(--template-fit-scale, 1))", maxWidth: "none", height: "100%", overflow: "hidden",
+                    } as const : {}),
                   }
                 : undefined
             }

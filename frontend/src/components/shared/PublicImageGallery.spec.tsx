@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PublicImageGallery } from "./PublicImageGallery";
 import { PublicImageDimensionsProvider } from "./PublicImageDimensionsProvider";
@@ -26,6 +26,27 @@ afterEach(() => {
 const images = ["/images/upload/first.png", "/images/upload/second.png"];
 const copy = imageMediaCopy("en");
 describe("shared banner carousel", () => {
+  it.each([false, true])("fills a fitted template's width without changing its reserved banner ratio (carousel=%s)", carousel => {
+    const { container } = render(<PublicImageDimensionsProvider dimensions={{ [images[0]]: { width: 1200, height: 300 } }}>
+      <div style={{ "--template-fit-scale": "0.85" } as import("react").CSSProperties}>
+        <PublicImageGallery banner edgeToEdge carousel={carousel} autoPlay={false} images={images} copy={copy} />
+      </div>
+    </PublicImageDimensionsProvider>);
+    const gallery = container.querySelector('[data-form-media="banner"]')!;
+    expect(gallery).toHaveStyle({ aspectRatio: "1200 / 300" });
+    const trigger = screen.getByRole("button", { name: "Preview: Banner image" });
+    expect(trigger).toHaveStyle({ width: "calc(100% / var(--template-fit-scale, 1))", maxWidth: "none", height: "100%", position: "absolute" });
+    expect(gallery.querySelector("img")).toHaveClass("object-cover");
+    expect(gallery.querySelector(carousel ? "[data-current-slide=true] img" : "img")).toHaveAttribute("width", "1200");
+  });
+  it("uses a legacy banner's decoded dimensions when stored dimensions are absent", async () => {
+    const { container } = render(<PublicImageGallery banner edgeToEdge images={[images[0]]} copy={copy} />);
+    const image = container.querySelector("img")!;
+    Object.defineProperties(image, { naturalWidth: { value: 1200 }, naturalHeight: { value: 300 } });
+    await act(async () => { fireEvent.load(image); });
+    await waitFor(() => expect(container.querySelector('[data-form-media="banner"]')).toHaveStyle({ aspectRatio: "1200 / 300" }));
+    expect(screen.getByRole("button", { name: "Preview: Banner image" })).toHaveStyle({ height: "100%" });
+  });
   it("reserves the first banner's true proportions while fitting different slides without cropping", () => {
     const { container } = render(
       <PublicImageDimensionsProvider

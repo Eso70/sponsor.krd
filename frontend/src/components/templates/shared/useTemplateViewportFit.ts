@@ -40,6 +40,7 @@ export function useTemplateViewportFit() {
       // the next measurement. Never enlarge content or shrink it below 85%.
       const scale = height > 0 && available > 0 ? Math.max(0.85, Math.min(1, available / height)) : 1;
       const fitted = scale < 1;
+      content.style.setProperty("--template-fit-scale", String(scale));
       content.style.transform = fitted ? `scale(${scale})` : "";
       frame.style.height = fitted ? `${height * scale}px` : "";
       frame.dataset.fitted = String(fitted);
