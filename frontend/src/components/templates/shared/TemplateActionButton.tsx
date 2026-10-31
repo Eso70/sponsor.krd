@@ -52,7 +52,7 @@ export const TemplateActionButton = memo(function TemplateActionButton({
   if (href) {
     return <motion.a
       {...motionProps as HTMLMotionProps<"a">}
-      href={href} target="_blank" rel="noopener noreferrer" dir={dir}
+      href={href} rel="noopener noreferrer" dir={dir}
       onClick={(event) => {
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         try {

@@ -110,6 +110,15 @@ describe("business route protection", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("x-robots-tag")).toContain("noindex");
   });
+  it.each(["/linktree", "/form", "/linktree/", "/form/"])("allows public directory %s without a page-slug preflight", async (path) => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null));
+    for (const req of [request(path), new NextRequest(`http://localhost:3011${path}`, { headers: { host: "localhost:3011" } })]) {
+      const response = await proxy(req);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+    }
+    expect(fetch.mock.calls.some(([url]) => String(url).includes("linktree-status") || String(url).includes("/status"))).toBe(false);
+  });
   it.each(["/form/INVALID", "/form/" + "a".repeat(81), "/form/good/unknown"])(
     "rejects malformed form path %s before streaming",
     async (path) => {

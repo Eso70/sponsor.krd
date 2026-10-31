@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PublicImageGallery } from "./PublicImageGallery";
+import { PublicImageDimensionsProvider } from "./PublicImageDimensionsProvider";
 import { imageMediaCopy } from "./image-media-copy";
 import { FormPreviewHeader } from "@/features/forms/components/FormPreviewHeader";
 import { createForm } from "@/features/forms/forms-model";
@@ -25,6 +26,43 @@ afterEach(() => {
 const images = ["/images/upload/first.png", "/images/upload/second.png"];
 const copy = imageMediaCopy("en");
 describe("shared banner carousel", () => {
+  it("reserves the first banner's true proportions while fitting different slides without cropping", () => {
+    const { container } = render(
+      <PublicImageDimensionsProvider
+        dimensions={{
+          [images[0]]: { width: 1200, height: 600 },
+          [images[1]]: { width: 800, height: 800 },
+        }}
+      >
+        <PublicImageGallery
+          banner
+          carousel
+          autoPlay={false}
+          eager
+          images={images}
+          copy={copy}
+        />
+      </PublicImageDimensionsProvider>,
+    );
+    const trigger = screen.getByRole("button", {
+      name: "Preview: Banner image",
+    });
+    expect(trigger).toHaveStyle({ aspectRatio: "1200 / 600" });
+    expect(
+      container.querySelector("[data-current-slide=true] img"),
+    ).toHaveAttribute("width", "1200");
+    expect(
+      container.querySelector("[data-current-slide=true] img"),
+    ).toHaveAttribute("height", "600");
+    fireEvent.click(screen.getByRole("button", { name: "Banner image 2 / 2" }));
+    expect(trigger).toHaveStyle({ aspectRatio: "1200 / 600" });
+    expect(
+      container.querySelector("[data-current-slide=true] img"),
+    ).toHaveClass("h-full", "object-contain");
+    expect(
+      container.querySelector("[data-current-slide=true] img"),
+    ).toHaveAttribute("height", "800");
+  });
   it("advances every three seconds, wraps and does not count automatic engagement", () => {
     vi.useFakeTimers();
     const change = vi.fn();
@@ -266,7 +304,7 @@ describe("shared banner carousel", () => {
     ).toHaveAttribute("src", expect.stringContaining("first.png"));
   });
   it.each([false, true])(
-    "rotates the same Form banner in preview/public mode (%s)",
+    "autoplays previews but leaves the public first banner stable (%s)",
     (publicPage) => {
       vi.useFakeTimers();
       const form = {
@@ -290,7 +328,10 @@ describe("shared banner carousel", () => {
         container.querySelector(
           '[data-form-media="banner"] [data-current-slide=true] img',
         ),
-      ).toHaveAttribute("src", expect.stringContaining("second.png"));
+      ).toHaveAttribute(
+        "src",
+        expect.stringContaining(publicPage ? "first.png" : "second.png"),
+      );
     },
   );
   it("pauses in hidden tabs and restarts when visible", () => {

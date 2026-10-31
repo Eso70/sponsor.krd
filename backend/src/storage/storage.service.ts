@@ -343,6 +343,21 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     return Number(result.rows[0]?.total || 0) === urls.length;
   }
 
+  /** Only live administrator branding may be reused by platform-owned pages. */
+  async arePlatformBrandingAssetsOwned(...values: unknown[]): Promise<boolean> {
+    if (!this.database) return false;
+    const urls = this.extractUploadedUrls(values);
+    if (!urls.length) return true;
+    const result = await this.database.query<{ total: string }>(
+      `SELECT COUNT(DISTINCT asset.public_url)::text AS total
+       FROM uploaded_media_assets asset
+       WHERE asset.scope='sponsor_krd' AND asset.public_url=ANY($1::text[])
+         AND EXISTS (SELECT 1 FROM platform_admins admin WHERE asset.public_url IN (admin.logo,admin.avatar,admin.favicon))`,
+      [urls],
+    );
+    return Number(result.rows[0]?.total || 0) === urls.length;
+  }
+
   private async deleteIfUnreferenced(url: string): Promise<boolean> {
     if (!this.database || !this.keyFromUrl(url)) return false;
     const result = await this.database.query<{ referenced: boolean }>(

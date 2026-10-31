@@ -44,11 +44,11 @@ export const TemplateViewportLayout = memo(function TemplateViewportLayout({
   backgroundPatternAccent = "#ffffff",
   backgroundPatternOpacityScale = 1,
 }: TemplateViewportLayoutProps) {
-  const { hasBanner, seo } = useTemplateMedia();
+  const { hasBanner, seo, sponsor } = useTemplateMedia();
   const locale = usePublicLinktreeLocale();
   return (
     <div
-      className={`${footerStyles.viewport} relative w-full overflow-y-auto ${isPreview ? "min-h-full" : "min-h-screen min-h-[100svh] min-h-[100dvh]"} ${className} ${hasBanner ? "!px-0 !pt-0" : ""}`.trim()}
+      className={`${footerStyles.viewport} ${sponsor?.enabled && (sponsor.style === "wordmark" ? sponsor.logo : sponsor.name) ? footerStyles.sponsoredViewport : ""} relative w-full overflow-y-auto ${isPreview ? "min-h-full" : "min-h-screen min-h-[100svh] min-h-[100dvh]"} ${className} ${hasBanner ? "!px-0 !pt-0" : ""}`.trim()}
       style={style}
       dir={dir}
       data-template-viewport-layout

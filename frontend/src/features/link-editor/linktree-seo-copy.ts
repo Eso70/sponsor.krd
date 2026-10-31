@@ -1,4 +1,6 @@
 import type { BusinessLocale } from "@/features/business/i18n/messages";
+/** Shared visual week order; saved selections retain their original values. */
+export const LINKTREE_DISPLAY_WEEKDAYS = ["Sa", "Su", "Mo", "Tu", "We", "Th", "Fr"] as const;
 const text = {
   section: ["Search & page details", "گەڕان و وردەکاریی پەڕە", "البحث وتفاصيل الصفحة"],
   category: ["Category", "پۆل", "الفئة"], type: ["Business type", "جۆری کار", "نوع النشاط"],

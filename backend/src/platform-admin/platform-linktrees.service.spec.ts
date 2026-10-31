@@ -23,7 +23,6 @@ describe('PlatformLinktreesService', () => {
     duplicateLinktree: jest.fn(),
     getLinktreeById: jest.fn(),
     updateLinktree: jest.fn(),
-    syncSubmittedLinks: jest.fn(),
     deleteLinktree: jest.fn(),
     toggleArchive: jest.fn(),
   } as unknown as LinktreesService;
@@ -106,7 +105,6 @@ describe('PlatformLinktreesService', () => {
         slug: 'taken',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(linktrees.syncSubmittedLinks).not.toHaveBeenCalled();
   });
 
   it('does not disguise an unrelated failure as a slug conflict', async () => {
@@ -153,6 +151,7 @@ describe('PlatformLinktreesService', () => {
     const input = {
       name: 'Campaign',
       slug: 'new-campaign',
+      is_default: false,
       subtitle_color: '#123456',
       template_config: { verification_badge: true },
       links: { website: ['https://example.com'] },
@@ -171,17 +170,19 @@ describe('PlatformLinktreesService', () => {
     expect(linktrees.updateLinktree).toHaveBeenCalledWith(
       'page-id',
       expect.objectContaining({
-        seo_name: 'new-campaign',
+        slug: 'new-campaign',
+        links: input.links,
         subtitle_color: '#123456',
         template_config: { verification_badge: true },
       }),
       workspaceId,
       'platform',
     );
-    expect(linktrees.syncSubmittedLinks).toHaveBeenCalledWith(
+    expect(linktrees.updateLinktree).toHaveBeenCalledWith(
       'page-id',
-      input,
+      expect.not.objectContaining({ is_default: false }),
       workspaceId,
+      'platform',
     );
   });
 

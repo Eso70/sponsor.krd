@@ -384,31 +384,9 @@ export const LinktreePage = memo(function LinktreePage({
     };
   }, [linktree.template_config]);
 
-  /**
-   * Cross-platform URL opener.
-   * - Native URI schemes (tel:, viber://, mailto:) MUST use window.location.href on iOS Safari.
-   *   window.open() is blocked for these schemes on iOS and will silently fail.
-   * - Regular https:// links open in a new tab via window.open().
-   */
+  /** Keep web navigation in the current browsing context. App handoffs remain OS-controlled. */
   const openUrl = useCallback((targetUrl: string) => {
-    // Native app URI schemes — must use location.href, NOT window.open()
-    const isNativeScheme =
-      targetUrl.startsWith("tel:") ||
-      targetUrl.startsWith("viber://") ||
-      targetUrl.startsWith("mailto:");
-
-    if (isNativeScheme) {
-      window.location.href = targetUrl;
-      return;
-    }
-
-    // Regular web URLs — open in new tab
-    try {
-      window.open(targetUrl, "_blank", "noopener,noreferrer");
-    } catch {
-      // Fallback for popup blockers
-      window.location.href = targetUrl;
-    }
+    window.location.href = targetUrl;
   }, []);
 
   /**
@@ -452,6 +430,7 @@ export const LinktreePage = memo(function LinktreePage({
         // questions and closed them is indistinguishable from one who never
         // tapped WhatsApp at all. Engagement only, so it never reaches TikTok.
         if (enableMarketingTracking) tracker.trackEngagement("action_open", {
+          immediate: true,
           actionKey: `${linkActionKey(linkId)}:questions`,
           label: "WhatsApp questions",
           properties: { measurement: "whatsapp_questions", step: "opened", linkId },
@@ -506,6 +485,13 @@ export const LinktreePage = memo(function LinktreePage({
             links={links}
             theme={theme}
             onLinkClick={handleLinkClick}
+            onSponsorClick={enableMarketingTracking ? (url, name) => tracker.trackEngagement("action_open", {
+              actionKey: "page:sponsor-click",
+              immediate: true,
+              label: name,
+              destination: url,
+              properties: { measurement: "sponsor" },
+            }) : undefined}
             onMediaAction={enableMarketingTracking ? (action, index) => tracker.trackEngagement("action_open", {
               actionKey: `page:${action}`,
               properties: { media: index < 0 ? "logo" : "banner", index },
@@ -517,7 +503,7 @@ export const LinktreePage = memo(function LinktreePage({
             isOpen={isWhatsAppModalOpen}
             onClose={() => {
               const pending = pendingWhatsAppRef.current;
-              if (pending && enableMarketingTracking) tracker.trackEngagement("action_open", { actionKey: `${linkActionKey(pending.linkId)}:questions:closed`, properties: { measurement: "whatsapp_questions", step: "dismissed", linkId: pending.linkId } });
+              if (pending && enableMarketingTracking) tracker.trackEngagement("action_open", { immediate: true, actionKey: `${linkActionKey(pending.linkId)}:questions:closed`, properties: { measurement: "whatsapp_questions", step: "dismissed", linkId: pending.linkId } });
               setIsWhatsAppModalOpen(false);
               setPendingWhatsAppUrl("");
               pendingWhatsAppRef.current = null;

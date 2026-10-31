@@ -40,6 +40,7 @@ export interface TemplateComponentProps {
   links: Link[];
   theme: TemplateTheme;
   onLinkClick: (linkId: string, url: string, platform: string, defaultMessage?: string | null) => void;
+  onSponsorClick?: (url: string, name: string) => void;
   onMediaAction?: (action: "image-open" | "banner-change", index: number) => void;
 }
 

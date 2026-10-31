@@ -278,6 +278,7 @@ export interface FormMetrics {
   submissions: number;
 }
 export interface PublicFormPayload {
+  imageDimensions?: import("./linktree.types").PublicImageDimensions;
   /** Public branding fallback for browser tab icons. */
   businessLogo?: string | null;
   privacyVersion: string;

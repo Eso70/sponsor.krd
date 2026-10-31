@@ -18,6 +18,9 @@ import { linktreeSlugCopy } from "../linktree-slug-copy";
 import { LinktreeQuestionsEditor } from "./LinktreeQuestionsEditor";
 import { BasicInfoStep } from "@/features/link-editor/components/BasicInfoStep";
 import { LinktreeBannerEditor } from "./LinktreeBannerEditor";
+import { LinktreeSponsorEditor } from "./LinktreeSponsorEditor";
+import { persistSponsorDraft, sponsorEditorCopy, sponsorEditorDraft } from "../sponsor-editor";
+import { inspectLinktreeSponsor, LINKTREE_SPONSOR_KEY } from "@linktree/types";
 import { LinktreeSeoEditor } from "./LinktreeSeoEditor";
 import { LinktreeCategoryFields } from "./LinktreeCategoryFields";
 import { linktreeSeoCopy } from "../linktree-seo-copy";
@@ -238,6 +241,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
   management,
 }: LinktreeEditorDrawerProps) {
   const [managementBusy, setManagementBusy] = useState(false);
+  const [sponsorBusy, setSponsorBusy] = useState(false);
+  const [sponsorErrors, setSponsorErrors] = useState<Record<string, string>>({});
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateFooter, setDuplicateFooter] = useState<HTMLDivElement | null>(
     null,
@@ -257,7 +262,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
   } = useEditorImageCrop();
   const cropCopy = imageCropCopy(locale);
   const [openSection, setOpenSection] = useState<
-    "banner" | "basic" | "select" | "links" | "questions" | "seo" | null
+    "banner" | "basic" | "select" | "links" | "questions" | "seo" | "sponsor" | null
   >("basic");
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
@@ -714,6 +719,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
   useEffect(() => {
     if (!isOpen) {
       setDuplicating(false);
+      setSponsorErrors({});
+      setSponsorBusy(false);
       initializedLinktreeIdRef.current = null;
       setCropRequest(null);
       setUploadError(null);
@@ -1395,6 +1402,13 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
 
     try {
       setSubmitError(null);
+      if (sponsorBusy) throw new Error(sponsorEditorCopy[locale].invalid);
+      const sponsorCheck = inspectLinktreeSponsor(sponsorEditorDraft(templateConfig[LINKTREE_SPONSOR_KEY], businessIdentity?.name || ""), isFormImage);
+      setSponsorErrors(sponsorCheck.errors);
+      if (Object.keys(sponsorCheck.errors).length) {
+        setOpenSection("sponsor");
+        throw new Error(sponsorEditorCopy[locale].invalid);
+      }
       if (!slugValid) {
         setOpenSection("basic");
         throw new Error(slugCopy.fix);
@@ -1599,6 +1613,10 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       // Store WhatsApp modal config in template_config before normalization
       const templateConfigWithMessage = {
         ...templateConfig,
+        [LINKTREE_SPONSOR_KEY]: await persistSponsorDraft(
+          sponsorCheck.value,
+          (file) => uploadImage(file, "banner-image"),
+        ),
         seo: !advancedSeoAllowed
           ? templateConfig.seo
           : seoCheck.value
@@ -1879,7 +1897,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
     <ManagementDrawer
       isOpen={isOpen}
       onClose={() => {
-        if (cropBusy || isSubmitting || managementBusy) return;
+        if (cropBusy || isSubmitting || managementBusy || sponsorBusy) return;
         if (cropRequest) cancelCrop();
         else if (duplicating) setDuplicating(false);
         else onClose();
@@ -1898,7 +1916,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       extraWide
       compactHeader
       bodyLayout="contained"
-      busy={isSubmitting || cropBusy || managementBusy}
+      busy={isSubmitting || cropBusy || managementBusy || sponsorBusy}
       createBusinessStyle
       sponsorKrdTheme={platformTheme}
       closeLabel={copy?.close}
@@ -1923,14 +1941,14 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
           <LinktreeEditorActions
             editing={isEditMode}
             locale={locale}
-            loading={isLoadingEditData || managementBusy || !slugValid}
+            loading={isLoadingEditData || managementBusy || sponsorBusy || !slugValid}
             saving={isSubmitting}
             managementActions={
               !isLoadingEditData && management ? (
                 <LinktreeEditorPageActions
                   management={management}
                   locale={locale}
-                  disabled={isSubmitting || managementBusy}
+                  disabled={isSubmitting || managementBusy || sponsorBusy}
                   onBusyChange={setManagementBusy}
                   onDuplicate={() => setDuplicating(true)}
                 />
@@ -1939,7 +1957,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
             valid={hasValidLinks && !validateName(name)}
             copy={copy}
             onClose={() => {
-              if (!managementBusy) onClose();
+              if (!managementBusy && !sponsorBusy) onClose();
             }}
             onSubmit={() => {
               void handleSubmit();
@@ -2017,7 +2035,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
 
         {!isLoadingEditData && (
           <fieldset
-            disabled={isSubmitting || managementBusy}
+            disabled={isSubmitting || managementBusy || sponsorBusy}
             className="contents"
           >
             <EditorPreviewLayout
@@ -2090,6 +2108,20 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                     setOpenSection(openSection === "banner" ? null : "banner")
                   }
                   requestCrop={setCropRequest}
+                />
+                <LinktreeSponsorEditor
+                  locale={locale}
+                  sponsor={sponsorEditorDraft(templateConfig[LINKTREE_SPONSOR_KEY], businessIdentity?.name || "")}
+                  onChange={(sponsor) => {
+                    setTemplateConfig((previous) => ({ ...previous, [LINKTREE_SPONSOR_KEY]: sponsor }));
+                    if (Object.keys(sponsorErrors).length) setSponsorErrors(inspectLinktreeSponsor(sponsor, isFormImage).errors);
+                  }}
+                  open={openSection === "sponsor"}
+                  onToggle={() => setOpenSection(openSection === "sponsor" ? null : "sponsor")}
+                  errors={sponsorErrors}
+                  requestCrop={setCropRequest}
+                  onBusyChange={setSponsorBusy}
+                  platformTheme={platformTheme}
                 />
                 <EditorSection
                   title={copy?.basicStep ?? "زانیارییەکان"}

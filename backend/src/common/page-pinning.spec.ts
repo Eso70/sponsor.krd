@@ -18,7 +18,6 @@ describe('owner-scoped page pins', () => {
     {} as never,
     {} as never,
     {} as never,
-    {} as never,
   );
   afterEach(() => query.mockReset());
 
@@ -54,9 +53,9 @@ describe('owner-scoped page pins', () => {
     await forms.list('owner', 2);
     const [sql, parameters] = query.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain(
-      'ORDER BY is_pinned DESC,updated_at DESC,id LIMIT 20 OFFSET $4',
+      'ORDER BY is_pinned DESC,updated_at DESC,id LIMIT 15 OFFSET $4',
     );
     expect(sql).toContain('ORDER BY form."isPinned" DESC');
-    expect(parameters.slice(0, 4)).toEqual(['owner', false, '%%', 40]);
+    expect(parameters.slice(0, 4)).toEqual(['owner', false, '%%', 30]);
   });
 });

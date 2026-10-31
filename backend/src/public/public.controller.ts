@@ -93,6 +93,41 @@ export class PublicController {
     return { success: true, data: linktrees };
   }
 
+  @Get('directory/:kind')
+  async getDirectory(
+    @Subdomain() subdomain: string,
+    @Param('kind') kind: string,
+    @Query('page') page = '1',
+    @Req() request: FastifyRequest,
+  ) {
+    if (
+      (kind !== 'linktree' && kind !== 'form') ||
+      !/^[1-9]\d{0,3}$|^10000$/.test(page)
+    ) {
+      throw new NotFoundException('Page not found');
+    }
+    if (
+      await this.redisService.isRateLimited(
+        `rl:public-directory:${requestIp(request)}`,
+        120,
+        60,
+      )
+    ) {
+      throw new HttpException(
+        'Too many requests. Try again shortly.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    return {
+      success: true,
+      data: await this.publicService.getPublicDirectory(
+        subdomain,
+        kind,
+        Number(page),
+      ),
+    };
+  }
+
   @Get('plans')
   async getPlans() {
     return { success: true, data: await this.publicService.getPlans() };

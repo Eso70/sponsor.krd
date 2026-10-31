@@ -1,5 +1,7 @@
 import "server-only";
 import { cache } from "react";
+import type { ComponentProps } from "react";
+import type { BusinessLanding } from "@/components/business/BusinessLanding";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { PublicLinktreePayload, PublicSitemapPage } from "@linktree/types";
@@ -87,6 +89,38 @@ export const fetchPublicLinktree = cache(async (uid: string) => {
     return classifyUpstreamFailure(error).status === 504
       ? ("gateway-timeout" as const)
       : ("service-unavailable" as const);
+  }
+});
+
+/** Request-scoped only: settings/default-page changes take effect on the next visit. */
+export const fetchBusinessHomepage = cache(async () => {
+  const context = await publicRequestContext();
+  if (context.isPlatformRoot) return null;
+  try {
+    const response = await publicFetch("/api/public/business");
+    if (response.status === 404 || response.status === 403) return null;
+    if (!response.ok) {
+      console.error("[business-homepage] Upstream read failed", response.status);
+      return response.status === 504 ? "gateway-timeout" as const : "service-unavailable" as const;
+    }
+    const { data: business } = await response.json() as {
+      data?: ComponentProps<typeof BusinessLanding>["business"] & {
+        homepage_linktree?: boolean;
+        default_linktree_slug?: string | null;
+      };
+    };
+    if (!business) return null;
+    const linktree = business.homepage_linktree && business.default_linktree_slug
+      ? await fetchPublicLinktree(business.default_linktree_slug)
+      : null;
+    // A removed/inactive default falls back to the usual homepage. An upstream
+    // failure remains visible rather than silently showing different content.
+    if (typeof linktree === "string") return linktree;
+    return { business, linktree };
+  } catch (error) {
+    console.error("[business-homepage] Upstream unavailable", error instanceof Error ? error.name : "Error");
+    return classifyUpstreamFailure(error).status === 504
+      ? "gateway-timeout" as const : "service-unavailable" as const;
   }
 });
 

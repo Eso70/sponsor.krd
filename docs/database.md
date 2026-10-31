@@ -1,5 +1,13 @@
 # Database
 
+`business_defaults.homepage_linktree` is a non-null boolean, default false.
+Apply `2026-10-30_business_linktree_homepage.sql` through `pnpm db:migrate`
+before deploying the homepage switch. The additive migration preserves existing
+settings and pages; fresh baselines include the column. Business settings reads,
+partial updates, approved updates, and business backup export/import preserve it.
+Older backups restore with the switch off. Switching it off restores the usual
+homepage without removing or renaming any Linktree.
+
 Linktree profit tracking is retired. Apply `2026-10-15_retire_linktree_profit.sql` through `pnpm db:migrate` during deployment to remove its obsolete records table, including that table's indexes and triggers. This deletes only the retired profit records; Linktrees, links, Forms, responses, analytics, subscriptions and billing records remain intact. The retired table is absent from the fresh baseline. This migration has not been applied automatically. Editable Forms duplication uses existing columns and needs no schema addition.
 
 
@@ -496,3 +504,9 @@ preference and the defaults permission field. Existing saved colors, Linktrees,
 links and analytics are preserved. Only the database default for future default rows
 changes to Dark (`#161b22`); the new pattern preference starts at `grid45`.
 Business backups include this preference; older backups receive the new fallback.
+
+## Optional Linktree sponsor actions
+
+Sponsor presentation is stored in the existing Linktree `template_config.sponsor` JSON. `2026-10-31_linktree_sponsor_actions.sql` adds the owner-scoped public-page action registration trigger for existing deployments; fresh installations include `98_linktree_sponsor_actions.sql`. The trigger retains the action ID when labels/destinations change, marks disabled/destination-free sponsor actions hidden, and records engagement-only metadata. Apply through `pnpm db:migrate`; no reset or manual schema update is needed.
+
+`2026-10-31_linktree_sponsor_contacts.sql` updates the sponsor registration function to accept validated telephone destinations and wordmark-only attribution with no separate text name. Action identities and engagement-only classification remain unchanged.

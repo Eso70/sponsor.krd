@@ -674,3 +674,13 @@ read and update capabilities, and every grant write also scopes owner and page.
 ## Public icon derivatives
 
 The public branding icon endpoint reads only strict `/images/upload/` asset paths through StorageService. It does not fetch client-provided URLs or disclose private files. Conversion is bounded, rate limited and cached with ETags. It returns only ICO bytes and safe MIME headers; rejected requests retain private/no-store responses through the frontend proxy. Host-level browser metadata resolves existing verified business domain mappings and never accepts an owner ID from the browser.
+
+## Linktree editor media and approval boundaries
+
+Every Linktree write path, including approved mutations, validates submitted managed logo, background, banner, and social-preview uploads against the server-resolved owner. Claiming an upload is bookkeeping after validation and must never substitute for ownership authorization. Full editor updates authorize both page updates and link synchronization before any mutation. Pending approval is an unapplied outcome; the browser must not publish links separately or treat HTTP 202 as a completed save.
+
+Platform-owned pages may reuse live administrator branding uploads through an explicit platform-only ownership check. Business pages cannot use that allowance. Validate media before queuing approvals as well as before applying them, and restrict rejected-request cleanup to assets owned by the requesting business.
+
+## Linktree sponsor safety
+
+Sponsor names are bounded text rendered through React escaping; raw HTML is never accepted. Destinations accept `/` for the current owner homepage, absolute HTTP(S) URLs without credentials, or a strict international `tel:+` number. WhatsApp links require a numeric wa.me path. Protocol-relative, script/data, malformed, credential-bearing and control-character URLs are rejected. Wordmarks use managed JPEG/PNG uploads with server-side owner checks on normal, approval and duplication writes. Local raster drafts remain preview-only until the existing validated upload pipeline returns a managed path.

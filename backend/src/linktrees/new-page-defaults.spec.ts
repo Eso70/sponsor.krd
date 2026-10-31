@@ -26,6 +26,12 @@ describe('new-page defaults isolation', () => {
     const query = jest
       .fn<Promise<{ rows: unknown[] }>, [string, unknown[]?]>()
       .mockImplementation((sql: string) => {
+        if (
+          sql.includes(
+            'FROM linktrees WHERE id=$1 AND business_id=$2 FOR UPDATE',
+          )
+        )
+          return Promise.resolve({ rows: [row] });
         if (sql.includes('SELECT d.background_color'))
           return Promise.resolve({
             rows: [
@@ -79,11 +85,55 @@ describe('new-page defaults isolation', () => {
         claimBusinessAssets: jest.fn(),
         deleteUnreferencedFromValues: jest.fn(),
       } as never,
-      { syncLinks: jest.fn() } as never,
       {} as never,
     );
     return { service, query, redis };
   }
+
+  it.each(['business', 'platform'] as const)(
+    'retains saved question IDs when editing an unrelated field through %s',
+    async (scope) => {
+      const { service, query } = setup();
+      const question = {
+        id: '11111111-1111-4111-8111-111111111111',
+        text: 'Order',
+        message: 'Hello',
+      };
+      jest.spyOn(service, 'getLinktreeById').mockResolvedValue({
+        ...row,
+        headline: row.name,
+        subtitle: null,
+        subtitle_color: null,
+        slogan: null,
+        slogan_color: null,
+        description: null,
+        logo: null,
+        footer_text: '',
+        footer_phone: '',
+        template_config: {
+          templateKey: 'spectrum',
+          whatsapp_modal: { enabled: true, questions: [question] },
+        },
+      });
+      const original = query.getMockImplementation()!;
+      query.mockImplementation((sql, values) =>
+        sql === 'SELECT id FROM whatsapp_questions WHERE linktree_id=$1'
+          ? Promise.resolve({ rows: [{ id: question.id }] })
+          : original(sql, values),
+      );
+      await service.updateLinktree(
+        row.id,
+        { description: 'New description' },
+        'business-1',
+        scope,
+      );
+      expect(
+        query.mock.calls.some(([sql]) =>
+          /(?:UPDATE|INSERT INTO|DELETE FROM) whatsapp_questions/.test(sql),
+        ),
+      ).toBe(false);
+    },
+  );
 
   it.each(['business', 'platform'] as const)(
     'new pages inherit preferences and retain explicit none through %s',
@@ -300,9 +350,7 @@ describe('new-page defaults isolation', () => {
     'refuses badge changes to a page outside the %s owner',
     async (scope) => {
       const { service, query } = setup();
-      const lookup = jest
-        .spyOn(service, 'getLinktreeById')
-        .mockRejectedValue(new NotFoundException());
+      query.mockResolvedValue({ rows: [] });
       await expect(
         service.updateLinktree(
           row.id,
@@ -313,8 +361,13 @@ describe('new-page defaults isolation', () => {
           scope,
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
-      expect(lookup).toHaveBeenCalledWith(row.id, 'different-owner');
-      expect(query).not.toHaveBeenCalled();
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('business_id=$2 FOR UPDATE'),
+        [row.id, 'different-owner'],
+      );
+      expect(
+        query.mock.calls.some(([sql]) => sql.includes('UPDATE linktrees')),
+      ).toBe(false);
     },
   );
 

@@ -1,5 +1,40 @@
 # Testing and verification
 
+Public directory coverage includes the proxy's bare-route allowlist and malformed
+path rejection, shared Business/Platform directory rendering, empty states in
+three languages, same-context links, pagination and bounded campaign forwarding.
+The PostgreSQL fixture in `linktree-analytics.e2e-spec.ts` verifies cross-owner
+isolation, active/archive filters, live Forms plan gating, public-only summaries,
+missing/suspended businesses and disjoint paginated results.
+
+Default-Linktree homepage coverage:
+- `business-homepage.spec.ts` checks off/missing defaults, host-derived tenant
+  routing, custom domains, and exclusion of the platform root.
+- `BusinessSettingsPage.spec.tsx` saves, reloads, and disables the preference in
+  Kurdish, Arabic, and English.
+- `PublicLinktreeContent.spec.tsx` verifies shared rendering with the explicit
+  homepage marketing exclusion; pixel placement still constrains mounts.
+- `linktree-analytics.e2e-spec.ts` checks real PostgreSQL persistence, partial
+  updates, cross-owner isolation, and inactive/archived default exclusion.
+
+Linktree tracking regression coverage includes a real PostgreSQL fixture:
+`pnpm --filter backend exec jest --config test/jest-e2e.json --runInBand linktree-analytics`.
+It creates and removes only its guarded `sponsor_krd_linktree_analytics_e2e_<pid>`
+database. It checks redirect-first question attribution, retry idempotency,
+Business/Platform ownership, retained zero-selection questions, browser-only
+tracking, multiple destinations, and page-local calendar filtering. Frontend
+`LinktreePage.tracking.spec.tsx` checks immediate chooser engagement, selection,
+dismissal and preview exclusion; the shared analytics drawer integration tests
+cover both dashboard data sources.
+
+The question fixture deliberately stores different editor JSON IDs and canonical
+`whatsapp_questions` UUIDs, matching real public payloads. It also covers missing
+JSON copies, disabled modals, cross-page IDs, question edits/reordering/removal,
+unique visitors and historical labels. Both owner integrations assert unrelated
+Linktree edits preserve question IDs. The phone validation suite resolves its
+metadata dependency relative to this workspace's shared package; collection-pin
+coverage uses the documented 15-row form page size.
+
 The architecture HTTP suite gives its real Redis client a unique key prefix
 per run and removes only that prefix at teardown. It must never call FLUSHDB
 or FLUSHALL against a shared Redis server. Scoped pattern cleanup accounts for
@@ -306,3 +341,36 @@ DNS resolver regressions cover cached stale proofs, authoritative negatives,
 missing addresses, one-resolver timeouts, partial outages and rejection of proof
 and routing assembled from different resolvers. Only configured trusted DNS
 servers participate; a complete proof and routing result is always required.
+
+## Public mobile performance regression checks
+
+`PublicImageGallery.spec.tsx` verifies stored intrinsic dimensions, a stable
+carousel frame and manual public versus automatic preview behavior.
+`LinktreeBanner.spec.tsx` exercises all six templates, including lazy image
+viewers. `TemplateActionButton.spec.tsx` preserves native and modified-click
+navigation without a forced new window. Public form and management integration
+tests cover the shared renderer and Business/Platform adapters.
+
+The disposable PostgreSQL `test/linktree-analytics.e2e-spec.ts` also checks
+banner metadata for both Linktree and Form sources in business and platform
+workspaces, rejecting dimensions belonging to another owner.
+
+The measured live baseline and physical TikTok acceptance procedure are in
+[the mobile performance audit](mobile-performance-audit-2026-10-30.md).
+Browser unit tests do not measure CLS, INP or real in-app-browser compatibility.
+
+## Linktree mutation regression coverage
+
+Shared frontend mutation tests cover Business/Platform request routing, full editor saves in one request, explicit description clearing, normalized failures, pending approval outcomes, and cache invalidation only after applied writes. Dashboard integration tests exercise both actual dashboard entry components and verify approval notices without successful-save feedback or local published-state changes. Shared analytics, collection, and Forms component tests protect the neutral presentation integrations. Backend regression tests cover the shared transaction boundaries, media ownership, combined edit authorization, approval execution, link identity/metadata preservation, and canonical WhatsApp changes.
+
+Run the database regressions with `pnpm --filter backend exec jest --config test/jest-e2e.json --runInBand linktree-mutations linktree-analytics`. Each suite creates and drops only its own guarded `sponsor_krd_*_e2e_<pid>` database; neither modifies the configured application database. The mutation fixture forces a link-write failure with a fixture-only trigger to verify rollback of page fields and questions.
+
+## Dashboard installation checks
+
+Manifest, metadata, launch-handler and proxy tests cover both dashboard scopes, valid/expired/absent sessions, outage handling, custom-host relative URLs and production console configuration. Run `SEO_SMOKE_DASHBOARD_INSTALL_ONLY=1 pnpm --filter frontend test:seo` (set the environment variable using the current shell syntax). The fixture checks real rendered HTML contains exactly one scope-specific manifest, fetches both manifests without cookies, exercises Business launch redirects, verifies protected Platform launch, and rejects cross-host dashboard manifests without writing application data. Manually verify Add to Home Screen and cold launch on iOS Safari and Android Chrome after deployment, including logout/session expiry and each tenant's selected custom domain.
+
+## Linktree sponsor regression coverage
+
+Shared runtime and backend tests cover defaults, strict config validation, safe URLs, image formats, foreign assets, baseline registration and Business/Platform save paths. The guarded PostgreSQL mutation fixture checks sponsor save/reload, action identity preservation, destination changes, hiding/re-enabling, migration rerun and cross-owner rollback. Frontend tests exercise localized editor toggles/name/wordmark/link controls, all template renderers, attribution ordering above legal links, preview exclusion, and engagement-only click tracking. Run the sponsor, Linktree drawer, media ownership, public tracking and pixel-placement tests plus the existing Linktree mutation PostgreSQL fixture.
+
+Sponsor refinements test editable/empty introductory text, hidden wordmark names, destination selection, international WhatsApp/phone normalization and incomplete-number rejection. The PostgreSQL mutation fixture verifies nameless-wordmark/contact persistence in both scopes and rerunning the contact migration without replacing analytics action IDs.

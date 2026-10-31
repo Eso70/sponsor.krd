@@ -1,3 +1,4 @@
+import { platformConsolePath } from "@/lib/platform-console-path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createContentSecurityPolicy } from "@/lib/security/content-security-policy";
@@ -12,16 +13,7 @@ import {
 } from "@/lib/security/internal-proxy-key";
 
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost";
-const PLATFORM_ADMIN_PATH = normalizePrivatePath(
-  process.env.PLATFORM_ADMIN_PATH,
-);
-function normalizePrivatePath(value: string | undefined): string {
-  const normalized = (value || "").trim().replace(/^\/+|\/+$/g, "");
-  if (!/^[a-zA-Z0-9_-]{20,}$/.test(normalized)) {
-    return process.env.NODE_ENV === "development" ? "/platform-console" : "";
-  }
-  return `/${normalized}`;
-}
+const PLATFORM_ADMIN_PATH = platformConsolePath() || "";
 
 function isPlatformAdminPath(pathname: string): boolean {
   return (
@@ -303,12 +295,13 @@ export async function proxy(request: NextRequest) {
   );
   const formMatch = pathname.match(/^\/form\/([a-z0-9][a-z0-9-]{0,79})\/?$/);
   const publicPageMatch = linktreeMatch || formMatch;
+  const publicDirectory = /^\/(?:linktree|form)\/?$/.test(pathname);
   if (
     (pathname === "/linktree" ||
       pathname.startsWith("/linktree/") ||
       pathname === "/form" ||
       pathname.startsWith("/form/")) &&
-    !publicPageMatch
+    !publicPageMatch && !publicDirectory
   ) {
     return rewriteNotFound(request, "/__public-not-found", requestHeaders, csp);
   }
@@ -381,6 +374,8 @@ export async function proxy(request: NextRequest) {
     // public. Protected routes disclose nothing when no session is present.
     if (
       pathname !== "/business/workspace-entry" &&
+      pathname !== "/business/launch" &&
+      pathname !== "/business/manifest.webmanifest" &&
       !pathname.startsWith("/business/auth/consume")
     ) {
       const sessionToken = request.cookies.get("business_session")?.value;
@@ -415,9 +410,10 @@ export async function proxy(request: NextRequest) {
   // Protect and internally rewrite the configured platform console route.
   if (!subdomain && isPlatformAdminPath(pathname)) {
     const isLoginPath = pathname === `${PLATFORM_ADMIN_PATH}/login`;
+    const isManifestPath = pathname === `${PLATFORM_ADMIN_PATH}/manifest.webmanifest`;
     const sessionToken = request.cookies.get("platform_admin_session")?.value;
 
-    if (!isLoginPath) {
+    if (!isLoginPath && !isManifestPath) {
       if (!sessionToken) {
         return createRedirect(
           request,

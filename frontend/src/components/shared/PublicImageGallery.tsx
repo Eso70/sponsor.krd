@@ -6,15 +6,17 @@ import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { isLocalRasterImage as isFormImage } from "@/lib/images/local-raster-image";
 import type { ImageMediaCopy } from "./image-media-copy";
-import { FullscreenImageViewer } from "@/components/shared/FullscreenImageViewer";
+import { usePublicImageDimensions } from "./PublicImageDimensionsProvider";
+import { FullscreenImageViewer } from "./LazyFullscreenImageViewer";
 import {
   STANDARD_TEMPLATE_HEADER_AVATAR_SIZES,
   STANDARD_TEMPLATE_HEADER_CLASSES,
-} from "@/components/templates/shared/TemplateHeader";
+} from "@/components/templates/shared/template-header-styles";
 
 export function PublicImageGallery({
   images,
   carousel = false,
+  autoPlay = true,
   placeholder = false,
   logo = false,
   largeLogo = false,
@@ -31,6 +33,7 @@ export function PublicImageGallery({
 }: {
   images: string[];
   carousel?: boolean;
+  autoPlay?: boolean;
   placeholder?: boolean;
   logo?: boolean;
   largeLogo?: boolean;
@@ -45,6 +48,7 @@ export function PublicImageGallery({
   onImageOpen?: (index: number) => void;
   onSlideChange?: (index: number) => void;
 }) {
+  const dimensions = usePublicImageDimensions();
   const [position, setPosition] = useState(0);
   const [snapping, setSnapping] = useState(false);
   const [failedImages, setFailedImages] = useState<string[]>([]);
@@ -78,6 +82,8 @@ export function PublicImageGallery({
       (safeImages.length || 1)
     : 0;
   const canMove = carousel && safeImages.length > 1;
+  const firstDimensions = dimensions[safeImages[0]];
+  const reserveBanner = banner && !cover && !!firstDimensions;
   const move = (offset: number) => {
     if (!canMove || position < 0 || position >= safeImages.length) return;
     const next = (current + offset + safeImages.length) % safeImages.length;
@@ -104,6 +110,7 @@ export function PublicImageGallery({
   useEffect(() => {
     if (
       !banner ||
+      !autoPlay ||
       !canMove ||
       openedIndex !== null ||
       hovered ||
@@ -126,6 +133,7 @@ export function PublicImageGallery({
     };
   }, [
     banner,
+    autoPlay,
     canMove,
     current,
     safeImages.length,
@@ -151,8 +159,14 @@ export function PublicImageGallery({
       loading={eager && active ? "eager" : "lazy"}
       fetchPriority={eager && active ? "high" : "auto"}
       src={source}
-      width={option ? 56 : logo ? logoSize : 400}
-      height={option ? 56 : logo ? logoSize : banner ? 144 : 112}
+      width={option ? 56 : logo ? logoSize : (dimensions[source]?.width ?? 400)}
+      height={
+        option
+          ? 56
+          : logo
+            ? logoSize
+            : (dimensions[source]?.height ?? (banner ? 144 : 112))
+      }
       onError={() =>
         setFailedImages((failed) =>
           failed.includes(source) ? failed : [...failed, source],
@@ -168,7 +182,7 @@ export function PublicImageGallery({
             : cover
               ? "block h-full w-full object-cover"
               : banner
-                ? "block h-auto w-full object-contain"
+                ? `block ${reserveBanner ? "h-full" : "h-auto"} w-full object-contain`
                 : "h-28 w-full object-cover"
       }
     />
@@ -298,11 +312,18 @@ export function PublicImageGallery({
               setMouseDragging(false);
               setDragOffset(0);
             }}
+            style={
+              reserveBanner
+                ? {
+                    aspectRatio: `${firstDimensions.width} / ${firstDimensions.height}`,
+                  }
+                : undefined
+            }
             className={`block w-full ${cover ? "h-full" : ""} ${canMove ? (mouseDragging ? "cursor-grabbing select-none" : "cursor-grab select-none") : "cursor-zoom-in"}`}
           >
             {canMove ? (
               <span
-                className={`relative block overflow-hidden ${cover ? "h-full" : ""}`}
+                className={`relative block overflow-hidden ${cover || reserveBanner ? "h-full" : ""}`}
                 dir="ltr"
               >
                 {[
@@ -314,7 +335,7 @@ export function PublicImageGallery({
                     key={`${source}-${index}`}
                     data-current-slide={index === position + 1}
                     aria-hidden={index !== position + 1}
-                    className={`${styles.slide} ${cover ? styles.coverSlide : ""} ${mouseDragging || snapping ? styles.draggingSlide : ""}`}
+                    className={`${styles.slide} ${cover || reserveBanner ? styles.coverSlide : ""} ${mouseDragging || snapping ? styles.draggingSlide : ""}`}
                     style={{
                       position:
                         index === position + 1 ? "relative" : "absolute",

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LinktreePill } from "@/components/business/LinktreeMeta";
+import { LinktreePill } from "@/features/link-editor/components/LinktreeMeta";
 import { LinktreesGrid } from "@/components/business/LinktreesGrid";
 import { businessMessages } from "@/features/business/i18n/messages";
 import type {

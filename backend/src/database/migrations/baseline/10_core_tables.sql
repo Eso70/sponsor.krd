@@ -241,6 +241,7 @@ CREATE TABLE public.business_defaults (
     background_color character varying(100) DEFAULT '#161b22'::character varying NOT NULL,
     background_pattern text DEFAULT 'grid45' NOT NULL CHECK (background_pattern IN ('none','grid','grid45','dots','diagonal','cross','circles','waves','zigzag')),
     whatsapp_enabled boolean DEFAULT false NOT NULL,
+    homepage_linktree boolean DEFAULT false NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT business_defaults_background_color_check CHECK ((btrim((background_color)::text) <> ''::text)),
     CONSTRAINT business_defaults_template_key_check CHECK ((btrim((template_key)::text) <> ''::text))

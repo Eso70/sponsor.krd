@@ -10,7 +10,7 @@ export function FormCollectionBanner({
   locale,
   compact = false,
 }: {
-  form: FormSummary;
+  form: Pick<FormSummary, "bannerEnabled" | "bannerImages" | "banner" | "bannerMode">;
   locale: FormLanguage;
   compact?: boolean;
 }) {

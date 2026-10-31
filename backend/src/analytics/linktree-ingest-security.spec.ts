@@ -3,7 +3,10 @@ import type { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { UnifiedAnalyticsService } from './unified-analytics.service';
 
-function fixture() {
+function fixture(
+  actionOverrides: Record<string, unknown> = {},
+  pageType = 'linktree',
+) {
   const query = jest.fn((sql: string) => {
     if (sql.includes('FROM public_pages'))
       return Promise.resolve({
@@ -11,7 +14,7 @@ function fixture() {
           {
             id: 'page',
             business_id: 'owner',
-            page_type: 'linktree',
+            page_type: pageType,
             timezone: 'Asia/Baghdad',
             name: 'Page',
           },
@@ -25,6 +28,7 @@ function fixture() {
             label: 'WhatsApp',
             action_type: 'whatsapp',
             tiktok_event: 'Contact',
+            ...actionOverrides,
           },
         ],
       });
@@ -37,7 +41,7 @@ function fixture() {
   const service = new UnifiedAnalyticsService(database, {
     get: () => 's'.repeat(32),
   } as unknown as ConfigService);
-  return { service, query };
+  return { service, query, client };
 }
 const input = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -49,6 +53,86 @@ const input = {
 };
 const context = { ip: '203.0.113.9', userAgent: 'Mozilla/5.0' };
 describe('Linktree outcome integrity', () => {
+  it.each([
+    [undefined, 'https://site.example/linktree/page', 'direct'],
+    ['', 'https://site.example/linktree/page', 'direct'],
+    [
+      'https://www.tiktok.com/',
+      'https://site.example/linktree/page',
+      'tiktok_organic',
+    ],
+  ] as const)(
+    'uses the landing referrer %s instead of the tracking request header',
+    async (referrer, requestReferrer, channel) => {
+      const { service, query } = fixture();
+      await service.ingest(
+        {
+          ...input,
+          eventName: 'page_view',
+          pageUrl: 'https://site.example/linktree/page',
+          referrer,
+        },
+        { ...context, referrer: requestReferrer },
+      );
+      const event = query.mock.calls.find(([sql]) =>
+        sql.includes('INSERT INTO analytics_events'),
+      );
+      const values = (event as unknown as [string, unknown[]])[1];
+      expect(values[9]).toBe(referrer || null);
+      expect(values[34]).toBe(channel);
+      const session = query.mock.calls.find(([sql]) =>
+        sql.includes('INSERT INTO analytics_sessions'),
+      );
+      expect((session as unknown as [string, unknown[]])[1][6]).toBe(
+        referrer || null,
+      );
+    },
+  );
+
+  it('counts an accepted server-side form submission in events and both rollups', async () => {
+    const { service, query, client } = fixture(
+      { action_type: 'form', tiktok_event: 'SubmitForm' },
+      'form',
+    );
+    await service.ingest(
+      { ...input, eventName: 'form_submit' },
+      context,
+      client,
+    );
+    const event = query.mock.calls.find(([sql]) =>
+      sql.includes('INSERT INTO analytics_events'),
+    );
+    expect((event as unknown as [string, unknown[]])[1][26]).toBe(true);
+    for (const table of ['analytics_page_daily', 'analytics_action_daily']) {
+      const rollup = query.mock.calls.find(([sql]) =>
+        sql.includes(`INSERT INTO ${table}`),
+      );
+      expect((rollup as unknown as [string, unknown[]])[1][6]).toBe(1);
+    }
+  });
+  it.each([
+    ['button_click', {}, true],
+    ['whatsapp_click', { metadata: { engagement_only: true } }, false],
+  ] as const)(
+    'keeps stored and rolled-up conversions consistent for %s',
+    async (eventName, action, expected) => {
+      const { service, query } = fixture(action);
+      await service.ingest({ ...input, eventName }, context);
+      const event = query.mock.calls.find(([sql]) =>
+        sql.includes('INSERT INTO analytics_events'),
+      );
+      expect((event as unknown as [string, unknown[]])[1][26]).toBe(expected);
+      for (const table of ['analytics_page_daily', 'analytics_action_daily']) {
+        const rollup = query.mock.calls.find(([sql]) =>
+          sql.includes(`INSERT INTO ${table}`),
+        );
+        expect((rollup as unknown as [string, unknown[]])[1][6]).toBe(
+          expected ? 1 : 0,
+        );
+      }
+    },
+  );
+
   it('ignores browser revenue and takes the registered marketing name', async () => {
     const { service, query } = fixture();
     await service.ingest(

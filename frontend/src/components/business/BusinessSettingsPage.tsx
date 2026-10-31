@@ -53,6 +53,7 @@ import { StatCardGrid } from "@/components/shared/StatCardGrid";
 import { BusinessOwnerIdentityFields } from "@/features/link-editor/components/BusinessOwnerIdentityFields";
 import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
 import { DefaultPageCreationCard } from "@/features/business/components/DefaultPageCreationCard";
+import { BusinessHomepageSetting } from "@/features/business/components/BusinessHomepageSetting";
 import {
   AVATAR_MIME_TYPES,
   FAVICON_MIME_TYPES,
@@ -74,6 +75,7 @@ type SettingsData = {
   default_background_color: string;
   default_background_pattern: BackgroundPatternStyle;
   default_whatsapp_enabled: boolean;
+  homepage_linktree: boolean;
   /**
    * When the profile unlocks again, or null when it is editable. Profile
    * changes apply immediately and then lock for a cooldown period instead of
@@ -102,6 +104,7 @@ const emptySettings: SettingsData = {
   default_background_color: DEFAULT_LINKTREE_BACKGROUND_COLOR,
   default_background_pattern: resolveNewPagePattern(undefined),
   default_whatsapp_enabled: false,
+  homepage_linktree: false,
 };
 export function BusinessSettingsPage() {
   const startRequest = useLatestRequest();
@@ -205,6 +208,7 @@ export function BusinessSettingsPage() {
           default_background_color: data.default_background_color,
           default_background_pattern: data.default_background_pattern,
           default_whatsapp_enabled: data.default_whatsapp_enabled,
+          homepage_linktree: data.homepage_linktree,
         };
       } else if (
         effectiveAccess?.permissions["business:profile:update"]?.outcome ===
@@ -301,7 +305,8 @@ export function BusinessSettingsPage() {
       data.default_background_pattern !== savedSnapshot.default_background_pattern ||
       data.default_background_color !==
         savedSnapshot.default_background_color ||
-      data.default_whatsapp_enabled !== savedSnapshot.default_whatsapp_enabled
+      data.default_whatsapp_enabled !== savedSnapshot.default_whatsapp_enabled ||
+      data.homepage_linktree !== savedSnapshot.homepage_linktree
     );
   }, [data, savedSnapshot]);
   const profileEditingOutcome =
@@ -566,6 +571,10 @@ export function BusinessSettingsPage() {
                   </div>
                 </div>
                 <DefaultPageCreationCard />
+                <BusinessHomepageSetting
+                  checked={data.homepage_linktree}
+                  onChange={(value) => setData((current) => ({ ...current, homepage_linktree: value }))}
+                />
               </>
             )}
 

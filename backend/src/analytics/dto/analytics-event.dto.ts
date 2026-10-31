@@ -148,6 +148,12 @@ export class TrackAnalyticsBatchDto {
  * generic boolean conversion treats the non-empty string `"false"` as true.
  */
 export class TrackAnalyticsRedirectDto {
+  /** Saved question identity only; ingestion resolves its page-owned label. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  whatsappQuestionId?: string;
+
   @IsUUID()
   eventId: string;
 

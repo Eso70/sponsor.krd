@@ -74,3 +74,5 @@ route naming in three languages, public metadata privacy and API proxy isolation
 The SEO HTTP fixture checks real HTML has one title and one tab icon candidate,
 implicit favicon redirects stay on the tenant, the stock ICO is a valid binary,
 and existing SEO/crawler/host/marketing boundaries still hold.
+
+Dashboard installation uses separate scope-specific manifest links supplied by the Business and Platform layouts; public branding keeps the public manifest. Both dashboard manifests reuse the same owner-aware manifest builder and Apple standalone metadata. See the dashboard installation section in frontend.md for launch and session behavior.

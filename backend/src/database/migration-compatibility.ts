@@ -45,6 +45,7 @@ export const REQUIRED_COLUMNS = [
   ['linktrees', 'is_archived'],
   ['linktrees', 'archived_at'],
   ['whatsapp_questions', 'video_url'],
+  ['business_defaults', 'homepage_linktree'],
 ] as const;
 
 const OBSOLETE_COLUMNS: ReadonlyArray<readonly [string, string]> = [];
@@ -132,6 +133,11 @@ export async function assertSupportedSchema(
         legacyContent &&
         table === 'linktrees' &&
         LINKTREE_CONTENT_RENAMES.some(([canonical]) => canonical === column)
+      ) &&
+      !(
+        options.beforeForwardMigrations &&
+        table === 'business_defaults' &&
+        column === 'homepage_linktree'
       ),
   ).map(([table, column]) => `${table}.${column}`);
   const foundObsoleteColumns = OBSOLETE_COLUMNS.filter(([table, column]) =>

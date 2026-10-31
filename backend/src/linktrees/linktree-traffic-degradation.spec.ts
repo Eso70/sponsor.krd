@@ -29,7 +29,6 @@ describe('getAllLinktrees when traffic totals are unavailable', () => {
       {} as never,
       {} as never,
       {} as never,
-      {} as never,
       { linktreeTotalsForBusiness: totals } as never,
     );
     return { service, database };

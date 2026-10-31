@@ -150,6 +150,7 @@ describe('PublicUnifiedAnalyticsController', () => {
         consentState: 'granted',
         browserDispatched: 'true',
         browserEventName: 'Contact',
+        whatsappQuestionId: 'question-price',
       },
       request,
       reply,
@@ -168,6 +169,10 @@ describe('PublicUnifiedAnalyticsController', () => {
         occurredAt: '2026-08-24T01:33:18.000Z',
         browserDispatched: true,
         browserEventName: 'Contact',
+        properties: {
+          delivery: 'first_party_redirect',
+          whatsappQuestionId: 'question-price',
+        },
       }),
       expect.objectContaining({ ip: '203.0.113.20' }),
     );

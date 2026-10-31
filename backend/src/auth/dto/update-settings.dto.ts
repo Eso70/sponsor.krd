@@ -46,6 +46,7 @@ export class UpdateSettingsDto {
   default_background_pattern?: string;
   @IsOptional() @IsBoolean() default_footer_hidden?: boolean;
   @IsOptional() @IsBoolean() default_whatsapp_enabled?: boolean;
+  @IsOptional() @IsBoolean() homepage_linktree?: boolean;
 
   @IsOptional() @IsArray() tiktok_configs?: unknown[];
   @IsOptional() @IsString() @MaxLength(100) pixel_id?: string;

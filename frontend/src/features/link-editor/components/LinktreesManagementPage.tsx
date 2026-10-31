@@ -25,7 +25,7 @@ import { linktreeStatsCopy } from "../linktree-stats-copy";
 import { LinktreeStats } from "./LinktreeStats";
 import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
 import type { LinktreeListCopy } from "./linktree-list-copy";
-import type { PageListTrafficLabels } from "@/components/business/LinktreeMeta";
+import type { PageListTrafficLabels } from "@/features/link-editor/components/LinktreeMeta";
 
 const KURDISH_COPY = {
   title: DASHBOARD_PAGE_LABELS.linktrees,

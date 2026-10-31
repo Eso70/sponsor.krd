@@ -30,6 +30,7 @@ interface PublicMarketingSiteShellProps {
   primaryActionInk?: string;
   secondaryAction?: PublicMarketingAction | null;
   emphasizeFirstNavItem?: boolean;
+  hideBrandName?: boolean;
   appearance?: "business" | "sponsor-krd";
   embedded?: boolean;
   navbarCopy?: Partial<
@@ -54,6 +55,7 @@ export function PublicMarketingSiteShell({
   primaryActionInk,
   secondaryAction,
   emphasizeFirstNavItem = false,
+  hideBrandName = false,
   appearance = "business",
   embedded = false,
   navbarCopy,
@@ -101,6 +103,7 @@ export function PublicMarketingSiteShell({
             actionInk={primaryActionInk}
             secondaryAction={secondaryAction}
             emphasizeFirstNavItem={emphasizeFirstNavItem}
+            hideBrandName={hideBrandName}
             copy={navbarCopy}
             languageControl={languageControl}
           />

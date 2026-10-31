@@ -22,6 +22,39 @@ describe("parseTypedTime", () => {
 });
 
 describe("TimeInput", () => {
+  it.each([
+    ["00:00", "12:00 AM"], ["12:00", "12:00 PM"], ["18:05", "06:05 PM"],
+  ])("switches notation without changing %s", async (value, display) => {
+    const change = vi.fn();
+    render(<TimeInput label="Time" locale="en" value={value} onChange={change} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Time" }));
+    fireEvent.click(await screen.findByRole("button", { name: "24h" }));
+    expect(screen.getByRole("textbox", { name: "Time" })).toHaveValue(value);
+    expect(screen.getByRole("button", { name: "24h" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("group", { name: "Period" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("option").filter(option => option.parentElement?.getAttribute("aria-label") === "Hour")).toHaveLength(24);
+    fireEvent.click(screen.getByRole("button", { name: "12h" }));
+    expect(screen.getByRole("textbox", { name: "Time" })).toHaveValue(display);
+    expect(screen.getByRole("group", { name: "Period" })).toBeInTheDocument();
+    expect(change).not.toHaveBeenCalled();
+  });
+
+  it("selects midnight and late hours in 24-hour mode and accepts typed time", async () => {
+    const change = vi.fn();
+    render(<TimeInput label="Time" locale="en" value="18:05" onChange={change} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Time" }));
+    fireEvent.click(await screen.findByRole("button", { name: "24h" }));
+    const hours = screen.getByRole("group", { name: "Hour" });
+    fireEvent.click(within(hours).getByText("00"));
+    expect(change).toHaveBeenLastCalledWith("00:05");
+    fireEvent.click(within(hours).getByText("23"));
+    expect(change).toHaveBeenLastCalledWith("23:05");
+    const field = screen.getByRole("textbox", { name: "Time" });
+    fireEvent.change(field, { target: { value: "21:37" } });
+    fireEvent.blur(field);
+    expect(change).toHaveBeenLastCalledWith("21:37");
+  });
+
   it("uses a custom popup, supports keyboard selection, and restores focus", async () => {
     const change = vi.fn();
     render(<TimeInput label="Time" locale="en" value="09:00" onChange={change} />);

@@ -60,6 +60,7 @@ export function FormPreviewHeader({
           <FormMediaPreview
             banner
             eager={publicPage && !showFinal}
+            autoPlay={!publicPage}
             images={images}
             carousel={form.bannerMode === "carousel"}
             placeholder={placeholders}

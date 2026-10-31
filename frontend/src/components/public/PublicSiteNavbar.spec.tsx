@@ -2,6 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { PublicSiteNavbar } from "./PublicSiteNavbar";
 
 describe("PublicSiteNavbar", () => {
+  it("can hide the visible business name while keeping the accessible logo", () => {
+    render(<PublicSiteNavbar branding={{ name: "Example business" }} hideBrandName />);
+    expect(screen.queryByText("Example business")).not.toBeInTheDocument();
+    expect(screen.getByAltText("Example business logo")).toBeInTheDocument();
+  });
   it("renders caller-owned navigation with separate sign-in and sign-up actions", () => {
     render(
       <PublicSiteNavbar

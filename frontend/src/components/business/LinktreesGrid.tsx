@@ -1,4 +1,5 @@
 "use client";
+import { PageListMetaField } from "@/components/shared/PageListMetaField";
 import { PageListActions } from "@/components/shared/PageListActions";
 import { PageListDescription } from "@/components/shared/PageListDescription";
 import { PageSelectionCheckbox, usePageSelection } from "@/components/shared/PageSelection";
@@ -38,10 +39,9 @@ import { formatDate, getAbsoluteUrl } from "@/lib/utils/linktree-utils";
 import {
   LINKTREE_TRAFFIC_LABELS,
   LinktreeMetaBadges,
-  LinktreeMetaField,
   type LinktreeMetaBadgesProps,
   type PageListTrafficLabels,
-} from "@/components/business/LinktreeMeta";
+} from "@/features/link-editor/components/LinktreeMeta";
 import { PageCollectionSkeleton } from "@/components/shared/PageCollectionSkeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { ManagementTablePagination } from "@/components/shared/ManagementTable";
@@ -189,11 +189,11 @@ const LinktreeCard = memo(function LinktreeCard({
       {/* Details Section */}
       {showPageMeta && (
         <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
-          <LinktreeMetaField
+          <PageListMetaField
             label={labels.created}
             value={formatDate(item.created_at)}
           />
-          <LinktreeMetaField
+          <PageListMetaField
             label={labels.updated}
             value={formatDate(item.updated_at)}
           />

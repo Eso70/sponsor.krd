@@ -1,5 +1,61 @@
 # Frontend
 
+Public Linktree business details show selected weekdays in Saturday–Friday
+order, shared with both dashboard editors, regardless of the saved selection
+order. Location summaries show country, city, then street/area, omitting missing
+parts. Stored details and structured address fields are unchanged.
+
+`/linktree` and `/form` are public directories, rendered by the shared
+`PublicDirectoryRoute` and `PublicDirectory` components. Each host lists only its
+own active, non-archived pages; the root domain lists the platform workspace,
+not all businesses. Empty collections retain navigation and an explanatory empty
+state. Cards open their canonical page in the same browser context, with no
+prefetch that would record page views before a visitor opens a page. Pagination
+uses 24 items and the shared TablePagination. Kurdish, Arabic and English use the
+existing public language preferences and navigation/footer shell. Directories
+are noindex/follow and contain no marketing tags. Bounded UTM parameters and
+ttclid survive directory navigation and opening the destination.
+
+Public directory grid cards reuse ManagementCard, PageListCardMedia,
+PageListCardHeader, the saved collection banners, PageListDescription and
+GridCardActionButton from the dashboards. Only public identity/media and the
+same-tab destination links are rendered. Cards also show public link/question
+counts, the default Linktree badge, a copyable URL and a decorative cover when
+no banner is published. The content shows only the centered card grid (or its
+empty state), with pagination when needed. There is no visible heading panel,
+collection tabs, search box or summary counters; an accessible heading remains.
+Tab titles are simply localized "Links" / "Forms". Directories hide the visible
+business name in the hero and navigation; the logo retains its accessible label.
+The footer and other public pages retain their existing branding.
+Public cards opt into a 24rem maximum width, larger identity/description text,
+larger logos and 44px minimum open actions through shared component size props.
+Both collection types use content-driven card heights, purple open actions,
+and bottom-aligned URL/action areas. Public descriptions wrap fully without line
+clamping; cards in each row stretch to match its tallest content, and card widths
+shrink to fit smaller viewports. No fixed or minimum card height is imposed.
+Linktree cards preview up to five distinct published channels; forms show their
+published language and required-question count. These are public content details,
+not customer activity or response statistics. Each Linktree card includes a short
+localized contact instruction above its URL, alongside any authored description.
+Form cards retain their authored description or existing fallback copy.
+Dashboard sizes remain the default.
+ManagementGridLayout's opt-in centered layout
+wraps bounded-width cards and centers incomplete rows; dashboard layouts keep
+their joined grid. The directory content has a minimum height of 100svh, so even
+one card or an empty collection keeps the footer below the first viewport.
+
+Business Settings → Defaults includes **Use default Linktree as homepage**.
+The switch uses the normal Save action and defaults to off. When enabled, the
+business `/` renders the same `PublicLinktreeContent` as its current active,
+non-archived default Linktree; the canonical `/linktree/<slug>` URL still works,
+and the root address does not redirect. Missing or inaccessible defaults fall
+back to BusinessLanding. Upstream failures retain an unavailable state.
+Metadata keeps the Linktree canonical URL and the root document uses that page's
+language/direction. Request-scoped loading shares data between layout, metadata
+and body, including verified custom domains; the platform root is unchanged.
+The switch is a business-only preference, separate from new-page appearance.
+Marketing tracking remains disabled at `/` (see `tracking.md`).
+
 The shared Form/Card editor has a required title above its tabs, independent of
 the optional Introduction headline. The same field and live owner-scoped URL
 availability feedback serve Business and Platform creation/editing. Title changes
@@ -103,7 +159,7 @@ one tile for Image, five for Carousel. Click an empty add tile to upload, click 
 image to replace it, or use its remove action. There is no crop control. Upload
 limits and decoding checks apply to both layouts. The banner retains an enabled toggle.
 Preview and public carousels use small pagination dots instead of side chevrons,
-with shared sliding transitions and a three-second banner interval. Sliding
+with shared sliding transitions and a three-second banner interval in editor previews. Published banners advance only on dots or swipes, keeping the first contentful image stable during loading. Sliding
 respects reduced-motion preferences.
 Clicking a banner opens the validated image uncropped in the shared ImagePreviewModal,
 which reuses modal keyboard handling, close behavior, and focus restoration.
@@ -1429,7 +1485,7 @@ EditorImagePicker, PublicImageGallery, and the inline crop workspace. Single-ima
 and carousel modes retain up to five images; Linktree accepts JPEG/PNG up to 5 MB.
 The drawer preview and all six public templates share full-width banner rendering
 through TemplateViewportLayout and TemplateBanner. Banners retain their image
-proportions, with no card border or rounded frame. TemplateHeader overlaps the
+proportions, with no card border or rounded frame. Public responses include owner-scoped banner dimensions from uploaded_media_assets; PublicImageDimensionsProvider supplies them to the shared gallery. The first image reserves the banner's aspect ratio before download, and carousel slides fit that stable frame without cropping. Legacy assets without stored dimensions retain the existing fallback until their inventory is repaired. Fullscreen image viewers are loaded on demand. TemplateHeader overlaps the
 unchanged template logo halfway across the banner's bottom edge. Banner
 and logo clicks open FullscreenImageViewer with navigation/zoom controls, while
 explicit Update actions retain image replacement. With Banner disabled, no banner
@@ -1587,7 +1643,9 @@ Automatic values stay derived instead of being saved as stale overrides. Clearin
 an override or choosing Use Information restores automatic updates.
 
 Business opening and closing hours reuse TimeInput with the shared anchored
-PickerPopup. Display is twelve-hour, while persisted values remain HH:mm. The
+PickerPopup. Display defaults to twelve-hour; localized 12h/24h buttons inside
+each picker switch the field and hour choices without changing the selected time.
+The 24-hour picker omits AM/PM, while persisted values remain HH:mm. The
 optional fields support clearing, typed entry and keyboard selection; no native
 time widget or database change is required.
 
@@ -1925,3 +1983,29 @@ GlobalInputLimits observer could add maxlength=255 before React hydrated a publi
 form quantity input. Native inputs must declare any applicable limit themselves.
 Server-side definition/submission validation remains authoritative. Hydration tests
 compare server and client numeric/text fields with no warning suppression.
+
+## Shared Linktree mutations
+
+Business and Platform Linktree editors use `features/link-editor/use-linktree-mutations.ts` and its shared API module. Both scopes serialize the same canonical editor payload and save the page and links with one request. Empty descriptions are sent explicitly so clearing a field persists. The shared layer also owns archive, status, delete, normalized API errors, and applied-write cache invalidation. Dashboard adapters supply scoped presentation and update their lists only after an applied result. HTTP 202 `APPROVAL_REQUIRED` produces a separate pending result: show the localized approval notice, leave published data unchanged, and never continue with a second link write or announce a completed save.
+
+The shared analytics drawer uses the same `apiRequest` transport as other features. Linktree badges live in the neutral link-editor feature; the generic `PageListMetaField` lives in shared components. Both dashboards, Forms, and public directories reuse these components.
+
+## Dashboard home-screen installation
+
+Public pages retain `/manifest.webmanifest` with the public homepage as their launch URL. The Business layout links `/business/manifest.webmanifest`; the Platform layout links the manifest under the configured private console path. `lib/brand/dashboard-install.ts` owns both dashboard manifest contracts and Apple standalone metadata. Relative `id`, `scope`, and `start_url` isolate installations by origin and keep public and dashboard installs distinct.
+
+Business installs launch `/business/launch` on the current tenant subdomain or selected custom domain. This entry validates the host-bound session through `/api/auth/session`, then redirects to `/business/pages` or `/business/workspace-entry`. Upstream failures return a retryable 503 without removing a valid cookie. Platform installs launch the Businesses route under the configured console base and reuse its existing session/login protection. Manifest endpoints expose public branding only, carry no credentials, and remain accessible without a session so login and installation work after expiry. The private console path is never placed in the public manifest.
+
+There is no offline dashboard or service-worker caching of authenticated responses. Home-screen installation requires a secure production origin and platform browser support. Existing shortcuts installed with the previous homepage start URL should be removed and re-added from the correct dashboard after deployment; browsers do not reliably migrate an old shortcut into a new app identity. Reinstalling may require signing in again in the installed app's browser context.
+
+The public manifest is an explicit route handler, not the special root `app/manifest.ts` metadata file. Root layout supplies its link through `Metadata.manifest`, allowing child dashboard metadata to override it. Next file-based manifest metadata otherwise takes priority over the dashboard link.
+
+## Optional Linktree sponsorship
+
+Both dashboard editors expose one shared Sponsor section. It is off by default for new and existing pages. When enabling it, the sponsor name starts with the owning business/platform name and the optional destination starts as `/` (the current owner's homepage). Owners can edit the name, clear the destination for plain attribution, or choose a text label versus an uploaded JPEG/PNG wordmark. Wordmarks use the existing upload/crop controls, preserve their proportions, and are persisted through the same owner-scoped upload endpoint. Validation happens before uploads and submission.
+
+The configuration is stored at `template_config.sponsor`: `{enabled, style, name, logo, url, intro?}`. `style` is `text` or `wordmark`; text-mode name is required and at most 100 characters; wordmark mode hides the name field and saves no separate text name; `logo` is an owned managed upload or null; `url` is `/`, an absolute HTTP(S) URL without embedded credentials, a validated international `tel:+` number, or null. WhatsApp uses a canonical `https://wa.me/<number>` destination. Disabled settings can be retained without displaying attribution. Removing a wordmark requires returning to text or disabling attribution before saving.
+
+All six templates and the live drawer preview use the shared sponsor/legal footer. Attribution appears above the existing English Terms and Privacy links. When no custom introduction is saved, the introductory label follows the public page language: «سپۆنسەرکراوە لەلایەن», «برعاية», or “Sponsored by”. Wordmarks have a localized accessible attribution label when no text name is present and a bounded contain layout. Preview attribution never navigates or tracks; published optional links use the existing page tracker. Footer spacing reserves room for the sponsor and mobile safe area.
+
+Sponsor controls use concise labels. Introductory text is editable (100 characters maximum), and an explicit empty value hides that line. Destination choices are No link, Homepage, Website, WhatsApp, and Phone call. Only Website shows a URL field; contact modes reuse the shared country selector/phone input and save canonical destinations. Incomplete phone entries cannot be saved. Wordmark mode hides the sponsor-name field and uses a localized generic image alternative for accessibility. The legal footer measures its actual height so wrapped custom text cannot cover page actions.

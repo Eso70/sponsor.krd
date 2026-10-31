@@ -29,8 +29,8 @@ describe('linktree page defaults', () => {
     expect(DEFAULT_LINKTREE_TEMPLATE_KEY).toBe('spectrum');
   });
 
-  it('starts a business on a white canvas', () => {
-    expect(DEFAULT_LINKTREE_BACKGROUND_COLOR).toBe('#ffffff');
+  it('starts a business on the shared dark canvas', () => {
+    expect(DEFAULT_LINKTREE_BACKGROUND_COLOR).toBe('#161b22');
   });
 
   it('hides the footer and leaves the WhatsApp modal off', () => {

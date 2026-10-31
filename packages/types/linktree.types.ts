@@ -183,7 +183,13 @@ export interface PublicLinktree extends LinktreeContentFields {
   business_default_avatar: string | null;
 }
 
+export type PublicImageDimensions = Record<
+  string,
+  { width: number; height: number }
+>;
+
 export interface PublicLinktreePayload {
+  imageDimensions?: PublicImageDimensions;
   linktree: PublicLinktree;
   links: LinktreeLink[];
   /**

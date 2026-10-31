@@ -3,6 +3,11 @@ import {
   readPlanLinktreeSeo,
 } from '@linktree/types/linktree-seo.cjs';
 import { featurePlanSql } from '../billing/feature-plan-policy';
+import type {
+  PublicDirectoryKind,
+  PublicDirectoryItem,
+  PublicPageDirectory,
+} from '@linktree/types';
 import {
   readLinktreeBanner,
   LINKTREE_BANNER_KEY,
@@ -17,6 +22,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { publicImageDimensions } from '../storage/public-image-dimensions';
 import { RedisService } from '../redis/redis.service';
 import {
   PUBLIC_PLANS_CACHE_KEY,
@@ -155,6 +161,8 @@ type PublicBusinessRow = {
   background_color: string | null;
   whatsapp_enabled: boolean | null;
   branding_removed: boolean;
+  homepage_linktree: boolean;
+  default_linktree_slug: string | null;
 };
 
 type PlanSummary = {
@@ -436,12 +444,140 @@ export class PublicService {
        FROM linktrees lt
        INNER JOIN businesses a ON lt.business_id = a.id
        WHERE lt.status = 'active' AND a.subdomain = $1
-         AND a.account_type = 'business'
+         AND a.account_type = 'business' AND a.status = 'active'
+         AND NOT COALESCE(lt.is_archived, false)
        ORDER BY lt.headline`,
       [subdomain],
     );
 
     return linktreesRes.rows || [];
+  }
+
+  async getPublicDirectory(
+    subdomain: string,
+    kind: PublicDirectoryKind,
+    page: number,
+  ): Promise<PublicPageDirectory> {
+    if (
+      !['linktree', 'form'].includes(kind) ||
+      !Number.isInteger(page) ||
+      page < 1 ||
+      page > 10000
+    ) {
+      throw new NotFoundException('Page not found');
+    }
+    const business = subdomain
+      ? await this.getBusinessBySubdomain(subdomain)
+      : null;
+    const owner =
+      business?.id ?? (await this.platformWorkspace.getWorkspaceId());
+    const platformBrand = business
+      ? null
+      : await this.platformWorkspace.getBranding();
+    const brand = business
+      ? {
+          name: business.name,
+          logo: business.logo,
+          accentColor: business.website_color || '#000000',
+          brandingRemoved: business.branding_removed,
+        }
+      : {
+          name: platformBrand!.name,
+          logo: platformBrand!.logo,
+          accentColor: platformBrand!.accentColor,
+          brandingRemoved: true,
+        };
+    // Return public presentation only, never definitions, internal form names,
+    // response totals, customer details, pixel configuration or owner identifiers.
+    const source =
+      kind === 'linktree'
+        ? `
+      SELECT lt.id, COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS slug,
+        NULLIF(BTRIM(lt.headline), '') AS title, LEFT(lt.slogan, 240) AS description,
+        COALESCE(NULLIF(lt.logo, ''), (SELECT b.default_avatar FROM business_branding b WHERE b.business_id=lt.business_id)) AS logo,
+        lt.template_config->'banner' AS "bannerConfig",
+        (SELECT COUNT(*)::int FROM links l WHERE l.linktree_id=lt.id AND l.business_id=lt.business_id) AS "contentCount",
+        ARRAY(SELECT DISTINCT l.platform FROM links l WHERE l.linktree_id=lt.id AND l.business_id=lt.business_id ORDER BY l.platform LIMIT 5) AS platforms,
+        NULL::text AS language, NULL::int AS "requiredQuestionCount",
+        lt.is_default AS preferred
+      FROM linktrees lt JOIN businesses a ON a.id=lt.business_id
+      WHERE lt.business_id=$1::uuid AND a.status='active' AND lt.status='active'
+        AND NOT COALESCE(lt.is_archived, false)
+        AND (a.account_type='business' OR EXISTS (
+          SELECT 1 FROM root_public_slugs r WHERE r.linktree_id=lt.id
+            AND r.business_id=a.id AND r.page_type='linktree'
+            AND r.slug=COALESCE(NULLIF(lt.seo_name, ''), lt.uid)
+        ))`
+        : `
+      SELECT f.id, f.slug, NULLIF(BTRIM(f.definition->>'headline'), '') AS title,
+        LEFT(f.definition->>'description', 240) AS description,
+        CASE WHEN f.definition->>'logoEnabled'='false' THEN NULL ELSE f.definition->>'logo' END AS logo,
+        jsonb_build_object('enabled', COALESCE(f.definition->>'bannerEnabled', 'true') <> 'false',
+          'mode', f.definition->>'bannerMode', 'images',
+          CASE WHEN jsonb_typeof(f.definition->'bannerImages')='array' AND f.definition->'bannerImages'<>'[]'::jsonb
+            THEN f.definition->'bannerImages' ELSE jsonb_build_array(f.definition->>'banner') END) AS "bannerConfig",
+        false AS preferred,
+        jsonb_array_length(CASE WHEN jsonb_typeof(f.definition->'questions')='array' THEN f.definition->'questions' ELSE '[]'::jsonb END) AS "contentCount",
+        ARRAY[]::text[] AS platforms, f.definition->>'language' AS language,
+        (SELECT COUNT(*)::int FROM jsonb_array_elements(CASE WHEN jsonb_typeof(f.definition->'questions')='array' THEN f.definition->'questions' ELSE '[]'::jsonb END) q WHERE q->>'required'='true') AS "requiredQuestionCount"
+      FROM forms f JOIN businesses a ON a.id=f.business_id
+      WHERE f.business_id=$1::uuid AND a.status='active' AND f.status='active'
+        AND NOT f.is_archived
+        AND (a.account_type='platform' OR ${featurePlanSql('forms', 'a')})`;
+    const result = await this.databaseService.query<
+      PublicDirectoryItem & { total: string; bannerConfig: unknown }
+    >(
+      `SELECT slug, title, description, logo, "bannerConfig", "contentCount", platforms, language, "requiredQuestionCount", preferred AS "isDefault", COUNT(*) OVER ()::text AS total
+       FROM (${source}) eligible
+       ORDER BY preferred DESC, title NULLS LAST, id
+       LIMIT 24 OFFSET $2`,
+      [owner, (page - 1) * 24],
+    );
+    if (page > 1 && !result.rows.length)
+      throw new NotFoundException('Page not found');
+    const total = Number(result.rows[0]?.total || 0);
+    return {
+      kind,
+      brand,
+      items: result.rows.map(
+        ({
+          slug,
+          title,
+          description,
+          logo,
+          bannerConfig,
+          contentCount,
+          isDefault,
+          platforms,
+          language,
+          requiredQuestionCount,
+        }) => {
+          const banner = readLinktreeBanner(bannerConfig);
+          return {
+            slug,
+            title,
+            description,
+            contentCount,
+            isDefault,
+            ...(kind === 'linktree'
+              ? { platforms }
+              : {
+                  language:
+                    language && ['ckb', 'ar', 'en'].includes(language)
+                      ? language
+                      : undefined,
+                  requiredQuestionCount,
+                }),
+            logo: logo || null,
+            bannerImages: banner.enabled ? banner.images : [],
+            bannerMode: kind === 'form' ? banner.mode : 'image',
+          };
+        },
+      ),
+      page,
+      totalPages: Math.max(1, Math.ceil(total / 24)),
+      total,
+    };
   }
 
   /** Resolve paid metadata against live access, outside the cached source body. */
@@ -497,14 +633,14 @@ export class PublicService {
         [cachedData.linktree.id, subdomain, uid],
       );
       if (live.rows.length) {
-        return {
+        return this.withImageDimensions({
           ...cachedData,
           linktree: await this.applySeoPlan(cachedData.linktree),
           analytics: await this.pageAnalytics.forSource(
             'linktree',
             cachedData.linktree.id,
           ),
-        };
+        });
       }
     }
 
@@ -576,7 +712,10 @@ export class PublicService {
       { linktree: payload.linktree, links: payload.links },
       7200,
     );
-    return { ...payload, linktree: await this.applySeoPlan(payload.linktree) };
+    return this.withImageDimensions({
+      ...payload,
+      linktree: await this.applySeoPlan(payload.linktree),
+    });
   }
 
   /** Resolve a SponsorKrd-owned page only on the root-domain public route. */
@@ -609,10 +748,10 @@ export class PublicService {
         'linktree',
         cachedData.linktree.id,
       );
-      return {
+      return this.withImageDimensions({
         ...cachedData,
         analytics,
-      };
+      });
     }
 
     const base = this.publicLinktreeSelect(false);
@@ -693,7 +832,24 @@ export class PublicService {
       { linktree: payload.linktree, links: payload.links },
       7200,
     );
-    return payload;
+    return this.withImageDimensions(payload);
+  }
+
+  private async withImageDimensions(
+    payload: PublicLinktreePayload,
+  ): Promise<PublicLinktreePayload> {
+    const banner = readLinktreeBanner(
+      payload.linktree.template_config?.[LINKTREE_BANNER_KEY],
+    );
+    return {
+      ...payload,
+      imageDimensions: await publicImageDimensions(
+        this.databaseService,
+        'linktree',
+        payload.linktree.id,
+        banner.images,
+      ),
+    };
   }
 
   async getBusinessBySubdomain(subdomain: string) {
@@ -703,6 +859,11 @@ export class PublicService {
          b.logo, b.favicon, b.default_avatar, b.website_color,
          d.footer_text, d.footer_phone, d.template_key,
          d.background_color, d.whatsapp_enabled,
+         COALESCE(d.homepage_linktree, false) AS homepage_linktree,
+         (SELECT COALESCE(NULLIF(lt.seo_name, ''), lt.uid) FROM linktrees lt
+          WHERE lt.business_id = a.id AND lt.is_default = true
+            AND lt.status = 'active' AND lt.is_archived = false
+          ORDER BY lt.id LIMIT 1) AS default_linktree_slug,
          -- No pixel ids here. The subdomain landing page is not one of the two
          -- surfaces allowed to load a business's pixel; see docs/tracking.md.
          -- Ultra pays to drop the "Powered by Sponsor.krd" badge. Read live, so a

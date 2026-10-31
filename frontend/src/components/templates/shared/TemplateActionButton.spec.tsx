@@ -19,6 +19,7 @@ describe("template action sizing", () => {
     render(<TemplateActionButton href="https://example.com" onClick={click}>Website</TemplateActionButton>);
     const link = screen.getByRole("link", { name: "Website" });
     expect(link).toHaveAttribute("href", "https://example.com");
+    expect(link).not.toHaveAttribute("target");
     fireEvent.click(link);
     expect(click).toHaveBeenCalledTimes(1);
     fireEvent.click(link, { ctrlKey: true });

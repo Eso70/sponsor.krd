@@ -17,6 +17,7 @@ export function PageListUrl({
   copied,
   onCopy,
   onOpen,
+  newTab = true,
 }: {
   url: string;
   displayUrl?: string;
@@ -25,6 +26,7 @@ export function PageListUrl({
   copied?: boolean;
   onCopy?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onOpen?: () => void;
+  newTab?: boolean;
 }) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const isCopied = copied ?? copiedUrl === url;
@@ -42,8 +44,8 @@ export function PageListUrl({
         )}
         <a
           href={url}
-          target="_blank"
-          rel="noopener noreferrer"
+          target={newTab ? "_blank" : undefined}
+          rel={newTab ? "noopener noreferrer" : undefined}
           title={url}
           onClick={(event) => {
             if (onOpen && !event.ctrlKey && !event.metaKey && !event.shiftKey) {

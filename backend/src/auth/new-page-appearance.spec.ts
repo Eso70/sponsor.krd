@@ -71,6 +71,8 @@ describe('new-page appearance settings', () => {
       false,
       false,
       true,
+      false,
+      false,
     ]);
   });
   it('loads defaults under plain Node without the TypeScript package root', () => {

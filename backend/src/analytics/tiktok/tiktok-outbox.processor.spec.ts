@@ -105,4 +105,24 @@ describe('TikTokOutboxProcessor', () => {
       requestId: 'accepted',
     });
   });
+
+  it.each(['<html>upstream error</html>', '{}', '{"message":"OK"}', 'null'])(
+    'retries an unacknowledged HTTP 200 response: %s',
+    async (body) => {
+      (global.fetch as jest.Mock).mockResolvedValue(
+        new Response(body, { status: 200 }),
+      );
+      const processor = new TikTokOutboxProcessor(
+        database,
+        secrets,
+        config,
+        metrics as never,
+        communications as never,
+      );
+      expect(await processor['send']([job])).toMatchObject({
+        success: false,
+        retryable: true,
+      });
+    },
+  );
 });

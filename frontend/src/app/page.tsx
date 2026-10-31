@@ -1,16 +1,15 @@
+import { notFound } from "next/navigation";
+import { PublicLinktreeContent } from "@/components/public/PublicLinktreeContent";
+import { buildPageMetadata } from "@/lib/public/page-seo";
 import { brandIcons } from "@/lib/brand/tab-branding";
 import { cookies, headers } from "next/headers";
 import { HomeLanding } from "@/components/home/HomeLanding";
 import { PlatformOrganizationStructuredData } from "@/components/public/PlatformOrganizationStructuredData";
-import { publicRequestContext } from "@/lib/public/public-page.server";
+import { fetchBusinessHomepage, publicRequestContext } from "@/lib/public/public-page.server";
 import { BusinessLanding } from "@/components/business/BusinessLanding";
-import { extractSubdomain } from "@/lib/subdomain-utils";
 import { SPONSOR_KRD_ACCENT_COLOR } from "@/lib/sponsor-krd-theme";
-import type { ComponentProps } from "react";
 import { BusinessServiceUnavailablePage } from "@/components/error-pages/BusinessServiceUnavailablePage";
-import { BusinessBadGatewayPage } from "@/components/error-pages/BusinessBadGatewayPage";
 import { BusinessGatewayTimeoutPage } from "@/components/error-pages/BusinessGatewayTimeoutPage";
-import { classifyUpstreamFailure } from "@/lib/api/upstream-failure";
 import { businessTabTitle } from "@/lib/utils/tab-title";
 import { businessPublicCopy } from "@/features/business/i18n/public-copy";
 import {
@@ -23,10 +22,6 @@ import {
   parseRootPublicLocale,
 } from "@/features/public-site/root-public-locale";
 import { rootPublicCopy } from "@/features/public-site/root-public-copy";
-import {
-  INTERNAL_PROXY_KEY_HEADER,
-  internalProxyKey,
-} from "@/lib/security/internal-proxy-key";
 import {
   SPONSOR_KRD_APP_ICON,
 } from "@/lib/brand/brand-assets";
@@ -51,8 +46,6 @@ async function isRootRequest(): Promise<boolean> {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || ROOT_HOSTS.has(hostname);
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
 export default async function Home() {
   if (await isRootRequest()) {
     const locale = parseRootPublicLocale(
@@ -66,124 +59,36 @@ export default async function Home() {
     );
   }
 
-  const headerStore = await headers();
-  const host = headerStore.get("host") || "";
-  const subdomain = extractSubdomain(
-    host,
-    headerStore.get("x-subdomain") || undefined,
-    ROOT_DOMAIN,
-  );
-  if (!subdomain) {
-    const locale = parseRootPublicLocale(
-      (await cookies()).get(ROOT_PUBLIC_LOCALE_COOKIE)?.value,
-    );
-    return <HomeLanding initialLocale={locale} />;
-  }
-  const cookieStore = await cookies();
   const initialLocale = publicBusinessLocale(
-    cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
+    (await cookies()).get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
   );
-
-  let landingProps: ComponentProps<typeof BusinessLanding> | null = null;
-  let badGateway = false;
-  let serviceUnavailable = false;
-  let gatewayTimeout = false;
-  try {
-    const headers_ = {
-      "x-subdomain": subdomain,
-      [INTERNAL_PROXY_KEY_HEADER]: internalProxyKey() || "",
-    };
-    const signal = AbortSignal.timeout(30_000);
-    const businessRes = await fetch(`${BACKEND_URL}/api/public/business`, {
-      headers: headers_,
-      cache: "no-store",
-      signal,
-    });
-    badGateway = businessRes.status === 502;
-    serviceUnavailable = businessRes.status === 503;
-    gatewayTimeout = businessRes.status === 504;
-
-    if (
-      !badGateway &&
-      !serviceUnavailable &&
-      !gatewayTimeout &&
-      businessRes.ok
-    ) {
-      const businessJson = await businessRes.json();
-      const business = businessJson?.data;
-      if (business) {
-        landingProps = { business, initialLocale };
-      }
-    }
-  } catch (error) {
-    const failure = classifyUpstreamFailure(error);
-    gatewayTimeout = failure.status === 504;
-    serviceUnavailable = failure.status === 503;
+  const result = await fetchBusinessHomepage();
+  if (!result) notFound();
+  if (result === "gateway-timeout") {
+    return <BusinessGatewayTimeoutPage pageCopy={businessErrorPageCopy(initialLocale, "gatewayTimeout")} />;
   }
-
-  if (badGateway)
-    return (
-      <BusinessBadGatewayPage
-        pageCopy={businessErrorPageCopy(initialLocale, "badGateway")}
-      />
-    );
-  if (serviceUnavailable)
-    return (
-      <BusinessServiceUnavailablePage
-        pageCopy={businessErrorPageCopy(initialLocale, "serviceUnavailable")}
-      />
-    );
-  if (gatewayTimeout)
-    return (
-      <BusinessGatewayTimeoutPage
-        pageCopy={businessErrorPageCopy(initialLocale, "gatewayTimeout")}
-      />
-    );
-  if (!landingProps) return <HomeLanding />;
-  return <BusinessLanding {...landingProps} />;
+  if (result === "service-unavailable") {
+    return <BusinessServiceUnavailablePage pageCopy={businessErrorPageCopy(initialLocale, "serviceUnavailable")} />;
+  }
+  if (result.linktree) {
+    return <PublicLinktreeContent result={result.linktree} enableMarketingTracking={false} />;
+  }
+  return <BusinessLanding business={result.business} initialLocale={initialLocale} />;
 }
 
 export async function generateMetadata() {
-  const headerStore = await headers();
-  const host = (headerStore.get("host") || "").split(":")[0].toLowerCase();
-  const subdomain = extractSubdomain(
-    host,
-    headerStore.get("x-subdomain") || undefined,
-    ROOT_DOMAIN,
-  );
-
-  if (subdomain) {
-    const cookieStore = await cookies();
-    const locale = publicBusinessLocale(
-      cookieStore.get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value,
-    );
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/public/business`, {
-        headers: {
-          "x-subdomain": subdomain,
-          [INTERNAL_PROXY_KEY_HEADER]: internalProxyKey() || "",
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const business = json?.data;
-        if (business) {
-          const icons = brandIcons(business.favicon, business.logo);
-          return {
-            title: businessTabTitle(
-              business.name,
-              businessPublicCopy[locale].footer.home,
-            ),
-            description:
-              businessPublicCopy[locale].hero.description,
-            icons,
-            robots: {index: false, follow: true},
-          };
-        }
-      }
-    } catch {}
+  if (!(await isRootRequest())) {
+    const result = await fetchBusinessHomepage();
+    if (!result) notFound();
+    if (typeof result === "string") return { title: "Unavailable", robots: { index: false, follow: false } };
+    if (result.linktree) return buildPageMetadata(result.linktree.linktree, result.linktree.origin);
+    const locale = publicBusinessLocale((await cookies()).get(BUSINESS_PUBLIC_LOCALE_COOKIE)?.value);
+    return {
+      title: businessTabTitle(result.business.name, businessPublicCopy[locale].footer.home),
+      description: businessPublicCopy[locale].hero.description,
+      icons: brandIcons(result.business.favicon, result.business.logo),
+      robots: { index: false, follow: true },
+    };
   }
 
   // Root domain only — a business subdomain returned above with its own icons.

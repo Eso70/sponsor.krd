@@ -29,11 +29,11 @@ WITH events AS (
   WHERE source = 'server' AND is_conversion AND conversion_value IS NOT NULL AND currency IS NOT NULL
   GROUP BY currency
 ), question_config AS (
-  SELECT DISTINCT ON(page.id,question->>'id') page.id AS public_page_id, question->>'id' AS question_id, question->>'text' AS label
+  SELECT page.id AS public_page_id, question.id::text AS question_id, question.question_text AS label
   FROM public_pages page JOIN linktrees tree ON tree.id=page.source_linktree_id AND tree.business_id=page.business_id
-  CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(tree.template_config->'whatsapp_modal'->'questions')='array' THEN tree.template_config->'whatsapp_modal'->'questions' ELSE '[]'::jsonb END) question
-  WHERE page.business_id=$1 AND $2::uuid IS NOT NULL AND tree.template_config->'whatsapp_modal'->>'enabled'='true'
-    AND jsonb_typeof(question->'id')='string' AND jsonb_typeof(question->'text')='string' AND jsonb_typeof(question->'message')='string'
+  JOIN whatsapp_questions question ON question.linktree_id=tree.id
+  WHERE page.business_id=$1 AND $2::uuid IS NOT NULL
+    AND COALESCE(tree.whatsapp_modal_enabled, tree.template_config->'whatsapp_modal'->>'enabled'='true', false)
     AND ($2::uuid IS NULL OR page.id=$2 OR page.source_linktree_id=$2)
     AND ($3::varchar IS NULL OR page.page_type=$3)
 ), question_clicks AS (
@@ -66,6 +66,8 @@ SELECT
   COUNT(*) FILTER (WHERE (event_name IN ('whatsapp_click','call_click','email_click') OR (is_conversion AND event_name NOT IN ('lead_created','order_completed','form_submit'))))::int AS contact_actions,
   COUNT(DISTINCT visitor_id) FILTER (WHERE (event_name IN ('whatsapp_click','call_click','email_click') OR (is_conversion AND event_name NOT IN ('lead_created','order_completed','form_submit'))))::int AS contact_visitors,
   COUNT(*) FILTER (WHERE source = 'server' AND is_conversion)::int AS confirmed_outcomes,
+  COUNT(*) FILTER (WHERE event_name IN ('whatsapp_click','call_click','email_click')
+    OR (is_conversion AND (event_name NOT IN ('lead_created','order_completed','form_submit') OR source = 'server')))::int AS retained_conversions,
   COUNT(*) FILTER (WHERE source = 'server' AND is_conversion AND conversion_value IS NOT NULL AND currency IS NOT NULL)::int AS valued_outcomes,
   COALESCE((SELECT jsonb_agg(jsonb_build_object('name', name, 'views', views) ORDER BY views DESC) FROM channels), '[]'::jsonb) AS channels,
   COALESCE((SELECT jsonb_agg(jsonb_build_object('name', name, 'views', views) ORDER BY views DESC) FROM devices), '[]'::jsonb) AS devices

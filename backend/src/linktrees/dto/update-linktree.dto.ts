@@ -1,5 +1,7 @@
+import type { LinkMetadataInput } from './create-linktree.dto';
 import {
   IsString,
+  IsArray,
   IsOptional,
   IsBoolean,
   IsIn,
@@ -16,6 +18,19 @@ import {
 } from '../../common/website-color';
 
 export class UpdateLinktreeDto {
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  platforms?: string[];
+
+  @IsObject()
+  @IsOptional()
+  links?: Record<string, string[]>;
+
+  @IsObject()
+  @IsOptional()
+  linkMetadata?: Record<string, LinkMetadataInput[]>;
+
   @IsString()
   @IsOptional()
   @MinLength(2)

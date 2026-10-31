@@ -35,7 +35,6 @@ export const analyticsInsightsCopy = {
     visitors: "Unique visitors",
     selectionShare: "Share of selections",
     lastSelected: "Last selected",
-    links: "Links used",
     historical: "Historical",
     questionNote:
       "Selections open WhatsApp with the chosen question. They do not confirm a message was sent. Detailed tracking starts after this update.",
@@ -76,7 +75,6 @@ export const analyticsInsightsCopy = {
     visitors: "الزوار الفريدون",
     selectionShare: "نسبة الاختيارات",
     lastSelected: "آخر اختيار",
-    links: "الروابط المستخدمة",
     historical: "تاريخي",
     questionNote:
       "يفتح الاختيار واتساب مع السؤال المحدد؛ ولا يؤكد إرسال رسالة. يبدأ التتبع التفصيلي بعد هذا التحديث.",
@@ -117,7 +115,6 @@ export const analyticsInsightsCopy = {
     visitors: "سەردانکەری جیاواز",
     selectionShare: "ڕێژەی هەڵبژاردن",
     lastSelected: "دواین هەڵبژاردن",
-    links: "لینکە بەکارهاتووەکان",
     historical: "مێژوویی",
     questionNote:
       "هەڵبژاردن واتساپ بە پرسیارەکە دەکاتەوە، بەڵام نایسەلمێنێت نامە نێردراوە. بەدواداچوونی ورد دوای ئەم نوێکردنەوەیە دەست پێدەکات.",

@@ -211,6 +211,7 @@ describe("shared Linktree drawer", () => {
                   category: "food",
                   businessType: "restaurant",
                   title: "Saved title",
+                  business: { hours: { days: ["Mo"], opens: "09:00", closes: "18:05" } },
                 },
               },
             },
@@ -243,6 +244,12 @@ describe("shared Linktree drawer", () => {
       expect(screen.getByRole("textbox", { name: "SEO title" })).toHaveValue(
         "Saved title",
       );
+      fireEvent.click(screen.getByRole("button", { name: "Open Closes" }));
+      fireEvent.click(await screen.findByRole("button", { name: "24h" }));
+      expect(screen.getByRole("textbox", { name: "Closes" })).toHaveValue("18:05");
+      fireEvent.click(screen.getByRole("button", { name: "12h" }));
+      expect(screen.getByRole("textbox", { name: "Closes" })).toHaveValue("06:05 PM");
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
       fireEvent.change(screen.getByRole("textbox", { name: "SEO title" }), {
         target: { value: "New search title" },
       });
@@ -1199,5 +1206,65 @@ describe("manual Linktree addresses", () => {
     expect(input).toHaveValue('new-address');
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ headline: 'Renamed page', slug: 'new-address' }), 'page-id'));
+  });
+});
+
+
+describe("shared sponsor drawer integration", () => {
+  const page = {
+    linktree: { id: "sponsor-page", uid: "sponsor-page", name: "Sponsored page", background_color: "#ffffff", template_config: { templateKey: "spectrum" } },
+    links: [{ id: "instagram", platform: "instagram", url: "https://instagram.com/example", display_order: 0 }],
+  };
+  it.each([false, true])("saves the owner default and intentional no-link display (platform=%s)", async (platformTheme) => {
+    const save = vi.fn();
+    render(<LinktreeEditorDrawer isOpen locale="en" copy={englishEditorCopy} platformTheme={platformTheme}
+      businessIdentity={{ name: platformTheme ? "Sponsor.krd" : "Acme" }} onClose={vi.fn()} onSubmit={save} editData={page} />);
+    const toggle = screen.getByRole("switch", { name: "Show sponsor" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("textbox", { name: "Sponsor name" })).toHaveValue(platformTheme ? "Sponsor.krd" : "Acme");
+    fireEvent.change(screen.getByRole("textbox", { name: "Introductory text" }), { target: { value: "Supported by" } });
+    fireEvent.click(screen.getByRole("button", { name: "Destination" }));
+    fireEvent.click(screen.getByRole("option", { name: "No link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ templateConfig: expect.objectContaining({ sponsor: { enabled: true, style: "text", name: platformTheme ? "Sponsor.krd" : "Acme", logo: null, url: null, intro: "Supported by" } }) }), "sponsor-page"));
+  });
+  it.each([false, true])("uploads a draft wordmark through the correct existing owner endpoint (platform=%s)", async (platformTheme) => {
+    const save = vi.fn();
+    const base = platformTheme ? "/api/platform/linktrees" : "/api/linktrees";
+    const upload = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, options) => {
+      if (options?.method === "POST") return Response.json({ url: "/images/upload/wordmark.png" });
+      return Response.json({ data: { available: true } });
+    });
+    try {
+      render(<LinktreeEditorDrawer isOpen locale="en" copy={englishEditorCopy} platformTheme={platformTheme}
+        apiEndpoints={{ upload: `${base}/upload`, checkName: `${base}/check-name`, checkSlug: `${base}/check-slug` }}
+        onClose={vi.fn()} onSubmit={save} editData={{ ...page, linktree: { ...page.linktree, template_config: { templateKey: "spectrum", sponsor: {
+          enabled: true, style: "wordmark", name: "Acme", url: "/", logo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==",
+        } } } }} />);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ templateConfig: expect.objectContaining({ sponsor: expect.objectContaining({ enabled: true, logo: "/images/upload/wordmark.png" }) }) }), "sponsor-page"));
+      expect(upload).toHaveBeenCalledWith(`${base}/upload`, expect.objectContaining({ method: "POST", credentials: "include" }));
+      const posted = upload.mock.calls.find(([, options]) => options?.method === "POST")?.[1]?.body as FormData;
+      expect(posted.get("assetType")).toBe("banner-image");
+      expect(posted.get("file")).toMatchObject({ type: "image/png" });
+    } finally { upload.mockRestore(); }
+  });
+  it("opens sponsor validation before any persistence", async () => {
+    const save = vi.fn();
+    render(<LinktreeEditorDrawer isOpen locale="en" copy={englishEditorCopy} onClose={vi.fn()} onSubmit={save} editData={page} businessIdentity={{ name: "Acme" }} />);
+    fireEvent.click(screen.getByRole("switch", { name: "Show sponsor" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Sponsor name" }), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Destination" }));
+    fireEvent.click(screen.getByRole("option", { name: "Website" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Website" }), { target: { value: "javascript:alert(1)" } });
+    fireEvent.click(screen.getByRole("button", { name: "Information" }));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Sponsor" })).toHaveAttribute("aria-expanded", "true"));
+      expect(screen.getByText("Enter a sponsor name, up to 100 characters.")).toBeVisible();
+      expect(save).not.toHaveBeenCalled();
+    } finally { log.mockRestore(); }
   });
 });

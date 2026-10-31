@@ -12,6 +12,15 @@ General development principles are defined in `AGENTS.md`. This document focuses
 
 # Design Principles
 
+Public Linktree/Form directories use the dashboard's existing grid-card media,
+identity and action components. Public cards expose an Open link, never private
+statistics or management controls. Sparse rows center through the shared grid's
+explicit centered option; content fills at least the viewport above the footer.
+Directory content is the card grid only: no hero, search toolbar or collection
+tabs. Public cards opt into the shared large size (24rem wide, larger logos and
+titles, 44px open actions), with public content details and copyable URLs inside
+the cards. Default dashboard component sizes remain unchanged.
+
 Linktree grid Open and Delete actions use GridCardActionButton, matching the
 Analytics, Edit and Share controls and shared table actions. Keep their neutral
 and destructive tones while reusing responsive sizing, borderless surfaces and
@@ -120,11 +129,11 @@ share access/error pages. Transparent and opaque uploaded logos keep their own
 appearance in light and dark modes; no second background is added behind them.
 
 Form and Linktree carousel banners share PublicImageGallery. Multiple-image
-banners advance every 3 seconds, pause during hover/focus/touch or full-image
+banners in editor previews advance every 3 seconds, pause during hover/focus/touch or full-image
 viewing, and stop while the document is hidden. Horizontal touch swipes move
 one image and wrap around; vertical scrolling and pinch zoom remain native.
 Swipes suppress the following image-open click. Automatic changes do not report
-engagement; manual dots/swipes use the existing media action callback.
+engagement; manual dots/swipes use the existing media action callback. Published banners use manual navigation to avoid replacing the LCP image during loading. Stored owner-scoped dimensions reserve the first banner's proportions; subsequent images fit the same frame without cropping. Public main actions navigate in the current browsing context, including form completion links; an external app handoff remains controlled by the browser and operating system.
 EditorBannerControls keeps carousel thumbnails unobstructed, with replace/crop/
 remove actions below each image and no visible drag grip. Holding the image for
 250 ms starts mouse/touch ordering; ordinary clicks open its preview. The shared
@@ -1509,3 +1518,7 @@ images retain a shared fallback; disabled banners never expose saved media.
 PublicImageGallery uses edge clones for seamless forward and backward wrapping,
 then resets to the identical real slide without animating the reset. Automatic
 changes remain presentation only and dashboard collections have no tracker.
+
+## Optional Linktree sponsor attribution
+
+Sponsorship is a shared, off-by-default editor section in Business and Platform. Keep the public two-line attribution centered above Terms/Privacy with a quiet localized introductory label and either a bounded name or contained wordmark. The sponsor name is shown only in text mode; wordmarks use a localized accessible attribution label. Do not stretch/crop wordmarks or allow empty enabled branding. Retain readable wrapping, footer clearance and mobile safe-area spacing. Use the same public footer in drawer previews; preview sponsor links are inert.

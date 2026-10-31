@@ -1,3 +1,4 @@
+import { validateLinktreeUpdate } from '../linktrees/validate-linktree-update';
 import {
   CanActivate,
   ExecutionContext,
@@ -13,10 +14,12 @@ import {
   isPermissionKey,
   PERMISSION_BY_KEY,
   type Capability,
+  type PermissionKey,
 } from './capabilities';
 import { ApprovalService } from './approval.service';
 import { AuthorizationService } from './authorization.service';
 import { REQUIRED_CAPABILITIES } from './require-capabilities.decorator';
+import type { AuthorizationDecision } from '@linktree/types';
 import type { SessionUser } from './session.service';
 
 @Injectable()
@@ -53,7 +56,22 @@ export class AuthorizationGuard implements CanActivate {
       !Array.isArray(request.body)
         ? (request.body as Record<string, unknown>)
         : {};
-    for (const permission of required) {
+    if (
+      request.method === 'PATCH' &&
+      required.includes('business:linktrees:update')
+    )
+      validateLinktreeUpdate(body);
+    const permissions = [...required];
+    const completeLinktreeEdit =
+      request.method === 'PATCH' &&
+      permissions.includes('business:linktrees:update') &&
+      body.links !== undefined;
+    if (completeLinktreeEdit && !permissions.includes('business:links:sync'))
+      permissions.push('business:links:sync');
+    let pending:
+      | { permission: PermissionKey; decision: AuthorizationDecision }
+      | undefined;
+    for (const permission of permissions) {
       if (!isPermissionKey(permission)) {
         throw new ForbiddenException(
           'You do not have permission to perform this action',
@@ -65,7 +83,15 @@ export class AuthorizationGuard implements CanActivate {
         user.role === 'business' &&
         definition?.fields &&
         ['PATCH', 'PUT'].includes(request.method)
-          ? Object.keys(body).filter((field) => field !== 'section')
+          ? Object.keys(body).filter(
+              (field) =>
+                field !== 'section' &&
+                !(
+                  completeLinktreeEdit &&
+                  permission === 'business:linktrees:update' &&
+                  ['links', 'linkMetadata', 'platforms'].includes(field)
+                ),
+            )
           : undefined;
       const decision =
         typeof (
@@ -82,7 +108,9 @@ export class AuthorizationGuard implements CanActivate {
               permission,
               resource: resourceId
                 ? {
-                    type: this.resourceType(permission),
+                    type: completeLinktreeEdit
+                      ? 'linktree'
+                      : this.resourceType(permission),
                     id: resourceId,
                     ownerBusinessId:
                       user.role === 'business' ? user.id : undefined,
@@ -112,29 +140,8 @@ export class AuthorizationGuard implements CanActivate {
                   : ('platform-role' as const),
             };
       if (decision.outcome === 'approval') {
-        if (!this.approvals) {
-          throw new ForbiddenException('Approval service is unavailable');
-        }
-        const approval = await this.approvals.create({
-          businessId: user.id,
-          permission,
-          action: `${request.method} ${request.url}`,
-          resource: resourceId
-            ? { type: this.resourceType(permission), id: resourceId }
-            : undefined,
-          changes: body,
-          decision,
-        });
-        throw new HttpException(
-          {
-            statusCode: HttpStatus.ACCEPTED,
-            code: 'APPROVAL_REQUIRED',
-            message: 'This mutation was submitted for platform approval',
-            approval,
-            decision,
-          },
-          HttpStatus.ACCEPTED,
-        );
+        pending ??= { permission, decision };
+        continue;
       }
       if (decision.outcome !== 'allow') {
         throw new ForbiddenException({
@@ -143,6 +150,35 @@ export class AuthorizationGuard implements CanActivate {
           decision,
         });
       }
+    }
+
+    if (pending) {
+      if (!this.approvals)
+        throw new ForbiddenException('Approval service is unavailable');
+      const resourceId = this.resourceId(params);
+      const permission = completeLinktreeEdit
+        ? 'business:linktrees:update'
+        : pending.permission;
+      const approval = await this.approvals.create({
+        businessId: user.id,
+        permission,
+        action: `${request.method} ${request.url}`,
+        resource: resourceId
+          ? { type: this.resourceType(permission), id: resourceId }
+          : undefined,
+        changes: body,
+        decision: pending.decision,
+      });
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.ACCEPTED,
+          code: 'APPROVAL_REQUIRED',
+          message: 'This mutation was submitted for platform approval',
+          approval,
+          decision: pending.decision,
+        },
+        HttpStatus.ACCEPTED,
+      );
     }
 
     return true;

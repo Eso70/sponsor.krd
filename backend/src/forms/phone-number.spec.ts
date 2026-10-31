@@ -6,7 +6,7 @@ import {
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 const sharedRequire = createRequire(
-  resolve(__dirname, '../../../../packages/types/package.json'),
+  resolve(__dirname, '../../../packages/types/package.json'),
 );
 const phoneMetadata = sharedRequire('libphonenumber-js/max') as {
   getCountries(): string[];

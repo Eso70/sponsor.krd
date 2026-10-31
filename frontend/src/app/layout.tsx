@@ -17,7 +17,7 @@ import {
 import "./globals.css";
 import { PublicRouteTracking } from "@/components/analytics/PublicRouteTracking";
 import { resolveLinktreeHost } from "@/lib/public/linktree-host";
-import { fetchPublicLinktree } from "@/lib/public/public-page.server";
+import { fetchBusinessHomepage, fetchPublicLinktree } from "@/lib/public/public-page.server";
 import { fetchPublicForm } from "@/features/forms/public-form.server";
 import { automaticPageSeo } from "@/lib/public/page-seo";
 import { rootPublicCopy } from "@/features/public-site/root-public-copy";
@@ -33,6 +33,7 @@ import {
 const sponsorKrdThemeStyle = createSponsorKrdThemeVariables() as CSSProperties;
 
 const baseMetadata: Metadata = {
+  manifest: "/manifest.webmanifest",
   metadataBase: new URL(getAppBaseUrl()),
   title: "Sponsor.krd",
   description: rootPublicCopy.en.metadataDescription,
@@ -71,6 +72,7 @@ export default async function RootLayout({
     process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost",
   );
   let language = "en";
+  let homepageLinktree = false;
   const linktree = pathname.match(/^\/linktree\/([a-z0-9-]{1,50})\/?$/);
   if (linktree) {
     const result = await fetchPublicLinktree(linktree[1]);
@@ -81,7 +83,7 @@ export default async function RootLayout({
   } else if (/^\/form\/[a-z0-9][a-z0-9-]{0,79}\/?$/.test(pathname)) {
     const payload = await fetchPublicForm(pathname.split("/")[2]);
     language = payload.form.language;
-  } else if (pathname === "/" || pathname.startsWith("/legal/")) {
+  } else if (pathname === "/" || /^\/(?:linktree|form)\/?$/.test(pathname) || pathname.startsWith("/legal/")) {
     language =
       scope.isPlatformRoot || pathname.startsWith("/legal/")
         ? parseRootPublicLocale(
@@ -92,12 +94,20 @@ export default async function RootLayout({
           );
   }
 
+  if (pathname === "/" && !scope.isPlatformRoot) {
+    const homepage = await fetchBusinessHomepage();
+    if (homepage && typeof homepage !== "string" && homepage.linktree) {
+      homepageLinktree = true;
+      language = automaticPageSeo(homepage.linktree.linktree).locale;
+    }
+  }
+
   return (
     <html
       className={initialTheme === "dark" ? "dark" : undefined}
       data-app-theme={initialTheme === "dark" || initialTheme === "light" ? initialTheme : undefined}
       lang={language}
-      dir={linktree && language !== "en" ? "rtl" : "ltr"}
+      dir={(linktree || homepageLinktree || /^\/(?:linktree|form)\/?$/.test(pathname)) && language !== "en" ? "rtl" : "ltr"}
       style={{ ...sponsorKrdThemeStyle, ...cursorVariables } as CSSProperties}
       suppressHydrationWarning
     >

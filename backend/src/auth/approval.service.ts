@@ -1,7 +1,13 @@
-import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
-import { assertLinktreeSeoPlan } from '../common/linktree-seo';
-import { normalizeLinktreeContent } from '../linktrees/linktree-content';
 import type { UpdateLinktreeDto } from '../linktrees/dto/update-linktree.dto';
+import { normalizeLinktreeContent } from '../linktrees/linktree-content';
+import { normalizeTemplateConfig } from '../linktrees/linktree-template-config';
+import { assertLinktreeMediaOwnership } from '../common/linktree-banner';
+import { validateLinktreeUpdate } from '../linktrees/validate-linktree-update';
+import { updateLinktreeInTransaction } from '../linktrees/linktree-write';
+import { syncLinksInTransaction } from '../links/sync-links';
+import type { SyncLinkInput } from '../links/link.types';
+import { TemplateAccessService } from '../billing/template-access.service';
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
 import {
   BadRequestException,
   ConflictException,
@@ -19,11 +25,6 @@ import { PERMISSION_BY_KEY, type PermissionKey } from './capabilities';
 import { AuthorizationService } from './authorization.service';
 import { SecretCryptoService } from './secret-crypto.service';
 import { StorageService } from '../storage/storage.service';
-import {
-  LINKTREE_BANNER_KEY,
-  readLinktreeBanner,
-} from '@linktree/types/linktree-banner.cjs';
-import { assertLinktreeBannerOwnership } from '../common/linktree-banner';
 import { publicLinktreeCacheKeys } from '../common/root-public-cache';
 import { RedisService } from '../redis/redis.service';
 import { describeError } from '../common/describe-error';
@@ -45,6 +46,10 @@ export class ApprovalService {
     private readonly crypto: SecretCryptoService,
     private readonly storage: StorageService,
     private readonly redis: RedisService,
+    private readonly templateAccess: TemplateAccessService = new TemplateAccessService(
+      database,
+      redis,
+    ),
   ) {}
 
   async create(input: {
@@ -56,6 +61,18 @@ export class ApprovalService {
     decision: AuthorizationDecision;
     reason?: string;
   }): Promise<{ id: string; status: 'pending' }> {
+    if (input.permission === 'business:linktrees:update') {
+      validateLinktreeUpdate(input.changes);
+      const content = normalizeLinktreeContent<UpdateLinktreeDto>(
+        input.changes,
+      );
+      await assertLinktreeMediaOwnership(
+        this.storage,
+        input.businessId,
+        normalizeTemplateConfig(content.template_config),
+        content.image,
+      );
+    }
     const definition = PERMISSION_BY_KEY.get(input.permission);
     if (!definition?.supportsApproval) {
       throw new ForbiddenException(
@@ -130,15 +147,15 @@ export class ApprovalService {
   async list(status?: string) {
     const expired = await this.database.query<{
       requested_changes: Record<string, unknown>;
+      business_id: string;
     }>(
       `UPDATE permission_approval_requests
        SET status='expired'
        WHERE status='pending' AND expires_at<=NOW()
-       RETURNING requested_changes`,
+       RETURNING business_id, requested_changes`,
     );
-    await this.storage.deleteUnreferencedFromValues(
-      expired.rows.map((row) => row.requested_changes),
-    );
+    for (const row of expired.rows)
+      await this.cleanupOwnedAssets(row.business_id, row.requested_changes);
     const result = await this.database.query(
       `SELECT request.id::text, request.business_id::text AS "businessId",
               business.name AS "businessName",
@@ -247,6 +264,27 @@ export class ApprovalService {
         );
       }
 
+      if (
+        row.permission_key === 'business:linktrees:update' &&
+        changes.links !== undefined
+      ) {
+        const linkDecision = await this.authorization.authorize({
+          principal: { id: row.business_id, type: 'business' },
+          businessId: row.business_id,
+          permission: 'business:links:sync',
+          resource: {
+            type: 'linktree',
+            id: row.resource_id || undefined,
+            ownerBusinessId: row.business_id,
+          },
+          context: { now: new Date() },
+        });
+        if (!['allow', 'approval'].includes(linkDecision.outcome))
+          throw new ConflictException(
+            'Link synchronization is no longer permitted',
+          );
+      }
+
       let cleanup: unknown = null;
       let previousTemplateConfig: unknown;
       let cacheKeys: string[] = [];
@@ -259,9 +297,11 @@ export class ApprovalService {
         cleanup = previous.rows[0];
       } else if (
         row.resource_id &&
-        ['business:linktrees:update', 'business:linktrees:delete'].includes(
-          row.permission_key,
-        )
+        [
+          'business:linktrees:update',
+          'business:linktrees:delete',
+          'business:links:sync',
+        ].includes(row.permission_key)
       ) {
         const previous = await client.query<{
           image: string | null;
@@ -337,7 +377,8 @@ export class ApprovalService {
     if (result.claim) {
       await this.storage.claimBusinessAssets(result.businessId, result.claim);
     }
-    await this.storage.deleteUnreferencedFromValues(result.cleanup);
+    await this.cleanupOwnedAssets(result.businessId, result.cleanup);
+
     return { id: result.id, status: result.status };
   }
 
@@ -394,8 +435,8 @@ export class ApprovalService {
       await client.query(
         `INSERT INTO business_defaults
           (business_id,footer_text,footer_phone,template_key,background_color,
-           footer_hidden,whatsapp_enabled,background_pattern)
-         VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$14)
+           footer_hidden,whatsapp_enabled,background_pattern,homepage_linktree)
+         VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$14,$16)
          ON CONFLICT (business_id) DO UPDATE SET
            footer_text=CASE WHEN $8 THEN EXCLUDED.footer_text ELSE business_defaults.footer_text END,
            footer_phone=CASE WHEN $9 THEN EXCLUDED.footer_phone ELSE business_defaults.footer_phone END,
@@ -404,6 +445,7 @@ export class ApprovalService {
            footer_hidden=CASE WHEN $12 THEN EXCLUDED.footer_hidden ELSE business_defaults.footer_hidden END,
            whatsapp_enabled=CASE WHEN $13 THEN EXCLUDED.whatsapp_enabled ELSE business_defaults.whatsapp_enabled END,
            background_pattern=CASE WHEN $15 THEN EXCLUDED.background_pattern ELSE business_defaults.background_pattern END,
+           homepage_linktree=CASE WHEN $17 THEN EXCLUDED.homepage_linktree ELSE business_defaults.homepage_linktree END,
            updated_at=NOW()`,
         [
           input.businessId,
@@ -421,6 +463,8 @@ export class ApprovalService {
           Object.hasOwn(input.changes, 'default_whatsapp_enabled'),
           resolveNewPagePattern(input.changes.default_background_pattern),
           Object.hasOwn(input.changes, 'default_background_pattern'),
+          this.optionalBoolean(input.changes.homepage_linktree) ?? false,
+          Object.hasOwn(input.changes, 'homepage_linktree'),
         ],
       );
       return;
@@ -590,83 +634,15 @@ export class ApprovalService {
       return;
     }
     if (input.permission === 'business:linktrees:update' && input.resourceId) {
-      const normalizedContent = normalizeLinktreeContent(
-        input.changes as UpdateLinktreeDto,
+      await updateLinktreeInTransaction(
+        client,
+        input.resourceId,
+        input.changes,
+        input.businessId,
+        'business',
+        this.storage,
+        (owner, key) => this.templateAccess.assertAllowed(owner, key),
       );
-      const columns: Record<string, string> = {
-        headline: 'headline',
-        slogan: 'slogan',
-        slogan_color: 'slogan_color',
-        logo: 'logo',
-        description: 'description',
-        name: 'headline',
-        subtitle: 'slogan',
-        subtitle_color: 'slogan_color',
-        seo_name: 'seo_name',
-        image: 'logo',
-        background_color: 'background_color',
-        footer_text: 'footer_text',
-        footer_phone: 'footer_phone',
-        footer_hidden: 'footer_hidden',
-      };
-      const assignments: string[] = [];
-      const assignedColumns = new Set<string>();
-      const parameters: unknown[] = [input.resourceId, input.businessId];
-      for (const [field, column] of Object.entries(columns)) {
-        if (!Object.hasOwn(input.changes, field) || assignedColumns.has(column))
-          continue;
-        assignedColumns.add(column);
-        parameters.push(
-          column === 'headline' ? normalizedContent.name : input.changes[field],
-        );
-        assignments.push(`${column}=$${parameters.length}`);
-      }
-      if (Object.hasOwn(input.changes, 'template_config')) {
-        const submittedConfig = input.changes.template_config;
-        if (
-          submittedConfig &&
-          typeof submittedConfig === 'object' &&
-          !Array.isArray(submittedConfig)
-        ) {
-          const config = submittedConfig as Record<string, unknown>;
-          if (config[LINKTREE_BANNER_KEY] !== undefined) {
-            config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
-              config[LINKTREE_BANNER_KEY],
-            );
-          }
-          await assertLinktreeBannerOwnership(
-            this.storage,
-            input.businessId,
-            config,
-          );
-          const previous = input.previousTemplateConfig;
-          await assertLinktreeSeoPlan(
-            client,
-            input.businessId,
-            config,
-            previous && typeof previous === 'object' && !Array.isArray(previous)
-              ? (previous as Record<string, unknown>)
-              : undefined,
-          );
-        }
-        parameters.push(JSON.stringify(input.changes.template_config || {}));
-        assignments.push(`template_config=$${parameters.length}::jsonb`);
-        const config = input.changes.template_config;
-        if (config && typeof config === 'object' && !Array.isArray(config)) {
-          const templateKey = (config as Record<string, unknown>).templateKey;
-          if (typeof templateKey === 'string') {
-            parameters.push(templateKey);
-            assignments.push(`template_key=$${parameters.length}`);
-          }
-        }
-      }
-      if (assignments.length) {
-        await client.query(
-          `UPDATE linktrees SET ${assignments.join(',')},updated_at=NOW()
-           WHERE id=$1::uuid AND business_id=$2::uuid`,
-          parameters,
-        );
-      }
       return;
     }
     if (input.permission === 'business:linktrees:delete' && input.resourceId) {
@@ -719,49 +695,17 @@ export class ApprovalService {
       return;
     }
     if (input.permission === 'business:links:sync' && input.resourceId) {
-      const rawLinks = Array.isArray(input.changes.links)
+      const links = Array.isArray(input.changes.links)
         ? input.changes.links
         : Array.isArray(input.changes.createLinks)
           ? input.changes.createLinks
           : [];
-      const owner = await client.query(
-        `SELECT 1 FROM linktrees WHERE id=$1::uuid AND business_id=$2::uuid`,
-        [input.resourceId, input.businessId],
-      );
-      if (!owner.rowCount) throw new ConflictException('Linktree not found');
-      await client.query(`DELETE FROM links WHERE linktree_id=$1::uuid`, [
+      await syncLinksInTransaction(
+        client,
         input.resourceId,
-      ]);
-      for (const [index, raw] of rawLinks.entries()) {
-        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
-        const link = raw as Record<string, unknown>;
-        const platform =
-          typeof link.platform === 'string' ? link.platform.trim() : '';
-        const url = typeof link.url === 'string' ? link.url.trim() : '';
-        if (!platform || !url) {
-          throw new BadRequestException(
-            'Every synchronized link needs a platform and URL',
-          );
-        }
-        await client.query(
-          `INSERT INTO links
-            (linktree_id,business_id,platform,url,display_name,description,
-             default_message,display_order)
-           VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8)`,
-          [
-            input.resourceId,
-            input.businessId,
-            platform,
-            url,
-            typeof link.display_name === 'string' ? link.display_name : null,
-            typeof link.description === 'string' ? link.description : null,
-            typeof link.default_message === 'string'
-              ? link.default_message
-              : null,
-            index,
-          ],
-        );
-      }
+        links as SyncLinkInput[],
+        input.businessId,
+      );
       return;
     }
     if (
@@ -851,6 +795,19 @@ export class ApprovalService {
     return { publicChanges, secrets, hasPassword };
   }
 
+  private async cleanupOwnedAssets(
+    businessId: string,
+    values: unknown,
+  ): Promise<void> {
+    if (
+      values &&
+      JSON.stringify(values).includes('/images/upload/') &&
+      (await this.storage.areBusinessAssetsOwned(businessId, values))
+    ) {
+      await this.storage.deleteUnreferencedFromValues(values);
+    }
+  }
+
   private changedFields(
     permission: PermissionKey,
     changes: Record<string, unknown>,
@@ -859,7 +816,15 @@ export class ApprovalService {
       return ['pixel_id', 'events_token'];
     }
     const definition = PERMISSION_BY_KEY.get(permission);
-    return definition?.fields ? Object.keys(changes) : undefined;
+    return definition?.fields
+      ? Object.keys(changes).filter(
+          (field) =>
+            !(
+              permission === 'business:linktrees:update' &&
+              ['links', 'platforms', 'linkMetadata'].includes(field)
+            ),
+        )
+      : undefined;
   }
 
   private optionalString(value: unknown): string | null {

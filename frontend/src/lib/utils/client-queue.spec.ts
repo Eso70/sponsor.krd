@@ -111,6 +111,10 @@ describe("analytics queue delivery", () => {
       eventName: "whatsapp_click",
       browserDispatched: true,
       browserEventName: "Contact",
+      properties: {
+        whatsappQuestionId: "question-price",
+        whatsappQuestionLabel: "Do not trust this",
+      },
     });
 
     const url = trackedNavigationUrl(
@@ -123,6 +127,8 @@ describe("analytics queue delivery", () => {
     expect(url).toContain("browserEventName=Contact");
     expect(url).not.toContain("wa.me");
     expect(url).toContain("message=secret");
+    expect(url).toContain("whatsappQuestionId=question-price");
+    expect(url).not.toContain("whatsappQuestionLabel");
   });
 
   it("keeps native application schemes on the beacon path", async () => {
@@ -154,10 +160,7 @@ describe("analytics queue delivery", () => {
     );
     const { trackedNavigationUrl } = await loadQueueModule();
 
-    const url = trackedNavigationUrl(
-      UUID,
-      "https://wa.me/9647500000000",
-    );
+    const url = trackedNavigationUrl(UUID, "https://wa.me/9647500000000");
     const query = new URL(url || "", "https://example.com").searchParams;
 
     expect(query.get("pageUrl")).toHaveLength(2048);

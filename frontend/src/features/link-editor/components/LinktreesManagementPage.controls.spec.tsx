@@ -57,10 +57,8 @@ describe.each(["tenant", "platform"] as const)(
         screen.queryByRole("button", { name: /campaign|کەمپەین|الحملة/i }),
       ).not.toBeInTheDocument();
       expect(active).toHaveAttribute("aria-pressed", "true");
-      expect(active).toHaveClass(
-        accentMode === "platform" ? "sa-gradient" : "theme-fill",
-      );
       fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+      expect(active).toHaveAttribute("aria-pressed", "false");
       expect(screen.getByRole("button", { name: "Archive" })).toHaveAttribute(
         "aria-pressed",
         "true",

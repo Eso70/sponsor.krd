@@ -1,22 +1,17 @@
+import { dashboardInstallMetadata } from "@/lib/brand/dashboard-install";
+import { requestBranding } from "@/lib/brand/request-branding.server";
+import { platformConsolePath } from "@/lib/platform-console-path";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Admin | Sponsor.krd",
-  robots: "noindex, nofollow",
-};
-
-function configuredConsoleSegment(): string | null {
-  const segment = (process.env.PLATFORM_ADMIN_PATH || "")
-    .trim()
-    .replace(/^\/+|\/+$/g, "");
-
-  if (!/^[a-zA-Z0-9_-]{20,}$/.test(segment)) {
-    return process.env.NODE_ENV === "development" ? "platform-console" : null;
-  }
-
-  return segment;
+export async function generateMetadata(): Promise<Metadata> {
+  const base = platformConsolePath();
+  return {
+    title: "Admin | Sponsor.krd",
+    robots: "noindex, nofollow",
+    ...(base ? dashboardInstallMetadata((await requestBranding()).name, base) : {}),
+  };
 }
 
 export default async function PlatformConsoleLayout({
@@ -27,7 +22,7 @@ export default async function PlatformConsoleLayout({
   params: Promise<{ platformConsole: string }>;
 }) {
   const { platformConsole } = await params;
-  if (platformConsole !== configuredConsoleSegment()) {
+  if (platformConsole !== platformConsolePath()?.slice(1)) {
     notFound();
   }
 

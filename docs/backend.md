@@ -1,5 +1,20 @@
 # Backend
 
+`GET /api/public/directory/:kind?page=1` serves a bounded, host-scoped public
+directory for `linktree` or `form`. PublicService resolves an active business or
+the platform content workspace; clients cannot supply an owner ID. Responses
+contain branding, public headlines/descriptions, saved logos and bounded banner
+images, slugs, public content counts, default-page status, and pagination only.
+Cards may also receive up to five distinct link platform identifiers or the
+form's validated language and required-question count, never question text.
+Disabled form media stays hidden. Linktree
+cards use the first saved banner; form cards retain their saved carousel mode.
+Archived/paused pages are excluded; forms require live Forms plan access and
+root Linktrees must retain their canonical root-slug registration. Internal form
+management names, definitions, responses and tracking configuration are omitted.
+Requests are rate-limited; invalid kinds/pages and missing owners return 404,
+while an empty first page succeeds. No schema change is required.
+
 Form volume prices use the shared runtime-safe
 `@linktree/types/form-product-pricing.cjs` helper. Definition validation enforces
 ordered, bounded discounts; submissions derive prices from the published locked
@@ -763,3 +778,19 @@ The shared content normalizer validates lowercase ASCII URL identifiers before
 writes, including approval execution. Owner-scoped uniqueness and the root-route
 registry remain authoritative; existing updates purge both old and new public
 cache keys after commit. No migration is required.
+
+## Atomic Linktree editor writes
+
+Business and Platform Linktree updates accept the canonical grouped `links`, `platforms`, and `linkMetadata` editor fields. An omitted `links` field preserves existing links; a supplied link set is synchronized in the same transaction as the page fields and canonical WhatsApp questions. The business full-editor update checks both Linktree-update and link-sync permissions. A denied capability rejects the complete operation; an approval requirement queues the complete edit without publishing part of it.
+
+Normal updates and approved edits reuse transaction-aware Linktree and link synchronization helpers. Matching link destinations retain their identifiers, analytics actions, and submitted metadata. Logo, background, banner, and social-preview upload references must satisfy the shared media ownership policy before persistence. These changes require no schema migration.
+
+`linktrees/linktree-write.ts` owns the transaction-aware page update; `links/sync-links.ts` owns identity-preserving link synchronization; `linktrees/linktree-links.ts` and `linktree-template-config.ts` own shared mapping and normalization. Approval execution calls these helpers within its existing transaction rather than depending on the controller-owning Linktrees module.
+
+## Linktree sponsor configuration
+
+The shared runtime sponsor validator normalizes `template_config.sponsor` for Business and Platform writes, including approved edits and duplication. It rejects invalid names, URLs, unsupported image paths and enabled wordmarks without an image. The shared media policy verifies sponsor wordmark ownership alongside the other page assets. Existing configuration storage is reused; no new management endpoint or content table is introduced. Public rendering reads the same safe runtime contract.
+
+Apply `2026-10-31_linktree_sponsor_actions.sql` through `pnpm db:migrate` on existing deployments. Fresh installs use baseline part `98_linktree_sponsor_actions.sql`. The trigger registers/updates the optional owner-scoped sponsor engagement action without resetting its identity or historical events, and hides it when the link is removed or attribution is disabled.
+
+Sponsor refinements add optional plain-text `intro` and allow wordmarks without a separate name. Contact destinations additionally accept strict international `tel:+` numbers; WhatsApp URLs use a numeric wa.me destination. Apply `2026-10-31_linktree_sponsor_contacts.sql` after the original sponsor-actions migration so contact and nameless-wordmark actions register correctly. Fresh baseline part 98 already contains the final trigger.

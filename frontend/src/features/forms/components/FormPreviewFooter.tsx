@@ -63,7 +63,7 @@ export function FormPreviewFooter({
                 key={action.id}
                 href={action.url}
                 onClick={() => onAction?.(action.id, action.url)}
-                target="_blank"
+                target={publicPage ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 className={buttonClass}
                 data-form-action

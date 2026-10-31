@@ -337,6 +337,7 @@ export class AuthController {
         'default_background_pattern',
         'default_footer_hidden',
         'default_whatsapp_enabled',
+        'homepage_linktree',
       ]) {
         delete data[field];
       }
@@ -582,6 +583,7 @@ export class AuthController {
           'default_background_pattern',
           'default_footer_hidden',
           'default_whatsapp_enabled',
+          'homepage_linktree',
         ].includes(key),
       );
     }

@@ -12,6 +12,35 @@ vi.mock("@/features/communications/BusinessMessagesPanel", () => ({ BusinessMess
 afterEach(() => vi.unstubAllGlobals());
 
 describe.each(["en", "ar", "ckb"] as const)("Business Settings shared layout (%s)", (locale) => {
+  it("saves and reloads the reversible homepage choice", async () => {
+    let saved = false;
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") saved = JSON.parse(init.body as string).homepage_linktree;
+      return new Response(JSON.stringify({ data: url.includes("effective-access")
+        ? { permissions: { "business:defaults:update": { outcome: "allow" } } }
+        : url.includes("linktrees/default") ? null
+        : { name: "Sample business", homepage_linktree: saved } }));
+    });
+    vi.stubGlobal("fetch", request);
+    const copy = businessMessages[locale].SettingsPage;
+    const view = render(<BusinessLocaleProvider initialLocale={locale}><BusinessSettingsPage /></BusinessLocaleProvider>);
+    await screen.findByPlaceholderText(copy.businessName);
+    fireEvent.click(screen.getByRole("tab", { name: copy.defaultsTab }));
+    const toggle = await screen.findByRole("switch", { name: copy.homepageLinktree });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: copy.save }));
+    await waitFor(() => expect(saved).toBe(true));
+    await waitFor(() => expect(screen.getByRole("button", { name: copy.savedButton })).toBeDisabled());
+    view.unmount();
+    render(<BusinessLocaleProvider initialLocale={locale}><BusinessSettingsPage /></BusinessLocaleProvider>);
+    await screen.findByPlaceholderText(copy.businessName);
+    fireEvent.click(screen.getByRole("tab", { name: copy.defaultsTab }));
+    expect(await screen.findByRole("switch", { name: copy.homepageLinktree })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("switch", { name: copy.homepageLinktree }));
+    fireEvent.click(screen.getByRole("button", { name: copy.save }));
+    await waitFor(() => expect(saved).toBe(false));
+  });
   it("does not display defaults as saved data or allow saving after a load failure", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 500 })));
     const copy = businessMessages[locale].SettingsPage;

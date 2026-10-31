@@ -5,23 +5,16 @@ import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { Fragment, memo, useState, type CSSProperties, type ReactNode } from "react";
 import { usePublicLinktreeCopy, usePublicLinktreeLocale } from "@/features/business/i18n/public-linktree";
 import { imageMediaCopy } from "@/components/shared/image-media-copy";
-import { FullscreenImageViewer } from "@/components/shared/FullscreenImageViewer";
+import { FullscreenImageViewer } from "@/components/shared/LazyFullscreenImageViewer";
 import { PublicLinktreeBusinessSummary } from "@/components/public/PublicLinktreeBusinessSummary";
 import { useTemplateMedia } from "./TemplateMediaContext";
 
 const DEFAULT_AVATAR = "/images/DefaultAvatar.png";
 
-export const STANDARD_TEMPLATE_HEADER_CLASSES = {
-  content: "flex flex-col items-center gap-4 text-center",
-  avatar: "h-28 w-28",
-  text: "flex flex-col items-center gap-1.5 text-center",
-  name: "text-3xl font-bold leading-tight text-balance px-2",
-  subtitle:
-    "text-base font-medium leading-snug max-w-sm text-pretty px-2",
-  description: "text-sm leading-relaxed max-w-sm text-pretty px-2",
-} as const;
-
-export const STANDARD_TEMPLATE_HEADER_AVATAR_SIZES = "112px";
+export {
+  STANDARD_TEMPLATE_HEADER_CLASSES,
+  STANDARD_TEMPLATE_HEADER_AVATAR_SIZES,
+} from "./template-header-styles";
 
 function Wrap({
   className,

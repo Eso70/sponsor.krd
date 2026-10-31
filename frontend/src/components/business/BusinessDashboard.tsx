@@ -24,10 +24,8 @@ import dynamic from "next/dynamic";
 import { DrawerPresence } from "@/components/shared/DrawerPresence";
 import { LinktreeEditorDrawer } from "@/features/link-editor/components/LinktreeEditorDrawer";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  normalizeTemplateConfig,
-  type TemplateKey,
-} from "@/lib/templates/config";
+import type { LinktreeEditorSubmitData } from "@/features/link-editor/editor-types";
+import { useLinktreeMutations, LINKTREE_APPROVAL_COPY } from "@/features/link-editor/use-linktree-mutations";
 import { toast } from "sonner";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { SPONSOR_KRD_LOGO } from "@/lib/brand/brand-assets";
@@ -549,7 +547,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     unavailable: analyticsUnavailable,
     refresh: fetchAnalyticsTotals,
   } = useBusinessAnalyticsTotals("linktree", activeTab === "linktrees");
-  const isSubmittingRef = useRef(false); // Prevent duplicate submissions
+  const mutations = useLinktreeMutations("business");
   const [editData, setEditData] = useState<{
     linktree: Linktree;
     links: Array<{
@@ -698,52 +696,24 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!linktreeToDelete || isDeleting) return;
-
     setIsDeleting(true);
-
-    // Optimistic update - remove from UI immediately
-    const deletedId = linktreeToDelete.id;
-    removeLinktree(deletedId);
-
-    // Close modal immediately for better UX
-    setIsDeleteModalOpen(false);
-    setLinktreeToDelete(null);
-
     try {
-      const response = await fetch(`/api/linktrees/${deletedId}`, {
-        method: "DELETE",
-        credentials: "include", // Include cookies for authentication
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        // Revert optimistic update on error
-        await fetchLinktrees(false, true);
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || "Failed to delete linktree";
-        console.error(errorMessage);
-        throw new Error(errorMessage);
+      const result = await mutations.remove(linktreeToDelete.id);
+      if (result.outcome === "approval") {
+        toast.info(LINKTREE_APPROVAL_COPY[locale]);
+      } else {
+        removeLinktree(linktreeToDelete.id);
+        toast.success(actionT("deleteSuccess"));
       }
-
-      // Clear cache after successful deletion (batch clear)
-      const { clearCachedData } = await import("@/lib/utils/cache");
-      if (linktreeToDelete) {
-        // Clear all related caches in one batch
-        clearCachedData("/api/linktrees");
-        clearCachedData(`/api/linktrees/${linktreeToDelete.id}`);
-        clearCachedData(`/api/linktrees/${linktreeToDelete.id}/links`);
-        clearCachedData(`/api/linktrees/${linktreeToDelete.id}/analytics`);
-      }
-
-      // Success - no need to fetch again, optimistic update already applied
-      toast.success(actionT("deleteSuccess"));
+      setIsDeleteModalOpen(false);
+      setLinktreeToDelete(null);
     } catch (error) {
       console.error("Error deleting linktree:", error);
       toast.error(actionT("deleteFailed"));
     } finally {
       setIsDeleting(false);
     }
-  }, [linktreeToDelete, isDeleting, fetchLinktrees, removeLinktree, actionT]);
+  }, [linktreeToDelete, isDeleting, mutations, removeLinktree, actionT, locale]);
 
   const handleDeleteModalClose = useCallback(() => {
     if (!isDeleting) {
@@ -754,81 +724,38 @@ export const BusinessDashboard = memo(function BusinessDashboard({
 
   const handleToggleArchive = useCallback(
     async (id: string, nextStatus: boolean) => {
-      mergeLinktree(id, {
-        is_archived: nextStatus,
-        archived_at: nextStatus ? new Date().toISOString() : null,
-      });
-
       try {
-        const response = await fetch(`/api/linktrees/${id}/archive`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_archived: nextStatus }),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          await fetchLinktrees(false, true);
-          toast.error(actionT("archiveFailed"));
+        const result = await mutations.archive(id, nextStatus);
+        if (result.outcome === "approval") {
+          toast.info(LINKTREE_APPROVAL_COPY[locale]);
           return;
         }
-
-        const { clearCachedData } = await import("@/lib/utils/cache");
-        clearCachedData("/api/linktrees");
-        clearCachedData(`/api/linktrees/${id}`);
-
-        if (nextStatus) {
-          toast.success(actionT("archived"));
-        } else {
-          toast.success(actionT("restored"));
-        }
-      } catch {
-        await fetchLinktrees(false, true);
+        mergeLinktree(id, { is_archived: nextStatus, archived_at: nextStatus ? new Date().toISOString() : null });
+        toast.success(actionT(nextStatus ? "archived" : "restored"));
+      } catch (error) {
+        console.error("Error archiving linktree:", error);
         toast.error(actionT("archiveFailed"));
       }
     },
-    [mergeLinktree, fetchLinktrees, actionT],
+    [mutations, mergeLinktree, actionT, locale],
   );
 
   const handleToggleStatus = useCallback(
     async (id: string, nextStatus: "active" | "inactive") => {
-      mergeLinktree(id, {
-        status: nextStatus,
-      });
-
       try {
-        const response = await fetch(`/api/linktrees/${id}/status`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: nextStatus }),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          await fetchLinktrees(false, true);
-          toast.error(actionT("statusFailed"));
+        const result = await mutations.status(id, nextStatus);
+        if (result.outcome === "approval") {
+          toast.info(LINKTREE_APPROVAL_COPY[locale]);
           return;
         }
-
-        const { clearCachedData } = await import("@/lib/utils/cache");
-        clearCachedData("/api/linktrees");
-        clearCachedData(`/api/linktrees/${id}`);
-
-        if (nextStatus === "active") {
-          toast.success(actionT("pageActivated"));
-        } else {
-          toast.success(actionT("pageDeactivated"));
-        }
-      } catch {
-        await fetchLinktrees(false, true);
+        mergeLinktree(id, { status: nextStatus });
+        toast.success(actionT(nextStatus === "active" ? "pageActivated" : "pageDeactivated"));
+      } catch (error) {
+        console.error("Error changing linktree status:", error);
         toast.error(actionT("statusFailed"));
       }
     },
-    [mergeLinktree, fetchLinktrees, actionT],
+    [mutations, mergeLinktree, actionT, locale],
   );
 
   // Left unmemoised on purpose: React Compiler handles the memoisation here, and
@@ -863,522 +790,18 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   }, []);
 
   const handleSubmit = useCallback(
-    async (
-      data: {
-        headline: string;
-        slug?: string;
-        slogan?: string;
-        slogan_color?: string;
-        description?: string;
-        logo: string | null;
-        background_color: string;
-        templateKey: TemplateKey;
-        templateConfig: Record<string, unknown>;
-        platforms: string[];
-        links: Record<string, string[]>;
-        linkMetadata?: Record<
-          string,
-          Array<{
-            display_order?: number;
-            display_name?: string;
-            description?: string;
-            default_message?: string;
-            metadata?: Record<string, unknown>;
-          }>
-        >;
-        is_default?: boolean;
-      },
-      editId?: string,
-    ) => {
-      // Prevent duplicate submissions
-      if (isSubmittingRef.current) {
-        // Submission already in progress, ignoring duplicate call
-        return;
+    async (data: LinktreeEditorSubmitData, editId?: string) => {
+      const result = await mutations.save(data, editId);
+      if (result.outcome === "approval") {
+        toast.info(LINKTREE_APPROVAL_COPY[locale]);
+      } else {
+        if (editId) mergeLinktree(editId, result.page);
+        else prependLinktree(result.page);
+        toast.success(actionT(editId ? "updated" : "created"));
       }
-
-      // Mark as submitting immediately to prevent duplicates
-      isSubmittingRef.current = true;
-      let errorShown = false; // Track if error was shown
-
-      try {
-        const normalizedTemplateConfig = normalizeTemplateConfig(
-          data.templateKey,
-          data.templateConfig,
-        );
-
-        if (editId) {
-          // ============================================
-          // UPDATE EXISTING LINKTREE
-          // ============================================
-
-          // Validate required fields
-          if (
-            !data.headline?.trim() ||
-            !data.background_color
-          ) {
-            console.error("Headline and background color are required");
-            throw new Error("Missing required fields");
-          }
-
-          if (!data.templateKey) {
-            console.error("Template key is required");
-            throw new Error("Missing template key");
-          }
-
-          // Validate links exist
-          if (!data.links || Object.keys(data.links).length === 0) {
-            console.error("At least one link is required");
-            throw new Error("No links provided");
-          }
-
-          // Validate editId is a valid UUID
-          const uuidRegex =
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (!uuidRegex.test(editId)) {
-            console.error("Invalid linktree ID");
-            throw new Error("Invalid linktree ID format");
-          }
-
-          // Step 1: Update linktree metadata
-          const updateResponse = await fetch(`/api/linktrees/${editId}`, {
-            method: "PATCH",
-            credentials: "include", // Include cookies for authentication
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              headline: data.headline.trim(),
-              ...(data.slug ? { seo_name: data.slug } : {}),
-              slogan: data.slogan?.trim() || null,
-              slogan_color: data.slogan_color?.trim() || null,
-              description: data.description?.trim() || null,
-              logo: data.logo || null,
-              background_color: data.background_color,
-              template_config: normalizedTemplateConfig,
-            }),
-          });
-
-          if (!updateResponse.ok) {
-            type ErrorDetail = { field?: string; message?: string };
-            let errorData: {
-              error?: string;
-              details?: ErrorDetail[] | string;
-            } | null = null;
-
-            try {
-              const text = await updateResponse.text();
-              if (text) {
-                const parsed = JSON.parse(text) as unknown;
-                if (parsed && typeof parsed === "object") {
-                  // The API envelope nests the failure: `{ error: { code,
-                  // message, details } }`, with `details` a list of plain
-                  // strings from class-validator. Reading only a flat
-                  // `{ error: string }` meant every validation failure arrived
-                  // as a bare "Validation failed" with the one useful part —
-                  // which field, and why — thrown away.
-                  const body = parsed as {
-                    error?: unknown;
-                    details?: unknown;
-                    message?: unknown;
-                  };
-                  const envelope =
-                    body.error && typeof body.error === "object"
-                      ? (body.error as {
-                          message?: unknown;
-                          details?: unknown;
-                        })
-                      : undefined;
-
-                  const rawDetails = envelope?.details ?? body.details;
-                  const parsedDetails = Array.isArray(rawDetails)
-                    ? rawDetails
-                        .map((detail): ErrorDetail | null => {
-                          // `["createLinks.0.url must be a URL address"]`
-                          if (typeof detail === "string") {
-                            return { message: detail };
-                          }
-                          if (typeof detail === "object" && detail !== null) {
-                            const entry = detail as ErrorDetail;
-                            return {
-                              field:
-                                typeof entry.field === "string"
-                                  ? entry.field
-                                  : undefined,
-                              message:
-                                typeof entry.message === "string"
-                                  ? entry.message
-                                  : undefined,
-                            };
-                          }
-                          return null;
-                        })
-                        .filter((detail): detail is ErrorDetail => !!detail)
-                    : undefined;
-
-                  const messageOf = (value: unknown) =>
-                    typeof value === "string" ? value : undefined;
-
-                  errorData = {
-                    error:
-                      messageOf(body.error) ??
-                      messageOf(envelope?.message) ??
-                      messageOf(body.message),
-                    details:
-                      parsedDetails ?? messageOf(rawDetails) ?? undefined,
-                  };
-                }
-              }
-            } catch (parseError) {
-              console.error("Failed to parse error response:", parseError);
-              errorData = {
-                error: `HTTP ${updateResponse.status}: ${updateResponse.statusText}`,
-              };
-            }
-
-            const detailMessage = Array.isArray(errorData?.details)
-              ? errorData.details
-                  .filter(
-                    (detail) => detail && (detail.field || detail.message),
-                  )
-                  .map((detail) => {
-                    const fieldPrefix = detail.field ? `${detail.field}: ` : "";
-                    return `${fieldPrefix}${detail.message ?? ""}`.trim();
-                  })
-                  .filter((entry) => entry.length > 0)
-                  .join(", ")
-              : typeof errorData?.details === "string"
-                ? errorData.details
-                : "";
-
-            const baseMessage =
-              errorData?.error ||
-              `Failed to update linktree (HTTP ${updateResponse.status})`;
-            const errorMessage = detailMessage
-              ? `${baseMessage}: ${detailMessage}`
-              : baseMessage;
-            console.error(
-              "Update error:",
-              errorMessage,
-              errorData ?? undefined,
-            );
-            toast.error(
-              locale === "ckb" ? errorMessage : actionT("updateFailed"),
-            );
-            throw new Error(errorMessage);
-          }
-
-          // Step 2: Fetch existing identities for the legacy batch request shape.
-          const linksResponse = await fetch(`/api/linktrees/${editId}/links`, {
-            credentials: "include",
-            cache: "no-store",
-          });
-          const existingLinkIds: string[] = [];
-          if (linksResponse.ok) {
-            const linksResult = await linksResponse.json();
-            const existingLinks = linksResult.data || [];
-            existingLinkIds.push(
-              ...existingLinks.map((link: { id: string }) => link.id),
-            );
-          } else {
-            console.error(
-              "Failed to fetch existing links:",
-              linksResponse.status,
-              linksResponse.statusText,
-            );
-            // If we can't fetch existing links, we should still try to delete all links for this linktree
-            // This is a safety measure to prevent duplicates
-          }
-
-          // Step 3: Prepare links to create
-          const linksToCreate: Array<{
-            platform: string;
-            url: string;
-            display_order: number;
-            display_name?: string | null;
-            description?: string | null;
-            default_message?: string | null;
-            metadata?: Record<string, unknown>;
-          }> = [];
-
-          // Track linkId to index mapping for error display
-          const linkIdToIndexMap: Record<number, string> = {};
-          let linkCreateIndex = 0;
-
-          if (data.links && Object.keys(data.links).length > 0) {
-            let displayOrder = 0;
-            for (const [platform, urls] of Object.entries(data.links)) {
-              // Validate platform
-              if (
-                !platform ||
-                typeof platform !== "string" ||
-                platform.trim().length === 0
-              ) {
-                continue; // Skip invalid platforms
-              }
-
-              // Validate urls array
-              if (!Array.isArray(urls) || urls.length === 0) {
-                continue; // Skip empty arrays
-              }
-
-              const metadataArray = data.linkMetadata?.[platform] || [];
-              urls.forEach((url, index) => {
-                // Validate URL
-                if (
-                  !url ||
-                  typeof url !== "string" ||
-                  url.trim().length === 0
-                ) {
-                  return; // Skip invalid URLs
-                }
-
-                const trimmedPlatform = platform.trim();
-                const trimmedUrl = url.trim();
-
-                // Additional validation: ensure platform and URL are not just whitespace
-                if (trimmedPlatform.length === 0 || trimmedUrl.length === 0) {
-                  return; // Skip empty strings
-                }
-
-                const metadata = metadataArray[index] || {};
-                linksToCreate.push({
-                  platform: trimmedPlatform,
-                  url: trimmedUrl,
-                  display_order: typeof metadata.display_order === "number" && Number.isSafeInteger(metadata.display_order) && metadata.display_order >= 0
-                    ? metadata.display_order : displayOrder,
-                  display_name: metadata.display_name?.trim() || null,
-                  description: metadata.description?.trim() || null,
-                  default_message: metadata.default_message?.trim() || null,
-                  metadata:
-                    metadata.metadata &&
-                    typeof metadata.metadata === "object" &&
-                    !Array.isArray(metadata.metadata)
-                      ? metadata.metadata
-                      : {},
-                });
-
-                // Store mapping: index in linksToCreate -> platform_index (for error mapping)
-                linkIdToIndexMap[linkCreateIndex] =
-                  `${trimmedPlatform}_${index}`;
-                linkCreateIndex++;
-                displayOrder++;
-              });
-            }
-          }
-
-          // Keep global order across grouped platforms and their validation identities.
-          const orderedLinks = linksToCreate.map((link, index) => ({ link, errorKey: linkIdToIndexMap[index] }))
-            .sort((a, b) => a.link.display_order - b.link.display_order);
-          linksToCreate.splice(0, linksToCreate.length, ...orderedLinks.map(({ link }) => link));
-          orderedLinks.forEach(({ errorKey }, index) => { linkIdToIndexMap[index] = errorKey; });
-
-          // The shared batch sync preserves matching link identities and analytics.
-          if (existingLinkIds.length > 0 || linksToCreate.length > 0) {
-            const batchResponse = await fetch(
-              `/api/linktrees/${editId}/links/batch`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                  deleteIds: existingLinkIds,
-                  createLinks: linksToCreate,
-                }),
-              },
-            );
-
-            if (!batchResponse.ok) {
-              const errorData = await batchResponse.json().catch(() => ({}));
-              let errorMessage = "Failed to update links";
-
-              // Check if there are per-link validation errors
-              if (
-                Array.isArray(errorData.details) &&
-                errorData.details.length > 0
-              ) {
-                // Map errors to link positions for display in modal
-                // The API returns errors with index corresponding to linksToCreate array
-                const linkErrors: Record<string, string> = {};
-
-                errorData.details.forEach(
-                  (d: {
-                    index?: number;
-                    platform?: string;
-                    url?: string;
-                    reason?: string;
-                  }) => {
-                    if (d.index !== undefined && d.platform && d.reason) {
-                      // Map API index to platform_index format using our mapping
-                      const mappedKey = linkIdToIndexMap[d.index];
-                      if (mappedKey) {
-                        linkErrors[mappedKey] = d.reason;
-                      } else {
-                        // Fallback: use platform_index directly
-                        linkErrors[`${d.platform}_${d.index}`] = d.reason;
-                      }
-                    }
-                  },
-                );
-
-                // Store link errors to pass to modal
-                errorMessage =
-                  errorData.message ||
-                  errorData.error ||
-                  "Some links have validation errors";
-                console.error(errorMessage);
-
-                // Throw error with link errors attached
-                const error = new Error(errorMessage) as Error & {
-                  linkErrors?: Record<string, string>;
-                };
-                error.linkErrors = linkErrors;
-                throw error;
-              } else {
-                if (errorData.message) {
-                  errorMessage = errorData.message;
-                } else if (errorData.error) {
-                  errorMessage = errorData.error;
-                }
-                console.error(errorMessage);
-                throw new Error(errorMessage);
-              }
-            } else {
-              // Clear cache after successful batch update
-              const { clearCachedData } = await import("@/lib/utils/cache");
-              clearCachedData(`/api/linktrees/${editId}/links`);
-              clearCachedData(`/api/linktrees/${editId}`);
-              clearCachedData("/api/linktrees");
-            }
-          }
-
-          // Optimistic update - update in UI immediately
-          const updateResponseData = await updateResponse.json();
-          if (updateResponseData.data) {
-            // Clear cache after successful update
-            const { clearCachedData } = await import("@/lib/utils/cache");
-            clearCachedData("/api/linktrees");
-            clearCachedData(`/api/linktrees/${editId}`);
-            clearCachedData(`/api/linktrees/${editId}/links`);
-            if (updateResponseData.data.uid) {
-              clearCachedData(
-                `/api/linktrees/uid/${updateResponseData.data.uid}`,
-              );
-              clearCachedData(
-                `/api/public/linktrees/${updateResponseData.data.uid}`,
-              );
-            }
-
-            mergeLinktree(editId, updateResponseData.data);
-          }
-
-          // Step 5: Show success notification
-          if (!errorShown) {
-            toast.info(actionT("updated"));
-            errorShown = true;
-          }
-
-          // Close modal immediately for better UX
-          setIsDrawerOpen(false);
-          setEditData(null);
-
-          // Background refresh disabled to reduce server load on free hosting
-        } else {
-          // ============================================
-          // CREATE NEW LINKTREE
-          // ============================================
-
-          // Validate required fields
-          if (
-            !data.headline?.trim() ||
-            !data.background_color
-          ) {
-            console.error("Headline and background color are required");
-            throw new Error("Missing required fields");
-          }
-
-          if (!data.templateKey) {
-            console.error("Template key is required");
-            throw new Error("Missing template key");
-          }
-
-          if (!data.links || Object.keys(data.links).length === 0) {
-            console.error("Please add at least one link");
-            throw new Error("No links provided");
-          }
-
-          if (!data.platforms || data.platforms.length === 0) {
-            console.error("At least one platform is required");
-            throw new Error("No platforms provided");
-          }
-
-          const createResponse = await fetch("/api/linktrees", {
-            method: "POST",
-            credentials: "include", // Include cookies for authentication
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              headline: data.headline.trim(),
-              ...(data.slug ? { seo_name: data.slug } : {}),
-              slogan: data.slogan?.trim() || null,
-              slogan_color: data.slogan_color?.trim() || null,
-              description: data.description?.trim() || null,
-              logo: data.logo || null,
-              background_color: data.background_color,
-              template_config: normalizedTemplateConfig,
-              platforms: data.platforms,
-              links: data.links,
-              linkMetadata: data.linkMetadata,
-              ...((data as { is_default?: boolean }).is_default
-                ? { is_default: true }
-                : {}),
-            }),
-          });
-
-          if (!createResponse.ok) {
-            const errorData = await createResponse.json().catch(() => ({}));
-            const errorMessage =
-              errorData.error || errorData.details
-                ? `${errorData.error || "Validation failed"}: ${Array.isArray(errorData.details) ? errorData.details.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`).join(", ") : ""}`
-                : "Failed to create linktree";
-            console.error(errorMessage);
-            throw new Error(errorMessage);
-          }
-
-          const result = await createResponse.json();
-          if (result.data) {
-            // Clear cache after successful creation
-            const { clearCachedData } = await import("@/lib/utils/cache");
-            clearCachedData("/api/linktrees");
-
-            // Optimistic update - add to UI immediately
-            prependLinktree(result.data);
-
-            toast.success(actionT("created"));
-            handleDrawerClose();
-
-            // Background refresh disabled to reduce server load on free hosting
-          } else {
-            console.error("Failed to create linktree: No data returned");
-            throw new Error("No data returned from server");
-          }
-        }
-      } catch (error) {
-        console.error("Error saving linktree:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        // Show error only if not already shown
-        if (!errorShown) {
-          console.error(
-            editId
-              ? `Failed to update linktree: ${errorMessage}`
-              : `Failed to create linktree: ${errorMessage}`,
-          );
-        }
-        // Re-throw error so modal can handle it and display per-link errors
-        throw error;
-      } finally {
-        // ALWAYS reset submission flag, even on error
-        isSubmittingRef.current = false;
-      }
+      handleDrawerClose();
     },
-    [handleDrawerClose, mergeLinktree, prependLinktree, actionT, locale],
+    [mutations, handleDrawerClose, mergeLinktree, prependLinktree, actionT, locale],
   );
 
   // Don't render anything if not authenticated (after all hooks)

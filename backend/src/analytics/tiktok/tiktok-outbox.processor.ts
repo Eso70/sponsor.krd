@@ -298,7 +298,7 @@ export class TikTokOutboxProcessor implements OnModuleInit, OnModuleDestroy {
       } catch {
         requestId = undefined;
       }
-      const providerAccepted = providerCode === undefined || providerCode === 0;
+      const providerAccepted = providerCode === 0;
       const success = response.ok && providerAccepted;
       const summary = success
         ? undefined
@@ -312,6 +312,7 @@ export class TikTokOutboxProcessor implements OnModuleInit, OnModuleDestroy {
         retryable:
           response.status === 429 ||
           response.status >= 500 ||
+          (response.ok && providerCode === undefined) ||
           (response.ok && providerCode !== undefined && providerCode >= 50000),
         statusCode: response.status,
         requestId,

@@ -1,8 +1,15 @@
-import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
+import { inspectLinktreeSponsor } from '@linktree/types/linktree-sponsor.cjs';
 import {
-  normalizeLinktreeCreate,
-  normalizeLinktreeContent,
-} from './linktree-content';
+  updateLinktreeInTransaction,
+  type LinktreeRow,
+} from './linktree-write';
+import {
+  normalizeTemplateConfig,
+  type NormalizedTemplateConfig,
+} from './linktree-template-config';
+import { buildCreateLinks } from './linktree-links';
+import { resolveNewPagePattern } from '@linktree/types/linktree-defaults.cjs';
+import { normalizeLinktreeCreate } from './linktree-content';
 import { slugifyPublicPageName as slugifyLinktreeName } from '../common/public-page-slug';
 export { slugifyLinktreeName };
 import {
@@ -17,12 +24,15 @@ import {
   readLinktreeBanner,
   LINKTREE_BANNER_KEY,
 } from '@linktree/types/linktree-banner.cjs';
-import { questionVideoUrl } from '../common/whatsapp-question-video';
-import { assertLinktreeBannerOwnership } from '../common/linktree-banner';
 import {
-  assertLinktreeSeoPlan,
-  normalizeLinktreeSeoConfig,
-} from '../common/linktree-seo';
+  syncWhatsAppQuestions,
+  type WhatsappQuestionInput,
+} from './sync-whatsapp-questions';
+import {
+  assertLinktreeBannerOwnership,
+  assertLinktreeMediaOwnership,
+} from '../common/linktree-banner';
+import { assertLinktreeSeoPlan } from '../common/linktree-seo';
 import { publicLinktreeCacheKeys } from '../common/root-public-cache';
 import { DatabaseService } from '../database/database.service';
 import {
@@ -35,23 +45,16 @@ import {
   BACKGROUND_IMAGE_CONFIG_KEY,
   isLinktreeBackgroundImage,
 } from '../common/linktree-background-image';
-import {
-  BACKGROUND_PATTERN_CONFIG_KEY,
-  isLinktreeBackgroundPattern,
-} from '../common/linktree-background-pattern';
+import { BACKGROUND_PATTERN_CONFIG_KEY } from '../common/linktree-background-pattern';
 import { ForbiddenException } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
-import {
-  CreateLinktreeDto,
-  type LinkMetadataInput,
-} from './dto/create-linktree.dto';
+import { CreateLinktreeDto } from './dto/create-linktree.dto';
 import { UpdateLinktreeDto } from './dto/update-linktree.dto';
 import { DuplicateLinktreeDto } from './dto/duplicate-linktree.dto';
 import * as crypto from 'crypto';
 import { EntitlementService } from '../billing/entitlement.service';
 import { TemplateAccessService } from '../billing/template-access.service';
 import { StorageService } from '../storage/storage.service';
-import { LinksService } from '../links/links.service';
 import {
   AnalyticsReadRepository,
   type LinktreeAnalyticsTotals,
@@ -77,19 +80,6 @@ import {
  * Type aliases rather than interfaces: pg constrains the row generic to
  * `QueryResultRow`, and only aliases pick up the implicit index signature.
  */
-type TemplateConfig = Record<string, unknown> & {
-  templateKey?: string;
-  type?: string;
-  buttonStyle?: string;
-  buttonGradient?: boolean;
-  whatsapp_modal?: Record<string, unknown>;
-};
-
-/** What `normalizeTemplateConfig` guarantees once it has filled the defaults. */
-type NormalizedTemplateConfig = TemplateConfig & {
-  templateKey: string;
-  whatsapp_modal: Record<string, unknown>;
-};
 
 type BusinessDefaultsRow = {
   name?: string;
@@ -103,39 +93,6 @@ type BusinessDefaultsRow = {
   default_footer_phone: string | null;
   default_footer_hidden: boolean | null;
   default_whatsapp_enabled: boolean | null;
-};
-
-/** An unvalidated WhatsApp question as it arrives inside `template_config`. */
-type WhatsappQuestionInput = {
-  videoUrl?: unknown;
-  text?: unknown;
-  message?: unknown;
-};
-
-type LinktreeRow = {
-  id: string;
-  name: string;
-  subtitle: string | null;
-  subtitle_color: string | null;
-  description: string | null;
-  seo_name: string;
-  uid: string;
-  image: string | null;
-  background_color: string;
-  template_key: string | null;
-  template_config: TemplateConfig | string | null;
-  whatsapp_modal_enabled: boolean | null;
-  footer_text: string | null;
-  footer_phone: string | null;
-  footer_hidden: boolean | null;
-  status: string;
-  is_pinned?: boolean;
-  is_archived?: boolean;
-  archived_at?: Date | null;
-  is_default: boolean;
-  created_at?: Date;
-  updated_at?: Date;
-  business_default_avatar?: string | null;
 };
 
 type MappedLinktree = Omit<LinktreeRow, 'template_config'> & {
@@ -227,7 +184,6 @@ export class LinktreesService {
     private readonly entitlementService: EntitlementService,
     private readonly templateAccessService: TemplateAccessService,
     private readonly storage: StorageService,
-    private readonly linksService: LinksService,
     private readonly analyticsRead: AnalyticsReadRepository,
   ) {}
 
@@ -244,43 +200,7 @@ export class LinktreesService {
     return 'lt-' + result;
   }
 
-  private normalizeTemplateConfig(
-    templateConfig: TemplateConfig | string | null | undefined,
-    templateKey?: string | null,
-    validateSeo = false,
-  ): NormalizedTemplateConfig {
-    const config: TemplateConfig =
-      typeof templateConfig === 'string'
-        ? (JSON.parse(templateConfig || '{}') as TemplateConfig)
-        : { ...(templateConfig || {}) };
-
-    config.templateKey = config.templateKey || templateKey || 'spectrum';
-    config.type = config.type || 'simple';
-    config.buttonStyle = config.buttonStyle || 'pill';
-    config.buttonGradient = config.buttonGradient !== false;
-    config.verification_badge = config.verification_badge === true;
-    if (config[LINKTREE_BANNER_KEY] !== undefined) {
-      config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
-        config[LINKTREE_BANNER_KEY],
-      );
-    }
-    normalizeLinktreeSeoConfig(config, validateSeo);
-    config.whatsapp_modal = config.whatsapp_modal || {};
-
-    // A background image is painted into public page CSS, so anything that is
-    // not one of our own uploads is dropped rather than stored or served.
-    if (!isLinktreeBackgroundImage(config[BACKGROUND_IMAGE_CONFIG_KEY])) {
-      delete config[BACKGROUND_IMAGE_CONFIG_KEY];
-    }
-
-    // A pattern outside the catalogue draws nothing, which would leave the
-    // owner with a setting that appears saved and never applies.
-    if (!isLinktreeBackgroundPattern(config[BACKGROUND_PATTERN_CONFIG_KEY])) {
-      delete config[BACKGROUND_PATTERN_CONFIG_KEY];
-    }
-
-    return config as NormalizedTemplateConfig;
-  }
+  private normalizeTemplateConfig = normalizeTemplateConfig;
 
   private async mapLinktreeRow(
     clientOrDb: Queryable,
@@ -325,133 +245,7 @@ export class LinktreesService {
     return withLinkMetadata(row);
   }
 
-  private buildCreateLinks(data: CreateLinktreeDto) {
-    const displayOrders: number[] = [];
-    const linksToCreate: Array<{
-      platform: string;
-      url: string;
-      display_name: string | null;
-      description: string | null;
-      default_message: string | null;
-      original_input: string | null;
-      country_code: string | null;
-      gps_lat: number | null;
-      gps_lng: number | null;
-      custom_color: string | null;
-      custom_icon: string | null;
-    }> = [];
-
-    if (!data.links || typeof data.links !== 'object') return linksToCreate;
-
-    for (const [platformKey, urls] of Object.entries(data.links)) {
-      const platform = platformKey.trim();
-      if (!platform || !Array.isArray(urls)) continue;
-
-      const metadataRows = Array.isArray(data.linkMetadata?.[platform])
-        ? data.linkMetadata?.[platform] || []
-        : [];
-
-      urls.forEach((url, index) => {
-        if (!url || typeof url !== 'string' || !url.trim()) return;
-
-        const row: LinkMetadataInput = metadataRows[index] || {};
-        displayOrders.push(
-          typeof row.display_order === 'number' &&
-            Number.isSafeInteger(row.display_order) &&
-            row.display_order >= 0 &&
-            row.display_order <= 32767
-            ? row.display_order
-            : linksToCreate.length,
-        );
-        const metadata: Record<string, unknown> =
-          row.metadata &&
-          typeof row.metadata === 'object' &&
-          !Array.isArray(row.metadata)
-            ? (row.metadata as Record<string, unknown>)
-            : {};
-
-        linksToCreate.push({
-          platform,
-          url: url.trim(),
-          display_name:
-            typeof row.display_name === 'string' && row.display_name.trim()
-              ? row.display_name.trim()
-              : null,
-          description:
-            typeof row.description === 'string' && row.description.trim()
-              ? row.description.trim()
-              : null,
-          default_message:
-            typeof row.default_message === 'string'
-              ? row.default_message.trim()
-              : null,
-          original_input:
-            typeof metadata.original_input === 'string'
-              ? metadata.original_input
-              : null,
-          country_code:
-            typeof metadata.country_code === 'string'
-              ? metadata.country_code
-              : null,
-          gps_lat:
-            metadata.gps_lat !== undefined && metadata.gps_lat !== null
-              ? Number(metadata.gps_lat)
-              : null,
-          gps_lng:
-            metadata.gps_lng !== undefined && metadata.gps_lng !== null
-              ? Number(metadata.gps_lng)
-              : null,
-          custom_color:
-            typeof metadata.custom_color === 'string'
-              ? metadata.custom_color
-              : null,
-          custom_icon:
-            typeof metadata.custom_icon === 'string'
-              ? metadata.custom_icon
-              : null,
-        });
-      });
-    }
-
-    return linksToCreate
-      .map((link, index) => ({ link, order: displayOrders[index] ?? index }))
-      .sort((a, b) => a.order - b.order)
-      .map(({ link }) => link);
-  }
-
-  /**
-   * Converts the editor's grouped link payload to the canonical sync shape.
-   * Platform administration uses the same mapping as business creation so
-   * metadata, phone inputs, GPS values, labels, and descriptions cannot drift.
-   */
-  buildSyncLinks(data: CreateLinktreeDto): SyncLinkInput[] {
-    return this.buildCreateLinks(data).map((link) => ({
-      platform: link.platform,
-      url: link.url,
-      display_name: link.display_name,
-      description: link.description,
-      default_message: link.default_message,
-      metadata: {
-        original_input: link.original_input,
-        country_code: link.country_code,
-        gps_lat: link.gps_lat,
-        gps_lng: link.gps_lng,
-        custom_color: link.custom_color,
-        custom_icon: link.custom_icon,
-      },
-    }));
-  }
-
-  async syncSubmittedLinks(
-    linktreeId: string,
-    data: CreateLinktreeDto,
-    businessId: string,
-  ) {
-    const links = this.buildSyncLinks(data);
-    await this.linksService.syncLinks(linktreeId, links, businessId);
-    return this.linksService.getLinksByLinktree(linktreeId, businessId);
-  }
-
+  private buildCreateLinks = buildCreateLinks;
   async getAllLinktrees(businessId: string) {
     const res = await this.databaseService.query<LinktreeRow>(
       `SELECT lt.id, lt.headline AS name, lt.slogan AS subtitle, lt.slogan_color AS subtitle_color, lt.description, lt.seo_name, lt.uid, lt.logo AS image, lt.background_color,
@@ -638,7 +432,13 @@ export class LinktreesService {
     );
     if (!isPlatform)
       await assertLinktreeSeoPlan(this.databaseService, businessId, config);
-    await assertLinktreeBannerOwnership(this.storage, businessId, config);
+    await assertLinktreeMediaOwnership(
+      this.storage,
+      businessId,
+      config,
+      data.image,
+      isPlatform,
+    );
     if (!isPlatform) {
       await this.ensureTemplateAllowed(businessId, config.templateKey);
     }
@@ -742,23 +542,11 @@ export class LinktreesService {
       );
 
       const createdLinktree = ltRes.rows[0];
-      for (let i = 0; i < whatsappQuestions.length; i++) {
-        const q = whatsappQuestions[i];
-        if (typeof q?.text === 'string' && typeof q.message === 'string') {
-          if (!q.text || !q.message) continue;
-          await client.query(
-            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order, video_url)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [
-              createdLinktree.id,
-              q.text.trim(),
-              q.message.trim(),
-              i,
-              questionVideoUrl(q.videoUrl),
-            ],
-          );
-        }
-      }
+      await syncWhatsAppQuestions(
+        client,
+        createdLinktree.id,
+        whatsappQuestions,
+      );
       for (let i = 0; i < linksToCreate.length; i++) {
         const link = linksToCreate[i];
         await client.query(
@@ -1125,7 +913,7 @@ export class LinktreesService {
     // 6. Construct target template_config with copy lineage metadata
     const targetDepth = currentDepth + 1;
     const originId = sourceLineage?.origin_id || sourceId;
-    const targetTemplateConfig = {
+    const targetTemplateConfig: Record<string, unknown> = {
       ...sourceTemplateConfig,
       ...(dto?.banner !== undefined
         ? { [LINKTREE_BANNER_KEY]: readLinktreeBanner(dto.banner) }
@@ -1170,6 +958,19 @@ export class LinktreesService {
     ) {
       throw new BadRequestException(
         'The background image must belong to this workspace',
+      );
+    }
+    if (sourceTemplateConfig.sponsor !== undefined) {
+      const sponsor = inspectLinktreeSponsor(sourceTemplateConfig.sponsor);
+      if (Object.keys(sponsor.errors).length)
+        throw new BadRequestException('Invalid sponsor settings');
+      targetTemplateConfig.sponsor = sponsor.value;
+      await assertLinktreeMediaOwnership(
+        this.storage,
+        businessId,
+        { sponsor: sponsor.value },
+        undefined,
+        isPlatform,
       );
     }
     const targetTemplateKey = dto?.template_key ?? source.template_key;
@@ -1337,138 +1138,18 @@ export class LinktreesService {
     businessId: string,
     scope: LinktreeWriteScope = 'business',
   ) {
-    const data = normalizeLinktreeContent(input);
-    const isPlatform = scope === 'platform';
-    const current = await this.getLinktreeById(id, businessId);
-    const nextSeoName = data.seo_name || data.slug;
-
-    if (nextSeoName && nextSeoName !== current.seo_name) {
-      const slugCheck = await this.databaseService.query<{
-        '?column?': number;
-      }>(
-        'SELECT 1 FROM linktrees WHERE business_id = $1 AND seo_name = $2 AND id != $3',
-        [businessId, nextSeoName, id],
-      );
-      if (slugCheck.rows.length > 0)
-        throw new ConflictException('SEO URL slug already in use');
-    }
-
-    const name = data.name !== undefined ? data.name : current.name;
-    const subtitle =
-      data.subtitle !== undefined ? data.subtitle : current.subtitle;
-    const subtitle_color =
-      data.subtitle_color !== undefined
-        ? data.subtitle_color || null
-        : current.subtitle_color;
-    const description =
-      data.description !== undefined ? data.description : current.description;
-    const seo_name = nextSeoName !== undefined ? nextSeoName : current.seo_name;
-    const image = data.image !== undefined ? data.image : current.image;
-    const background_color =
-      data.background_color !== undefined
-        ? data.background_color
-        : current.background_color;
-    const footer_text =
-      data.footer_text !== undefined ? data.footer_text : current.footer_text;
-    const footer_phone =
-      data.footer_phone !== undefined
-        ? data.footer_phone
-        : current.footer_phone;
-    const footer_hidden =
-      data.footer_hidden !== undefined
-        ? data.footer_hidden
-        : current.footer_hidden;
-    const status =
-      data.status !== undefined ? data.status : current.status || 'active';
-    if (current.is_default && status === 'inactive') {
-      throw new BadRequestException('پەیجی بنەڕەتی ناتوانرێت ناچالاک بکرێت');
-    }
-
-    const config = this.normalizeTemplateConfig(
-      data.template_config !== undefined
-        ? data.template_config
-        : current.template_config,
-      current.template_key,
-      data.template_config !== undefined,
-    );
-    if (!isPlatform)
-      await assertLinktreeSeoPlan(
-        this.databaseService,
-        businessId,
-        config,
-        current.template_config,
-      );
-    await assertLinktreeBannerOwnership(this.storage, businessId, config);
-    if (!isPlatform) {
-      await this.ensureTemplateAllowed(businessId, config.templateKey);
-    }
-    const whatsappModal = config.whatsapp_modal || {};
-    const whatsappEnabled = !!whatsappModal.enabled;
-    const whatsappQuestions: WhatsappQuestionInput[] = Array.isArray(
-      whatsappModal.questions,
-    )
-      ? (whatsappModal.questions as WhatsappQuestionInput[])
-      : [];
-
-    const row = await this.databaseService.transaction(async (client) => {
-      const ltRes = await client.query<LinktreeRow>(
-        `UPDATE linktrees
-         SET headline = $1, slogan = $2, slogan_color = $15, description = $14, seo_name = $3,
-             logo = $4, background_color = $5,
-             template_key = $6, template_config = $7::jsonb, whatsapp_modal_enabled = $8,
-             footer_text = $9, footer_phone = $10, footer_hidden = $11,
-             status = $16,
-             updated_at = NOW()
-         WHERE id = $12 AND business_id = $13
-         RETURNING id, headline AS name, slogan AS subtitle, slogan_color AS subtitle_color, description, seo_name, uid, logo AS image, background_color,
-                   template_key, template_config, whatsapp_modal_enabled,
-                    footer_text, footer_phone, footer_hidden, status, is_pinned, is_archived, archived_at, is_default, created_at, updated_at`,
-        [
-          name,
-          subtitle,
-          seo_name,
-          image,
-          background_color,
-          config.templateKey,
-          JSON.stringify(config),
-          whatsappEnabled,
-          footer_text,
-          footer_phone,
-          footer_hidden,
+    const { row, current, image, config } =
+      await this.databaseService.transaction((client) =>
+        updateLinktreeInTransaction(
+          client,
           id,
+          input,
           businessId,
-          description,
-          subtitle_color,
-          status,
-        ],
+          scope,
+          this.storage,
+          (owner, key) => this.ensureTemplateAllowed(owner, key),
+        ),
       );
-
-      const updatedLinktree = ltRes.rows[0];
-
-      await client.query(
-        'DELETE FROM whatsapp_questions WHERE linktree_id = $1',
-        [id],
-      );
-      for (let i = 0; i < whatsappQuestions.length; i++) {
-        const q = whatsappQuestions[i];
-        if (typeof q?.text === 'string' && typeof q.message === 'string') {
-          if (!q.text || !q.message) continue;
-          await client.query(
-            `INSERT INTO whatsapp_questions (linktree_id, question_text, message, display_order, video_url)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [
-              id,
-              q.text.trim(),
-              q.message.trim(),
-              i,
-              questionVideoUrl(q.videoUrl),
-            ],
-          );
-        }
-      }
-
-      return updatedLinktree;
-    });
 
     await this.storage.claimBusinessAssets(businessId, image, config);
     await this.storage.deleteUnreferencedFromValues(

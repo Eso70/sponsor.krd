@@ -326,6 +326,9 @@ export function trackedNavigationUrl(
   if (event.ttp) query.set("ttp", event.ttp);
   if (event.browserEventName)
     query.set("browserEventName", event.browserEventName);
+  const questionId = event.properties.whatsappQuestionId;
+  if (typeof questionId === "string" && questionId.length <= 200)
+    query.set("whatsappQuestionId", questionId);
   const parsedDestination = new URL(destination, window.location.href);
   const hostname = parsedDestination.hostname.toLowerCase();
   const message =

@@ -1,17 +1,8 @@
-import { LinktreesService } from './linktrees.service';
+import { buildSyncLinks } from './linktree-links';
 
 describe('grouped Linktree ordering', () => {
-  const service = new LinktreesService(
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
   it('preserves interleaved duplicate platforms for create and platform sync', () => {
-    const result = service.buildSyncLinks({
+    const result = buildSyncLinks({
       name: 'Page',
       links: {
         custom: ['https://first.example', 'https://last.example'],
@@ -29,7 +20,7 @@ describe('grouped Linktree ordering', () => {
     ]);
   });
   it('preserves legacy order and safely ignores malformed positions', () => {
-    const result = service.buildSyncLinks({
+    const result = buildSyncLinks({
       name: 'Page',
       links: {
         custom: ['https://first.example', 'https://last.example'],

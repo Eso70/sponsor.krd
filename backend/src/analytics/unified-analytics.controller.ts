@@ -66,6 +66,7 @@ function prepareRedirectQuery(
     consentState: redirectQueryString(query, 'consentState'),
     browserDispatched: redirectQueryString(query, 'browserDispatched'),
     browserEventName: redirectQueryString(query, 'browserEventName'),
+    whatsappQuestionId: redirectQueryString(query, 'whatsappQuestionId'),
   });
 }
 
@@ -236,7 +237,12 @@ export class PublicUnifiedAnalyticsController {
             pageId,
             actionId,
             browserDispatched: redirectEvent.browserDispatched === 'true',
-            properties: { delivery: 'first_party_redirect' },
+            properties: {
+              delivery: 'first_party_redirect',
+              ...(redirectEvent.whatsappQuestionId
+                ? { whatsappQuestionId: redirectEvent.whatsappQuestionId }
+                : {}),
+            },
           }),
           context,
         );

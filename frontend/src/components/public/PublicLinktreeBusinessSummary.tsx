@@ -7,7 +7,7 @@ import styles from "./PublicLinktreeBusinessDetails.module.css";
 export function PublicLinktreeBusinessSummary({ seo, locale, color }: { seo?: LinktreeSeo; locale: BusinessLocale; color: string }) {
   if (!seo) return null;
   const category = linktreeCategoryLabel(seo, locale);
-  const address = [seo.business?.street, seo.business?.city, seo.business?.country].filter(Boolean).join(", ");
+  const address = [seo.business?.country, seo.business?.city, seo.business?.street].filter(Boolean).join(", ");
   if (!category && !address) return null;
   return <div data-business-summary className={styles.overview} style={{color}} dir={locale === "en" ? "ltr" : "rtl"}>
     {category && <span className={styles.fact}><Tag aria-hidden className={styles.icon} /><span>{category}</span></span>}

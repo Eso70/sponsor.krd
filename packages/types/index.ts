@@ -11,4 +11,6 @@ export * from "./domain.types";
 
 export * from "./forms.types";
 export * from "./linktree-banner";
+export * from "./linktree-sponsor";
 export type * from "./analytics-sharing.types";
+export type * from "./public-directory.types";

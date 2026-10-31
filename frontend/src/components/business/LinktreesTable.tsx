@@ -32,7 +32,7 @@ import {
   LinktreeMetaBadges,
   type LinktreeMetaBadgesProps,
   type PageListTrafficLabels,
-} from "@/components/business/LinktreeMeta";
+} from "@/features/link-editor/components/LinktreeMeta";
 import type { LinktreeListItem as Linktree } from "@linktree/types";
 import {
   KURDISH_LINKTREE_LIST_COPY,

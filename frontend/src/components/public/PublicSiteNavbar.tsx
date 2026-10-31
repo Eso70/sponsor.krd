@@ -34,6 +34,7 @@ interface PublicSiteNavbarProps {
   actionInk?: string;
   /** Whether the first nav item is emphasized like an active page. Default true. */
   emphasizeFirstNavItem?: boolean;
+  hideBrandName?: boolean;
   copy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
   languageControl?: ReactNode;
 }
@@ -49,6 +50,7 @@ export function PublicSiteNavbar({
   actionColor,
   actionInk,
   emphasizeFirstNavItem = true,
+  hideBrandName = false,
   copy,
   languageControl,
 }: PublicSiteNavbarProps = {}) {
@@ -136,9 +138,9 @@ export function PublicSiteNavbar({
         height={30}
         className="rounded-lg object-cover shadow-sm"
       />
-      <span className="text-base font-bold tracking-tight text-slate-950 dark:text-white sm:text-lg">
+      {!hideBrandName && <span className="text-base font-bold tracking-tight text-slate-950 dark:text-white sm:text-lg">
         {branding?.name || "Sponsor.krd"}
-      </span>
+      </span>}
     </>
   );
 

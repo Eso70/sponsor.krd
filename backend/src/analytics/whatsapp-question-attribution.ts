@@ -38,13 +38,12 @@ export async function whatsappQuestionAttribution(
   ) {
     const result = await client.query<{ id: string; label: string }>(
       `
-      SELECT question->>'id' AS id, question->>'text' AS label
+      SELECT question.id::text AS id, question.question_text AS label
       FROM public_pages page JOIN linktrees tree ON tree.id=page.source_linktree_id AND tree.business_id=page.business_id
-      CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(tree.template_config->'whatsapp_modal'->'questions')='array' THEN tree.template_config->'whatsapp_modal'->'questions' ELSE '[]'::jsonb END) question
+      JOIN whatsapp_questions question ON question.linktree_id=tree.id
       WHERE page.id=$1 AND page.business_id=$3
-        AND tree.template_config->'whatsapp_modal'->>'enabled'='true'
-        AND jsonb_typeof(question->'id')='string' AND jsonb_typeof(question->'text')='string' AND jsonb_typeof(question->'message')='string'
-        AND question->>'id'=$2 LIMIT 1`,
+        AND COALESCE(tree.whatsapp_modal_enabled, tree.template_config->'whatsapp_modal'->>'enabled'='true', false)
+        AND question.id::text=$2 LIMIT 1`,
       [page.id, input.whatsappQuestionId, page.business_id],
     );
     const question = result.rows[0];

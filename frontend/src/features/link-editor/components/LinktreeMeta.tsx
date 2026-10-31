@@ -162,28 +162,3 @@ export const LinktreeMetaBadges = memo(function LinktreeMetaBadges({
   );
 });
 
-interface LinktreeMetaFieldProps {
-  label: string;
-  value: string;
-  className?: string;
-}
-
-/** Labelled read-only field used by the Linktree card and mobile list views. */
-export const LinktreeMetaField = memo(function LinktreeMetaField({
-  label,
-  value,
-  className = "",
-}: LinktreeMetaFieldProps) {
-  return (
-    <div className={`min-w-0 ${className}`}>
-      <span className="mb-1 block text-[10px] font-medium text-gray-400">
-        {label}
-      </span>
-      <Tooltip content={value} side="top">
-        <span className="block truncate text-[11px] font-medium text-gray-700 dark:text-gray-300">
-          {value}
-        </span>
-      </Tooltip>
-    </div>
-  );
-});

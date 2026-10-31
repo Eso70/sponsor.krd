@@ -99,22 +99,6 @@ export function WhatsAppQuestionAnalytics({
                       }).format(new Date(question.lastSelectedAt))}
                     </p>
                   )}
-                  {question.links.length > 0 && (
-                    <details className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                      <summary className="cursor-pointer">{copy.links}</summary>
-                      <div className="mt-2 space-y-1">
-                        {question.links.map((link, index) => (
-                          <div
-                            key={`${question.id}:${index}`}
-                            className="flex justify-between gap-3"
-                          >
-                            <span dir="auto">{link.label}</span>
-                            <span>{link.clicks}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
                 </article>
               ))}
             </div>

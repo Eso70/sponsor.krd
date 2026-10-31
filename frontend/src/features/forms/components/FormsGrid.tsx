@@ -11,7 +11,7 @@ import { ManagementGrid } from "@/components/shared/ManagementGrid";
 import { ManagementCard } from "@/components/shared/ManagementCard";
 import { PageListUrl } from "@/components/shared/PageListUrl";
 import { PageListTraffic } from "@/components/shared/PageListTraffic";
-import { LinktreeMetaField } from "@/components/business/LinktreeMeta";
+import { PageListMetaField } from "@/components/shared/PageListMetaField";
 import { formatDate, getAbsoluteUrl } from "@/lib/utils/linktree-utils";
 import { FormCollectionBadges } from "./FormCollectionBadges";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -113,12 +113,12 @@ export function FormsGrid({
           )}
           <div className="mb-2 grid grid-cols-2 gap-2 sm:mb-3">
             {form.createdAt && (
-              <LinktreeMetaField
+              <PageListMetaField
                 label={copy.created}
                 value={formatDate(form.createdAt)}
               />
             )}
-            <LinktreeMetaField
+            <PageListMetaField
               label={copy.updated}
               value={formatDate(form.updatedAt)}
             />

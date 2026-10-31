@@ -1445,7 +1445,7 @@ export class BusinessAdministrationService {
         ),
         this.databaseService.query<Record<string, unknown>>(
           `SELECT footer_text, footer_phone, footer_hidden, template_key,
-                  background_color, background_pattern, whatsapp_enabled, updated_at
+                  background_color, background_pattern, whatsapp_enabled, homepage_linktree, updated_at
            FROM business_defaults WHERE business_id=$1::uuid`,
           [id],
         ),
@@ -1798,8 +1798,8 @@ export class BusinessAdministrationService {
         await client.query(
           `INSERT INTO business_defaults (
            business_id,footer_text,footer_phone,footer_hidden,template_key,
-           background_color,whatsapp_enabled,updated_at,background_pattern)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+           background_color,whatsapp_enabled,updated_at,background_pattern,homepage_linktree)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
           [
             businessId,
             toText(defaults.footer_text) || null,
@@ -1811,6 +1811,7 @@ export class BusinessAdministrationService {
             defaults.whatsapp_enabled === true,
             defaults.updated_at || new Date(),
             resolveNewPagePattern(defaults.background_pattern),
+            defaults.homepage_linktree === true,
           ],
         );
         const resolvedPlan = plan.rows[0];

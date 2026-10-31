@@ -117,7 +117,7 @@ describe("TikTok pixel placement", () => {
 
     expect(pages.sort()).toEqual([
       "app/form/[slug]/page.tsx",
-      "app/linktree/[uid]/page.tsx",
+      "components/public/PublicLinktreeContent.tsx",
     ]);
 
     // And the snippet is generated in the shared builder — plain, without

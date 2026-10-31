@@ -503,10 +503,11 @@ export class UnifiedAnalyticsService {
     const userAgent = context.userAgent.slice(0, 2000);
     const device = this.device(userAgent);
     const bot = this.isBot(userAgent);
-    const attribution = this.attribution(
-      input.pageUrl,
-      input.referrer || context.referrer,
-    );
+    // The API request's Referer is the current page, not the visitor's source.
+    // Only the landing document's referrer can describe acquisition; using the
+    // transport header when it is absent mislabels direct visits as referrals.
+    const landingReferrer = input.referrer || undefined;
+    const attribution = this.attribution(input.pageUrl, landingReferrer);
     const channel = this.deriveChannel({
       ttclid: input.ttclid || attribution.ttclid,
       utmSource: attribution.utmSource,
@@ -540,15 +541,27 @@ export class UnifiedAnalyticsService {
         if (!form.rows.length) throw new NotFoundException('Form not found');
       }
       const action = await this.resolveAction(client, page.id, input.actionId);
-      const propertiesJson = JSON.stringify(
-        await whatsappQuestionAttribution(
+      const browserDispatched = Boolean(
+        input.browserDispatched &&
+        input.browserEventName === this.tiktokEvent(input.eventName, action) &&
+        forwardsToTikTok({
+          pageType: page.page_type,
+          eventName: input.eventName,
+          hasAction: Boolean(action),
+          engagementOnly: action?.metadata?.engagement_only === true,
+          serverConfirmed: Boolean(transactionClient),
+        }),
+      );
+      const propertiesJson = JSON.stringify({
+        ...(await whatsappQuestionAttribution(
           client,
           page,
           action,
           input.eventName,
           safeProperties,
-        ),
-      );
+        )),
+        browserDispatched,
+      });
       if (Buffer.byteLength(propertiesJson, 'utf8') > 8192)
         throw new BadRequestException(
           'Analytics event properties must be 8 KB or smaller',
@@ -634,7 +647,7 @@ export class UnifiedAnalyticsService {
           page.id,
           occurredAt,
           input.pageUrl || null,
-          input.referrer || context.referrer || null,
+          landingReferrer || null,
           attribution.referrerHost || null,
           attribution.utmSource || null,
           attribution.utmMedium || null,
@@ -671,6 +684,7 @@ export class UnifiedAnalyticsService {
       const isConversion =
         action?.metadata?.engagement_only !== true &&
         (CONVERSION_EVENTS.has(input.eventName) ||
+          Boolean(transactionClient && input.eventName === 'form_submit') ||
           Boolean(
             action?.tiktok_event === 'Contact' &&
             CLICK_EVENTS.has(input.eventName) &&
@@ -713,7 +727,7 @@ export class UnifiedAnalyticsService {
           input.eventName,
           occurredAt,
           input.pageUrl || null,
-          input.referrer || context.referrer || null,
+          landingReferrer || null,
           context.ip,
           ipHmac,
           userAgent,
@@ -765,6 +779,7 @@ export class UnifiedAnalyticsService {
           action,
           eventName: input.eventName,
           occurredAt,
+          isConversion,
           conversionValue: conversionValue ?? 0,
         });
       }
@@ -800,7 +815,7 @@ export class UnifiedAnalyticsService {
           event_time: Math.floor(new Date(occurredAt).getTime() / 1000),
           event_id: input.eventId,
           url: input.pageUrl,
-          referrer: input.referrer || context.referrer,
+          referrer: landingReferrer,
           content_id: action?.id || page.id,
           content_ids: [action?.id || page.id],
           content_type: action ? action.action_type : page.page_type,
@@ -851,9 +866,7 @@ export class UnifiedAnalyticsService {
             tikTokName,
             input.eventId,
             JSON.stringify(payload),
-            Boolean(
-              input.browserDispatched && input.browserEventName === tikTokName,
-            ),
+            browserDispatched,
           ],
         );
       }
@@ -876,12 +889,13 @@ export class UnifiedAnalyticsService {
       action: ActionRow | null;
       eventName: AnalyticsEventName;
       occurredAt: string;
+      isConversion: boolean;
       conversionValue: number;
     },
   ): Promise<void> {
     const isView = input.eventName === 'page_view';
     const isClick = CLICK_EVENTS.has(input.eventName);
-    const isConversion = CONVERSION_EVENTS.has(input.eventName);
+    const isConversion = input.isConversion;
     await client.query(
       `INSERT INTO analytics_page_daily (
          business_id, public_page_id, day, timezone, total_views,
@@ -1015,6 +1029,7 @@ export class UnifiedAnalyticsService {
       contact_actions: string;
       contact_visitors: string;
       confirmed_outcomes: string;
+      retained_conversions: string;
       valued_outcomes: string;
       channels: Array<{ name: string; views: number }>;
       devices: Array<{ name: string; views: number }>;
@@ -1057,7 +1072,10 @@ export class UnifiedAnalyticsService {
       total_clicks: Number(row.total_clicks),
       unique_clicks: Number(uniques.unique_clickers),
       unique_clickers: Number(uniques.unique_clickers),
-      conversions: Number(row.conversions),
+      conversions: Math.max(
+        Number(row.conversions),
+        Number(insights?.retained_conversions) || 0,
+      ),
       conversion_value: Number(row.conversion_value),
     };
   }

@@ -29,7 +29,9 @@ export function GridCardActionButton({
   compact = false,
   presentation = "grid",
   onClick,
+  href,
   stopPropagation = false,
+  size = "default",
 }: {
   label: string;
   text?: string;
@@ -39,31 +41,40 @@ export function GridCardActionButton({
   disabled?: boolean;
   compact?: boolean;
   presentation?: "grid" | "table";
-  onClick: () => void;
+  onClick?: () => void;
+  /** Public actions navigate in the same tab through a real link. */
+  href?: string;
   stopPropagation?: boolean;
+  size?: "default" | "large";
 }) {
+  const Control = href ? "a" : "button";
   return (
     <Tooltip content={label} side="top">
-      <button
-        type="button"
+      <Control
+        type={href ? undefined : "button"}
+        href={href}
+        data-page-action
         data-primary-action={showLabel}
         onClick={(event) => {
           if (stopPropagation) event.stopPropagation();
-          onClick();
+          if (disabled) { event.preventDefault(); return; }
+          onClick?.();
         }}
-        disabled={disabled}
+        disabled={href ? undefined : disabled}
+        aria-disabled={disabled || undefined}
+        tabIndex={href && disabled ? -1 : undefined}
         aria-label={label}
         className={
           presentation === "table"
             ? `${actionStyle} w-8 shrink-0 p-1.5 sm:w-9 ${tones[tone]}`
-            : `${actionStyle} ${compact ? "w-8 shrink-0 sm:w-9" : "min-w-0 flex-1"} ${tones[tone]} ${showLabel ? "gap-1.5 px-2.5" : "px-0"}`
+            : `${actionStyle} ${size === "large" ? "min-h-11 sm:min-h-12" : ""} ${compact ? "w-8 shrink-0 sm:w-9" : "min-w-0 flex-1"} ${tones[tone]} ${showLabel ? "gap-1.5 px-2.5" : "px-0"}`
         }
       >
         <Icon aria-hidden="true" strokeWidth={1.75} className="h-3.5 w-3.5 shrink-0" />
         {showLabel && (
           <span className="truncate text-xs font-medium">{text || label}</span>
         )}
-      </button>
+      </Control>
     </Tooltip>
   );
 }

@@ -17,6 +17,7 @@ interface BusinessPublicSiteShellProps {
   navigationItems?: ReadonlyArray<{ label: string; href: string }>;
   action?: { label: string; href: string; external?: boolean } | null;
   emphasizeFirstNavItem?: boolean;
+  hideBrandName?: boolean;
   navbarCopy?: Partial<Record<"navigation" | "theme" | "menu" | "logo", string>>;
   language?: string;
   languageControl?: ReactNode;
@@ -34,6 +35,7 @@ export function BusinessPublicSiteShell({
   navigationItems,
   action,
   emphasizeFirstNavItem = true,
+  hideBrandName = false,
   navbarCopy,
   language,
   languageControl,
@@ -48,6 +50,7 @@ export function BusinessPublicSiteShell({
       navigationItems={navigationItems}
       primaryAction={action}
       emphasizeFirstNavItem={emphasizeFirstNavItem}
+      hideBrandName={hideBrandName}
       embedded={embedded}
       navbarCopy={navbarCopy}
       language={language}

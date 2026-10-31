@@ -8,6 +8,23 @@ describe('approved SEO cache lifecycle', () => {
       const query = jest.fn().mockImplementation((sql: string) => {
         if (sql.includes('AS allowed FROM businesses'))
           return Promise.resolve({ rows: [{ allowed }] });
+        if (sql.includes('FROM linktrees WHERE id=$1'))
+          return Promise.resolve({
+            rows: [
+              {
+                id: 'page',
+                name: 'Page',
+                template_config: {},
+                template_key: 'spectrum',
+                uid: 'page-uid',
+                seo_name: 'old-slug',
+              },
+            ],
+          });
+        if (sql.includes('UPDATE linktrees'))
+          return Promise.resolve({
+            rows: [{ id: 'page', uid: 'page-uid', seo_name: 'new-slug' }],
+          });
         if (sql.includes('FOR UPDATE'))
           return Promise.resolve({
             rows: [
@@ -65,6 +82,7 @@ describe('approved SEO cache lifecycle', () => {
           deleteUnreferencedFromValues: jest.fn(),
         } as never,
         redis as never,
+        { assertAllowed: jest.fn() } as never,
       );
       const review = service.review({
         id: 'approval',
@@ -86,8 +104,8 @@ describe('approved SEO cache lifecycle', () => {
         expect(redis.del).toHaveBeenCalledWith(`cache:platform-linktree:${id}`);
       }
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE id=$1::uuid AND business_id=$2::uuid'),
-        expect.arrayContaining(['page', 'owner']),
+        expect.stringContaining('WHERE id=$1 AND business_id=$2 FOR UPDATE'),
+        ['page', 'owner'],
       );
     },
   );

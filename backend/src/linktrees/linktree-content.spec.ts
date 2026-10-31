@@ -44,10 +44,10 @@ function setup(taken: string[] = [], rootTaken: string[] = []) {
     { getInteger: jest.fn(async () => 100) } as never,
     { assertAllowed: jest.fn() } as never,
     {
+      areBusinessAssetsOwned: jest.fn().mockResolvedValue(true),
       claimBusinessAssets: jest.fn(),
       deleteUnreferencedFromValues: jest.fn(),
     } as never,
-    {} as never,
     {} as never,
   );
   return { service, query };
@@ -163,20 +163,34 @@ describe('canonical Linktree content and backend URLs', () => {
         status: 'active',
       } as never);
       query.mockImplementation(async (sql: string, params?: unknown[]) =>
-        sql.includes('UPDATE linktrees')
+        sql.includes('FROM linktrees WHERE id=$1 AND business_id=$2 FOR UPDATE')
           ? {
               rows: [
                 {
                   id: 'page',
-                  name: params?.[0],
-                  seo_name: params?.[2],
+                  name: 'Old',
+                  seo_name: 'production-url',
                   uid: 'stable-id',
-                  template_config: {},
                   template_key: 'spectrum',
+                  template_config: {},
+                  status: 'active',
                 },
               ],
             }
-          : { rows: [] },
+          : sql.includes('UPDATE linktrees')
+            ? {
+                rows: [
+                  {
+                    id: 'page',
+                    name: params?.[0],
+                    seo_name: params?.[2],
+                    uid: 'stable-id',
+                    template_config: {},
+                    template_key: 'spectrum',
+                  },
+                ],
+              }
+            : { rows: [] },
       );
       await service.updateLinktree(
         'page',

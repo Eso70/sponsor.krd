@@ -22,6 +22,8 @@ function buildService(
   const calls: Call[] = [];
   const clientQuery = jest.fn((sql: string, params: unknown[] = []) => {
     calls.push({ sql, params });
+    if (sql.includes('SELECT id FROM linktrees'))
+      return Promise.resolve({ rows: [{ id: LINKTREE_ID }] });
     if (sql.includes('SELECT id, platform, url FROM links')) {
       return Promise.resolve({ rows: existing });
     }
@@ -96,6 +98,26 @@ describe('LinksService.syncLinks', () => {
     expect(find(calls, 'INSERT INTO links')).toHaveLength(0);
     expect(find(calls, 'DELETE FROM links')).toHaveLength(0);
     expect(find(calls, "status = 'archived'")).toHaveLength(0);
+  });
+
+  it('preserves absent GPS metadata as null rather than moving the link to zero coordinates', async () => {
+    const { service, calls } = buildService([
+      { id: WHATSAPP_ID, platform: 'website', url: 'https://example.com' },
+    ]);
+    await service.syncLinks(
+      LINKTREE_ID,
+      [
+        {
+          platform: 'website',
+          url: 'https://example.com',
+          metadata: { gps_lat: null, gps_lng: null },
+        },
+      ],
+      BUSINESS_ID,
+    );
+    const [update] = find(calls, 'UPDATE links SET');
+    expect(update.params[6]).toBeNull();
+    expect(update.params[7]).toBeNull();
   });
 
   it('matches on destination, so trailing whitespace and case do not orphan a link', async () => {

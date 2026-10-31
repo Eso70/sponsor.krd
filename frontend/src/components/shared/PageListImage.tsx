@@ -7,12 +7,12 @@ export function PageListImage({
 }: {
   src?: string | null;
   name: string;
-  variant?: "grid" | "table" | "mobile";
+  variant?: "grid" | "grid-large" | "table" | "mobile";
 }) {
   if (!src?.trim()) return null;
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-full border-gray-200 ${variant === "grid" ? "size-10 border-2 shadow-sm sm:size-14" : variant === "mobile" ? "size-16 border" : "mx-auto size-8 border sm:size-10"}`}
+      className={`relative shrink-0 overflow-hidden rounded-full border-gray-200 ${variant === "grid-large" ? "size-16 border-2 shadow-sm sm:size-20" : variant === "grid" ? "size-10 border-2 shadow-sm sm:size-14" : variant === "mobile" ? "size-16 border" : "mx-auto size-8 border sm:size-10"}`}
     >
       <Image
         src={src}
@@ -21,7 +21,7 @@ export function PageListImage({
         className="object-cover"
         loading="lazy"
         sizes={
-          variant === "grid"
+          variant === "grid" || variant === "grid-large"
             ? "(max-width: 640px) 64px, 80px"
             : variant === "table"
               ? "(max-width: 640px) 32px, 40px"

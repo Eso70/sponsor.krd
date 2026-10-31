@@ -12,7 +12,7 @@ import { TimeColumn } from "./TimeColumn";
  * ordered hour, minute and period choices from DateTimeInput.
  *
  * `value` is always 24-hour `HH:MM`, which is what the API stores; the field
- * itself reads in 12-hour form because that is how the popover presents it.
+ * can switch between 12-hour and 24-hour notation without changing that value.
  */
 
 const MINUTE_STEP = 5;
@@ -20,15 +20,15 @@ const MINUTE_STEP = 5;
 const TIME_INPUT_COPY = {
   ckb: {
     optional: "ئارەزوومەندانە", open: "کردنەوەی", invalid: "کاتەکە بە شێوەی 09:30 AM بنووسە.",
-    hour: "کاتژمێر", minute: "خولەک", now: "ئێستا", done: "تەواو", close: "داخستن",
+    hour: "کاتژمێر", minute: "خولەک", now: "ئێستا", done: "تەواو", close: "داخستن", format: "شێوازی کات", twelve: "١٢ کاتژمێر", twentyFour: "٢٤ کاتژمێر",
   },
   ar: {
     optional: "اختياري", open: "فتح", invalid: "أدخل الوقت بصيغة 09:30 AM.",
-    hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم", close: "إغلاق",
+    hour: "الساعة", minute: "الدقيقة", now: "الآن", done: "تم", close: "إغلاق", format: "تنسيق الوقت", twelve: "12 ساعة", twentyFour: "24 ساعة",
   },
   en: {
     optional: "Optional", open: "Open", invalid: "Enter the time as 09:30 AM.",
-    hour: "Hour", minute: "Minute", now: "Now", done: "Done", close: "Close",
+    hour: "Hour", minute: "Minute", now: "Now", done: "Done", close: "Close", format: "Time format", twelve: "12h", twentyFour: "24h",
   },
 } as const;
 
@@ -54,9 +54,10 @@ function toValue(hours: number, minutes: number): string {
 }
 
 /** `13:05` reads as `01:05 PM`. */
-function toDisplay(value: string): string {
+function toDisplay(value: string, format: "12h" | "24h"): string {
   const parsed = parseTimeValue(value);
   if (!parsed) return "";
+  if (format === "24h") return toValue(parsed.hours, parsed.minutes);
   const hour12 = parsed.hours % 12 || 12;
   const period = parsed.hours >= 12 ? "PM" : "AM";
   return `${String(hour12).padStart(2, "0")}:${String(parsed.minutes).padStart(2, "0")} ${period}`;
@@ -101,6 +102,7 @@ export function TimeInput({ value, onChange, label, hideLabel = false, disabled 
 }) {
   const copy = TIME_INPUT_COPY[locale];
   const [isOpen, setIsOpen] = useState(false);
+  const [format, setFormat] = useState<"12h" | "24h">("12h");
   const [typing, setTyping] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -128,7 +130,7 @@ export function TimeInput({ value, onChange, label, hideLabel = false, disabled 
     <div ref={anchorRef} dir="ltr" className={`${SHARED_CONTROL_CLASS} ${pickerStyles.field} flex h-10 w-full items-center overflow-hidden`} aria-invalid={invalid}
       onClick={() => { if (!disabled) { setIsOpen(true); inputRef.current?.focus(); } }}
       style={{ "--time-accent": accent } as React.CSSProperties}>
-      <input ref={inputRef} type="text" maxLength={8} value={typing ?? toDisplay(value)} disabled={disabled} required={required}
+      <input ref={inputRef} type="text" maxLength={8} value={typing ?? toDisplay(value, format)} disabled={disabled} required={required}
         onClick={() => setIsOpen(true)}
         onChange={(event) => { setTyping(maskTyped(event.target.value)); setInvalid(false); }} onBlur={commitTyped}
         onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitTyped(); } if (event.key === "ArrowDown") { event.preventDefault(); setIsOpen(true); } }}
@@ -142,13 +144,18 @@ export function TimeInput({ value, onChange, label, hideLabel = false, disabled 
     </div>
     {invalid && <span id={errorId} role="alert" className="mt-1 block text-xs text-red-500">{copy.invalid}</span>}
     <PickerPopup isOpen={isOpen && !disabled} onClose={close} anchorRef={anchorRef} title={label} closeLabel={copy.close} width={248} align="start" keepAnchorFocus hideHeader>
-      <div className="grid grid-cols-3 gap-2" dir="ltr">
-        <TimeColumn accent={accent} label={copy.hour} selected={String(hour12).padStart(2, "0")}
-          values={Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"))}
-          onSelect={next => commit(Number(next) % 12 + (period === "PM" ? 12 : 0), current.minutes)} />
+      <div role="group" aria-label={copy.format} className="mb-3 flex gap-2" dir="ltr">
+        {(["12h", "24h"] as const).map(mode => <button key={mode} type="button" aria-pressed={format === mode}
+          className={`${SHARED_SOFT_BUTTON_CLASS} flex-1 px-3 py-2 text-xs font-semibold`}
+          onClick={() => { commitTyped(); setFormat(mode); }}>{mode === "12h" ? copy.twelve : copy.twentyFour}</button>)}
+      </div>
+      <div className={`grid ${format === "12h" ? "grid-cols-3" : "grid-cols-2"} gap-2`} dir="ltr">
+        <TimeColumn accent={accent} label={copy.hour} selected={String(format === "12h" ? hour12 : current.hours).padStart(2, "0")}
+          values={Array.from({ length: format === "12h" ? 12 : 24 }, (_, index) => String(index + (format === "12h" ? 1 : 0)).padStart(2, "0"))}
+          onSelect={next => commit(format === "12h" ? Number(next) % 12 + (period === "PM" ? 12 : 0) : Number(next), current.minutes)} />
         <TimeColumn accent={accent} label={copy.minute} selected={currentMinute} values={minuteValues} onSelect={next => commit(current.hours, Number(next))} />
-        <TimeColumn accent={accent} label={locale === "en" ? "Period" : locale === "ar" ? "الفترة" : "بەشی ڕۆژ"} selected={period} values={["AM", "PM"]}
-          onSelect={next => commit(hour12 % 12 + (next === "PM" ? 12 : 0), current.minutes)} />
+        {format === "12h" && <TimeColumn accent={accent} label={locale === "en" ? "Period" : locale === "ar" ? "الفترة" : "بەشی ڕۆژ"} selected={period} values={["AM", "PM"]}
+          onSelect={next => commit(hour12 % 12 + (next === "PM" ? 12 : 0), current.minutes)} />}
       </div>
       <div className={`${pickerStyles.compactActions} mt-3 flex items-center justify-between gap-2`}>
         <button type="button" className={`${SHARED_SOFT_BUTTON_CLASS} px-3 py-2 text-xs font-semibold`}

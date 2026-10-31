@@ -22,6 +22,7 @@ import { PRIVACY_VERSION } from '../common/legal-versions';
 import { DatabaseService } from '../database/database.service';
 import { PlatformContentWorkspaceService } from '../platform-workspace/platform-content-workspace.service';
 import { StorageService } from '../storage/storage.service';
+import { publicImageDimensions } from '../storage/public-image-dimensions';
 import type { DuplicateFormDto } from './dto/duplicate-form.dto';
 import {
   UnifiedAnalyticsService,
@@ -391,6 +392,16 @@ export class FormsService {
     return {
       form,
       analytics,
+      imageDimensions: await publicImageDimensions(
+        this.db,
+        'form',
+        form.id,
+        form.bannerImages?.length
+          ? form.bannerImages
+          : form.banner
+            ? [form.banner]
+            : [],
+      ),
       privacyVersion: PRIVACY_VERSION,
       businessLogo: result.rows[0].business_logo ?? null,
     };

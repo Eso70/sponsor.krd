@@ -25,6 +25,10 @@ const fixture = createServer((req, res) => {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ success: status === 200, data }));
   };
+  if (process.env.SEO_SMOKE_DASHBOARD_INSTALL_ONLY === "1" &&
+      ["/api/auth/session", "/api/platform/auth/profile"].includes(url.pathname)) {
+    return respond({ authenticated: true }, String(req.headers.cookie || "").includes("expired") ? 401 : 200);
+  }
   if (process.env.SEO_SMOKE_FORMS_LOADING_ONLY === "1") {
     if (url.pathname === "/api/auth/session") {
       const locale =
@@ -274,7 +278,7 @@ const child = spawn(
       NEXT_PUBLIC_APP_URL: `http://localhost:${frontendPort}`,
       NEXT_PUBLIC_API_URL: `http://127.0.0.1:${backendPort}`,
       INTERNAL_PROXY_SECRET: "disposable-seo-smoke-secret",
-      ...(process.env.SEO_SMOKE_FORMS_LOADING_ONLY === "1"
+      ...(process.env.SEO_SMOKE_FORMS_LOADING_ONLY === "1" || process.env.SEO_SMOKE_DASHBOARD_INSTALL_ONLY === "1"
         ? { PLATFORM_ADMIN_PATH: "forms-loading-fixture-console" }
         : {}),
     },
@@ -305,7 +309,46 @@ try {
       }
     });
   });
-  if (process.env.SEO_SMOKE_FORMS_LOADING_ONLY === "1") {
+  if (process.env.SEO_SMOKE_DASHBOARD_INSTALL_ONLY === "1") {
+    const consoleBase = "/forms-loading-fixture-console";
+    for (const [host, page, manifestPath, start, scope] of [
+      ["alpha.localhost", "/business/workspace-entry", "/business/manifest.webmanifest", "/business/launch", "/business/"],
+      ["localhost", `${consoleBase}/login`, `${consoleBase}/manifest.webmanifest`, `${consoleBase}/businesses`, `${consoleBase}/`],
+    ]) {
+      const html = await get(host, page);
+      assert.equal(html.status, 200, html.body.slice(0, 200));
+      const manifestLinks = [...html.body.toString("utf8").matchAll(/<link\b[^>]*rel="manifest"[^>]*>/g)];
+      assert.equal(manifestLinks.length, 1, `one manifest on ${page}`);
+      assert.ok(manifestLinks[0][0].includes(`href="${manifestPath}"`), manifestLinks[0][0]);
+      const response = await get(host, manifestPath);
+      assert.equal(response.status, 200);
+      assert.match(response.headers["content-type"], /application\/manifest\+json/);
+      assert.match(response.headers["cache-control"], /no-store/);
+      const manifest = JSON.parse(response.body);
+      assert.equal(manifest.start_url, start);
+      assert.equal(manifest.scope, scope);
+      assert.equal(manifest.id, scope);
+    }
+    for (const cookie of ["", "business_session=valid", "business_session=expired"]) {
+      const response = await get("alpha.localhost", "/business/launch", "Mozilla/5.0", cookie);
+      assert.equal(response.status, 307);
+      assert.ok(response.headers.location.endsWith(cookie.includes("valid") ? "/business/pages" : "/business/workspace-entry"), response.headers.location);
+      assert.ok(response.headers.location.includes("alpha.localhost"), response.headers.location);
+    }
+    const platformLaunch = await get("localhost", `${consoleBase}/businesses`);
+    assert.equal(platformLaunch.status, 307);
+    assert.ok(platformLaunch.headers.location.endsWith(`${consoleBase}/login`));
+    assert.equal((await get("localhost", "/business/manifest.webmanifest")).status, 404);
+    customDomainActive = true;
+    const custom = await get(customHost, "/business/manifest.webmanifest");
+    assert.equal(custom.status, 200);
+    assert.equal(JSON.parse(custom.body).start_url, "/business/launch");
+    assert.equal((await get(customHost, `${consoleBase}/manifest.webmanifest`)).status, 404);
+    const publicApp = JSON.parse((await get("localhost", "/manifest.webmanifest")).body);
+    assert.equal(publicApp.start_url, "/");
+    assert.ok(!JSON.stringify(publicApp).includes(consoleBase));
+    console.log("Dashboard installation HTTP smoke passed: metadata, manifests, auth launches, tenant/custom hosts, and public isolation.");
+  } else if (process.env.SEO_SMOKE_FORMS_LOADING_ONLY === "1") {
     for (const locale of ["en", "ar", "ckb"]) {
       for (const [host, path, cookie] of [
         [

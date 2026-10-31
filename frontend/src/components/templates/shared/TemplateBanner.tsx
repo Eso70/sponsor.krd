@@ -11,7 +11,7 @@ export function TemplateBanner() {
   if (!hasBanner) return null;
   return <div data-linktree-banner className="relative w-full">
     <PublicImageGallery banner eager placeholder={preview} images={banner.images}
-      carousel={banner.mode === "carousel"} copy={copy}
+      carousel={banner.mode === "carousel"} autoPlay={preview === true} copy={copy}
       onImageOpen={(index) => onAction?.("image-open", index)}
       onSlideChange={(index) => onAction?.("banner-change", index)} />
   </div>;

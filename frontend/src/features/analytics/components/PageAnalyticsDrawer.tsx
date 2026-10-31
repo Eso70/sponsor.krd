@@ -1,4 +1,5 @@
 "use client";
+import { apiRequest } from "@/lib/api/request";
 import { PageAnalyticsContent } from "./PageAnalyticsContent";
 
 import { PageAnalyticsHeaderActions } from "./PageAnalyticsHeaderActions";
@@ -54,19 +55,6 @@ interface PageAnalyticsDrawerProps {
   copy?: Partial<PageAnalyticsCopy>;
   locale?: "en" | "ar" | "ckb";
   headerControls?: ReactNode;
-}
-
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    credentials: "include",
-    cache: "no-store",
-    ...init,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(json?.message || `Request failed (${res.status}): ${url}`);
-  }
-  return json.data as T;
 }
 
 function summaryUrl(
@@ -177,13 +165,13 @@ export function PageAnalyticsDrawer({
       // Both reads are addressed by data source so platform requests never
       // fall through to business endpoints protected by `BusinessGuard`.
       const [totalsResult, actionsResult] = await Promise.allSettled([
-        fetchJson<Totals>(
+        apiRequest<Totals>(
           summaryUrl(dataSource, pageId, bypassCache, range?.from, range?.to),
           { signal: controller.signal },
         ),
         summaryOnly
           ? Promise.resolve<ActionRow[]>([])
-          : fetchJson<ActionRow[]>(
+          : apiRequest<ActionRow[]>(
               actionsUrl(
                 dataSource,
                 pageId,
@@ -280,7 +268,7 @@ export function PageAnalyticsDrawer({
   const handleClearAnalytics = async () => {
     setIsClearing(true);
     try {
-      await fetchJson(clearUrl(dataSource, pageId), {
+      await apiRequest(clearUrl(dataSource, pageId), {
         method: "DELETE",
       });
       setTotals(null);

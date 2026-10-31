@@ -35,6 +35,7 @@ const DEFAULT_FIELDS = {
   default_background_pattern: 'Default background pattern',
   default_footer_hidden: 'Hide footer by default',
   default_whatsapp_enabled: 'Enable WhatsApp modal by default',
+  homepage_linktree: 'Show the default Linktree on the business homepage',
 } as const;
 
 const LINKTREE_FIELDS = {

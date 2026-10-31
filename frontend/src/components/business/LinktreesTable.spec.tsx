@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { LinktreesTable } from "@/components/business/LinktreesTable";
-import { LinktreePill } from "@/components/business/LinktreeMeta";
+import { LinktreePill } from "@/features/link-editor/components/LinktreeMeta";
 import { businessMessages } from "@/features/business/i18n/messages";
 import type { LinktreeListItem } from "@linktree/types";
 

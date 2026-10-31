@@ -112,6 +112,8 @@ export const englishBusinessMessages = {
     backgroundColor: "Background color", chooseBackgroundColor: "Choose default background color",
     footerText: "Footer text", defaultFooterText: "Default footer text", footerPhone: "Footer phone number",
     hideFooter: "Hide footer", enableWhatsapp: "Enable WhatsApp dialog", defaultBadge: "Default",
+    homepageLinktree: "Use default Linktree as homepage",
+    homepageLinktreeHelp: "Show your default page at your business home address as well as its Linktree address. Save to apply. If no active default page exists, your usual homepage is shown. Turn this off to restore it.",
     noDefaultPage: "No default page", noDefaultHint: "Create your first page to make it your business's default page",
     createDefaultTooltip: "Create a default business page", creating: "Creating...",
     createDefault: "Create default page", securityTitle: "Google and sessions",

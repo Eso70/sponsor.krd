@@ -12,7 +12,6 @@ describe('LinktreesService duplication algorithms', () => {
       {} as any,
       {} as any,
       {} as any,
-      {} as any,
     );
   });
 
@@ -147,7 +146,6 @@ describe('LinktreesService duplication algorithms', () => {
         mockEntitlements as never,
         templateAccess as never,
         mockStorage as never,
-        {} as never,
         {} as never,
       );
     });

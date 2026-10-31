@@ -10,6 +10,7 @@ export function PageListCardHeader({
   badges,
   verified,
   verificationLabel,
+  size = "default",
 }: {
   name: string;
   logo?: string | null;
@@ -17,6 +18,7 @@ export function PageListCardHeader({
   badges?: ReactNode;
   verified?: boolean;
   verificationLabel?: string;
+  size?: "default" | "large";
 }) {
   return (
     <div
@@ -24,12 +26,12 @@ export function PageListCardHeader({
     >
       {logo && (
         <div className="relative z-10 mx-auto mb-3 w-fit rounded-full bg-white dark:bg-[#1c222b]">
-          <PageListImage src={logo} name={name} />
+          <PageListImage src={logo} name={name} variant={size === "large" ? "grid-large" : "grid"} />
         </div>
       )}
       <div className="min-w-0">
         <h3
-          className="mb-1 truncate text-xs font-bold text-gray-900 sm:text-base"
+          className={`mb-1 font-bold text-gray-900 ${size === "large" ? "break-words text-lg sm:text-xl" : "truncate text-xs sm:text-base"}`}
           dir="auto"
           title={name}
         >

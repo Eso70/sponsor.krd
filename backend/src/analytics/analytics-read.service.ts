@@ -28,25 +28,6 @@ export class AnalyticsReadService {
     ];
   }
 
-  private eventPredicate(alias = 'event'): string {
-    return `${alias}.business_id = $1
-      AND (
-        $2::uuid IS NULL
-        OR ${alias}.public_page_id IN (
-          SELECT page.id
-          FROM public_pages page
-          WHERE page.business_id = $1
-            AND (
-              page.id = $2
-              OR page.source_linktree_id = $2
-            )
-        )
-      )
-      AND ($3::date IS NULL OR ${alias}.occurred_at >= $3::date)
-      AND ($4::date IS NULL OR ${alias}.occurred_at < $4::date + interval '1 day')
-      AND ${alias}.is_bot = false`;
-  }
-
   async getPages(businessId: string, filters: AnalyticsFilters = {}) {
     const rows = await this.repository.pagesForBusiness(businessId, {
       from: filters.from,
@@ -325,7 +306,10 @@ export class AnalyticsReadService {
   }
 
   async getTikTokHealth(businessId: string, filters: AnalyticsFilters) {
-    const values = this.values(businessId, filters);
+    const values = [
+      ...this.values(businessId, filters),
+      filters.pageType || null,
+    ];
     const result = await this.database.query<{
       connections: string;
       browser_events: string;
@@ -337,35 +321,42 @@ export class AnalyticsReadService {
       internal_conversions: string;
       conversion_deliveries: string;
     }>(
-      `SELECT
+      `WITH selected_events AS (
+         SELECT event.*
+         FROM analytics_events event
+         JOIN public_pages page ON page.id = event.public_page_id
+         WHERE event.business_id = $1 AND page.business_id = $1
+           AND event.is_bot = false
+           AND ($2::uuid IS NULL OR page.id = $2 OR page.source_linktree_id = $2)
+           AND ($5::varchar IS NULL OR page.page_type = $5)
+           AND ($3::date IS NULL OR event.occurred_at >= ($3::date::timestamp AT TIME ZONE page.timezone))
+           AND ($4::date IS NULL OR event.occurred_at < (($4::date + 1)::timestamp AT TIME ZONE page.timezone))
+       )
+       SELECT
          (SELECT COUNT(*) FROM business_tiktok_pixels pixel
           WHERE pixel.business_id = $1 AND pixel.status = 'active')::bigint AS connections,
-         COUNT(outbox.id) FILTER (WHERE outbox.browser_dispatched)::bigint AS browser_events,
+         (SELECT COUNT(*) FROM selected_events browser_event
+          WHERE browser_event.properties->>'browserDispatched' = 'true'
+            OR EXISTS (SELECT 1 FROM marketing_event_outbox browser_outbox
+                       WHERE browser_outbox.analytics_event_id = browser_event.id
+                         AND browser_outbox.business_id = $1
+                         AND browser_outbox.browser_dispatched))::bigint AS browser_events,
          COUNT(outbox.id)::bigint AS queued_events,
          COUNT(outbox.id) FILTER (WHERE outbox.status = 'delivered')::bigint AS delivered,
          COUNT(outbox.id) FILTER (WHERE outbox.status IN ('pending','processing','retry_scheduled'))::bigint AS retrying,
          COUNT(outbox.id) FILTER (WHERE outbox.status = 'failed_permanently')::bigint AS failed,
          MAX(outbox.delivered_at) AS last_delivered_at,
          (SELECT COUNT(*)::bigint
-          FROM analytics_events event
-          WHERE ${this.eventPredicate()}
-            AND event.is_conversion = true) AS internal_conversions,
+          FROM selected_events event
+          WHERE event.is_conversion = true
+            OR event.event_name IN ('whatsapp_click','call_click','email_click')) AS internal_conversions,
          COUNT(DISTINCT outbox.analytics_event_id) FILTER (
-           WHERE outbox.status = 'delivered' AND event.is_conversion = true
+           WHERE outbox.status = 'delivered' AND (event.is_conversion = true
+             OR event.event_name IN ('whatsapp_click','call_click','email_click'))
          )::bigint AS conversion_deliveries
        FROM marketing_event_outbox outbox
-       JOIN analytics_events event ON event.id = outbox.analytics_event_id
-       WHERE outbox.business_id = $1
-         AND (
-           $2::uuid IS NULL
-           OR event.public_page_id IN (
-             SELECT page.id FROM public_pages page
-             WHERE page.business_id = $1
-               AND (page.id = $2 OR page.source_linktree_id = $2)
-           )
-         )
-         AND ($3::date IS NULL OR outbox.created_at >= $3::date)
-         AND ($4::date IS NULL OR outbox.created_at < $4::date + interval '1 day')`,
+       JOIN selected_events event ON event.id = outbox.analytics_event_id
+       WHERE outbox.business_id = $1`,
       values,
     );
     const row = result.rows[0];

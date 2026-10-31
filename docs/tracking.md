@@ -5,6 +5,17 @@ Events API delivery are an optional, narrower layer on top of that pipeline.
 
 ## Placement rule
 
+The public `/linktree` and `/form` directory indexes do not mount a tracker or
+pixel. They list destination pages without recording false destination views;
+card prefetch is disabled. Allowlisted UTM fields and ttclid are carried to the
+selected page, where the existing shared tracker handles the actual visit.
+
+The optional default-Linktree homepage uses `PublicLinktreeContent` with
+`enableMarketingTracking={false}`. `/` retains the first-party Home route view
+through `PublicRouteTracking`; it does not load TikTok base code or report
+Linktree actions/conversions. The canonical `/linktree/<slug>` keeps its existing
+page tracker and pixel behavior. Use that canonical URL for tracked campaigns.
+
 TikTok marketing tracking is allowed only on published public Linktree and form pages.
 It must not be mounted or forwarded from:
 
@@ -179,6 +190,12 @@ beacon handoff. The report takes MAX per view, then averages measured visits;
 No old duration is invented, and previews never start these measurements. All
 storage uses existing event JSONB columns; no migration or data reset is needed.
 
+Traffic-source attribution uses the landing document's reported referrer, UTM
+parameters and click ID. The tracking API request's `Referer` header identifies
+the current page and must never stand in for a missing landing referrer; doing
+so incorrectly classifies direct visits as referrals. This correction applies
+to new events, sessions and marketing payloads, without guessing past sources.
+
 TikTok event names are authoritative registered-action values on both channels;
 an untrusted browser event-name claim cannot promote a contact to a purchase.
 Views retain ViewContent. Engagement and unregistered actions never create an
@@ -198,15 +215,27 @@ two calendar days represent a rolling 24-hour interval.
 The shared tracker attaches a saved question ID to the registered WhatsApp contact
 action. Different questions remain distinct even when they share message text;
 rapid repeated taps on the same question are deduplicated. The server resolves
-the label from the page-owned saved configuration and rejects unknown IDs and
+the label from the page-owned `whatsapp_questions` row and rejects unknown IDs and
 visitor-supplied labels. Message bodies and video URLs are not question analytics
 properties, and question destinations have query strings removed before storage.
 Chooser opens and dismissals are first-party engagement events only, validated
 against a page-owned WhatsApp action. Selection closes do not count as dismissals.
 
+Public rendering, attribution, and the current-question report all use
+`whatsapp_questions`, with `linktrees.whatsapp_modal_enabled` taking precedence
+over the legacy JSON flag. The editor's `template_config.whatsapp_modal.questions`
+copy can contain stale or temporary IDs and is never an analytics authority.
+Create/update use `syncWhatsAppQuestions`: existing IDs are retained only when
+they belong to that Linktree; new questions receive server-generated IDs. Editing
+wording, reordering questions, or saving unrelated settings therefore preserves
+history. Removed questions remain visible through retained event snapshots.
+No schema migration or existing-data rewrite is needed. Events whose question ID
+was already discarded cannot be safely assigned to a question afterwards.
+
 The report includes current questions with zero selections, retained historical
-questions, selection counts, unique visitors, selection share, last selection time
-and link breakdowns within the selected dates. These measurements start when the
+questions, selection counts, unique visitors, selection share and last selection
+time within the selected dates. The drawer omits per-question link breakdowns;
+the separate Buttons section retains button-level click totals. These measurements start when the
 updated public tracker is deployed; no past selections are invented. They measure
 contact intent, not delivery or confirmed sales. Existing JSONB event storage is
 reused with no migration or reset. Analytics controls use the shared dashboard
@@ -222,3 +251,30 @@ least one destination. Sending one conversion to two Pixels is one accepted
 conversion, while delivery/queue/failure counters still count destination rows.
 These are Events API acknowledgements, not an estimate of attributed Ads Manager
 conversions. No history rewrite or migration is needed for this read-query fix.
+
+### Analytics delivery consistency
+
+The outbound navigation handoff carries the bounded saved WhatsApp question ID,
+so a redirect that arrives before the beacon/batch retains the same question
+attribution. Ingestion still resolves the saved label and validates page/action
+ownership; retries keep the original event ID and never add another conversion.
+Chooser opens and dismissals use immediate first-party handoff and do not fire a
+Pixel. Selecting a question does not record a dismissal.
+
+Event rows and daily rollups use the same conversion decision, including
+registered Contact actions and transaction-backed form submissions. Linktree
+summary reads recover retained historical contact conversions where possible;
+missing historical question IDs cannot be reconstructed from totals.
+
+TikTok health filters by event occurrence in each page's timezone, including
+delayed deliveries in the original event's date range. Browser-event totals count
+distinct events, independently of the number of destinations or availability of
+an Events API token. New events retain the validated browser-dispatch claim in
+their properties; older events fall back to outbox metadata. This is a browser
+dispatch report, not proof that TikTok received a browser event. Server delivery
+requires both a successful HTTP response and TikTok response code `0`; malformed
+or missing acknowledgements retry instead of being marked delivered.
+
+## Linktree sponsor attribution
+
+Optional sponsor links use registered action key `page:sponsor-click`. The migration and fresh baseline register/update it from the owning public page's sponsor configuration and hide it when disabled or destination-free. Metadata marks it `engagement_only=true`. Public clicks call the shared page tracker's `trackEngagement("action_open", ...)` with immediate navigation delivery; they are never browser Pixel or Events API conversions. Drawer previews and the untracked default-Linktree homepage do not report sponsor actions. Sponsor logos are presentation, not image-open actions.

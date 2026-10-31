@@ -1,0 +1,32 @@
+export const directoryCopy = {
+  en: {
+    linktreeGuidance: "Open this page and choose a link to get in touch.",
+    formFallback: "Open this form to view its questions and share your details.",
+    requiredQuestions: "required questions",
+    linksTitle: "Links",
+    linksCount: "links", questionsCount: "questions", mainPage: "Main page", copyLink: "Copy link", copied: "Link copied", copyError: "Could not copy the link", exploreLinks: "Explore links", openForm: "Open form",
+    linktree: "Link pages", form: "Forms", linktreeDescription: "Choose a page to explore our links and contact options.",
+    formDescription: "Choose a form to get started.", empty: "Nothing available yet", emptyDescription: "Please check back later or return to the homepage.",
+    open: "Open", home: "Home", page: "Link page", untitledForm: "Form", of: "of", previous: "Previous", next: "Next",
+  },
+  ckb: {
+    linktreeGuidance: "بۆ پەیوەندیکردن، پەڕەکە بکەرەوە و لینکێک هەڵبژێرە.",
+    formFallback: "فۆڕمەکە بکەرەوە بۆ بینینی پرسیارەکان و ناردنی زانیارییەکانت.",
+    requiredQuestions: "پرسیاری پێویست",
+    linksTitle: "لینکەکان",
+    linksCount: "لینک", questionsCount: "پرسیار", mainPage: "پەڕەی سەرەکی", copyLink: "کۆپیکردنی لینک", copied: "لینک کۆپی کرا", copyError: "لینک کۆپی نەکرا", exploreLinks: "بینینی لینکەکان", openForm: "کردنەوەی فۆڕم",
+    linktree: "پەڕەکانی لینک", form: "فۆڕمەکان", linktreeDescription: "پەڕەیەک هەڵبژێرە بۆ بینینی لینکەکان و ڕێگاکانی پەیوەندی.",
+    formDescription: "بۆ دەستپێکردن فۆڕمێک هەڵبژێرە.", empty: "هێشتا هیچ پەڕەیەک بەردەست نییە", emptyDescription: "تکایە دواتر سەردان بکەرەوە یان بگەڕێوە بۆ پەڕەی سەرەکی.",
+    open: "کردنەوە", home: "سەرەکی", page: "پەڕەی لینک", untitledForm: "فۆڕم", of: "لە", previous: "پێشوو", next: "دواتر",
+  },
+  ar: {
+    linktreeGuidance: "افتح الصفحة واختر رابطاً للتواصل.",
+    formFallback: "افتح هذا النموذج للاطلاع على الأسئلة ومشاركة بياناتك.",
+    requiredQuestions: "أسئلة مطلوبة",
+    linksTitle: "الروابط",
+    linksCount: "روابط", questionsCount: "أسئلة", mainPage: "الصفحة الرئيسية", copyLink: "نسخ الرابط", copied: "تم نسخ الرابط", copyError: "تعذر نسخ الرابط", exploreLinks: "استكشف الروابط", openForm: "افتح النموذج",
+    linktree: "صفحات الروابط", form: "النماذج", linktreeDescription: "اختر صفحة لاستكشاف روابطنا وطرق التواصل معنا.",
+    formDescription: "اختر نموذجاً للبدء.", empty: "لا توجد صفحات متاحة حالياً", emptyDescription: "يرجى العودة لاحقاً أو الانتقال إلى الصفحة الرئيسية.",
+    open: "فتح", home: "الرئيسية", page: "صفحة روابط", untitledForm: "نموذج", of: "من", previous: "السابق", next: "التالي",
+  },
+} as const;

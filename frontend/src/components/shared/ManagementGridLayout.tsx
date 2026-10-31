@@ -7,11 +7,16 @@ export function ManagementGridLayout({
   desktopColumns = 3,
   className = "",
   footer,
+  centered = false,
+  cardSize = "default",
 }: {
   items: readonly { key: string; content: ReactNode }[];
   desktopColumns?: 2 | 3;
   className?: string;
   footer?: ReactNode;
+  /** Public collections keep sparse rows centered without stretching a single card. */
+  centered?: boolean;
+  cardSize?: "default" | "large";
 }) {
   const cellBorders = (index: number) => {
     const total = items.length;
@@ -28,12 +33,12 @@ export function ManagementGridLayout({
   return (
     <div className={className} dir="ltr">
       <div
-        className={`${styles.frame} grid grid-cols-1 lg:grid-cols-2 ${desktopColumns === 3 ? "xl:grid-cols-3" : ""}`}
+        className={centered ? "flex flex-wrap justify-center gap-5" : `${styles.frame} grid grid-cols-1 lg:grid-cols-2 ${desktopColumns === 3 ? "xl:grid-cols-3" : ""}`}
       >
         {items.map((item, index) => (
           <div
             key={item.key}
-            className={`min-w-0 border-slate-100 dark:border-white/5 ${cellBorders(index)}`}
+            className={centered ? `${styles.frame} min-w-0 max-w-full ${cardSize === "large" ? "[flex:0_1_24rem]" : "[flex:0_1_21rem]"}` : `min-w-0 border-slate-100 dark:border-white/5 ${cellBorders(index)}`}
           >
             {item.content}
           </div>

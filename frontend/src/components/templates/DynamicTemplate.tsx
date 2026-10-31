@@ -1,4 +1,5 @@
 "use client";
+import { readLinktreeSponsor } from "@linktree/types/linktree-sponsor.cjs";
 import { readLinktreeSeo } from "@linktree/types/linktree-seo.cjs";
 
 import { memo, useMemo } from "react";
@@ -55,6 +56,7 @@ export const DynamicTemplate = memo(function DynamicTemplate({
   theme,
   onLinkClick,
   onMediaAction,
+  onSponsorClick,
 }: TemplateComponentProps) {
   const normalizedConfig = useMemo(() => {
     const configObject = coerceTemplateConfig(linktree.template_config);
@@ -87,6 +89,8 @@ export const DynamicTemplate = memo(function DynamicTemplate({
   return (
     <TemplateMediaContext.Provider value={{
       seo: readLinktreeSeo(normalizedConfig.seo),
+      sponsor: readLinktreeSponsor(normalizedConfig.sponsor, linktree.id.includes("preview") ? isLocalRasterImage : undefined),
+      onSponsorClick,
       preview: linktree.id.includes("preview"),
       banner: linktree.id.includes("preview")
         ? readLinktreeBanner(normalizedConfig[LINKTREE_BANNER_KEY], isLocalRasterImage)

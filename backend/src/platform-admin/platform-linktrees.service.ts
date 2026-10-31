@@ -166,37 +166,20 @@ export class PlatformLinktreesService {
   }
 
   async update(id: string, data: CreateLinktreeDto) {
+    const { is_default: _ignoredDefault, ...update } = data;
     const businessId = await this.workspaceId();
     const current = await this.linktrees.getLinktreeById(id, businessId);
     let updated;
     try {
       updated = await this.linktrees.updateLinktree(
         id,
-        {
-          headline: data.headline,
-          slogan: data.slogan,
-          slogan_color: data.slogan_color,
-          logo: data.logo,
-          name: data.name,
-          subtitle: data.subtitle,
-          subtitle_color: data.subtitle_color,
-          description: data.description,
-          seo_name: data.seo_name || data.slug,
-          image: data.image,
-          background_color: data.background_color,
-          template_config: data.template_config,
-          footer_text: data.footer_text,
-          footer_phone: data.footer_phone,
-          footer_hidden: data.footer_hidden,
-          status: data.status,
-        },
+        update,
         businessId,
         'platform',
       );
     } catch (error) {
       rethrowRootSlugConflict(error);
     }
-    await this.linktrees.syncSubmittedLinks(id, data, businessId);
     await this.invalidate(
       current.uid,
       current.seo_name,

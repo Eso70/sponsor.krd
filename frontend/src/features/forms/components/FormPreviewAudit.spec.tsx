@@ -53,6 +53,7 @@ describe("Shared form preview audit", () => {
       const hint = formEditorCopy("en").finalDefault;
       const view = render(<FormPreview form={form} placeholders finalPage />);
       expect(screen.getByText(hint)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Website" })).toHaveAttribute("target", "_blank");
       view.rerender(
         <FormPreview
           form={form}
@@ -62,6 +63,7 @@ describe("Shared form preview audit", () => {
         />,
       );
       expect(screen.queryByText(hint)).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Website" })).not.toHaveAttribute("target");
       view.rerender(
         <FormPreview
           form={{ ...form, finalDescription: "We received your request." }}

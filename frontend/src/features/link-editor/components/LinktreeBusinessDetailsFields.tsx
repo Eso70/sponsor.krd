@@ -5,9 +5,9 @@ import { VisibilitySwitch } from "@/components/shared/VisibilitySwitch";
 import { TimeInput } from "@/components/shared/TimeInput";
 import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-styles";
 import { EDITOR_INPUT_CLASS, EDITOR_FIELD_CLASS } from "@/components/shared/editor-control-styles";
-import { LINKTREE_WEEKDAYS, type LinktreeBusinessDetails, type LinktreeSeo } from "@linktree/types/linktree-seo.cjs";
+import { type LinktreeBusinessDetails, type LinktreeSeo } from "@linktree/types/linktree-seo.cjs";
 import type { BusinessLocale } from "@/features/business/i18n/messages";
-import { linktreeSeoCopy } from "../linktree-seo-copy";
+import { LINKTREE_DISPLAY_WEEKDAYS, linktreeSeoCopy } from "../linktree-seo-copy";
 
 export function LinktreeBusinessDetailsFields({ seo, onChange, locale, errors }: { seo: LinktreeSeo; onChange: (seo: LinktreeSeo) => void; locale: BusinessLocale; errors: Record<string,string> }) {
   const copy = linktreeSeoCopy(locale), business = seo.business ?? {};
@@ -35,7 +35,7 @@ export function LinktreeBusinessDetailsFields({ seo, onChange, locale, errors }:
       onChange={(enabled) => update({ hours: enabled ? { days: [], opens: "", closes: "" } : undefined })} />}
     {business.hours && <div className="space-y-3">
       <div className="flex flex-wrap gap-1.5">
-        {LINKTREE_WEEKDAYS.map(day => <button key={day} type="button" aria-pressed={business.hours?.days.includes(day)}
+        {LINKTREE_DISPLAY_WEEKDAYS.map(day => <button key={day} type="button" aria-pressed={business.hours?.days.includes(day)}
           className={`${SHARED_SOFT_BUTTON_CLASS} px-2.5 py-2 text-xs`}
           onClick={() => { const hours = business.hours!; update({ hours: { ...hours, days: hours.days.includes(day) ? hours.days.filter(value => value !== day) : [...hours.days, day] } }); }}>{copy[day]}</button>)}
       </div>

@@ -19,7 +19,7 @@ import type {
 import { LinktreesManagementPage } from "@/features/link-editor/components/LinktreesManagementPage";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { apiRequest } from "@/lib/api/request";
-import { buildPlatformLinktreePayload } from "@/features/platform-admin/api/platform-linktrees";
+import { useLinktreeMutations, LINKTREE_APPROVAL_COPY } from "@/features/link-editor/use-linktree-mutations";
 import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 import { platformLinktreesCopy } from "@/features/platform-admin/i18n/linktrees-copy";
 import { sharedArabicLinktreeCopy } from "@/features/link-editor/shared-arabic-copy";
@@ -68,6 +68,7 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
   const arabic = locale === "ar";
   const english = locale === "en";
   const apiBase = "/api/platform/linktrees";
+  const mutations = useLinktreeMutations("platform");
   const [context, setContext] = useState<PlatformLinktreeContext | null>(null);
   const [items, setItems] = useState<LinktreeListItem[]>([]);
   const [totals, setTotals] = useState<AnalyticsTotals>(EMPTY_ANALYTICS_TOTALS);
@@ -174,12 +175,12 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
 
   const editRequest = useRef<AbortController | null>(null);
   useEffect(() => () => editRequest.current?.abort(), []);
-  const closeEditor = () => {
+  const closeEditor = useCallback(() => {
     editRequest.current?.abort();
     setEditorOpen(false);
     setLoadingEdit(false);
     setEditData(null);
-  };
+  }, []);
   const openEdit = useCallback(
     async (id: string) => {
       editRequest.current?.abort();
@@ -206,10 +207,12 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
   const save = useCallback(
     async (data: LinktreeEditorSubmitData, editId?: string) => {
       try {
-        await apiRequest(editId ? `${apiBase}/${editId}` : apiBase, {
-          method: editId ? "PATCH" : "POST",
-          json: buildPlatformLinktreePayload(data),
-        });
+        const result = await mutations.save(data, editId);
+        if (result.outcome === "approval") {
+          toast.info(LINKTREE_APPROVAL_COPY[locale]);
+          closeEditor();
+          return;
+        }
         setEditorOpen(false);
         setEditData(null);
         toast.success(editId ? copyRef.current.updated : copyRef.current.created);
@@ -220,54 +223,43 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
         throw error;
       }
     },
-    [apiBase, load],
+    [mutations, locale, load, closeEditor],
   );
 
   const handleToggleArchive = useCallback(
-    async (
-      id: string,
-      value: boolean,
-    ) => {
-      setItems((current) =>
-        current.map((item) =>
-          item.id === id ? { ...item, is_archived: value } : item,
-        ),
-      );
+    async (id: string, value: boolean) => {
       try {
-        await apiRequest(`${apiBase}/${id}/archive`, {
-          method: "PATCH",
-          json: { is_archived: value },
-        });
-        toast.success(
-          value ? copyRef.current.archived : copyRef.current.restored,
-        );
+        const result = await mutations.archive(id, value);
+        if (result.outcome === "approval") {
+          toast.info(LINKTREE_APPROVAL_COPY[locale]);
+          return;
+        }
+        setItems((current) => current.map((item) => item.id === id ? { ...item, is_archived: value } : item));
+        toast.success(value ? copyRef.current.archived : copyRef.current.restored);
       } catch (error) {
-        await load(true);
         console.error("Platform Linktree state update failed:", error);
         toast.error(copyRef.current.statusFailed);
       }
     },
-    [apiBase, load],
+    [mutations, locale],
   );
 
   const handleToggleStatus = useCallback(
     async (id: string, status: "active" | "inactive") => {
-      setItems((current) =>
-        current.map((item) => (item.id === id ? { ...item, status } : item)),
-      );
       try {
-        await apiRequest(`${apiBase}/${id}/status`, {
-          method: "PATCH",
-          json: { status },
-        });
+        const result = await mutations.status(id, status);
+        if (result.outcome === "approval") {
+          toast.info(LINKTREE_APPROVAL_COPY[locale]);
+          return;
+        }
+        setItems((current) => current.map((item) => item.id === id ? { ...item, status } : item));
         toast.success(status === "active" ? copyRef.current.statusEnabled : copyRef.current.statusDisabled);
       } catch (error) {
-        await load(true);
         console.error("Platform Linktree status update failed:", error);
         toast.error(copyRef.current.statusFailed);
       }
     },
-    [apiBase, load],
+    [mutations, locale],
   );
 
   const clearSelected = useCallback(async (ids: readonly string[]) => {
@@ -401,7 +393,12 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
           if (!deleting) return;
           setIsDeleting(true);
           try {
-            await apiRequest(`${apiBase}/${deleting.id}`, { method: "DELETE" });
+            const result = await mutations.remove(deleting.id);
+            if (result.outcome === "approval") {
+              toast.info(LINKTREE_APPROVAL_COPY[locale]);
+              setDeleting(null);
+              return;
+            }
             setDeleting(null);
             toast.success(copyRef.current.deleteSuccess);
             await load(true);
