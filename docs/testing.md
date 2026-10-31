@@ -35,6 +35,13 @@ that opening/closing the chooser does not rerender the memoized template.
 Scroll-lock tests cover nested overlays and isolated iframe documents. Since
 jsdom has no native dialog implementation or layout engine, its lifecycle shim
 does not replace browser checks of fitting, top-layer focus and list scrolling.
+Mobile fit regression coverage includes a VisualViewport shorter than the layout
+window, browser-bar resize events, pinch-zoom preservation and restoration of
+the app shell's minimum height. Dialog focus tests model a native browser that
+initially focuses Close and verify that opening focuses the panel instead.
+Outside-touch dismissal tests assert closure before any compatibility click,
+cancel the touch end to prevent tap-through, suppress duplicate callbacks, and
+preserve inside touches, drags, canceled gestures and multitouch.
 Question-theme coverage verifies white defaults on dark pages, isolated control
 colors, saved custom colors, live preview updates and save/reload in both owner
 integrations. Backend config tests preserve legacy JSON and normalize unsafe

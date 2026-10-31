@@ -1596,14 +1596,26 @@ All six Linktree templates share viewport fitting through
 TemplateViewportLayout/useTemplateViewportFit. Mobile top/main spacing is compact;
 the natural content box scales only when necessary, down to 85%, after reserving
 the measured, unscaled sponsor/legal footer. Very long pages remain scrollable.
+The footer is anchored absolutely to that page box, so ancestor containment
+cannot move it to the app shell's bottom. The page height and fit use the owning
+VisualViewport when available, follow browser-bar resizing and ignore pinch
+zoom magnification. The app shell's large-viewport minimum is removed only while
+a public Linktree owns it, preventing blank overflow below a fitted page.
 Measurements use the owning window (the iframe for previews), observe content,
 footer and viewport changes, and batch resize work in one animation frame.
 The fit does not change authored values or reduce browser zoom settings.
 
 WhatsApp questions use one native dialog for published pages and both dashboard
-previews. The browser owns modal focus, background inertness, Escape and focus
-return; a plain dim backdrop replaces full-page blur. CSS transitions animate
-only opacity/translation over 160ms and honor reduced motion. Long question
+previews. The browser owns background inertness, Escape and focus return. On
+opening, focus moves to the panel itself so the close button is not outlined
+as an active keyboard control; tabbing still shows the shared focus indicator.
+A plain dim backdrop replaces full-page blur. CSS transitions animate
+only opacity/translation over 140ms on entrance and honor reduced motion.
+Closing releases the native dialog and backdrop immediately, without retained
+overlay/display exit transitions. Outside touch taps dismiss on touch release
+rather than waiting for a compatibility click; the touch event is canceled to
+prevent activation of links behind the dismissed panel. Dragging, scrolling,
+canceled gestures and multitouch do not dismiss it. Long question
 lists scroll inside the viewport-bounded panel. Scroll locks are reference
 counted per owning document, so preview dialogs never lock the dashboard.
 Stable media/sponsor callbacks keep chooser state changes from rerendering the

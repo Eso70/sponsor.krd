@@ -4,6 +4,46 @@ import { WhatsAppQuestionModal } from "./WhatsAppQuestionModal";
 import { PublicLinktreeLocaleProvider } from "@/features/business/i18n/public-linktree";
 
 describe("WhatsApp question dialog", () => {
+  it("closes on outside touch release before the delayed click and prevents tap-through", () => {
+    const close = vi.fn(() => expect(dialog.open).toBe(false));
+    render(<WhatsAppQuestionModal isOpen onClose={close} onSelectQuestion={vi.fn()} whatsappUrl="" />);
+    const dialog = screen.getByRole("dialog") as HTMLDialogElement;
+    const touch = { identifier: 1, clientX: -10, clientY: -10 };
+    fireEvent.touchStart(dialog, { touches: [touch] });
+    expect(close).not.toHaveBeenCalled();
+    const uncancelled = fireEvent.touchEnd(dialog, { touches: [], changedTouches: [touch] });
+    expect(uncancelled).toBe(false);
+    expect(close).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(dialog, { clientX: -10, clientY: -10 });
+    expect(close).toHaveBeenCalledOnce();
+  });
+  it.each(["inside", "drag", "cancel", "multitouch"])("does not dismiss a %s touch gesture", gesture => {
+    const close = vi.fn();
+    render(<WhatsAppQuestionModal isOpen onClose={close} onSelectQuestion={vi.fn()} whatsappUrl="" />);
+    const dialog = screen.getByRole("dialog");
+    vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({ left: 100, top: 100, right: 300, bottom: 300, width: 200, height: 200, x: 100, y: 100, toJSON: () => ({}) });
+    const outside = { identifier: 1, clientX: 50, clientY: 50 };
+    const inside = { identifier: 1, clientX: 150, clientY: 150 };
+    fireEvent.touchStart(dialog, { touches: [gesture === "inside" ? inside : outside] });
+    if (gesture === "drag") fireEvent.touchMove(dialog, { touches: [{ ...outside, clientY: 80 }] });
+    if (gesture === "cancel") fireEvent.touchCancel(dialog);
+    if (gesture === "multitouch") fireEvent.touchStart(dialog, { touches: [outside, { ...outside, identifier: 2 }] });
+    fireEvent.touchEnd(dialog, { touches: [], changedTouches: [outside] });
+    expect(close).not.toHaveBeenCalled();
+    expect(dialog).toHaveAttribute("open");
+  });
+  it("focuses the panel rather than leaving the close button active on opening", () => {
+    const nativeOpen = vi.spyOn(HTMLDialogElement.prototype, "showModal").mockImplementation(function (this: HTMLDialogElement) {
+      this.open = true;
+      this.querySelector("button")?.focus();
+    });
+    try {
+      render(<PublicLinktreeLocaleProvider locale="en"><WhatsAppQuestionModal isOpen onClose={vi.fn()} onSelectQuestion={vi.fn()} whatsappUrl="" /></PublicLinktreeLocaleProvider>);
+      expect(screen.getByRole("dialog")).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Close" })).not.toHaveFocus();
+    } finally { nativeOpen.mockRestore(); }
+  });
   it("defaults to its own white surface inside a dark page", () => {
     render(<div className="dark" style={{ "--shared-control-text": "red" } as import("react").CSSProperties}>
       <WhatsAppQuestionModal isOpen onClose={vi.fn()} onSelectQuestion={vi.fn()} whatsappUrl="" />

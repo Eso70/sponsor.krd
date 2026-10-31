@@ -52,9 +52,10 @@ describe("published business Linktree fallbacks", () => {
     );
     expect(screen.getByRole("heading", { name: publicLinktreeCopy.ckb.modalTitle })).toBeInTheDocument();
     expect(screen.getByText(publicLinktreeCopy.ckb.modalSubtitle)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /My custom question/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: new RegExp(publicLinktreeCopy.ckb.questions[0].text) }));
     expect(onSelectQuestion).toHaveBeenCalledWith(publicLinktreeCopy.ckb.questions[0].message, publicLinktreeCopy.ckb.questions[0]);
-    expect(screen.getByRole("button", { name: /My custom question/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
   it("uses localized defaults only for missing content and respects an empty question list", () => {
     render(<PublicLinktreeLocaleProvider locale="en">

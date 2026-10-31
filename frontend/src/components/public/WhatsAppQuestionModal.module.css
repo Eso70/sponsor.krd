@@ -13,15 +13,17 @@
   animation: none !important;
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 160ms ease-out, transform 160ms ease-out, display 160ms allow-discrete, overlay 160ms allow-discrete;
+  transition: none;
+  touch-action: manipulation;
 }
-.dialog[open] { display: flex; flex-direction: column; opacity: 1; transform: none; }
+.dialog[open] { display: flex; flex-direction: column; opacity: 1; transform: none; transition: opacity 140ms ease-out, transform 140ms ease-out; }
 .dialog::backdrop {
   background: rgb(0 0 0 / 35%);
   opacity: 0;
-  transition: opacity 160ms ease-out, display 160ms allow-discrete, overlay 160ms allow-discrete;
+  transition: none;
+  touch-action: manipulation;
 }
-.dialog[open]::backdrop { opacity: 1; }
+.dialog[open]::backdrop { opacity: 1; transition: opacity 140ms ease-out; }
 @starting-style {
   .dialog[open] { opacity: 0; transform: translateY(12px); }
   .dialog[open]::backdrop { opacity: 0; }
@@ -30,5 +32,5 @@
   .dialog[data-picker-surface] { inset: 20px; margin: auto; max-height: calc(100dvh - 40px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dialog[data-picker-surface], .dialog::backdrop { transition: none; transform: none; }
+  .dialog[data-picker-surface], .dialog::backdrop, .dialog[open]::backdrop { transition: none; transform: none; }
 }

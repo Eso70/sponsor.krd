@@ -5,7 +5,7 @@ import { LinktreeSponsor } from "./LinktreeSponsor";
 import { LegalLinks } from "@/components/shared/LegalLinks";
 import styles from "./LinktreeLegalFooter.module.css";
 
-/** Fixed, minimal legal navigation over the existing page surface. */
+/** Legal navigation anchored to the fitted page, after content on long pages. */
 export function LinktreeLegalFooter({ color }: { color: string }) {
   const { sponsor, preview, onSponsorClick } = useTemplateMedia();
   const footerRef = useRef<HTMLElement>(null);

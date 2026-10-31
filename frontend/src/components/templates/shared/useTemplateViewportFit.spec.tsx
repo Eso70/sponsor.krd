@@ -13,6 +13,32 @@ function FitFixture() {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("template viewport fitting", () => {
+  it("uses the visible mobile viewport, follows browser-bar resizing, and preserves pinch zoom", () => {
+    vi.stubGlobal("innerHeight", 800);
+    const visibleViewport = Object.assign(new EventTarget(), { height: 600, scale: 1 });
+    vi.stubGlobal("visualViewport", visibleViewport);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(600);
+    let nextFrame: FrameRequestCallback | undefined;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { nextFrame = callback; return 1; });
+    const { getByTestId, container, unmount } = render(<div data-theme-background style={{ minHeight: "800px" }}><div className="public-template-shell"><FitFixture /></div></div>);
+    const shell = container.querySelector<HTMLElement>(".public-template-shell")!;
+    expect(shell.style.getPropertyValue("--template-viewport-height")).toBe("600px");
+    expect(getByTestId("frame").style.height).toBe("530px");
+    expect(container.firstElementChild).toHaveStyle({ minHeight: "0" });
+    visibleViewport.height = 700;
+    act(() => { visibleViewport.dispatchEvent(new Event("resize")); nextFrame!(0); });
+    expect(shell.style.getPropertyValue("--template-viewport-height")).toBe("700px");
+    expect(getByTestId("frame").style.height).toBe("");
+    visibleViewport.scale = 2;
+    visibleViewport.height = 350;
+    act(() => { visibleViewport.dispatchEvent(new Event("resize")); nextFrame!(0); });
+    expect(shell.style.getPropertyValue("--template-viewport-height")).toBe("700px");
+    expect(getByTestId("frame").style.height).toBe("");
+    const background = container.firstElementChild as HTMLElement;
+    unmount();
+    expect(background.style.minHeight).toBe("800px");
+    expect(shell.style.getPropertyValue("--template-viewport-height")).toBe("");
+  });
   it("reserves footer space, fits overflow, and restores full size when space returns", () => {
     vi.stubGlobal("innerHeight", 700);
     let height = 700;
