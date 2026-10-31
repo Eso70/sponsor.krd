@@ -10,7 +10,16 @@ function normalizeQuestionVideoUrl(value) {
 }
 function whatsappQuestionMessage(question) {
   const url = normalizeQuestionVideoUrl(question.videoUrl);
-  return url ? `${question.message.trim()}\n\n${url}` : question.message;
+  return url ? `${url}\n\n${question.message.trim()}` : question.message;
+}
+/** The question panel has its own solid surface, independent of the page. */
+function readWhatsappQuestionColor(value) {
+  if (typeof value !== 'string') return '#ffffff';
+  const color = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  if (/^#[0-9a-f]{3}$/.test(color)) return '#' + [...color.slice(1)].map(c => c + c).join('');
+  return '#ffffff';
 }
 exports.normalizeQuestionVideoUrl = normalizeQuestionVideoUrl;
 exports.whatsappQuestionMessage = whatsappQuestionMessage;
+exports.readWhatsappQuestionColor = readWhatsappQuestionColor;

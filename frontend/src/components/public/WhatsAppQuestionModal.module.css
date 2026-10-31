@@ -1,0 +1,34 @@
+.dialog[data-picker-surface] {
+  position: fixed;
+  --question-bottom-space: max(32px, 5dvh, env(safe-area-inset-bottom, 0px));
+  inset: auto 12px var(--question-bottom-space);
+  margin: 0 auto;
+  padding: 0;
+  width: calc(100% - 24px);
+  max-width: 448px;
+  max-height: calc(100dvh - max(12px, env(safe-area-inset-top, 0px)) - var(--question-bottom-space));
+  border: 0;
+  outline: none;
+  overflow: hidden;
+  animation: none !important;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 160ms ease-out, transform 160ms ease-out, display 160ms allow-discrete, overlay 160ms allow-discrete;
+}
+.dialog[open] { display: flex; flex-direction: column; opacity: 1; transform: none; }
+.dialog::backdrop {
+  background: rgb(0 0 0 / 35%);
+  opacity: 0;
+  transition: opacity 160ms ease-out, display 160ms allow-discrete, overlay 160ms allow-discrete;
+}
+.dialog[open]::backdrop { opacity: 1; }
+@starting-style {
+  .dialog[open] { opacity: 0; transform: translateY(12px); }
+  .dialog[open]::backdrop { opacity: 0; }
+}
+@media (min-width: 640px) {
+  .dialog[data-picker-surface] { inset: 20px; margin: auto; max-height: calc(100dvh - 40px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog[data-picker-surface], .dialog::backdrop { transition: none; transform: none; }
+}

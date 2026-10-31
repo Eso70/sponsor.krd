@@ -1,5 +1,11 @@
 # Backend
 
+Linktree question appearance is stored in `template_config.whatsapp_modal.backgroundColor`
+through the existing owner-scoped page writes. The shared normalizer accepts
+solid three/six-digit hex colors, expands short values, and replaces unsupported
+values with white. Missing legacy settings keep their existing JSON shape and
+render as white. No schema migration or permission change is required.
+
 `GET /api/public/directory/:kind?page=1` serves a bounded, host-scoped public
 directory for `linktree` or `form`. PublicService resolves an active business or
 the platform content workspace; clients cannot supply an owner ID. Responses

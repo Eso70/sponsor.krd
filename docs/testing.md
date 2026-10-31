@@ -27,6 +27,20 @@ tracking, multiple destinations, and page-local calendar filtering. Frontend
 dismissal and preview exclusion; the shared analytics drawer integration tests
 cover both dashboard data sources.
 
+Linktree viewport fitting has focused coverage for footer reservation, bounded
+scaling, restoration to full size, resize batching, content changes and cleanup.
+WhatsApp dialog tests cover native cancellation, reopening, focus return,
+backdrop dismissal and preserved question messages. Tracking tests also assert
+that opening/closing the chooser does not rerender the memoized template.
+Scroll-lock tests cover nested overlays and isolated iframe documents. Since
+jsdom has no native dialog implementation or layout engine, its lifecycle shim
+does not replace browser checks of fitting, top-layer focus and list scrolling.
+Question-theme coverage verifies white defaults on dark pages, isolated control
+colors, saved custom colors, live preview updates and save/reload in both owner
+integrations. Backend config tests preserve legacy JSON and normalize unsafe
+color input. The shared video-message regression asserts URL-first ordering
+while keeping questions without a video unchanged.
+
 The question fixture deliberately stores different editor JSON IDs and canonical
 `whatsapp_questions` UUIDs, matching real public payloads. It also covers missing
 JSON copies, disabled modals, cross-page IDs, question edits/reordering/removal,

@@ -1,5 +1,13 @@
 .viewport {
+  overflow-x: clip;
   padding-bottom: var(--linktree-footer-height, calc(56px + env(safe-area-inset-bottom, 0px))) !important;
+}
+.fitFrame[data-fitted="true"] { overflow: clip; }
+.fitContent { width: 100%; transform-origin: top center; display: flow-root; }
+.main { padding-block: clamp(12px, 2dvh, 24px); }
+@media (max-width: 639px) {
+  .viewport[data-has-banner="false"] { padding-top: max(20px, env(safe-area-inset-top, 0px)) !important; }
+  .viewport[data-preview="true"][data-has-banner="false"] { padding-top: 56px !important; }
 }
 .footer {
   position: fixed;

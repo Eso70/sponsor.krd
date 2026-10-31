@@ -32,7 +32,9 @@ describe("shared visual picker popup", () => {
         <button onClick={select}>Dots</button>
       </PickerPopup>
     </>);
-    await screen.findByRole("dialog");
+    const popup = await screen.findByRole("dialog");
+    // Outside-dismissal listeners mount with the focus effect after the portal.
+    await waitFor(() => expect(popup).toHaveFocus());
     fireEvent.pointerDown(screen.getByRole("button", { name: "Dots" }));
     fireEvent.click(screen.getByRole("button", { name: "Dots" }));
     expect(select).toHaveBeenCalledOnce();

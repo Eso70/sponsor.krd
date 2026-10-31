@@ -14,6 +14,7 @@ export interface LinktreeWhatsAppPreview {
   open: boolean;
   title: string;
   subtitle: string;
+  backgroundColor?: string;
   questions: WhatsAppQuestion[];
   onClose: () => void;
 }
@@ -45,7 +46,7 @@ export const LinktreeEditorPreview = memo(function LinktreeEditorPreview({ draft
           {whatsappPreview?.enabled && <div data-whatsapp-preview>
             <WhatsAppQuestionModal embedded isOpen={whatsappPreview.open || questionPreviewOpen}
               title={whatsappPreview.title} subtitle={whatsappPreview.subtitle} questions={whatsappPreview.questions}
-              appearance={presentation.theme.text === "#ffffff" ? "dark" : "light"} accentColor={draft.accentColor}
+              backgroundColor={whatsappPreview.backgroundColor}
               whatsappUrl="" onSelectQuestion={() => undefined}
               onClose={() => { setQuestionPreviewOpen(false); whatsappPreview.onClose(); }} />
           </div>}

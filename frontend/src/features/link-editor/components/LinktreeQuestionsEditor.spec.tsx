@@ -13,6 +13,7 @@ const questions = [
 function Editor({ onChange }: { onChange: (questions: WhatsAppQuestion[]) => void }) {
   const [items, setItems] = useState(questions);
   return <LinktreeQuestionsEditor copy={englishEditorCopy} whatsappModalEnabled whatsappModalTitle="Contact" whatsappModalSubtitle="Choose"
+    whatsappModalBackgroundColor="#ffffff" onWhatsappModalBackgroundColorChange={vi.fn()}
     whatsappQuestions={items} onWhatsappModalTitleChange={vi.fn()} onWhatsappModalSubtitleChange={vi.fn()}
     onWhatsappQuestionsChange={(next) => { setItems(next); onChange(next); }} />;
 }

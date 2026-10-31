@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { TemplateMediaContext } from "./TemplateMediaContext";
 import { TemplateViewportLayout } from "./TemplateViewportLayout";
@@ -44,6 +44,16 @@ describe("TemplateViewportLayout", () => {
       container.querySelector("[data-template-viewport-layout]"),
     ).toHaveClass("min-h-[100svh]");
   });
+});
+
+it.each([false, true])("shares readable opening hours between public pages and dashboard previews (preview=%s)", isPreview => {
+  const { container } = render(<TemplateMediaContext.Provider value={{ banner: { enabled: false, mode: "image", images: [] }, seo: { version: 1, business: { hours: { days: ["Mo", "Tu"], opens: "01:00", closes: "23:00" } } } }}>
+    <TemplateViewportLayout isPreview={isPreview} header={<header>Profile</header>} main={<div>Actions</div>} />
+  </TemplateMediaContext.Provider>);
+  fireEvent.click(container.querySelector("summary")!);
+  expect(screen.getByText("01:00 AM")).toBeVisible();
+  expect(screen.getByText("11:00 PM")).toBeVisible();
+  expect(screen.getAllByRole("listitem")).toHaveLength(2);
 });
 
 it("keeps optional business details after primary actions and out of the profile header", () => {

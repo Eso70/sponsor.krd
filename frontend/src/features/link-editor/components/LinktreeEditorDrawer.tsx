@@ -1,4 +1,5 @@
 "use client";
+import { readWhatsappQuestionColor } from "@linktree/types/whatsapp-question.cjs";
 import { resolveNewPagePattern } from "@linktree/types/linktree-defaults.cjs";
 
 import {
@@ -318,6 +319,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
   );
 
   // WhatsApp modal questions state
+  const [whatsappModalBackgroundColor, setWhatsappModalBackgroundColor] = useState("#ffffff");
   const [whatsappModalEnabled, setWhatsappModalEnabled] = useState(
     businessDefaults?.default_whatsapp_enabled ?? false,
   );
@@ -830,12 +832,14 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
       const whatsappModal = (
         linktree.template_config as Record<string, unknown> | null
       )?.whatsapp_modal;
+      setWhatsappModalBackgroundColor("#ffffff");
       if (
         whatsappModal &&
         typeof whatsappModal === "object" &&
         !Array.isArray(whatsappModal)
       ) {
         const modal = whatsappModal as Record<string, unknown>;
+        setWhatsappModalBackgroundColor(readWhatsappQuestionColor(modal.backgroundColor));
         // Load enabled flag, default to false if not found
         const enabled =
           typeof modal.enabled === "boolean" ? modal.enabled : false;
@@ -968,6 +972,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
         setSocialLinks([]);
       }
       setStatus("active");
+      setWhatsappModalBackgroundColor("#ffffff");
       setWhatsappModalEnabled(
         businessDefaults?.default_whatsapp_enabled ?? false,
       );
@@ -1645,6 +1650,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
         // Include whatsapp_modal with enabled flag
         whatsapp_modal: {
           enabled: whatsappModalEnabled,
+          backgroundColor: readWhatsappQuestionColor(whatsappModalBackgroundColor),
           ...(whatsappModalEnabled && whatsappQuestions.length > 0
             ? {
                 title:
@@ -2049,6 +2055,7 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                     open: openSection === "questions",
                     title: whatsappModalTitle,
                     subtitle: whatsappModalSubtitle,
+                    backgroundColor: whatsappModalBackgroundColor,
                     questions: whatsappQuestions,
                     onClose: () => setOpenSection(null),
                   }}
@@ -2288,6 +2295,8 @@ export const LinktreeEditorDrawer = memo(function LinktreeEditorDrawer({
                     whatsappModalEnabled={whatsappModalEnabled}
                     whatsappModalTitle={whatsappModalTitle}
                     whatsappModalSubtitle={whatsappModalSubtitle}
+                    whatsappModalBackgroundColor={whatsappModalBackgroundColor}
+                    onWhatsappModalBackgroundColorChange={setWhatsappModalBackgroundColor}
                     whatsappQuestions={whatsappQuestions}
                     questionErrors={questionErrors}
                     onWhatsappModalTitleChange={(value) => {

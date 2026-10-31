@@ -1,32 +1,37 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, type RefObject } from "react";
 
-const locks = new Set<symbol>();
-let restore: (() => void) | undefined;
+const documents = new WeakMap<Document, { locks: Set<symbol>; restore: () => void }>();
 
-/** Keep the document stable until the last retained overlay has unmounted. */
-export function useDocumentScrollLock(enabled: boolean) {
+function lockDocument(ownerDocument: Document) {
+  const token = Symbol("document-scroll-lock");
+  let state = documents.get(ownerDocument);
+  if (!state) {
+    const overflow = ownerDocument.body.style.overflow;
+    const gutter = ownerDocument.documentElement.style.scrollbarGutter;
+    ownerDocument.documentElement.style.scrollbarGutter = "stable";
+    ownerDocument.body.style.overflow = "hidden";
+    state = { locks: new Set(), restore: () => {
+      ownerDocument.body.style.overflow = overflow;
+      ownerDocument.documentElement.style.scrollbarGutter = gutter;
+    } };
+    documents.set(ownerDocument, state);
+  }
+  state.locks.add(token);
+  return () => {
+    state.locks.delete(token);
+    if (state.locks.size === 0) {
+      state.restore();
+      documents.delete(ownerDocument);
+    }
+  };
+}
+
+/** Keep each owning document stable until its final overlay closes. */
+export function useDocumentScrollLock(enabled: boolean, ownerRef?: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     if (!enabled) return;
-    const token = Symbol("document-scroll-lock");
-    if (locks.size === 0) {
-      const overflow = document.body.style.overflow;
-      const gutter = document.documentElement.style.scrollbarGutter;
-      document.documentElement.style.scrollbarGutter = "stable";
-      document.body.style.overflow = "hidden";
-      restore = () => {
-        document.body.style.overflow = overflow;
-        document.documentElement.style.scrollbarGutter = gutter;
-      };
-    }
-    locks.add(token);
-    return () => {
-      locks.delete(token);
-      if (locks.size === 0) {
-        restore?.();
-        restore = undefined;
-      }
-    };
-  }, [enabled]);
+    return lockDocument(ownerRef?.current?.ownerDocument ?? document);
+  }, [enabled, ownerRef]);
 }

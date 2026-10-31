@@ -1,11 +1,12 @@
 "use client";
 
-import { memo, useId, useRef, type CSSProperties } from "react";
+import { memo, useId, useLayoutEffect, useRef, type CSSProperties } from "react";
 import { useDocumentScrollLock } from "@/hooks/useDocumentScrollLock";
-import { useModalKeyboard } from "@/hooks/useModalKeyboard";
-import { parseWebsiteColor } from "@/lib/utils/parse-website-color";
+import { deriveTextColor } from "@/lib/utils/theme-colors";
+import { readWhatsappQuestionColor } from "@linktree/types/whatsapp-question.cjs";
 import { WhatsAppQuestionPanel } from "./WhatsAppQuestionPanel";
 import surfaceStyles from "@/components/shared/picker-popup-surface.module.css";
+import styles from "./WhatsAppQuestionModal.module.css";
 
 export interface WhatsAppQuestion { id: string; text: string; message: string; videoUrl?: string; }
 export interface WhatsAppQuestionModalProps {
@@ -16,28 +17,47 @@ export interface WhatsAppQuestionModalProps {
   title?: string;
   subtitle?: string;
   questions?: WhatsAppQuestion[];
-  appearance?: "light" | "dark";
-  accentColor?: string;
+  backgroundColor?: string;
   /** Stay inside the phone viewport without locking the dashboard document. */
   embedded?: boolean;
 }
 
-export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({ isOpen, onClose, onSelectQuestion, title, subtitle, questions, appearance = "light", accentColor, embedded = false }: WhatsAppQuestionModalProps) {
+export const WhatsAppQuestionModal = memo(function WhatsAppQuestionModal({ isOpen, onClose, onSelectQuestion, title, subtitle, questions, backgroundColor, embedded = false }: WhatsAppQuestionModalProps) {
   const titleId = useId();
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useModalKeyboard({ isOpen: isOpen && !embedded, onEscape: onClose, dialogRef });
-  useDocumentScrollLock(isOpen && !embedded);
-  if (!isOpen) return null;
-  const accent = parseWebsiteColor(accentColor);
-  return <div className={`${appearance} fixed inset-0 z-[100] flex items-end justify-center bg-black/35 p-3 backdrop-blur-sm sm:items-center sm:p-5`}
-    style={{ "--theme-primary": accent.primary } as CSSProperties}
-    onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div ref={dialogRef} role="dialog" aria-modal={!embedded} aria-labelledby={titleId} tabIndex={-1}
-      onKeyDown={embedded ? (event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } } : undefined}
-      data-picker-surface data-appearance={appearance}
-      className={`${surfaceStyles.surface} flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden !rounded-3xl border outline-none`}>
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  // A preview dialog belongs to its iframe, so it must never lock the dashboard.
+  useDocumentScrollLock(isOpen, dialogRef);
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) dialog.showModal();
+    else if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    return () => { if (dialog?.open) dialog.close(); };
+  }, []);
+  const color = readWhatsappQuestionColor(backgroundColor);
+  const text = deriveTextColor(color, color, color);
+  const appearance = text === "#ffffff" ? "dark" : "light";
+  return <dialog ref={dialogRef} aria-labelledby={titleId} tabIndex={-1}
+    className={`${appearance} ${surfaceStyles.surface} ${styles.dialog}`}
+    data-picker-surface data-appearance={appearance} data-embedded={embedded}
+    style={{
+      "--picker-surface": color,
+      "--theme-primary": text,
+      "--shared-control-text": text,
+      "--shared-control-muted": `color-mix(in srgb, ${text} 70%, ${color})`,
+      "--shared-control-surface": `color-mix(in srgb, ${text} 6%, ${color})`,
+      "--shared-control-hover": `color-mix(in srgb, ${text} 10%, ${color})`,
+    } as CSSProperties}
+    onCancel={(event) => { event.preventDefault(); event.stopPropagation(); onClose(); }}
+    onClick={(event) => {
+      if (event.target !== event.currentTarget) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
+    }}>
       <WhatsAppQuestionPanel titleId={titleId} title={title} subtitle={subtitle} questions={questions} onClose={onClose}
         onSelectQuestion={(message, question) => { onSelectQuestion(message, question); onClose(); }} />
-    </div>
-  </div>;
+  </dialog>;
 });

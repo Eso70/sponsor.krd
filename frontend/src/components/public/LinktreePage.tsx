@@ -7,6 +7,7 @@ import type {
   PublicPageAnalytics,
 } from "@linktree/types";
 import { appendMessageToUrl } from "@/lib/utils/message-url";
+import { readWhatsappQuestionColor } from "@linktree/types/whatsapp-question.cjs";
 import { DynamicTemplate } from "@/components/templates/DynamicTemplate";
 import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 import type { TemplateTheme } from "@/components/templates";
@@ -378,6 +379,7 @@ export const LinktreePage = memo(function LinktreePage({
     }
 
     return {
+      backgroundColor: readWhatsappQuestionColor(modal.backgroundColor),
       title: typeof modal.title === "string" ? modal.title : undefined,
       subtitle: typeof modal.subtitle === "string" ? modal.subtitle : undefined,
       questions: questions && questions.length > 0 ? questions : undefined,
@@ -472,6 +474,24 @@ export const LinktreePage = memo(function LinktreePage({
     [openUrl, reportLinkClick],
   );
 
+  // Stable callbacks keep opening/closing the chooser from repainting the
+  // template, banner, image galleries and all link buttons beneath it.
+  const handleSponsorClick = useCallback((url: string, name: string) => tracker.trackEngagement("action_open", {
+    actionKey: "page:sponsor-click", immediate: true, label: name, destination: url,
+    properties: { measurement: "sponsor" },
+  }), [tracker]);
+  const handleMediaAction = useCallback((action: "image-open" | "banner-change", index: number) => tracker.trackEngagement("action_open", {
+    actionKey: `page:${action}`,
+    properties: { media: index < 0 ? "logo" : "banner", index },
+  }), [tracker]);
+  const handleWhatsAppClose = useCallback(() => {
+    const pending = pendingWhatsAppRef.current;
+    if (pending && enableMarketingTracking) tracker.trackEngagement("action_open", { immediate: true, actionKey: `${linkActionKey(pending.linkId)}:questions:closed`, properties: { measurement: "whatsapp_questions", step: "dismissed", linkId: pending.linkId } });
+    setIsWhatsAppModalOpen(false);
+    setPendingWhatsAppUrl("");
+    pendingWhatsAppRef.current = null;
+  }, [tracker, enableMarketingTracking]);
+
   return (
     <PublicLinktreeLocaleProvider locale={locale}>
       <div className="relative" lang={locale} dir={locale === "en" ? "ltr" : "rtl"}>
@@ -485,33 +505,17 @@ export const LinktreePage = memo(function LinktreePage({
             links={links}
             theme={theme}
             onLinkClick={handleLinkClick}
-            onSponsorClick={enableMarketingTracking ? (url, name) => tracker.trackEngagement("action_open", {
-              actionKey: "page:sponsor-click",
-              immediate: true,
-              label: name,
-              destination: url,
-              properties: { measurement: "sponsor" },
-            }) : undefined}
-            onMediaAction={enableMarketingTracking ? (action, index) => tracker.trackEngagement("action_open", {
-              actionKey: `page:${action}`,
-              properties: { media: index < 0 ? "logo" : "banner", index },
-            }) : undefined}
+            onSponsorClick={enableMarketingTracking ? handleSponsorClick : undefined}
+            onMediaAction={enableMarketingTracking ? handleMediaAction : undefined}
           />
 
           {/* WhatsApp Question Modal */}
           <WhatsAppQuestionModal
             isOpen={isWhatsAppModalOpen}
-            onClose={() => {
-              const pending = pendingWhatsAppRef.current;
-              if (pending && enableMarketingTracking) tracker.trackEngagement("action_open", { immediate: true, actionKey: `${linkActionKey(pending.linkId)}:questions:closed`, properties: { measurement: "whatsapp_questions", step: "dismissed", linkId: pending.linkId } });
-              setIsWhatsAppModalOpen(false);
-              setPendingWhatsAppUrl("");
-              pendingWhatsAppRef.current = null;
-            }}
+            onClose={handleWhatsAppClose}
             onSelectQuestion={handleWhatsAppQuestionSelect}
             whatsappUrl={pendingWhatsAppUrl}
-            appearance={theme.text === "#ffffff" ? "dark" : "light"}
-            accentColor={linktree.business_website_color ?? undefined}
+            backgroundColor={whatsappModalConfig?.backgroundColor}
             title={whatsappModalConfig?.title}
             subtitle={whatsappModalConfig?.subtitle}
             questions={whatsappModalConfig?.questions}

@@ -31,6 +31,17 @@
 .row { display: grid; grid-template-columns: minmax(90px, 0.75fr) minmax(0, 1.25fr); gap: 12px; align-items: start; }
 .row dt { display: flex; align-items: center; gap: 6px; opacity: 0.65; font-size: 11px; }
 .row dd { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.hoursRow { display: grid; gap: 8px; }
+.hoursRow > dt { display: flex; align-items: center; gap: 6px; opacity: 0.65; font-size: 11px; }
+.hoursRow > dd { margin: 0; }
+.hours { display: grid; gap: 12px; }
+.weekdays { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.weekdays li { padding: 3px 9px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); }
+.times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.times > div { display: grid; gap: 3px; }
+.times dt { font-size: 11px; opacity: 0.65; }
+.times dd { margin: 0; }
+.times time { display: inline-block; white-space: nowrap; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 @media (max-width: 340px) { .row { grid-template-columns: 1fr; gap: 3px; } }
 
 @media (prefers-reduced-motion: reduce) { .summary, .chevron { transition: none; } }

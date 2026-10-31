@@ -30,16 +30,18 @@ describe("live Linktree preview", () => {
   it("previews draft questions and contains WhatsApp navigation", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     const onClose = vi.fn();
-    const whatsappPreview = { enabled: true, open: false, title: "Talk to us", subtitle: "Choose a topic",
+    const whatsappPreview = { enabled: true, open: false, title: "Talk to us", subtitle: "Choose a topic", backgroundColor: "#123456",
       questions: [{ id: "order", text: "Order a product", message: "My order" }], onClose };
     const { rerender } = render(<LinktreeEditorPreview draft={draft} locale="en" label="Preview" whatsappPreview={whatsappPreview} />);
     fireEvent.click(screen.getByRole("link", { name: "WhatsApp" }));
     expect(screen.getByRole("dialog", { name: "Talk to us" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog").style.getPropertyValue("--picker-surface")).toBe("#123456");
     fireEvent.click(screen.getByRole("button", { name: "Order a product" }));
     expect(onClose).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
-    rerender(<LinktreeEditorPreview draft={draft} locale="en" label="Preview" whatsappPreview={{ ...whatsappPreview, open: true, title: "Edited title" }} />);
+    rerender(<LinktreeEditorPreview draft={draft} locale="en" label="Preview" whatsappPreview={{ ...whatsappPreview, open: true, title: "Edited title", backgroundColor: "#ffffff" }} />);
     expect(screen.getByRole("dialog", { name: "Edited title" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog").style.getPropertyValue("--picker-surface")).toBe("#ffffff");
     open.mockRestore();
   });
 });

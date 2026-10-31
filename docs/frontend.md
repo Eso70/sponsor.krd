@@ -1592,6 +1592,36 @@ The Linktree editor uses FittedPhoneMockup to fit the complete hardware frame
 to the preview pane's width and remaining height using CSS container units.
 Its aspect ratio stays intact, resizing needs no JavaScript measurement, and
 long pages scroll inside the phone rather than clipping or scrolling the frame.
+All six Linktree templates share viewport fitting through
+TemplateViewportLayout/useTemplateViewportFit. Mobile top/main spacing is compact;
+the natural content box scales only when necessary, down to 85%, after reserving
+the measured, unscaled sponsor/legal footer. Very long pages remain scrollable.
+Measurements use the owning window (the iframe for previews), observe content,
+footer and viewport changes, and batch resize work in one animation frame.
+The fit does not change authored values or reduce browser zoom settings.
+
+WhatsApp questions use one native dialog for published pages and both dashboard
+previews. The browser owns modal focus, background inertness, Escape and focus
+return; a plain dim backdrop replaces full-page blur. CSS transitions animate
+only opacity/translation over 160ms and honor reduced motion. Long question
+lists scroll inside the viewport-bounded panel. Scroll locks are reference
+counted per owning document, so preview dialogs never lock the dashboard.
+Stable media/sponsor callbacks keep chooser state changes from rerendering the
+underlying template; existing question engagement and conversion tracking remain
+on the shared tracker.
+
+The questions section has its own Question theme control, reusing the existing
+Light/Dark/Custom picker with solid colors only. It stores
+`template_config.whatsapp_modal.backgroundColor`; legacy and new pages default
+to white independently of the page background or dashboard appearance. The
+panel derives readable text, button and hover colors from that saved surface.
+Business and Platform share saving/loading and the same live preview. On mobile
+the panel leaves at least 32px (or 5dvh/the safe-area inset, whichever is larger)
+below it, with its maximum height adjusted to preserve internal scrolling.
+When a question includes a valid video URL, the shared message formatter places
+the URL first, followed by a blank line and the question message. Questions
+without video keep their existing message unchanged.
+
 Both owner adapters pass DashboardAppearanceControls and their existing language
 selector into the Linktree drawer header, matching Forms. The controls change
 the dashboard's existing appearance and locale preferences; they preserve the
@@ -1648,6 +1678,12 @@ each picker switch the field and hour choices without changing the selected time
 The 24-hour picker omits AM/PM, while persisted values remain HH:mm. The
 optional fields support clearing, typed entry and keyboard selection; no native
 time widget or database change is required.
+
+Public business details and both dashboards' previews use the same opening-hours
+component. Selected weekdays appear as wrapping chips in Saturday-first order,
+above separately labeled opening and closing times. Public times use the same
+12-hour AM/PM formatter as TimeInput, with isolated left-to-right time values in
+all page languages; stored HH:mm values and weekday selections remain unchanged.
 
 DateInput and DateTimeInput also reuse PickerPopup; standalone portal positioning
 is removed. All date/time fields open through the full control and keep manual

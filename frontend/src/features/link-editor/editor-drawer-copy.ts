@@ -5,6 +5,7 @@ const labels = {
   linkDestination: ["Link or number", "لینک یان ژمارە", "الرابط أو الرقم"],
   preview: ["Live preview", "پێشبینینی ڕاستەوخۆ", "معاينة مباشرة"],
   theme: ["Theme", "ڕووکار", "المظهر"],
+  questionTheme: ["Question theme", "ڕووکاری پرسیارەکان", "مظهر الأسئلة"],
   color: ["Color", "ڕەنگ", "اللون"],
   light: ["Light", "ڕووناک", "فاتح"],
   dark: ["Dark", "تاریک", "داكن"],

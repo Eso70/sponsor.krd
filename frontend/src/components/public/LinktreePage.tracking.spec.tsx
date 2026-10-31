@@ -9,6 +9,7 @@ const tracker = vi.hoisted(() => ({
   trackAction: vi.fn(),
   trackEngagement: vi.fn(),
 }));
+const templateRender = vi.hoisted(() => vi.fn());
 vi.mock("@/features/analytics/page-tracking", () => ({
   createPageTracker: () => tracker,
 }));
@@ -18,8 +19,11 @@ vi.mock("@/features/analytics/page-engagement", () => ({
 vi.mock("@/components/analytics/TikTokPixel", () => ({
   TikTokPixel: () => null,
 }));
-vi.mock("@/components/templates/DynamicTemplate", () => ({
-  DynamicTemplate: ({ onLinkClick, onSponsorClick }: TemplateComponentProps) => (
+vi.mock("@/components/templates/DynamicTemplate", async () => {
+  const { memo } = await import("react");
+  return { DynamicTemplate: memo(function Template({ onLinkClick, onSponsorClick }: TemplateComponentProps) {
+    templateRender();
+    return (
     <>
     <button onClick={() => onSponsorClick?.("https://example.com", "Acme")}>Sponsor</button>
     <button
@@ -34,8 +38,9 @@ vi.mock("@/components/templates/DynamicTemplate", () => ({
       WhatsApp
     </button>
     </>
-  ),
-}));
+  );
+  }) };
+});
 
 const props: ComponentProps<typeof LinktreePage> = {
   linktree: {
@@ -69,6 +74,21 @@ beforeEach(() => {
 });
 
 describe("published WhatsApp question tracking", () => {
+  it("uses the saved question theme independently of the page background", () => {
+    render(<LinktreePage {...props} linktree={{ ...props.linktree, background_color: "#ffffff", template_config: {
+      whatsapp_modal: { enabled: true, backgroundColor: "#123456", questions: [{ id: "price", text: "Price enquiry", message: "How much?" }] },
+    } }} />);
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
+    expect(screen.getByRole("dialog").style.getPropertyValue("--picker-surface")).toBe("#123456");
+  });
+  it("does not repaint the template when the question chooser opens or closes", () => {
+    render(<LinktreePage {...props} />);
+    expect(templateRender).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
+    expect(templateRender).toHaveBeenCalledOnce();
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(templateRender).toHaveBeenCalledOnce();
+  });
   it("hands off chooser engagement immediately and attributes a selection without a dismissal", () => {
     render(<LinktreePage {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
@@ -95,7 +115,7 @@ describe("published WhatsApp question tracking", () => {
   it("hands off a real dismissal immediately", () => {
     render(<LinktreePage {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "WhatsApp" }));
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(tracker.trackEngagement).toHaveBeenLastCalledWith(
       "action_open",
       expect.objectContaining({

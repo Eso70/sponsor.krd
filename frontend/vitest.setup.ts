@@ -1,5 +1,20 @@
 import "@testing-library/jest-dom/vitest";
 
+// jsdom does not implement native dialog lifecycle/focus. Model those browser
+// operations only; dialog interaction and layout also need real-browser checks.
+if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {
+  const returnFocus = new WeakMap<HTMLDialogElement, HTMLElement | null>();
+  HTMLDialogElement.prototype.showModal = function () {
+    returnFocus.set(this, this.ownerDocument.activeElement as HTMLElement | null);
+    this.open = true;
+    this.focus();
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+    returnFocus.get(this)?.focus({ preventScroll: true });
+  };
+}
+
 /**
  * Browser observer APIs that jsdom does not implement.
  *

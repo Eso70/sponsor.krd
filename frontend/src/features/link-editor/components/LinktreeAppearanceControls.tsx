@@ -23,9 +23,9 @@ function appearanceForColor(value: string): Appearance {
 }
 
 /** Page appearance is stored through the existing background color/image fields. */
-type LinktreeAppearanceControlsProps = Pick<BackgroundColorPickerProps, "value" | "onChange" | "onBlur" | "allowGradient" | "colorCopy" | "error" | "imagePreview" | "imageLabel" | "imageRemoveLabel" | "onImageChange" | "onImageRemove" | "onImageCrop" | "cropLabel"> & { locale: BusinessLocale };
+type LinktreeAppearanceControlsProps = Pick<BackgroundColorPickerProps, "value" | "onChange" | "onBlur" | "allowGradient" | "colorCopy" | "error" | "imagePreview" | "imageLabel" | "imageRemoveLabel" | "onImageChange" | "onImageRemove" | "onImageCrop" | "cropLabel"> & { locale: BusinessLocale; label?: string };
 
-export function LinktreeAppearanceControls({ locale, onBlur, ...props }: LinktreeAppearanceControlsProps) {
+export function LinktreeAppearanceControls({ locale, label, onBlur, ...props }: LinktreeAppearanceControlsProps) {
   const copy = editorDrawerCopy(locale);
   const [customRequested, setCustomRequested] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
@@ -41,8 +41,8 @@ export function LinktreeAppearanceControls({ locale, onBlur, ...props }: Linktre
       <div>
         <CustomSelect<Appearance>
           hideLabel
-          label={copy.theme}
-          ariaLabel={copy.theme}
+          label={label ?? copy.theme}
+          ariaLabel={label ?? copy.theme}
           value={appearance}
           options={[
             { value: "light", label: copy.light },

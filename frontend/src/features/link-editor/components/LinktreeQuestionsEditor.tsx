@@ -12,19 +12,23 @@ import { SHARED_SOFT_BUTTON_CLASS } from "@/components/shared/shared-control-sty
 import type { EditorCopy } from "../editor-copy";
 import { LinktreeQuestionCard } from "./LinktreeQuestionCard";
 import { createRuntimeId } from "@/lib/utils/random-id";
+import { LinktreeAppearanceControls } from "./LinktreeAppearanceControls";
+import { editorDrawerCopy } from "../editor-drawer-copy";
 
 export interface LinktreeQuestionsEditorProps {
   copy?: EditorCopy;
   whatsappModalEnabled: boolean;
   whatsappModalTitle: string;
   whatsappModalSubtitle: string;
+  whatsappModalBackgroundColor: string;
+  onWhatsappModalBackgroundColorChange: (value: string) => void;
   whatsappQuestions: WhatsAppQuestion[];
   onWhatsappModalTitleChange: (value: string) => void;
   onWhatsappModalSubtitleChange: (value: string) => void;
   onWhatsappQuestionsChange: (questions: WhatsAppQuestion[]) => void;
   questionErrors?: Record<string, { text?: string; message?: string; videoUrl?: string }>;
 }
-export function LinktreeQuestionsEditor({ copy, whatsappModalEnabled, whatsappModalTitle, whatsappModalSubtitle, whatsappQuestions, onWhatsappModalTitleChange, onWhatsappModalSubtitleChange, onWhatsappQuestionsChange, questionErrors = {} }: LinktreeQuestionsEditorProps) {
+export function LinktreeQuestionsEditor({ copy, whatsappModalEnabled, whatsappModalTitle, whatsappModalSubtitle, whatsappModalBackgroundColor, onWhatsappModalBackgroundColorChange, whatsappQuestions, onWhatsappModalTitleChange, onWhatsappModalSubtitleChange, onWhatsappQuestionsChange, questionErrors = {} }: LinktreeQuestionsEditorProps) {
   const reorderGroup = useId();
   const reorderLabel = formEditorCopy(copy?.language === "en" ? "en" : copy ? "ar" : "ckb").reorder;
   const reorder = (source: string, target: string) => {
@@ -34,7 +38,13 @@ export function LinktreeQuestionsEditor({ copy, whatsappModalEnabled, whatsappMo
   if (!whatsappModalEnabled) return null;
   const titleLabel = copy?.modalTitle ?? "سەردێڕ";
   const subtitleLabel = copy?.modalSubtitle ?? "ژێر سەردێڕ";
+  const locale = copy?.language === "en" ? "en" : copy ? "ar" : "ckb";
+  const themeLabel = editorDrawerCopy(locale).questionTheme;
   return <div className="space-y-5">
+    <EditorField label={themeLabel} className={EDITOR_FIELD_CLASS}>
+      <LinktreeAppearanceControls locale={locale} label={themeLabel} value={whatsappModalBackgroundColor}
+        onChange={onWhatsappModalBackgroundColorChange} allowGradient={false} />
+    </EditorField>
     <div className="grid gap-4 sm:grid-cols-2">
       <EditorField label={titleLabel} className={EDITOR_FIELD_CLASS}>
         <ModalTextInput value={whatsappModalTitle} onChange={(event) => onWhatsappModalTitleChange(event.target.value)} placeholder={titleLabel} dir="auto" className={EDITOR_INPUT_CLASS} />

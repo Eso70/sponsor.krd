@@ -4,6 +4,7 @@ import {
 } from '@linktree/types/linktree-banner.cjs';
 import { normalizeLinktreeSeoConfig } from '../common/linktree-seo';
 import { BadRequestException } from '@nestjs/common';
+import { readWhatsappQuestionColor } from '@linktree/types/whatsapp-question.cjs';
 import {
   inspectLinktreeSponsor,
   LINKTREE_SPONSOR_KEY,
@@ -58,6 +59,14 @@ export function normalizeTemplateConfig(
     config[LINKTREE_SPONSOR_KEY] = sponsor.value;
   }
   config.whatsapp_modal = config.whatsapp_modal || {};
+  if (config.whatsapp_modal.backgroundColor !== undefined) {
+    config.whatsapp_modal = {
+      ...config.whatsapp_modal,
+      backgroundColor: readWhatsappQuestionColor(
+        config.whatsapp_modal.backgroundColor,
+      ),
+    };
+  }
 
   // A background image is painted into public page CSS, so anything that is
   // not one of our own uploads is dropped rather than stored or served.

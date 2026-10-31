@@ -163,6 +163,31 @@ describe("verification badge editor integration", () => {
 });
 
 describe("shared Linktree drawer", () => {
+  it.each([false, true])("saves and restores an independent WhatsApp question theme (platform=%s)", async platformTheme => {
+    const save = vi.fn();
+    const modal = { enabled: true, title: "Contact", subtitle: "Choose", questions: [{ id: "q", text: "Ask us", message: "Hello" }] };
+    const editData = { linktree: { id: "question-theme", uid: "question-theme", name: "Question page", background_color: "#161b22",
+      template_config: { templateKey: "spectrum", whatsapp_modal: modal } },
+      links: [{ id: "instagram", platform: "instagram", url: "https://instagram.com/business", display_order: 0 }] };
+    const props = { isOpen: true, locale: "en" as const, copy: englishEditorCopy, platformTheme, onClose: vi.fn(), onSubmit: save };
+    const { rerender } = render(<LinktreeEditorDrawer {...props} editData={editData} />);
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp questions" }));
+    expect(screen.getByRole("combobox", { name: "Question theme" })).toHaveTextContent("Light");
+    fireEvent.click(screen.getByRole("combobox", { name: "Question theme" }));
+    fireEvent.click(screen.getByRole("option", { name: "Dark" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      background_color: "#161b22",
+      templateConfig: expect.objectContaining({ whatsapp_modal: expect.objectContaining({ backgroundColor: "#161b22" }) }),
+    }), expect.anything()));
+    rerender(<LinktreeEditorDrawer {...props} isOpen={false} editData={editData} />);
+    rerender(<LinktreeEditorDrawer {...props} editData={{ ...editData, linktree: { ...editData.linktree,
+      template_config: { ...editData.linktree.template_config, whatsapp_modal: { ...modal, backgroundColor: "#123456" } },
+    } }} />);
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp questions" }));
+    expect(screen.getByRole("combobox", { name: "Question theme" })).toHaveTextContent("Custom");
+    expect(screen.getByTestId("preview-background")).toHaveTextContent("#161b22");
+  });
   it.each([false, true])("opens new pages in dark appearance and preserves saved edit colors (platform=%s)", (platformTheme) => {
     const props = { isOpen: true, locale: "en" as const, copy: englishEditorCopy, platformTheme,
       businessDefaults: {}, onClose: vi.fn(), onSubmit: vi.fn() };

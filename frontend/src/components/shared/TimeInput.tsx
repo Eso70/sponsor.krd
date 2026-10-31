@@ -6,6 +6,8 @@ import { Clock3 } from "lucide-react";
 import { SHARED_CONTROL_CLASS, SHARED_SOFT_BUTTON_CLASS } from "./shared-control-styles";
 import pickerStyles from "./DateTimeInput.module.css";
 import { TimeColumn } from "./TimeColumn";
+import { formatTimeValue as toDisplay, parseTimeValue, toTimeValue as toValue } from "@/lib/utils/time-of-day";
+export { parseTimeValue } from "@/lib/utils/time-of-day";
 
 /**
  * A keyboard-editable time field using the shared anchored PickerPopup and
@@ -39,29 +41,6 @@ const TIME_INPUT_COPY = {
  */
 const BUSINESS_ACCENT =
   "var(--business-website-color, var(--theme-primary, #64748b))";
-
-export function parseTimeValue(value: string): { hours: number; minutes: number } | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value).trim());
-  if (!match) return null;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours > 23 || minutes > 59) return null;
-  return { hours, minutes };
-}
-
-function toValue(hours: number, minutes: number): string {
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-}
-
-/** `13:05` reads as `01:05 PM`. */
-function toDisplay(value: string, format: "12h" | "24h"): string {
-  const parsed = parseTimeValue(value);
-  if (!parsed) return "";
-  if (format === "24h") return toValue(parsed.hours, parsed.minutes);
-  const hour12 = parsed.hours % 12 || 12;
-  const period = parsed.hours >= 12 ? "PM" : "AM";
-  return `${String(hour12).padStart(2, "0")}:${String(parsed.minutes).padStart(2, "0")} ${period}`;
-}
 
 /**
  * Reads what was typed, in either notation.
