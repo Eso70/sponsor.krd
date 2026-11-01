@@ -1,8 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { formsApi } from "@/features/forms/api";
+import { formWhatsAppSettingsCopy } from "@/features/forms/form-whatsapp-settings-copy";
+import { formWhatsAppCopy } from "@/features/forms/form-submission-whatsapp";
+import { formsCopy } from "@/features/forms/forms-copy";
 import { PlatformSettingsPage } from "./PlatformSettingsPage";
 import { PlatformLocaleProvider } from "@/features/platform-admin/i18n/PlatformLocaleProvider";
 
-function renderSettings(locale: "ckb" | "ar" = "ckb") {
+function renderSettings(locale: "ckb" | "ar" | "en" = "ckb") {
   return render(<PlatformLocaleProvider initialLocale={locale}><PlatformSettingsPage /></PlatformLocaleProvider>);
 }
 
@@ -23,6 +27,7 @@ vi.mock("sonner", () => ({
 vi.mock("@/components/shared/ColorGradientModal", () => ({
   ColorGradientModal: () => null,
 }));
+vi.mock("@/features/forms/api", () => ({ formsApi: { whatsappTemplates: vi.fn(), saveWhatsAppTemplate: vi.fn() } }));
 
 const savedSettings = {
   id: "admin-id",
@@ -46,6 +51,22 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("PlatformSettingsPage General tab", () => {
+  it.each(["en", "ar", "ckb"] as const)("uses the shared Form messages settings in %s", async locale => {
+    vi.clearAllMocks();
+    vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({ [locale]: "Saved {{name}}" });
+    vi.mocked(formsApi.saveWhatsAppTemplate).mockResolvedValue({ [locale]: "Changed {{name}}" });
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ data: savedSettings })));
+    renderSettings(locale);
+    await screen.findByDisplayValue("Saved SponsorKrd");
+    fireEvent.click(screen.getByRole("tab", { name: formWhatsAppSettingsCopy(locale).tab }));
+    const panel = screen.getByRole("region", { name: formWhatsAppSettingsCopy(locale).title });
+    const field = await within(panel).findByRole("textbox", { name: formWhatsAppCopy(locale).message });
+    expect(field).toHaveValue("Saved {{name}}");
+    fireEvent.change(field, { target: { value: "Changed {{name}}" } });
+    fireEvent.click(within(panel).getByRole("button", { name: formsCopy(locale).save }));
+    await waitFor(() => expect(formsApi.saveWhatsAppTemplate).toHaveBeenCalledWith("platform", locale, "Changed {{name}}", expect.any(AbortSignal), expect.objectContaining({ order: "products_first", style: "compact" })));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });

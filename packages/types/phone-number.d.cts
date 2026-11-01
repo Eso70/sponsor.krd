@@ -11,6 +11,8 @@ export function normalizePhoneNumber(
   value: string,
   selectedCode: string,
 ): string | null;
+/** Validates a complete international number; never guesses a country. */
+export function normalizeInternationalPhoneNumber(value: string): string | null;
 /** Checks entry prefixes; complete numbers still require inspectPhoneNumber. */
 export function phoneNumberHasAllowedStart(
   value: string,

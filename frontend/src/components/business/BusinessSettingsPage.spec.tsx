@@ -1,4 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { formsApi } from "@/features/forms/api";
+import { formWhatsAppSettingsCopy } from "@/features/forms/form-whatsapp-settings-copy";
+import { formWhatsAppCopy, defaultFormWhatsAppTemplate, defaultFormWhatsAppDetails } from "@/features/forms/form-submission-whatsapp";
+import { formsCopy } from "@/features/forms/forms-copy";
 import { BusinessLocaleProvider } from "@/features/business/i18n/BusinessLocaleProvider";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { businessMessages } from "@/features/business/i18n/messages";
@@ -8,10 +12,42 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), use
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock("@/components/shared/ColorGradientModal", () => ({ ColorGradientModal: () => null }));
 vi.mock("@/features/communications/BusinessMessagesPanel", () => ({ BusinessMessagesPanel: () => <div>Business messages</div> }));
+vi.mock("@/features/forms/api", () => ({ formsApi: { whatsappTemplates: vi.fn(), saveWhatsAppTemplate: vi.fn() } }));
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe.each(["en", "ar", "ckb"] as const)("Business Settings shared layout (%s)", (locale) => {
+  it("saves and restores Form message defaults in Settings without changing Profile drafts", async () => {
+    vi.clearAllMocks();
+    vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({ [locale]: "Saved {{name}}" });
+    vi.mocked(formsApi.saveWhatsAppTemplate).mockResolvedValue({ [locale]: "Changed {{name}}" });
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify({ data: url.includes("effective-access") ? {
+      subscription: { planCode: "max" }, permissions: { "business:forms:read": { outcome: "allow" }, "business:forms:update": { outcome: "allow" }, "business:profile:update": { outcome: "allow" } },
+    } : { name: "Original" } }))));
+    render(<BusinessLocaleProvider initialLocale={locale}><BusinessSettingsPage/></BusinessLocaleProvider>);
+    const copy = businessMessages[locale].SettingsPage;
+    const name = await screen.findByPlaceholderText(copy.businessName);
+    fireEvent.change(name, { target: { value: "Unsaved profile" } });
+    fireEvent.click(screen.getByRole("tab", { name: formWhatsAppSettingsCopy(locale).tab }));
+    const panel = screen.getByRole("region", { name: formWhatsAppSettingsCopy(locale).title });
+    const field = await within(panel).findByRole("textbox", { name: formWhatsAppCopy(locale).message });
+    expect(field).toHaveValue("Saved {{name}}");
+    fireEvent.change(field, { target: { value: "Changed {{name}}" } });
+    fireEvent.click(within(panel).getByRole("button", { name: formsCopy(locale).save }));
+    await waitFor(() => expect(formsApi.saveWhatsAppTemplate).toHaveBeenCalledWith("business", locale, "Changed {{name}}", expect.any(AbortSignal), expect.objectContaining({ order: "products_first", style: "compact" })));
+    await waitFor(() => expect(within(panel).getByRole("button", { name: formsCopy(locale).save })).toBeEnabled());
+    fireEvent.change(field, { target: { value: "Discard this edit" } });
+    fireEvent.change(within(panel).getByRole("textbox", { name: formWhatsAppSettingsCopy(locale).heading }), { target: { value: "Unsaved heading" } });
+    expect(within(panel).queryByRole("button", { name: formsCopy(locale).cancel })).not.toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole("button", { name: formWhatsAppSettingsCopy(locale).restoreDefaults }));
+    expect(field).toHaveValue(defaultFormWhatsAppTemplate(locale));
+    expect(within(panel).getByRole("textbox", { name: formWhatsAppSettingsCopy(locale).heading })).toHaveValue(defaultFormWhatsAppDetails(locale).heading);
+    expect(formsApi.saveWhatsAppTemplate).toHaveBeenCalledOnce();
+    fireEvent.click(within(panel).getByRole("button", { name: formsCopy(locale).save }));
+    await waitFor(() => expect(formsApi.saveWhatsAppTemplate).toHaveBeenLastCalledWith("business", locale, null, expect.any(AbortSignal), defaultFormWhatsAppDetails(locale)));
+    fireEvent.click(screen.getByRole("tab", { name: copy.profileTab }));
+    expect(screen.getByPlaceholderText(copy.businessName)).toHaveValue("Unsaved profile");
+  });
   it('does not allow branding uploads when profile saving is denied, but preserves username editing', async () => {
     const copy = businessMessages[locale].SettingsPage;
     const request = vi.fn(async (url: string) => new Response(JSON.stringify({ data: url.includes('effective-access') ? { permissions: {

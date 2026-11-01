@@ -12,6 +12,7 @@ import { BusinessGuard } from '../auth/business.guard';
 import { PlatformAdminGuard } from '../auth/platform-admin.guard';
 import { AuthorizationGuard } from '../auth/authorization.guard';
 import { RequestBoundaryPipe } from '../common/request-boundary.pipe';
+import { validateFormWhatsAppSettings } from './form-whatsapp-settings';
 
 describe('form response HTTP pagination', () => {
   let app: NestFastifyApplication;
@@ -30,6 +31,13 @@ describe('form response HTTP pagination', () => {
     deleteSubmissions: jest.fn().mockResolvedValue({ deleted: 2 }),
     submissions: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     platformOwner: jest.fn().mockResolvedValue('platform-owner'),
+    whatsappTemplates: jest.fn().mockResolvedValue({ en: 'Hello {{name}}' }),
+    saveWhatsAppTemplate: jest
+      .fn()
+      .mockImplementation((_owner: string, input: unknown) => {
+        const { language, template } = validateFormWhatsAppSettings(input);
+        return template === null ? {} : { [language]: template };
+      }),
   };
   beforeAll(async () => {
     const guard = {
@@ -149,6 +157,53 @@ describe('form response HTTP pagination', () => {
     },
   );
   beforeEach(() => jest.clearAllMocks());
+  it.each([
+    ['/api/forms', 'business-owner'],
+    ['/api/platform/forms', 'platform-owner'],
+  ])(
+    'routes owner-wide message settings before form IDs in %s',
+    async (base, owner) => {
+      const get = await app.inject({
+        method: 'GET',
+        url: `${base}/whatsapp-settings`,
+      });
+      expect(get.statusCode).toBe(200);
+      expect(forms.whatsappTemplates).toHaveBeenCalledWith(owner);
+      const saved = await app.inject({
+        method: 'PATCH',
+        url: `${base}/whatsapp-settings`,
+        payload: { language: 'en', template: 'Hello {{name}}\n{{details}}' },
+      });
+      expect(saved.statusCode).toBe(200);
+      expect(forms.saveWhatsAppTemplate).toHaveBeenCalledWith(owner, {
+        language: 'en',
+        template: 'Hello {{name}}\n{{details}}',
+      });
+      for (const payload of [
+        { language: 'en', template: '{{unknown}}' },
+        { language: 'en', template: ' ' },
+        { language: 'de', template: 'Hello' },
+        { language: 'en', template: 'Hello', businessId: 'other' },
+        { language: 'en', template: 'x'.repeat(4001) },
+      ]) {
+        const response = await app.inject({
+          method: 'PATCH',
+          url: `${base}/whatsapp-settings`,
+          payload,
+        });
+        expect(response.statusCode).toBe(400);
+      }
+      expect(
+        (
+          await app.inject({
+            method: 'PATCH',
+            url: `${base}/whatsapp-settings`,
+            payload: { language: 'en', template: null },
+          })
+        ).statusCode,
+      ).toBe(200);
+    },
+  );
   it.each([
     ['/api/forms', 'business-owner'],
     ['/api/platform/forms', 'platform-owner'],

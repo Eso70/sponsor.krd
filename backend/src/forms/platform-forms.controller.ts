@@ -74,6 +74,27 @@ export class PlatformFormsController {
       ),
     };
   }
+  @Get('whatsapp-settings')
+  @RequireCapabilities(Capability.PlatformFormsRead)
+  async whatsappTemplates() {
+    return {
+      success: true,
+      data: await this.forms.whatsappTemplates(
+        await this.forms.platformOwner(),
+      ),
+    };
+  }
+  @Patch('whatsapp-settings')
+  @RequireCapabilities(Capability.PlatformFormsUpdate)
+  async saveWhatsAppTemplate(@Body() body: unknown) {
+    return {
+      success: true,
+      data: await this.forms.saveWhatsAppTemplate(
+        await this.forms.platformOwner(),
+        body,
+      ),
+    };
+  }
   @Get(':id')
   @RequireCapabilities(Capability.PlatformFormsRead)
   async get(@Param('id', ParseUUIDPipe) id: string) {

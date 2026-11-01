@@ -10,6 +10,9 @@ import type {
   FormSubmissionFilters,
   FormSubmissionsPage,
   FormSubmissionInput,
+  FormWhatsAppSettings,
+  FormWhatsAppDetailsConfig,
+  FormLanguage,
 } from "@linktree/types";
 export type FormsScope = "business" | "platform";
 const endpoint = (scope: FormsScope) =>
@@ -79,8 +82,29 @@ async function uploadDraftImages(
   return (await visit(form)) as FormDraft;
 }
 export const formsApi = {
+  whatsappTemplates: (scope: FormsScope, signal?: AbortSignal) =>
+    apiRequest<FormWhatsAppSettings>(`${endpoint(scope)}/whatsapp-settings`, {
+      signal,
+    }),
+  saveWhatsAppTemplate: (
+    scope: FormsScope,
+    language: FormLanguage,
+    template: string | null,
+    signal?: AbortSignal,
+    details?: FormWhatsAppDetailsConfig,
+  ) =>
+    apiRequest<FormWhatsAppSettings>(`${endpoint(scope)}/whatsapp-settings`, {
+      method: "PATCH",
+      json: { language, template, ...(details ? { details } : {}) },
+      signal,
+    }),
   duplicateOptions: (scope: FormsScope, id: string) =>
-    apiRequest<{ form: FormDraft; name: string; slug: string; available: boolean }>(`${endpoint(scope)}/${id}/duplicate-options`),
+    apiRequest<{
+      form: FormDraft;
+      name: string;
+      slug: string;
+      available: boolean;
+    }>(`${endpoint(scope)}/${id}/duplicate-options`),
   titleAvailability: (
     scope: FormsScope,
     title: string,
@@ -105,8 +129,16 @@ export const formsApi = {
       `${endpoint(scope)}?page=${page}&q=${encodeURIComponent(q)}&filter=${filter}`,
       { signal },
     ),
-  selection: (scope: FormsScope, q: string, filter: string, signal?: AbortSignal) =>
-    apiRequest<string[]>(`${endpoint(scope)}/selection?q=${encodeURIComponent(q)}&filter=${encodeURIComponent(filter)}`, { signal }),
+  selection: (
+    scope: FormsScope,
+    q: string,
+    filter: string,
+    signal?: AbortSignal,
+  ) =>
+    apiRequest<string[]>(
+      `${endpoint(scope)}/selection?q=${encodeURIComponent(q)}&filter=${encodeURIComponent(filter)}`,
+      { signal },
+    ),
   analytics: (scope: FormsScope, id: string, signal?: AbortSignal) =>
     apiRequest<FormAnalytics>(`${endpoint(scope)}/${id}/analytics`, { signal }),
   get: (scope: FormsScope, id: string, signal?: AbortSignal) =>
@@ -130,7 +162,12 @@ export const formsApi = {
       method: "PATCH",
       json: { isArchived },
     }),
-  async duplicate(scope: FormsScope, id: string, form: FormDraft, slug: string) {
+  async duplicate(
+    scope: FormsScope,
+    id: string,
+    form: FormDraft,
+    slug: string,
+  ) {
     const definition = await uploadDraftImages(form, scope);
     return apiRequest<FormDraft>(`${endpoint(scope)}/${id}/duplicate`, {
       method: "POST",

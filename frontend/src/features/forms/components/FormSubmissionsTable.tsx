@@ -9,8 +9,10 @@ import { FormResponseToggle } from "./FormResponseToggle";
 import { Inbox } from "lucide-react";
 import { ManagementTable } from "@/components/shared/ManagementTable";
 import { FormSubmissionDetails } from "./FormSubmissionDetails";
+import { FormSubmissionWhatsAppAction } from "./FormSubmissionWhatsAppAction";
 import type { FormSubmissionsPage, FormLanguage } from "../types";
 import type { FormsCopy } from "../forms-copy";
+import type { FormWhatsAppSettings } from "@linktree/types";
 
 export function FormSubmissionsTable({
   data,
@@ -20,6 +22,8 @@ export function FormSubmissionsTable({
   locale,
   pageSize = 20,
   essential = false,
+  canContact = false,
+  whatsappTemplates,
 }: {
   data: FormSubmissionsPage;
   page: number;
@@ -28,6 +32,8 @@ export function FormSubmissionsTable({
   locale: FormLanguage;
   pageSize?: 20 | 50 | 100;
   essential?: boolean;
+  canContact?: boolean;
+  whatsappTemplates?: FormWhatsAppSettings;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (id: string) =>
@@ -73,11 +79,21 @@ export function FormSubmissionsTable({
         <div className="space-y-3 rounded-2xl border border-slate-200/70 p-4 dark:border-white/10">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs text-slate-500">{date(row)}</p>
-            <FormResponseToggle
-              expanded={expanded === row.id}
-              copy={copy}
-              onClick={() => toggle(row.id)}
-            />
+            <div className="flex items-center gap-1">
+              {canContact && (
+                <FormSubmissionWhatsAppAction
+                  response={row}
+                  locale={locale}
+                  template={whatsappTemplates?.[locale]}
+                  detailsConfig={whatsappTemplates?.details?.[locale]}
+                />
+              )}
+              <FormResponseToggle
+                expanded={expanded === row.id}
+                copy={copy}
+                onClick={() => toggle(row.id)}
+              />
+            </div>
           </div>
           <FormSubmissionDetails
             locale={locale}
@@ -125,11 +141,21 @@ export function FormSubmissionsTable({
               </>
             )}
             <td className="px-3 py-3">
-              <FormResponseToggle
-                expanded={expanded === row.id}
-                copy={copy}
-                onClick={() => toggle(row.id)}
-              />
+              <div className="flex items-center gap-1">
+                {canContact && (
+                  <FormSubmissionWhatsAppAction
+                    response={row}
+                    locale={locale}
+                    template={whatsappTemplates?.[locale]}
+                    detailsConfig={whatsappTemplates?.details?.[locale]}
+                  />
+                )}
+                <FormResponseToggle
+                  expanded={expanded === row.id}
+                  copy={copy}
+                  onClick={() => toggle(row.id)}
+                />
+              </div>
             </td>
           </tr>
           {expanded === row.id && (

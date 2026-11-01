@@ -16,6 +16,10 @@ import { FormSubmissionsTable } from "./FormSubmissionsTable";
 import { formsApi, type FormsScope } from "../api";
 import type { FormSummary, FormSubmissionsPage, FormLanguage } from "../types";
 import type { FormsCopy } from "../forms-copy";
+import { useFormWhatsAppTemplates } from "../use-form-whatsapp-templates";
+import { formWhatsAppSettingsCopy } from "../form-whatsapp-settings-copy";
+import { SettingsActionButton } from "@/components/shared/SettingsActionButton";
+import { RefreshCw } from "lucide-react";
 
 export function FormInsightsModal({
   form,
@@ -38,6 +42,7 @@ export function FormInsightsModal({
   canDeleteResponses?: boolean;
   onResponsesDeleted?: () => void;
 }) {
+  const whatsapp = useFormWhatsAppTemplates(scope);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteFailed, setDeleteFailed] = useState(false);
@@ -265,10 +270,26 @@ export function FormInsightsModal({
             ) : null}
           </section>
           <section aria-label={copy.submissions} className="space-y-4">
-            <h2 className="text-base font-bold">
-              {copy.submissions}
-              {!responseLoading && !responseFailed ? ` (${data.total})` : ""}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold">
+                {copy.submissions}
+                {!responseLoading && !responseFailed ? ` (${data.total})` : ""}
+              </h2>
+            </div>
+            {whatsapp.failed && (
+              <div className="space-y-2">
+                <FormRequestError
+                  message={formWhatsAppSettingsCopy(locale).loadError}
+                />
+                <SettingsActionButton
+                  label={copy.retry}
+                  icon={RefreshCw}
+                  variant="soft"
+                  accentMode="tenant"
+                  onClick={() => void whatsapp.load()}
+                />
+              </div>
+            )}
             <FormResponseFilters
               filters={filters}
               disabled={exporting}
@@ -304,6 +325,8 @@ export function FormInsightsModal({
               </>
             ) : (
               <FormSubmissionsTable
+                canContact={!whatsapp.loading && !whatsapp.failed}
+                whatsappTemplates={whatsapp.templates}
                 key={`${page}-${filters.pageSize}-${responseRevision}`}
                 data={data}
                 pageSize={filters.pageSize}

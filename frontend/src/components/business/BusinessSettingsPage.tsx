@@ -55,13 +55,16 @@ import { BusinessOwnerIdentityFields } from "@/features/link-editor/components/B
 import { BusinessLanguageDropdown } from "@/features/business/components/BusinessLanguageDropdown";
 import { DefaultPageCreationCard } from "@/features/business/components/DefaultPageCreationCard";
 import { BusinessHomepageSetting } from "@/features/business/components/BusinessHomepageSetting";
+import { FormWhatsAppSettingsPage } from "@/features/forms/components/FormWhatsAppSettingsPage";
+import { formWhatsAppSettingsCopy } from "@/features/forms/form-whatsapp-settings-copy";
+import { isBusinessPageLocked } from "@/lib/business-page-access";
 import {
   AVATAR_MIME_TYPES,
   FAVICON_MIME_TYPES,
   LOGO_MIME_TYPES,
 } from "@/lib/brand/brand-assets";
 
-type Tab = "profile" | "defaults" | "messages";
+type Tab = "profile" | "defaults" | "messages" | "form-messages";
 type SettingsData = {
   name: string;
   username: string;
@@ -114,7 +117,7 @@ export function BusinessSettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>(() =>
-    searchParams.get("tab") === "messages" ? "messages" : "profile",
+    searchParams.get("tab") === "form-messages" ? "form-messages" : searchParams.get("tab") === "messages" ? "messages" : "profile",
   );
   const [initialConversationId] = useState(
     () => searchParams.get("conversation") || undefined,
@@ -195,6 +198,7 @@ export function BusinessSettingsPage() {
   const refreshing = useRegisterDashboardRefresh("business-settings", () => loadSettings(true));
 
   const save = async () => {
+    if (activeTab !== "profile" && activeTab !== "defaults") return;
     setSaving(true);
     try {
       // Only send the fields the backend DTO whitelists for the active
@@ -257,6 +261,8 @@ export function BusinessSettingsPage() {
     }
   };
 
+  const formLocale = locale === "en" ? "en" : locale === "ar" ? "ar" : "ckb";
+  const canManageFormMessages = !isBusinessPageLocked("forms", effectiveAccess) && effectiveAccess?.permissions["business:forms:update"]?.outcome === "allow";
   const tabs = useMemo(
     () => [
       { id: "profile" as const, label: t("profileTab"), icon: UserRound },
@@ -270,16 +276,18 @@ export function BusinessSettingsPage() {
         label: t("messagesTab"),
         icon: MessageSquare,
       },
+      ...(canManageFormMessages ? [{ id: "form-messages" as const, label: formWhatsAppSettingsCopy(formLocale).tab, icon: MessageSquare }] : []),
     ],
-    [t],
+    [t, canManageFormMessages, formLocale],
   );
   const activeTab = tabs.some((item) => item.id === tab) ? tab : "profile";
-  const tabLocked = isBusinessSettingsTabLocked(activeTab, effectiveAccess);
+  const tabLocked = activeTab === "form-messages" ? !canManageFormMessages : isBusinessSettingsTabLocked(activeTab, effectiveAccess);
   // Section save button uses the shared tab save behavior: it stays idle
   // ("پاشەکەوت کرا") until something changed, then flips to a live save.
   // Only user-editable fields count — server-managed response fields would
   // otherwise keep the form permanently dirty after every save.
   const dirty = useMemo(() => {
+    if (activeTab !== "profile" && activeTab !== "defaults") return false;
     return settingsSectionFields[activeTab].some(field => data[field] !== savedSnapshot[field]);
   }, [data, savedSnapshot, activeTab]);
   const profileEditingOutcome =
@@ -395,7 +403,7 @@ export function BusinessSettingsPage() {
       <SegmentedTabs tabs={tabs} value={activeTab} onChange={setTab} />
       <PageManagementSection
         title={tabs.find((item) => item.id === activeTab)!.label}
-        description={activeTab === "profile" ? t("profileDescription") : activeTab === "defaults" ? t("defaultsDescription") : t("messagesDescription")}
+        description={activeTab === "profile" ? t("profileDescription") : activeTab === "defaults" ? t("defaultsDescription") : activeTab === "form-messages" ? undefined : t("messagesDescription")}
         icon={activeTab === "profile" ? <Building2 className="size-5" /> : activeTab === "defaults" ? <Palette className="size-5" /> : <MessageSquare className="size-5" />}
       >
         <DashboardRefreshRegion loading={refreshing} label={t("loadingSettings")}>
@@ -560,9 +568,10 @@ export function BusinessSettingsPage() {
                 </div>
               </div>
             )}
+            {activeTab === "form-messages" && <FormWhatsAppSettingsPage scope="business" locale={formLocale}/>}
         </LockedContent>
         </DashboardRefreshRegion>
-        {activeTab !== "messages" && (
+        {(activeTab === "profile" || activeTab === "defaults") && (
           <SectionSaveActions>
             <TabSaveButton
               copy={{

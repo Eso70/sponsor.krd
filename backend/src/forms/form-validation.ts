@@ -378,6 +378,7 @@ export function validateSubmission(
       if (products.items.length)
         answers.push({
           questionId: q.id,
+          questionType: q.type,
           label: q.label,
           value: productAnswerText(products),
           products,
@@ -438,7 +439,13 @@ export function validateSubmission(
       (!/^\d{1,3}$/.test(value) || Number(value) > 130)
     )
       throw new BadRequestException('Invalid age');
-    answers.push({ questionId: q.id, label: q.label, value });
+    answers.push({
+      questionId: q.id,
+      questionType: q.type,
+      ...(q.labelKey ? { labelKey: q.labelKey } : {}),
+      label: q.label,
+      value,
+    });
   }
   return { input: data, answers };
 }

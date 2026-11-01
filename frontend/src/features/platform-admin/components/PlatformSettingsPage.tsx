@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Trash2,
   Radio,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardRefreshRegion } from "@/components/shared/DashboardRefreshRegion";
@@ -73,6 +74,8 @@ import { usePlatformLocale } from "@/features/platform-admin/i18n/PlatformLocale
 import { platformRequestError } from "@/features/platform-admin/i18n/request-error";
 import { arabicTikTokPixelCopy } from "@/features/analytics/tiktok-pixel-arabic-copy";
 import { englishBusinessMessages } from "@/features/shared/i18n/english-messages";
+import { FormWhatsAppSettingsPage } from "@/features/forms/components/FormWhatsAppSettingsPage";
+import { formWhatsAppSettingsCopy } from "@/features/forms/form-whatsapp-settings-copy";
 
 type Tab =
   | "general"
@@ -81,7 +84,8 @@ type Tab =
   | "media"
   | "tiktok"
   | "tiktok-ads"
-  | "subdomains";
+  | "subdomains"
+  | "form-messages";
 
 type PlatformSettings = {
   id: string;
@@ -653,6 +657,11 @@ export function PlatformSettingsPage() {
       icon: React.ComponentType<{ className?: string }>;
     }
   > = {
+    "form-messages": {
+      title: formWhatsAppSettingsCopy(locale).title,
+      description: formWhatsAppSettingsCopy(locale).hint,
+      icon: Radio,
+    },
     subdomains: {
       title: subdomainCopy[locale].title,
       description: subdomainCopy[locale].description,
@@ -711,7 +720,7 @@ export function PlatformSettingsPage() {
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Globe}
           label={t("Settings sections")}
-          value={tabs.length + 1}
+          value={tabs.length + 2}
           color="blue"
         />
         <StatCard
@@ -748,6 +757,7 @@ export function PlatformSettingsPage() {
             label: subdomainCopy[locale].title,
             icon: Globe,
           },
+          { id: "form-messages" as const, label: formWhatsAppSettingsCopy(locale).tab, icon: MessageSquare },
         ]}
         value={tab}
         onChange={changeTab}
@@ -755,6 +765,11 @@ export function PlatformSettingsPage() {
       />
 
       {tab === "subdomains" && <BlockedSubdomainsSettings />}
+      {tab === "form-messages" && <ThemeProvider websiteColor={accentColor}>
+        <PageManagementSection title={formWhatsAppSettingsCopy(locale).tab} icon={<MessageSquare className="size-5"/>}>
+          <FormWhatsAppSettingsPage scope="platform" locale={locale}/>
+        </PageManagementSection>
+      </ThemeProvider>}
       {tab === "tiktok" && (
         <ThemeProvider websiteColor={accentColor}>
           <BusinessTikTokPixelConfigPage

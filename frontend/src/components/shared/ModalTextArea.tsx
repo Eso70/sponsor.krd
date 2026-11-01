@@ -1,11 +1,13 @@
-import type { TextareaHTMLAttributes } from "react";
+import type { Ref, TextareaHTMLAttributes } from "react";
 import { TEXTAREA_LIMIT } from "./input-limits";
 import { modalInputClass } from "./modal-input-styles";
 
 export function ModalTextArea({
   className = "",
   ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  ref?: Ref<HTMLTextAreaElement>;
+}) {
   return (
     <textarea
       {...props}

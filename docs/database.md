@@ -1,5 +1,18 @@
 # Database
 
+Form WhatsApp presentation uses `business_defaults.form_whatsapp_details`, a
+non-null JSON object keyed by language. Apply `2026-11-01_form_whatsapp_details.sql`
+before deploying these controls. The idempotent additive migration preserves all
+templates, forms and responses; fresh baselines include it. Earlier application
+versions ignore the extra column and template-only updates preserve its values.
+
+Form WhatsApp defaults use `business_defaults.form_whatsapp_templates` (non-null
+JSON object, default `{}`). Apply `2026-11-01_form_whatsapp_templates.sql` through
+`pnpm db:migrate` before deploying this feature. The additive, idempotent migration
+preserves all existing settings, forms and responses; fresh baselines include it.
+Rolling back application code may leave the unused column in place, preserving
+custom defaults for a later redeploy. No production migration was run automatically.
+
 `business_defaults.homepage_linktree` is a non-null boolean, default false.
 Apply `2026-10-30_business_linktree_homepage.sql` through `pnpm db:migrate`
 before deploying the homepage switch. The additive migration preserves existing

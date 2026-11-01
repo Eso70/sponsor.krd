@@ -121,8 +121,37 @@ describe('form configuration and response validation', () => {
   });
   it('normalizes international phone numbers and retains server-owned labels', () => {
     expect(validateSubmission(input(), form()).answers).toEqual([
-      { questionId: 'phone', label: 'Phone', value: '+9647501234567' },
+      {
+        questionId: 'phone',
+        questionType: 'phone',
+        label: 'Phone',
+        value: '+9647501234567',
+      },
     ]);
+  });
+  it('snapshots question type and semantic label from the saved definition only', () => {
+    const definition = form();
+    definition.questions[0].labelKey = 'phone';
+    expect(validateSubmission(input(), definition).answers[0]).toMatchObject({
+      questionType: 'phone',
+      labelKey: 'phone',
+      label: 'Phone',
+    });
+    expect(() =>
+      validateSubmission(
+        {
+          ...input(),
+          answers: {
+            phone: {
+              value: '+9647501234567',
+              questionType: 'short',
+              labelKey: 'personName',
+            },
+          },
+        },
+        definition,
+      ),
+    ).toThrow();
   });
   it('accepts Iraqi domestic and matching international numbers without duplicating the prefix', () => {
     for (const phone of ['07501234567', '+964 7501234567'])

@@ -147,6 +147,162 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       await maintenance.end();
     }
   });
+  it('persists message defaults per workspace and language for every form, including reset and concurrent writes', async () => {
+    expect(await forms.whatsappTemplates(ownerA)).toEqual({});
+    for (const owner of [ownerA, ownerB, platformOwner]) {
+      await Promise.all([
+        forms.saveWhatsAppTemplate(owner, {
+          language: 'en',
+          template: `Hello {{name}} from ${owner}\n{{details}}`,
+        }),
+        forms.saveWhatsAppTemplate(owner, {
+          language: 'ckb',
+          template: 'سڵاو {{name}}\n{{details}}',
+        }),
+      ]);
+      expect(await forms.whatsappTemplates(owner)).toEqual({
+        en: `Hello {{name}} from ${owner}\n{{details}}`,
+        ckb: 'سڵاو {{name}}\n{{details}}',
+      });
+    }
+    await forms.saveWhatsAppTemplate(ownerA, {
+      language: 'en',
+      template: null,
+    });
+    expect(await forms.whatsappTemplates(ownerA)).toEqual({
+      ckb: 'سڵاو {{name}}\n{{details}}',
+    });
+    expect((await forms.whatsappTemplates(ownerB)).en).toContain(ownerB);
+    expect((await forms.whatsappTemplates(platformOwner)).en).toContain(
+      platformOwner,
+    );
+    const before = await forms.whatsappTemplates(ownerB);
+    await expect(
+      forms.saveWhatsAppTemplate(ownerB, {
+        language: 'en',
+        template: '{{unknown}}',
+        businessId: ownerA,
+      }),
+    ).rejects.toThrow();
+    expect(await forms.whatsappTemplates(ownerB)).toEqual(before);
+  });
+  it('upgrades existing defaults idempotently without changing their stored values', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Guarded disposable fixture only: rollback restores its complete schema/data.
+      const before = await client.query(
+        'SELECT business_id,footer_text,background_color FROM business_defaults ORDER BY business_id',
+      );
+      await client.query(
+        'ALTER TABLE business_defaults DROP COLUMN form_whatsapp_templates',
+      );
+      const migration = readFileSync(
+        join(
+          __dirname,
+          '../src/database/migrations/2026-11-01_form_whatsapp_templates.sql',
+        ),
+        'utf8',
+      );
+      await client.query(migration);
+      await client.query(migration);
+      expect(
+        (
+          await client.query(
+            'SELECT business_id,footer_text,background_color FROM business_defaults ORDER BY business_id',
+          )
+        ).rows,
+      ).toEqual(before.rows);
+      expect(
+        (
+          await client.query<{ count: number }>(
+            "SELECT count(*)::int count FROM business_defaults WHERE form_whatsapp_templates<>'{}'::jsonb",
+          )
+        ).rows[0].count,
+      ).toBe(0);
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  });
+  it('persists presentation settings by language and owner while supporting older template-only writers', async () => {
+    const details = {
+      order: 'products_first',
+      style: 'spaced',
+      heading: 'Order details',
+      namePrefix: 'Customer:',
+      totalLabel: 'Amount due',
+      showLabels: true,
+    };
+    for (const owner of [ownerA, ownerB, platformOwner]) {
+      await forms.saveWhatsAppTemplate(owner, {
+        language: 'en',
+        template: '{{name}}\n{{details}}',
+        details: { ...details, heading: owner },
+      });
+      await forms.saveWhatsAppTemplate(owner, {
+        language: 'ar',
+        template: '{{details}}\n{{name}}',
+        details: { ...details, namePrefix: 'العميل:' },
+      });
+      // Mixed-version clients only submit the template; existing presentation is retained.
+      await forms.saveWhatsAppTemplate(owner, {
+        language: 'en',
+        template: 'Hello {{name}}',
+      });
+      const saved = await forms.whatsappTemplates(owner);
+      expect(saved.en).toBe('Hello {{name}}');
+      expect(saved.details?.en).toEqual({ ...details, heading: owner });
+      expect(saved.details?.ar).toEqual({ ...details, namePrefix: 'العميل:' });
+    }
+    const before = await forms.whatsappTemplates(ownerA);
+    await expect(
+      forms.saveWhatsAppTemplate(ownerA, {
+        language: 'en',
+        template: '{{name}}',
+        details: { ...details, price: 1 },
+      }),
+    ).rejects.toThrow();
+    expect(await forms.whatsappTemplates(ownerA)).toEqual(before);
+  });
+  it('adds presentation defaults idempotently while preserving stored templates', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const before = await client.query(
+        'SELECT business_id,form_whatsapp_templates FROM business_defaults ORDER BY business_id',
+      );
+      await client.query(
+        'ALTER TABLE business_defaults DROP COLUMN form_whatsapp_details',
+      );
+      const sql = readFileSync(
+        join(
+          __dirname,
+          '../src/database/migrations/2026-11-01_form_whatsapp_details.sql',
+        ),
+        'utf8',
+      );
+      await client.query(sql);
+      await client.query(sql);
+      expect(
+        (
+          await client.query(
+            'SELECT business_id,form_whatsapp_templates FROM business_defaults ORDER BY business_id',
+          )
+        ).rows,
+      ).toEqual(before.rows);
+      expect(
+        (
+          await client.query<{ count: number }>(
+            "SELECT count(*)::int count FROM business_defaults WHERE form_whatsapp_details<>'{}'::jsonb",
+          )
+        ).rows[0].count,
+      ).toBe(0);
+    } finally {
+      await client.query('ROLLBACK');
+      client.release();
+    }
+  });
   it('blocks public forms after downgrade while preserving their data', async () => {
     const form = await forms.create(ownerA, {
       ...fixture(),
@@ -1102,6 +1258,13 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       expect(await forms.submit(host, form.slug!, body, context)).toEqual(
         first,
       );
+      expect(
+        (await forms.submissions(owner, form.id, 0)).items[0].answers[0],
+      ).toMatchObject({
+        questionId: 'phone',
+        questionType: 'phone',
+        value: '+9647501234567',
+      });
       const jobs = await pool.query<{
         business_id: string;
         event_name: string;
@@ -1209,6 +1372,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
         receipt,
       );
       const saved = (await forms.submissions(owner, form.id, 0)).items[0];
+      expect(saved.answers[0].questionType).toBe('product');
       expect(saved.answers[0].products).toMatchObject({
         currency: 'USD',
         total: 56,

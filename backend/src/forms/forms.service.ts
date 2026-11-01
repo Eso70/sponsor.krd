@@ -1,4 +1,6 @@
 import { featurePlanSql } from '../billing/feature-plan-policy';
+import { validateFormWhatsAppSettings } from './form-whatsapp-settings';
+import type { FormWhatsAppSettings } from '@linktree/types';
 import { pinOwnedPage } from '../common/pin-owned-page';
 import { createHash } from 'node:crypto';
 import {
@@ -90,6 +92,35 @@ export class FormsService {
   ) {}
   platformOwner() {
     return this.workspace.getWorkspaceId();
+  }
+  async whatsappTemplates(owner: string): Promise<FormWhatsAppSettings> {
+    const result = await this.db.query<{ templates: FormWhatsAppSettings }>(
+      `SELECT form_whatsapp_templates || CASE WHEN form_whatsapp_details='{}'::jsonb THEN '{}'::jsonb
+       ELSE jsonb_build_object('details',form_whatsapp_details) END AS templates FROM business_defaults WHERE business_id=$1`,
+      [owner],
+    );
+    return result.rows[0]?.templates ?? {};
+  }
+  async saveWhatsAppTemplate(
+    owner: string,
+    input: unknown,
+  ): Promise<FormWhatsAppSettings> {
+    const { language, template, details } = validateFormWhatsAppSettings(input);
+    // Update one language atomically, preserving concurrent edits to other languages.
+    const result = await this.db.query<{ templates: FormWhatsAppSettings }>(
+      `INSERT INTO business_defaults(business_id,form_whatsapp_templates,form_whatsapp_details)
+       VALUES($1, CASE WHEN $3::text IS NULL THEN '{}'::jsonb ELSE jsonb_build_object($2::text,$3::text) END,
+       CASE WHEN $4::jsonb IS NULL THEN '{}'::jsonb ELSE jsonb_build_object($2::text,$4::jsonb) END)
+       ON CONFLICT(business_id) DO UPDATE SET form_whatsapp_templates =
+       CASE WHEN $3::text IS NULL THEN business_defaults.form_whatsapp_templates - $2::text
+       ELSE business_defaults.form_whatsapp_templates || EXCLUDED.form_whatsapp_templates END,
+       form_whatsapp_details = CASE WHEN $4::jsonb IS NULL THEN business_defaults.form_whatsapp_details
+       ELSE business_defaults.form_whatsapp_details || EXCLUDED.form_whatsapp_details END
+       RETURNING form_whatsapp_templates || CASE WHEN form_whatsapp_details='{}'::jsonb THEN '{}'::jsonb
+       ELSE jsonb_build_object('details',form_whatsapp_details) END AS templates`,
+      [owner, language, template, details ? JSON.stringify(details) : null],
+    );
+    return result.rows[0].templates;
   }
   async titleAvailability(owner: string, title: string, excludeId?: string) {
     const name = title.trim();

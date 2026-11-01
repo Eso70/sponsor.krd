@@ -9,6 +9,7 @@ export function VisibilitySwitch({
   tooltip = label,
   stateLabel,
   compact = false,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -16,6 +17,7 @@ export function VisibilitySwitch({
   tooltip?: string;
   stateLabel?: string;
   compact?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Tooltip content={tooltip} side="top">
@@ -25,9 +27,10 @@ export function VisibilitySwitch({
         aria-checked={checked}
         aria-label={label}
         title={tooltip}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          "flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-primary)]",
+          "flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-primary)] disabled:cursor-not-allowed disabled:opacity-50",
           compact ? "h-9 px-1" : "h-10 border px-3 text-xs font-bold",
           !compact &&
             (checked

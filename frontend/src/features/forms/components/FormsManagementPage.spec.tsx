@@ -13,6 +13,7 @@ import { FormEditorDrawer } from "./FormEditorDrawer";
 import { FormPreview } from "./FormPreview";
 import { createForm, createQuestion } from "../forms-model";
 import { formsCopy } from "../forms-copy";
+import { formWhatsAppSettingsCopy } from "../form-whatsapp-settings-copy";
 
 import { formsApi } from "../api";
 import { apiRequest } from "@/lib/api/request";
@@ -39,10 +40,14 @@ vi.mock("../api", () => ({
     duplicateOptions: vi.fn(),
     remove: vi.fn(),
     submissions: vi.fn(),
+    whatsappTemplates: vi.fn(),
+    saveWhatsAppTemplate: vi.fn(),
   },
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({});
+  vi.mocked(formsApi.saveWhatsAppTemplate).mockResolvedValue({ en: "Saved {{name}}" });
   vi.mocked(formsApi.titleAvailability).mockResolvedValue({
     slug: "contact",
     available: true,
@@ -68,6 +73,11 @@ function startForm() {
 }
 
 describe("Forms frontend workspace", () => {
+  it.each(["business", "platform"] as const)("keeps shared WhatsApp defaults out of the %s Forms page", async scope => {
+    render(<FormsManagementPage scope={scope} locale="en" accentColor="#0f766e"/>);
+    expect(screen.queryByRole("button", { name: formWhatsAppSettingsCopy("en").title })).not.toBeInTheDocument();
+    expect(formsApi.whatsappTemplates).not.toHaveBeenCalled();
+  });
   for (const scope of ["business", "platform"] as const)
     it.each(["grid", "table"] as const)(
       `paginates ${scope} forms in %s view at fifteen items`,
@@ -541,6 +551,7 @@ describe("Forms frontend workspace", () => {
       screen.queryByRole("button", { name: "Duplicate" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Analytics" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: formWhatsAppSettingsCopy("en").title })).not.toBeInTheDocument();
   });
   it("explains incomplete drafts when publishing fails instead of losing the saved form", async () => {
     const saved = {

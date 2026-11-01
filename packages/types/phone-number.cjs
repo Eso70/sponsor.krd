@@ -145,8 +145,22 @@ function inspectPhoneNumber(value, selectedCode) {
 function normalizePhoneNumber(value, selectedCode) {
   return inspectPhoneNumber(value, selectedCode).number;
 }
+/** Read a saved international contact without guessing its country. */
+function normalizeInternationalPhoneNumber(value) {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!/^\+?[0-9٠-٩۰-۹\s().-]+$/.test(raw)) return null;
+  const digits = parseDigits(raw);
+  if (!raw.startsWith("+") && !digits.startsWith("00")) return null;
+  const phone = parsePhoneNumberFromString(
+    `+${digits.startsWith("00") ? digits.slice(2) : digits}`,
+    { extract: false },
+  );
+  return phone?.isValid() ? phone.number : null;
+}
 module.exports = {
   inspectPhoneNumber,
   normalizePhoneNumber,
   phoneNumberHasAllowedStart,
+  normalizeInternationalPhoneNumber,
 };

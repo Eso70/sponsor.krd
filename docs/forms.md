@@ -399,3 +399,79 @@ changes remain presentation only and dashboard collections have no tracker.
 New forms start with an empty Introduction description. The shared preview
 header does not substitute sample description text, in either Form or Card
 layout. Authored descriptions continue to render in previews and public pages.
+
+The authenticated form analytics drawer has a WhatsApp action beside each
+response in desktop rows and mobile cards, using one shared implementation in
+both dashboards. It opens an editable confirmation draft in WhatsApp using the
+drawer language (Kurdish, English or Arabic), the saved customer name, request
+answers and product price/quantity totals. The owner reviews and sends it in
+WhatsApp; opening the draft does not send a message or mark a response as contacted.
+The WhatsApp button opens the message directly and uses the shared WhatsApp brand
+green. Default templates are configured under Settings > Form messages in both
+dashboards, through one shared settings body. Forms and analytics do not include
+a separate template editor. Settings controls retain the tenant/workspace theme.
+The Name and details section exposes only presentation controls: original form
+order, products first or other answers first; compact, spaced or bullet layout;
+the details heading, prefix before the customer name, total caption and question
+label visibility. A read-only mock message preview shows the complete greeting,
+customer name, sample request, product quantities/prices and total. It updates
+with message text, layout/caption changes and the selected message language,
+using the same renderer as real responses. Synthetic examples have no recipient
+and never create submissions, send messages or enter saved settings. These preferences
+are saved per language and apply across the workspace's forms. Restore defaults
+appears before Save at the top of the editor and resets the selected language's
+message and layout together; Save persists that reset. There is no Cancel action.
+Saved names, answers, quantities, unit prices and
+totals cannot be changed through these controls; privacy exclusions remain fixed.
+Captions are bounded single-line text, with no placeholders; the total caption
+is required. Template variables remain in the main message editor.
+New defaults use the delivery-confirmation wording, products first, a localized
+four-column monospace product table, total, then the remaining answers (including
+city). The Kurdish greeting uses بەڕێز before the actual customer name. Product
+cells use Unicode direction isolation so Kurdish, Arabic, English and mixed
+names retain their own direction while numeric columns stay ordered. The mock
+example uses Ismail Dilshad, natural flowers and Erbil. The preview decodes the
+outgoing text table into full-width responsive columns, wrapping long names and
+amounts within their cells and respecting each cell's text direction. It uses
+the outgoing message's values rather than recalculating a separate preview.
+WhatsApp receives the original monospace text table and may
+wrap wider tables differently depending on device/font size.
+`productLayout` is optional: older saved layouts keep the calculation view, while
+Restore defaults selects product columns. Existing custom wording/layouts are
+preserved until explicitly restored and saved. No new database column is needed.
+Users with Forms Update permission can save a workspace-wide default for each
+language. It applies to every existing and future form/submission in that
+workspace, without rewriting forms or saved responses. Business and platform
+defaults are independent. Read-only users use saved templates but cannot edit them.
+`{{name}}` inserts the customer name and `{{details}}` inserts the formatted
+request/product summary. Insert buttons and Restore default reuse shared controls.
+Only those two placeholders are accepted; templates are limited to 4,000 characters.
+Customer-supplied placeholders and dollar signs remain literal. Rendered messages
+are bounded to 10,000 characters with a visible omission notice. Missing settings
+use standard wording; failed settings reads hide contact actions until retry so
+an error cannot silently substitute a different default. Saved defaults survive
+reloads and new forms. Customer messages
+never enter browser storage or advertising payloads.
+Shared analytics reports do not expose this contact action.
+
+New answers snapshot their server-owned question type and semantic label in the
+existing answers JSON, so later form edits do not change contact detection.
+Legacy responses use known name labels and valid international phone values;
+local numbers without a country prefix are never guessed. Missing or invalid
+phone numbers disable the action. Email and known identity fields are excluded
+from the draft. Request summaries above 5,000 characters show an explicit
+omission notice; the saved response remains complete.
+
+Apply `2026-11-01_form_whatsapp_templates.sql` before deploying the saved-template
+backend/frontend. It adds `business_defaults.form_whatsapp_templates`, with an
+empty JSON object for existing owners. Updates atomically change one language,
+preserving concurrent edits to other languages. Protected Forms read/update
+routes resolve the owner from the authenticated business or platform workspace;
+clients cannot select another owner. Fresh baselines include the column.
+Also apply `2026-11-01_form_whatsapp_details.sql` before deploying presentation
+settings. It adds `business_defaults.form_whatsapp_details` with empty defaults,
+preserving existing templates. Settings responses retain their language keys and
+optionally add a `details` map. Older clients ignore that extra key and their
+template-only writes preserve the saved presentation preferences. Both template
+and presentation update atomically for the selected language. Code rollback can
+leave the extra column in place without losing preferences.

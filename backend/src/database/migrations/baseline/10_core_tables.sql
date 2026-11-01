@@ -242,6 +242,8 @@ CREATE TABLE public.business_defaults (
     background_pattern text DEFAULT 'grid45' NOT NULL CHECK (background_pattern IN ('none','grid','grid45','dots','diagonal','cross','circles','waves','zigzag')),
     whatsapp_enabled boolean DEFAULT false NOT NULL,
     homepage_linktree boolean DEFAULT false NOT NULL,
+    form_whatsapp_templates jsonb DEFAULT '{}'::jsonb NOT NULL CHECK (jsonb_typeof(form_whatsapp_templates) = 'object'),
+    form_whatsapp_details jsonb DEFAULT '{}'::jsonb NOT NULL CHECK (jsonb_typeof(form_whatsapp_details) = 'object'),
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT business_defaults_background_color_check CHECK ((btrim((background_color)::text) <> ''::text)),
     CONSTRAINT business_defaults_template_key_check CHECK ((btrim((template_key)::text) <> ''::text))

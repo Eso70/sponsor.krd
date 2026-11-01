@@ -24,7 +24,10 @@ const data = {
       createdAt: "2026-10-20T00:00:00Z",
       consent: true,
       revision: 1,
-      answers: [{ questionId: "name", label: "Name", value: "Customer" }],
+      answers: [
+        { questionId: "name", label: "Name", value: "Customer" },
+        { questionId: "phone", label: "Phone", value: "+9647501234567" },
+      ],
     },
   ],
 };
@@ -39,12 +42,13 @@ it("keeps search usable and reuses full and date-range CSV exports through the s
       apiBase="/api/public/analytics-shares/share"
       initialData={data}
       name="Orders"
-      definition={{id: "form-id", name: "Orders", slug: "orders"}}
+      definition={{ id: "form-id", name: "Orders", slug: "orders" }}
       locale="en"
       onAccessLost={vi.fn()}
     />,
   );
   const input = screen.getByRole("textbox", { name: copy.responseSearch });
+  expect(document.querySelector('a[href^="https://wa.me/"]')).toBeNull();
   fireEvent.change(input, { target: { value: "Customer" } });
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(

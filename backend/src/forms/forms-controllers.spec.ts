@@ -43,6 +43,8 @@ describe('form management authorization boundaries', () => {
         ['titleAvailability', read],
         ['submissions', read],
         ['getAnalytics', read],
+        ['whatsappTemplates', read],
+        ['saveWhatsAppTemplate', update],
         ['create', create],
         ['duplicate', create],
         ['duplicateOptions', create],

@@ -79,6 +79,22 @@ export class BusinessFormsController {
       ),
     };
   }
+  @Get('whatsapp-settings')
+  @RequireCapabilities(Capability.BusinessFormsRead)
+  async whatsappTemplates(@CurrentUser() user: SessionUser) {
+    return { success: true, data: await this.forms.whatsappTemplates(user.id) };
+  }
+  @Patch('whatsapp-settings')
+  @RequireCapabilities(Capability.BusinessFormsUpdate)
+  async saveWhatsAppTemplate(
+    @CurrentUser() user: SessionUser,
+    @Body() body: unknown,
+  ) {
+    return {
+      success: true,
+      data: await this.forms.saveWhatsAppTemplate(user.id, body),
+    };
+  }
   @Get(':id')
   @RequireCapabilities(Capability.BusinessFormsRead)
   async get(

@@ -1,5 +1,16 @@
 # Deployment
 
+For WhatsApp name/detail presentation controls, apply the additive
+`2026-11-01_form_whatsapp_details.sql` before deploying backend and frontend.
+Verify language-specific captions/order, fixed historical product values, owner
+isolation and an older template-only update preserving presentation preferences.
+
+For saved form WhatsApp templates, apply `2026-11-01_form_whatsapp_templates.sql`
+through the normal migration command before deploying backend and frontend
+together. Verify separate Business/Platform defaults, language save/reload, and a
+WhatsApp draft from a second form. Older application code tolerates the added
+column; keep it when rolling back the application.
+
 For public SEO deployment, build/deploy frontend and backend together, include
 `KurdishFont-share.ttf`, verify host/proxy configuration, and test at least two
 real HTTPS tenant pages before submitting their sitemaps through Search Console.

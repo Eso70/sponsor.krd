@@ -2,10 +2,55 @@ import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { apiRequest } from "@/lib/api/request";
 import { formsApi } from "./api";
 import { createForm } from "./forms-model";
+import { defaultFormWhatsAppDetails } from "./form-submission-whatsapp";
 vi.mock("@/lib/api/request", () => ({ apiRequest: vi.fn() }));
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 describe("forms API adapters", () => {
+  it.each(["business", "platform"] as const)(
+    "reads and saves owner-wide WhatsApp defaults in %s without client owner identifiers",
+    async (scope) => {
+      const base = scope === "platform" ? "/api/platform/forms" : "/api/forms";
+      const signal = new AbortController().signal;
+      await formsApi.whatsappTemplates(scope, signal);
+      expect(apiRequest).toHaveBeenLastCalledWith(`${base}/whatsapp-settings`, {
+        signal,
+      });
+      await formsApi.saveWhatsAppTemplate(
+        scope,
+        "ckb",
+        "سڵاو {{name}}\n{{details}}",
+        signal,
+      );
+      expect(apiRequest).toHaveBeenLastCalledWith(`${base}/whatsapp-settings`, {
+        method: "PATCH",
+        json: { language: "ckb", template: "سڵاو {{name}}\n{{details}}" },
+        signal,
+      });
+      await formsApi.saveWhatsAppTemplate(scope, "ckb", null, signal);
+      expect(apiRequest).toHaveBeenLastCalledWith(`${base}/whatsapp-settings`, {
+        method: "PATCH",
+        json: { language: "ckb", template: null },
+        signal,
+      });
+      const details = {
+        ...defaultFormWhatsAppDetails("ckb"),
+        order: "products_first" as const,
+      };
+      await formsApi.saveWhatsAppTemplate(
+        scope,
+        "ckb",
+        "{{name}}\n{{details}}",
+        signal,
+        details,
+      );
+      expect(apiRequest).toHaveBeenLastCalledWith(`${base}/whatsapp-settings`, {
+        method: "PATCH",
+        json: { language: "ckb", template: "{{name}}\n{{details}}", details },
+        signal,
+      });
+    },
+  );
   it.each(["business", "platform"] as const)(
     "%s uploads copy images once and saves edited fields and address atomically",
     async (scope) => {

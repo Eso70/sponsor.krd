@@ -1,4 +1,20 @@
 export type FormLanguage = "ckb" | "ar" | "en";
+/** Owner-wide message defaults; missing languages use the standard wording. */
+export type FormWhatsAppTemplates = Partial<Record<FormLanguage, string>>;
+export interface FormWhatsAppDetailsConfig {
+  order: "form" | "products_first" | "answers_first";
+  style: "compact" | "spaced" | "bullets";
+  heading: string;
+  namePrefix: string;
+  totalLabel: string;
+  showLabels: boolean;
+  /** Missing on older saved layouts, which retain the calculation presentation. */
+  productLayout?: "columns" | "calculation";
+}
+/** Additional settings preserve the existing language-to-template API keys. */
+export type FormWhatsAppSettings = FormWhatsAppTemplates & {
+  details?: Partial<Record<FormLanguage, FormWhatsAppDetailsConfig>>;
+};
 export type FormTextKey =
   | "email"
   | "phone"
@@ -201,6 +217,9 @@ export interface FormSubmission {
   createdAt: string;
   answers: {
     questionId: string;
+    /** Server-owned metadata captured with the answer, absent on legacy responses. */
+    questionType?: QuestionType;
+    labelKey?: FormTextKey;
     label: string;
     value: string;
     products?: FormProductAnswer;

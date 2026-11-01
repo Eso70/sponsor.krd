@@ -12,6 +12,11 @@ import { formsApi } from "../api";
 import { formsCopy } from "../forms-copy";
 import { createForm } from "../forms-model";
 import { exportFormResponses } from "../form-responses-export";
+import {
+  formWhatsAppCopy,
+  defaultFormWhatsAppDetails,
+} from "../form-submission-whatsapp";
+import { formWhatsAppSettingsCopy } from "../form-whatsapp-settings-copy";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("../form-responses-export", () => ({ exportFormResponses: vi.fn() }));
@@ -38,6 +43,8 @@ vi.mock("../api", () => ({
     analytics: vi.fn(),
     submissions: vi.fn(),
     deleteSubmissions: vi.fn(),
+    whatsappTemplates: vi.fn(),
+    saveWhatsAppTemplate: vi.fn(),
   },
 }));
 const copy = formsCopy("en");
@@ -81,6 +88,11 @@ const show = (scope: "business" | "platform" = "business") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({});
+  vi.mocked(formsApi.saveWhatsAppTemplate).mockImplementation(
+    async (_scope, language, template) =>
+      template === null ? {} : { [language]: template },
+  );
   vi.mocked(formsApi.analytics).mockResolvedValue(metrics);
   vi.mocked(formsApi.submissions).mockResolvedValue({
     items: [response],
@@ -88,6 +100,113 @@ beforeEach(() => {
   });
 });
 describe("combined form insights", () => {
+  it.each(
+    (["business", "platform"] as const).flatMap((scope) =>
+      (["en", "ckb", "ar"] as const).map((locale) => ({ scope, locale })),
+    ),
+  )(
+    "prepares localized WhatsApp drafts in $scope / $locale on desktop and mobile",
+    async ({ scope, locale }) => {
+      vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({
+        [locale]: "Custom {{name}}\n{{details}}",
+        details: {
+          [locale]: {
+            ...defaultFormWhatsAppDetails(locale),
+            heading: "Order summary",
+            namePrefix: "Customer:",
+          },
+        },
+      });
+      vi.mocked(formsApi.submissions).mockResolvedValue({
+        items: [
+          {
+            ...response,
+            answers: [
+              ...response.answers,
+              {
+                questionId: "phone",
+                label: "Phone",
+                value: "+9647501234567",
+                questionType: "phone",
+              },
+            ],
+          },
+        ],
+        total: 1,
+      });
+      render(
+        <FormInsightsModal
+          form={createForm(locale)}
+          scope={scope}
+          locale={locale}
+          copy={formsCopy(locale)}
+          onClose={vi.fn()}
+          accentColor="#0f766e"
+        />,
+      );
+      const controls = await screen.findAllByRole("button", {
+        name: `${formWhatsAppCopy(locale).open} · +9647501234567`,
+      });
+      expect(controls).toHaveLength(2);
+      const open = vi.spyOn(window, "open").mockReturnValue(null);
+      for (const control of controls) {
+        fireEvent.click(control);
+        const url = new URL(open.mock.calls.at(-1)![0] as string);
+        expect(url.origin + url.pathname).toBe("https://wa.me/9647501234567");
+        expect(url.searchParams.get("text")).toContain(
+          "Custom Customer: Example customer",
+        );
+        expect(url.searchParams.get("text")).toContain("Call me later");
+        expect(url.searchParams.get("text")).toContain("Order summary");
+        expect(control.querySelector("svg")).toHaveStyle({ color: "#25D366" });
+      }
+      expect(
+        screen.queryByRole("button", {
+          name: formWhatsAppSettingsCopy(locale).title,
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("textbox", {
+          name: formWhatsAppCopy(locale).message,
+        }),
+      ).not.toBeInTheDocument();
+      open.mockRestore();
+      expect(formsApi.deleteSubmissions).not.toHaveBeenCalled();
+    },
+  );
+  it("keeps saved defaults read-only without update permission and blocks contact on settings failure", async () => {
+    vi.mocked(formsApi.whatsappTemplates).mockRejectedValue(
+      new Error("offline"),
+    );
+    show();
+    await screen.findByText(formWhatsAppSettingsCopy("en").loadError);
+    expect(
+      screen.queryByRole("button", {
+        name: formWhatsAppSettingsCopy("en").title,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: formWhatsAppCopy("en").unavailable,
+      }),
+    ).not.toBeInTheDocument();
+    vi.mocked(formsApi.whatsappTemplates).mockResolvedValue({});
+    fireEvent.click(screen.getByRole("button", { name: copy.retry }));
+    expect(
+      await screen.findAllByRole("button", {
+        name: formWhatsAppCopy("en").unavailable,
+      }),
+    ).toHaveLength(2);
+  });
+  it("disables WhatsApp when the submitted phone is missing or invalid", async () => {
+    show();
+    const controls = await screen.findAllByRole("button", {
+      name: formWhatsAppCopy("en").unavailable,
+    });
+    expect(controls).toHaveLength(2);
+    controls.forEach((control) => expect(control).toBeDisabled());
+    expect(document.querySelector('a[href^="https://wa.me/"]')).toBeNull();
+  });
   it.each(["business", "platform"] as const)(
     "exports a selected range without changing table filters in %s",
     async (scope) => {
