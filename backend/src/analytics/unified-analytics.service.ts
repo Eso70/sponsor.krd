@@ -1,3 +1,4 @@
+import { tiktokContentProperties } from '@linktree/types/tiktok-content.cjs';
 import {
   BadRequestException,
   Injectable,
@@ -33,6 +34,7 @@ interface PublicPageRow {
   timezone: string;
   name: string;
   slug: string;
+  description?: string;
 }
 
 /**
@@ -367,7 +369,7 @@ export class UnifiedAnalyticsService {
     sourceOrPublicPageId: string,
   ): Promise<PublicPageRow> {
     const result = await client.query<PublicPageRow>(
-      `SELECT id, business_id, page_type, timezone, name, slug
+      `SELECT id, business_id, page_type, timezone, name, slug, COALESCE(seo_config->>'description','') AS description
        FROM public_pages
        WHERE deleted_at IS NULL
          AND status = 'published'
@@ -803,12 +805,7 @@ export class UnifiedAnalyticsService {
           typeof action.metadata === 'object' &&
           typeof action.metadata.platform === 'string'
             ? action.metadata.platform
-            : typeof properties.platform === 'string'
-              ? properties.platform
-              : undefined;
-        const contentName = rawPlatform
-          ? this.canonicalPlatformName(rawPlatform)
-          : action?.label || page.name;
+            : undefined;
 
         const payload = {
           event: tikTokName,
@@ -816,10 +813,14 @@ export class UnifiedAnalyticsService {
           event_id: input.eventId,
           url: input.pageUrl,
           referrer: landingReferrer,
-          content_id: action?.id || page.id,
-          content_ids: [action?.id || page.id],
-          content_type: action ? action.action_type : page.page_type,
-          content_name: contentName,
+          ...tiktokContentProperties({
+            pageId: page.id,
+            pageName: page.name,
+            actionId: action?.id,
+            actionName: action?.label,
+            platform: rawPlatform,
+            description: page.description,
+          }),
           value: conversionValue ?? undefined,
           currency: currency ?? undefined,
           ip: context.ip,
@@ -1210,36 +1211,5 @@ export class UnifiedAnalyticsService {
     };
     if (transactionClient) await clearData(transactionClient);
     else await this.database.transaction(clearData);
-  }
-
-  private canonicalPlatformName(platform: string): string {
-    const map: Record<string, string> = {
-      whatsapp: 'WhatsApp',
-      phone: 'Phone',
-      tel: 'Phone',
-      email: 'Email',
-      mailto: 'Email',
-      telegram: 'Telegram',
-      viber: 'Viber',
-      messenger: 'Messenger',
-      signal: 'Signal',
-      line: 'Line',
-      facebook: 'Facebook',
-      instagram: 'Instagram',
-      tiktok: 'TikTok',
-      youtube: 'YouTube',
-      snapchat: 'Snapchat',
-      x: 'X',
-      twitter: 'X',
-      linkedin: 'LinkedIn',
-      spotify: 'Spotify',
-      appstore: 'App Store',
-      playstore: 'Google Play',
-      location: 'Location',
-      website: 'Website',
-      link: 'Website',
-    };
-    const key = platform.trim().toLowerCase();
-    return map[key] || key.charAt(0).toUpperCase() + key.slice(1);
   }
 }

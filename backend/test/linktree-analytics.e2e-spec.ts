@@ -1,3 +1,4 @@
+import { PublicPageAnalyticsService } from '../src/analytics/public-page-analytics.service';
 import { randomUUID } from 'crypto';
 import { join } from 'path';
 import { Pool, type PoolClient } from 'pg';
@@ -721,4 +722,61 @@ describe('Linktree question analytics and delivery reconciliation (PostgreSQL)',
         ?.whatsapp,
     ).toMatchObject({ selected: 0, questions: [] });
   });
+  it.each([0, 1])(
+    'matches browser metadata and Events API data for Linktree owner context %s',
+    async (ownerIndex) => {
+      const owner = owners[ownerIndex];
+      const page = await pageFor(owner);
+      await pool.query(
+        'INSERT INTO business_tiktok_pixels(business_id,pixel_id,encrypted_events_token) VALUES($1,$2,$3)',
+        [
+          owner,
+          `MATCH_${randomUUID().replace(/-/g, '')}`,
+          Buffer.from('fixture'),
+        ],
+      );
+      const meta = await new PublicPageAnalyticsService({
+        query: pool.query.bind(pool),
+      } as unknown as DatabaseService).forSource('linktree', page.treeId);
+      expect(meta.content!.id).toBe(page.pageId);
+      expect(meta.actions[`link:${page.linkId}`]).toMatchObject({
+        id: page.actionId,
+        pixelEvent: 'Contact',
+        contentName: 'WhatsApp',
+      });
+      const url = `https://${ownerIndex === 0 ? 'analytics-fixture.' : ''}sponsor.krd/linktree/${page.slug}`;
+      for (const kind of ['view', 'contact'] as const) {
+        const eventId = randomUUID();
+        await analytics.ingest(
+          {
+            eventId,
+            pageId: page.treeId,
+            actionId: kind === 'contact' ? page.actionId : undefined,
+            eventName: kind === 'contact' ? 'whatsapp_click' : 'page_view',
+            visitorId: 'parity-visitor',
+            sessionId: 'parity-session',
+            occurredAt: new Date().toISOString(),
+            pageUrl: url,
+            browserDispatched: true,
+            browserEventName: kind === 'contact' ? 'Contact' : 'ViewContent',
+            properties: { platform: 'untrusted-override' },
+          },
+          context,
+        );
+        const jobs = await pool.query<{ payload: Record<string, unknown> }>(
+          'SELECT payload FROM marketing_event_outbox WHERE external_event_id=$1',
+          [eventId],
+        );
+        expect(jobs.rows.length).toBeGreaterThan(0);
+        for (const job of jobs.rows)
+          expect(job.payload).toMatchObject({
+            event: kind === 'contact' ? 'Contact' : 'ViewContent',
+            event_id: eventId,
+            url,
+            content_id: kind === 'contact' ? page.actionId : meta.content!.id,
+            content_name: kind === 'contact' ? 'WhatsApp' : meta.content!.name,
+          });
+      }
+    },
+  );
 });

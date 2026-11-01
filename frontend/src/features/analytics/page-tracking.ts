@@ -1,5 +1,6 @@
 "use client";
 
+import { tiktokContentName, tiktokContentProperties } from "@linktree/types/tiktok-content.cjs";
 import type { PublicPageAnalytics } from "@linktree/types";
 import {
   flushNow,
@@ -174,42 +175,19 @@ const IMMEDIATE_EVENTS = new Set<PageEventName>([
   "lead_created",
 ]);
 
-function canonicalPlatformName(platform: string): string {
-  const map: Record<string, string> = {
-    whatsapp: "WhatsApp",
-    phone: "Phone",
-    tel: "Phone",
-    email: "Email",
-    mailto: "Email",
-    telegram: "Telegram",
-    viber: "Viber",
-    messenger: "Messenger",
-    signal: "Signal",
-    line: "Line",
-    facebook: "Facebook",
-    instagram: "Instagram",
-    tiktok: "TikTok",
-    youtube: "YouTube",
-    snapchat: "Snapchat",
-    x: "X",
-    twitter: "X",
-    linkedin: "LinkedIn",
-    spotify: "Spotify",
-    appstore: "App Store",
-    playstore: "Google Play",
-    location: "Location",
-    website: "Website",
-    link: "Website",
-  };
-  const key = platform.trim().toLowerCase();
-  return map[key] || (key.charAt(0).toUpperCase() + key.slice(1));
-}
-
 export function createPageTracker(options: PageTrackerOptions): PageTracker {
   const recent = new Map<string, number>();
   const reportedOnce = new Set<string>();
   let viewSent = false;
   const pageViewId = createRuntimeId();
+
+  const content = options.analytics.content ?? { id: options.pageId, name: options.pageName, description: options.description ?? "" };
+  const pixelProperties = (action?: PublicPageAnalytics["actions"][string], fallbackName?: string, platform?: unknown) => ({
+    ...tiktokContentProperties({ pageId: content.id, pageName: content.name,
+      actionId: action?.id, actionName: action?.contentName || fallbackName,
+      platform: action?.contentName ? undefined : platform, description: content.description }),
+    url: window.location.href,
+  });
 
   const hasPixel = () => options.analytics.pixelIds.length > 0;
 
@@ -244,31 +222,22 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
     const pixelEvent = input.action?.pixelEvent;
 
     const rawPlatform = (input.properties?.platform as string) || undefined;
-    const contentName = rawPlatform
-      ? canonicalPlatformName(rawPlatform)
-      : (input.label || options.pageName);
+    const contentName = input.action?.contentName || tiktokContentName(content.name, input.label, rawPlatform);
 
     let pixelDispatched = false;
     if (hasPixel() && pixelEvent) {
-      trackTikTokEvent(
+      pixelDispatched = trackTikTokEvent(
         pixelEvent,
-        {
-          content_id: input.action?.id || options.pageId,
-          content_ids: [input.action?.id || options.pageId],
-          content_name: contentName,
-          description: options.description ?? "",
-          url: window.location.href,
-        },
+        pixelProperties(input.action, contentName),
         eventId,
         options.analytics.pixelIds,
-      );
-      pixelDispatched = true;
+      ) !== false;
       recordTikTokDebug({
         kind: "pixel",
         eventName: pixelEvent,
         eventId,
         actionKey: input.actionKey,
-        pixelDispatched: true,
+        pixelDispatched,
       });
     }
 
@@ -331,29 +300,24 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
       if (viewSent) return;
       viewSent = true;
       const eventId = pageViewId;
+      let pixelDispatched = false;
       if (hasPixel()) {
-        trackTikTokEvent(
+        pixelDispatched = trackTikTokEvent(
           "ViewContent",
-          {
-            content_id: options.pageId,
-            content_ids: [options.pageId],
-            content_name: options.pageName,
-            description: options.description ?? "",
-            url: window.location.href,
-          },
+          pixelProperties(),
           eventId,
           options.analytics.pixelIds,
-        );
+        ) !== false;
       }
       queueAnalyticsEvent({
         pageId: options.pageId,
         eventName: "page_view",
         eventId,
-        browserDispatched: hasPixel(),
+        browserDispatched: pixelDispatched,
         // The server maps `page_view` to `ViewContent` too, so the names agree
         // either way. Sent explicitly so that stays true by contract rather
         // than by two mappings happening to match.
-        browserEventName: hasPixel() ? "ViewContent" : undefined,
+        browserEventName: pixelDispatched ? "ViewContent" : undefined,
         properties: {
           contentId: options.pageId,
           pageViewId,
@@ -451,18 +415,13 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
       const onceKey = `server-conversion:${actionKey}:${eventId}`;
       if (reportedOnce.has(onceKey)) return;
       try {
-        trackTikTokEvent(
+        const dispatched = trackTikTokEvent(
           action.pixelEvent,
-          {
-            content_id: action.id,
-            content_ids: [action.id],
-            content_name: options.pageName,
-            description: options.description ?? "",
-            url: window.location.href,
-          },
+          pixelProperties(action),
           eventId,
           options.analytics.pixelIds,
         );
+        if (dispatched === false) return;
       } catch {
         // The response is already saved. A third-party SDK failure must not
         // make the submission UI offer another attempt or hide its receipt.

@@ -44,6 +44,24 @@ Pixel event and server Events API event represent the same conversion, both
 must use that exact ID and the same TikTok event name. TikTok can then
 deduplicate the pair.
 
+Published forms and Linktrees now expose canonical `analytics.content` metadata
+using the registered public-page ID rather than their source record ID. Registered
+actions include the authoritative marketing content name. Both channels build
+content IDs, names, `contents` and public SEO descriptions with the shared
+`@linktree/types/tiktok-content.cjs` implementation; visitor-supplied platform
+labels cannot replace registered action metadata. Source IDs remain valid for
+first-party ingestion and dashboard URLs. Older public payloads retain the
+frontend fallback until their cached HTML refreshes; event IDs/names remain
+compatible throughout. No stored history is rewritten.
+
+A browser SDK failure returns a failed dispatch instead of aborting first-party
+ingestion or outbound navigation. Each configured Pixel is attempted independently;
+a failed destination never triggers a duplicate broadcast to successful ones.
+The existing Events API queue continues independently for token-enabled Pixels.
+SDK PageView is browser-only base-code activity; the paired app page event is
+ViewContent. Dashboard server tests are synthetic server-only requests, not a
+second browser conversion. Neither replaces testing real accepted submissions.
+
 The tracker:
 
 - records a page view once;
@@ -112,11 +130,11 @@ events create transactional `marketing_event_outbox` rows for active,
 entitled business destinations. The outbox worker performs delivery, retry,
 backoff, error recording, and permanent-failure notification.
 
-The Events API test tool sends a test-code-scoped lead/page event using a real
-published Linktree URL belonging to the authenticated owner, including the
+The Events API test tool sends a test-code-scoped event using the selected real
+published Linktree or form belonging to the authenticated owner, including the
 tenant subdomain for a customer or the root domain for the platform workspace.
-It refuses to fabricate a root-homepage URL when that owner has no published
-Linktree. Diagnostic events include a page content ID but never invent TikTok
+It refuses to fabricate a root-homepage URL when that owner has no eligible
+published page. Diagnostic events include a page content ID but never invent TikTok
 click IDs, cookies, or visitor identities. A plan or offer link opening is a
 button click, not a checkout event. Do not add shopping events to a Linktree
 whose visitors cannot actually add to cart or purchase.
@@ -141,6 +159,46 @@ milestones. They remain available to Sponsor.krd analytics.
 - Validate page and action ownership server-side; never trust IDs from the
   browser.
 - Keep debug output free of secrets and sensitive personal data.
+
+## Website campaign readiness
+
+Public Linktrees and forms emit ViewContent in both browser and server channels.
+Registered contact/link actions emit their stored Contact/ClickButton event;
+SubmitForm is emitted only after a response is accepted. Base-code PageView is
+separate browser-only activity. Do not add duplicate Event Builder rules for
+events the application already emits, or shopping outcomes/value that these
+pages do not measure.
+
+Use the canonical published `/linktree/<slug>` or `/form/<slug>` as the ad
+destination, on the intended business/custom domain. The bare homepage and
+directory indexes do not perform marketing tracking. Select the same owner Pixel
+in Ads Manager, save its matching Events API token, and verify real page views
+and conversions with Test Events plus normal Events Manager delivery/diagnostics.
+Optimize for the relevant Contact/SubmitForm goal when that is the campaign's
+actual outcome; ViewContent alone measures visits.
+
+TikTok appends the real `ttclid` to ad landing URLs. The shared attribution reader
+retains it in origin-scoped session storage for the existing 30-minute idle
+analytics session, so a later Linktree/form request without the query parameter
+can still carry it. A newer real click supersedes it; a new session expires it.
+Blocked storage falls back to document memory. No identifier is invented or
+carried into dashboard/fixed-route attribution. `_ttp`, IP, user agent and the
+owner-scoped hashed anonymous visitor identity continue through the existing
+delivery path. Campaign UTMs remain useful for first-party reporting; do not
+manually invent click IDs or use test event codes in live campaigns.
+
+Verify first-party cookies in the owner's TikTok Pixel settings. Optional
+Advanced Matching of email/phone is a separate data-sharing integration:
+this application does not automatically extract or send form answers. Do not
+enable broad automatic field collection on arbitrary customer forms without
+reviewing which data it would collect and the site's disclosures. A controlled
+implementation must use permitted identifiers only, normalize/hash them correctly,
+and retain the existing owner and consent boundaries.
+
+Official references: [website connections](https://ads.tiktok.com/help/article/website-data-connection-setup-methods?lang=en),
+[matching signals](https://ads.tiktok.com/resources/help/article/how-to-set-up-matching-events-with-events-api),
+[cookies](https://ads.tiktok.com/resources/help/article/using-cookies-with-tiktok-pixel?lang=en),
+and [standard events](https://ads.tiktok.com/resources/help/article/standard-events-parameters?lang=en).
 - Preserve tenant entitlement checks before creating outbox work.
 
 ## Adding a tracked Linktree action

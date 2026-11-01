@@ -1,5 +1,6 @@
 import { act, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getAnalyticsAttribution } from "@/lib/utils/client-queue";
 import type { ReactNode } from "react";
 import type { FormResponseValues } from "./FormPreview";
 import { createForm } from "../forms-model";
@@ -46,8 +47,23 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.submitPreview = null;
 });
+const originalUrl = window.location.href;
+afterEach(() => window.history.replaceState({}, "", originalUrl));
 
 describe("public form browser tracking", () => {
+  it.each(["form", "card"] as const)("retains the ad click for the accepted %s submission after navigation", async layout => {
+    window.history.replaceState({}, "", "/linktree/landing?ttclid=real-ad-click");
+    getAnalyticsAttribution();
+    window.history.replaceState({}, "", "/form/contact");
+    render(<PublicFormPage form={{ ...createForm("en"), slug: "contact", revision: 1, layout }}
+      privacyVersion="2026-10-11" analytics={{ pixelIds: ["OWNER_PIXEL"], actions: {} }} />);
+    mocks.submit.mockResolvedValueOnce({ id: "receipt" });
+    await act(async () => { await mocks.submitPreview!({ answers: {}, phoneCountryCodes: {}, consent: true }); });
+    expect(mocks.submit).toHaveBeenCalledWith("contact", expect.objectContaining({
+      tracking: expect.objectContaining({ ttclid: "real-ad-click", pageUrl: expect.stringContaining("/form/contact") }),
+    }));
+  });
+
   it.each(["form", "card"] as const)(
     "fires only after server acceptance in %s layout and reuses the retry ID",
     async (layout) => {

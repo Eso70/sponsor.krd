@@ -1,3 +1,4 @@
+import { tiktokContentProperties } from '@linktree/types/tiktok-content.cjs';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { PoolClient } from 'pg';
@@ -254,16 +255,18 @@ export class TikTokPixelConfigService {
       account_type: 'business' | 'platform';
       action_id?: string;
       action_name?: string;
+      action_platform?: string;
+      description?: string;
     }>(
       `SELECT page.id::text, page.name, page.slug, page.page_type,
               business.subdomain, business.account_type,
-              action.id::text AS action_id, action.label AS action_name
+              action.id::text AS action_id, action.label AS action_name, action.platform AS action_platform, COALESCE(page.seo_config->>'description','') AS description
        FROM public_pages page
        JOIN businesses business ON business.id=page.business_id
        LEFT JOIN linktrees linktree ON linktree.id=page.source_linktree_id AND linktree.business_id=page.business_id
        LEFT JOIN forms form ON form.id=page.source_form_id AND form.business_id=page.business_id
        LEFT JOIN LATERAL (
-         SELECT id,label FROM public_page_actions
+         SELECT id,label,metadata->>'platform' AS platform FROM public_page_actions
          WHERE public_page_id=page.id AND status='active' AND tiktok_event=$4
          ORDER BY id LIMIT 1
        ) action ON true
@@ -416,12 +419,14 @@ export class TikTokPixelConfigService {
     const pageUrl = this.testPageUrl(page);
     const eventTime = Math.floor(Date.now() / 1000);
     const eventId = crypto.randomUUID();
-    const contentId = page.action_id || page.id;
-    const properties = {
-      content_id: contentId,
-      content_ids: [contentId],
-      content_name: page.action_name || page.name,
-    };
+    const properties = tiktokContentProperties({
+      pageId: page.id,
+      pageName: page.name,
+      actionId: page.action_id,
+      actionName: page.action_name,
+      platform: page.action_platform,
+      description: page.description,
+    });
 
     const requestBody = {
       event_source: 'web',

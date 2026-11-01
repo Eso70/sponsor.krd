@@ -56,6 +56,8 @@ const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const FLUSH_INTERVAL_MS = 15_000;
 const MAX_ANALYTICS_URL_LENGTH = 2048;
 const MAX_TIKTOK_ATTRIBUTION_LENGTH = 255;
+const TIKTOK_CLICK_SESSION_KEY = "sponsor_krd_tiktok_click_session";
+let memoryTikTokClick: { sessionId: string; id: string } | undefined;
 let memoryQueue: QueuedAnalyticsEvent[] = [];
 let flushPromise: Promise<void> | null = null;
 
@@ -179,6 +181,34 @@ function cookie(name: string): string | undefined {
   }
 }
 
+/** Keep an actual ad click within this origin's existing analytics session. */
+function sessionTikTokClickId(incoming: string | undefined): string | undefined {
+  const current = boundedAnalyticsValue(incoming, MAX_TIKTOK_ATTRIBUTION_LENGTH);
+  // Dashboard/fixed-route analytics must not inherit public marketing context.
+  if (!/^\/(?:linktree|form)\/[^/]+\/?$/.test(window.location.pathname)) return current;
+  const sessionId = getAnalyticsSessionId();
+  let saved = memoryTikTokClick;
+  try {
+    const raw: unknown = JSON.parse(sessionStorage.getItem(TIKTOK_CLICK_SESSION_KEY) || "null");
+    if (raw && typeof raw === "object" && "sessionId" in raw && "id" in raw &&
+      typeof raw.sessionId === "string" && typeof raw.id === "string") {
+      saved = { sessionId: raw.sessionId, id: raw.id };
+    }
+  } catch {
+    // Private browsing and malformed optional metadata cannot block a page.
+  }
+  const id = current || (saved?.sessionId === sessionId
+    ? boundedAnalyticsValue(saved.id, MAX_TIKTOK_ATTRIBUTION_LENGTH) : undefined);
+  memoryTikTokClick = id ? { sessionId, id } : undefined;
+  try {
+    if (memoryTikTokClick) sessionStorage.setItem(TIKTOK_CLICK_SESSION_KEY, JSON.stringify(memoryTikTokClick));
+    else sessionStorage.removeItem(TIKTOK_CLICK_SESSION_KEY);
+  } catch {
+    // The in-memory copy remains available for this document.
+  }
+  return id;
+}
+
 export function getAnalyticsAttribution(): {
   pageUrl?: string;
   referrer?: string;
@@ -196,10 +226,7 @@ export function getAnalyticsAttribution(): {
       document.referrer || undefined,
       MAX_ANALYTICS_URL_LENGTH,
     ),
-    ttclid: boundedAnalyticsValue(
-      params.get("ttclid") || undefined,
-      MAX_TIKTOK_ATTRIBUTION_LENGTH,
-    ),
+    ttclid: sessionTikTokClickId(params.get("ttclid") || undefined),
     ttp: boundedAnalyticsValue(cookie("_ttp"), MAX_TIKTOK_ATTRIBUTION_LENGTH),
   };
 }

@@ -23,6 +23,8 @@ export interface PublicPageAction {
   id: string;
   /** The TikTok event this action reports, owned by the server. */
   pixelEvent: PublicPageTikTokEvent;
+  /** Authoritative public action name used by both marketing channels. */
+  contentName?: string;
 }
 
 /**
@@ -37,6 +39,8 @@ export interface PublicPageAction {
  * "report internally, do not fire the pixel" rather than inventing an id.
  */
 export interface PublicPageAnalytics {
+  /** Registered public-page identity, independent of the source form/Linktree ID. */
+  content?: { id: string; name: string; description: string };
   /** Empty when the business has no pixel or has lost the `feature.tiktok` plan entitlement. */
   pixelIds: string[];
   actions: Record<string, PublicPageAction>;

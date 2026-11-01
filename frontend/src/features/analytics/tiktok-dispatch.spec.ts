@@ -39,6 +39,23 @@ afterEach(() => {
 });
 
 describe("trackTikTokEvent", () => {
+  it("returns a failure instead of throwing when the SDK fails", () => {
+    const { track } = stubQueue(false);
+    track.mockImplementation(() => { throw new Error("SDK failed"); });
+    expect(trackTikTokEvent("Contact", properties, "event-1", ["PIXELONE"])).toBe(false);
+  });
+
+  it("keeps a failing Pixel from dropping another Pixel's copy or broadcasting duplicates", () => {
+    const track = vi.fn();
+    const working = vi.fn();
+    vi.stubGlobal("window", { ...globalThis.window, ttq: { track, push: vi.fn(), instance: (id: string) => ({
+      track: id === "ONE" ? () => { throw new Error("Failed destination"); } : working,
+    }) } });
+    expect(trackTikTokEvent("Contact", properties, "shared-id", ["ONE", "TWO"])).toBe(true);
+    expect(working).toHaveBeenCalledExactlyOnceWith("Contact", properties, { event_id: "shared-id" });
+    expect(track).not.toHaveBeenCalled();
+  });
+
   it("uses one bare track call for a single pixel", () => {
     const { track, instanceTrack } = stubQueue(true);
 

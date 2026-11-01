@@ -20,6 +20,43 @@ function service(rows: Array<Record<string, unknown>>[] = []) {
 }
 
 describe('PublicPageAnalyticsService', () => {
+  it('serves canonical public-page and registered action metadata without customer identity', async () => {
+    const { service: subject } = service([
+      [
+        {
+          id: 'public-id',
+          business_id: 'owner',
+          name: 'Page',
+          description: 'Public description',
+        },
+      ],
+      [{ pixel_id: 'PIXEL123' }],
+      [
+        {
+          id: 'action',
+          action_key: 'link:whatsapp',
+          tiktok_event: 'Contact',
+          label: 'Localized label',
+          metadata: { platform: 'whatsapp' },
+        },
+      ],
+    ]);
+    expect(await subject.forSource('linktree', 'source-id')).toEqual({
+      content: {
+        id: 'public-id',
+        name: 'Page',
+        description: 'Public description',
+      },
+      pixelIds: ['PIXEL123'],
+      actions: {
+        'link:whatsapp': {
+          id: 'action',
+          pixelEvent: 'Contact',
+          contentName: 'WhatsApp',
+        },
+      },
+    });
+  });
   it('re-checks the tiktok entitlement on every read', async () => {
     const { service: subject, query } = service();
     await subject.forPublicPage('business-1', 'page-1');

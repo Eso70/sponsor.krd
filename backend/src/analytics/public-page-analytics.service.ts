@@ -5,6 +5,7 @@ import type {
 } from '@linktree/types';
 import { DatabaseService } from '../database/database.service';
 import { TIKTOK_OWNER_ELIGIBLE_SQL } from './tiktok-owner-eligibility';
+import { tiktokContentName } from '@linktree/types/tiktok-content.cjs';
 
 /**
  * The tracking block a public page is served with.
@@ -58,8 +59,10 @@ export class PublicPageAnalyticsService {
       id: string;
       action_key: string;
       tiktok_event: string;
+      label?: string;
+      metadata?: { platform?: unknown };
     }>(
-      `SELECT id, action_key, tiktok_event
+      `SELECT id, action_key, tiktok_event, label, metadata
          FROM public.public_page_actions
         WHERE public_page_id = $1 AND status = 'active'`,
       [publicPageId],
@@ -70,6 +73,15 @@ export class PublicPageAnalyticsService {
         {
           id: row.id,
           pixelEvent: row.tiktok_event as PublicPageTikTokEvent,
+          ...(row.label
+            ? {
+                contentName: tiktokContentName(
+                  '',
+                  row.label,
+                  row.metadata?.platform,
+                ),
+              }
+            : {}),
         },
       ]),
     );
@@ -99,13 +111,19 @@ export class PublicPageAnalyticsService {
     const page = await this.database.query<{
       id: string;
       business_id: string;
-    }>(`SELECT id, business_id FROM public.public_pages WHERE ${column} = $1`, [
-      sourceId,
-    ]);
+      name: string;
+      description: string;
+    }>(
+      `SELECT id, business_id, name, COALESCE(seo_config->>'description','') AS description FROM public.public_pages WHERE ${column} = $1`,
+      [sourceId],
+    );
     const row = page.rows[0];
     // A page with no identity row cannot be reported against, so it is served
     // without tracking rather than with a pixel that has nothing to attach to.
     if (!row) return { pixelIds: [], actions: {} };
-    return this.forPublicPage(row.business_id, row.id);
+    return {
+      ...(await this.forPublicPage(row.business_id, row.id)),
+      content: { id: row.id, name: row.name, description: row.description },
+    };
   }
 }

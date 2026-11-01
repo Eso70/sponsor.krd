@@ -1051,11 +1051,38 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       });
       const payload = await forms.publicForm(host, form.slug!);
       expect(payload.analytics.pixelIds).toEqual([pixel]);
-      const requestId = randomUUID();
+      expect(payload.analytics.content?.id).not.toBe(form.id);
       const context = {
         ip: '127.0.0.1',
         userAgent: 'Mozilla/5.0 Chrome/130.0',
       };
+      const pageViewId = randomUUID();
+      await analytics.ingest(
+        {
+          eventId: pageViewId,
+          pageId: form.id,
+          eventName: 'page_view',
+          visitorId: 'marketing-visitor',
+          sessionId: 'marketing-session',
+          occurredAt: new Date().toISOString(),
+          pageUrl: `https://${host ? host + '.' : ''}sponsor.krd/form/${form.slug}`,
+          browserDispatched: true,
+          browserEventName: 'ViewContent',
+        },
+        context,
+      );
+      const view = await pool.query<{ payload: Record<string, unknown> }>(
+        'SELECT payload FROM marketing_event_outbox WHERE external_event_id=$1',
+        [pageViewId],
+      );
+      expect(view.rows[0].payload).toMatchObject({
+        event: 'ViewContent',
+        event_id: pageViewId,
+        content_id: payload.analytics.content!.id,
+        content_name: payload.analytics.content!.name,
+      });
+      const requestId = randomUUID();
+
       const body = {
         requestId,
         privacyVersion: PRIVACY_VERSION,
@@ -1066,7 +1093,7 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
         tracking: {
           visitorId: 'marketing-visitor',
           sessionId: 'marketing-session',
-          pageUrl: `https://forms-a.localhost/form/${form.slug}`,
+          pageUrl: `https://${host ? host + '.' : ''}sponsor.krd/form/${form.slug}`,
           ttclid: 'ad-click',
           ttp: 'pixel-cookie',
         },
@@ -1089,6 +1116,9 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
         event_name: 'SubmitForm',
         payload: {
           event_id: requestId,
+          content_id: payload.analytics.actions['form:submit'].id,
+          content_name: payload.analytics.actions['form:submit'].contentName,
+          url: body.tracking.pageUrl,
           ttclid: 'ad-click',
           ttp: 'pixel-cookie',
         },

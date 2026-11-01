@@ -42,6 +42,40 @@ beforeEach(() => {
 });
 
 describe("accepted public form conversions", () => {
+  it.each(["form", "linktree"])("uses registered content and action metadata for %s browser events", contentType => {
+    const publicId = "55555555-5555-4555-8555-555555555555";
+    const tracker = createPageTracker({
+      pageId: PAGE_ID, pageName: "Outdated display name", description: "Outdated description", contentType,
+      analytics: {
+        pixelIds: ["OWNER_PIXEL"], content: { id: publicId, name: "Registered page", description: "Public description" },
+        actions: { "page:action": { id: ACTION_ID, pixelEvent: "Contact", contentName: "WhatsApp" } },
+      },
+    });
+    tracker.trackView();
+    expect(mocks.trackTikTokEvent).toHaveBeenLastCalledWith("ViewContent", expect.objectContaining({
+      content_id: publicId, content_ids: [publicId], content_name: "Registered page", description: "Public description",
+      contents: [{ content_id: publicId, content_name: "Registered page" }],
+    }), EVENT_ID, ["OWNER_PIXEL"]);
+    tracker.trackAction("page:action", "whatsapp_click", { label: "Different rendered label", properties: { platform: "telegram" } });
+    expect(mocks.trackTikTokEvent).toHaveBeenLastCalledWith("Contact", expect.objectContaining({
+      content_id: ACTION_ID, content_ids: [ACTION_ID], content_name: "WhatsApp", description: "Public description",
+      contents: [{ content_id: ACTION_ID, content_name: "WhatsApp" }],
+    }), EVENT_ID, ["OWNER_PIXEL"]);
+    tracker.trackServerConversion("page:action", "server-receipt-id");
+    expect(mocks.trackTikTokEvent).toHaveBeenLastCalledWith("Contact", expect.objectContaining({ content_name: "WhatsApp", content_id: ACTION_ID }), "server-receipt-id", ["OWNER_PIXEL"]);
+  });
+
+  it("queues the server counterpart even when the Pixel cannot dispatch", () => {
+    mocks.trackTikTokEvent.mockReturnValueOnce(false).mockReturnValueOnce(false);
+    const tracker = createPageTracker({ pageId: PAGE_ID, pageName: "Page", contentType: "linktree", analytics: {
+      pixelIds: ["OWNER_PIXEL"], actions: { "link:whatsapp": { id: ACTION_ID, pixelEvent: "Contact" } },
+    } });
+    tracker.trackView();
+    tracker.trackAction("link:whatsapp", "whatsapp_click");
+    expect(mocks.queueAnalyticsEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.queueAnalyticsEvent).toHaveBeenLastCalledWith(expect.objectContaining({ eventId: EVENT_ID, browserDispatched: false, browserEventName: undefined }));
+  });
+
   function formTracker(pixelIds = ["OWNER_PIXEL"], registered = true) {
     return createPageTracker({
       pageId: PAGE_ID,

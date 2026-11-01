@@ -44,7 +44,8 @@ export interface TikTokEventProperties {
   content_id: string;
   content_ids: string[];
   content_name: string;
-  description: string;
+  description?: string;
+  contents?: Array<{ content_id: string; content_name: string }>;
   url?: string;
 }
 
@@ -198,31 +199,36 @@ export function trackTikTokEvent(
   properties: TikTokEventProperties,
   eventId: string,
   pixelIds: string[] = [],
-): void {
-  if (typeof window === "undefined") return;
-  const ttq = queue();
-  const options = { event_id: eventId };
-
-  // With two or more pixels loaded, address each one explicitly. A bare
-  // `ttq.track` leaves it to the SDK which loaded instances receive the event,
-  // and a business paying for a second pixel getting events on only one of them
-  // is indistinguishable from the pixel being misconfigured.
-  //
-  // Only when `instance` actually exists — it is added by the real `events.js`,
-  // so during the stub window before that lands, and for the single-pixel case,
-  // this is the same `ttq.track` call it has always been. The stub replays that
-  // call once the script arrives.
-  if (pixelIds.length > 1 && typeof ttq.instance === "function") {
-    let dispatched = false;
-    for (const pixelId of pixelIds) {
-      const instance = ttq.instance(pixelId);
-      if (!instance?.track) continue;
-      instance.track(event, { ...properties }, options);
-      dispatched = true;
+): boolean {
+  if (typeof window === "undefined") return false;
+  const failure = (pixelId?: string) => recordTikTokDebug({
+    kind: "error", eventName: event, eventId, pixelId,
+    pixelDispatched: false, detail: "Browser Pixel dispatch failed",
+  });
+  try {
+    const ttq = queue();
+    const options = { event_id: eventId };
+    if (pixelIds.length > 1 && typeof ttq.instance === "function") {
+      let dispatched = false;
+      let resolved = false;
+      for (const pixelId of pixelIds) {
+        try {
+          const instance = ttq.instance(pixelId);
+          if (!instance?.track) { failure(pixelId); continue; }
+          resolved = true;
+          instance.track(event, { ...properties }, options);
+          dispatched = true;
+        } catch { resolved = true; failure(pixelId); }
+      }
+      // Do not broadcast again after any instance was addressed: that would
+      // duplicate successful deliveries when another destination failed.
+      if (resolved) return dispatched;
     }
-    // Every instance lookup missed — fall back rather than dropping the event.
-    if (dispatched) return;
+    if (!ttq.track) return false;
+    ttq.track(event, { ...properties }, options);
+    return true;
+  } catch {
+    failure();
+    return false;
   }
-
-  ttq.track?.(event, { ...properties }, options);
 }
