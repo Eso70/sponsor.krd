@@ -210,6 +210,39 @@ two calendar days represent a rolling 24-hour interval.
 
 ## Persisted forms
 
+### Server test panel
+
+Business and Platform TikTok settings share `TikTokTestEventPanel`. Choose a
+Linktree or form, a published page, the exact TikTok test code, and ViewContent,
+Contact or ClickButton; forms also offer SubmitForm. The selected canonical URL
+is shown before sending. Save Pixel/token changes first. Tests send only to
+TikTok's test environment and never insert form responses, analytics conversions
+or marketing outbox rows.
+
+Owner-scoped `GET .../tiktok/test-pages` endpoints return eligible published
+pages in 100-item cursor batches. Both dashboard adapters use the same service;
+Platform resolves its internal workspace on the server. The POST test request
+uses JSON and an optional `page_id` public-page identity, revalidated against
+owner, source status and live eligibility before sending. Omitting `page_id`
+retains legacy automatic selection. SubmitForm is rejected on Linktrees. Test
+parameters use a registered matching action when available. Only HTTP success
+with TikTok code `0` is acknowledged; HTTP errors, validation details and provider
+request IDs remain visible. Never send an Events API token from this panel's
+browser request or attach a test code to normal production conversions.
+
+Confirmed browser conversions are dispatched once per submission event ID within
+the shared page tracker. A throwing browser SDK does not change a saved response
+into a failed submission; the existing server delivery remains independent.
+Failed dispatches can be retried with the same ID, preserving TikTok deduplication.
+The existing opt-in `?ttdebug=1` report identifies missing active Pixels, missing
+submission actions and dispatch exceptions. A dispatch entry means the event was
+handed to the browser SDK, not proof that TikTok received it.
+
+For website form campaigns, select the owner Pixel and `SubmitForm` optimization
+event after verifying a successful submission in TikTok Test Events. The app
+already sends that event after saving; avoid adding an Event Builder button-click
+rule for the same submission, which would create an independent extra event.
+
 ### Linktree WhatsApp question attribution
 
 The shared tracker attaches a saved question ID to the registered WhatsApp contact

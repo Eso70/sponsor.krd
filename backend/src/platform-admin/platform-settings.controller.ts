@@ -11,6 +11,7 @@ import {
   Req,
   Res,
   Param,
+  Query,
   BadRequestException,
 } from '@nestjs/common';
 import { PlatformSettingsService } from './platform-settings.service';
@@ -35,10 +36,14 @@ import {
   UpdateMediaSettingsDto,
   UpdatePlatformBrandingDto,
   UpdatePlatformProfileDto,
+  UpdatePlatformGeneralDto,
 } from './dto/platform-settings.dto';
 import { DataRetentionService } from './data-retention.service';
 import { requestIp } from '../common/request-context';
-import { TestTikTokEventsApiDto } from '../analytics/dto/test-tiktok-events-api.dto';
+import {
+  TestTikTokEventsApiDto,
+  TikTokTestPagesQueryDto,
+} from '../analytics/dto/test-tiktok-events-api.dto';
 
 @Controller('api/platform/settings')
 @UseGuards(PlatformAdminGuard, AuthorizationGuard)
@@ -129,6 +134,15 @@ export class PlatformSettingsController {
     };
   }
 
+  @Get('tiktok/test-pages')
+  @RequireCapabilities(Capability.PlatformSettingsTikTokRead)
+  async tikTokTestPages(@Query() query: TikTokTestPagesQueryDto) {
+    return {
+      success: true,
+      data: await this.platformSettingsService.getTikTokTestPages(query.cursor),
+    };
+  }
+
   @Post('tiktok/test')
   @RequireCapabilities(Capability.PlatformSettingsTikTokRead)
   async testTikTok(
@@ -207,6 +221,21 @@ export class PlatformSettingsController {
   async getSettings(@CurrentUser() user: SessionUser) {
     const data = await this.platformSettingsService.getProfile(user.id);
     return { success: true, data };
+  }
+
+  @Put('general')
+  @RequireCapabilities(
+    Capability.PlatformSettingsProfileUpdate,
+    Capability.PlatformSettingsBrandingUpdate,
+  )
+  async updateGeneral(
+    @CurrentUser() user: SessionUser,
+    @Body() body: UpdatePlatformGeneralDto,
+  ) {
+    return {
+      success: true,
+      data: await this.platformSettingsService.updateGeneral(user.id, body),
+    };
   }
 
   @Put('profile')

@@ -435,19 +435,48 @@ export function createPageTracker(options: PageTrackerOptions): PageTracker {
 
     trackServerConversion(actionKey, eventId) {
       const action = resolveAction(actionKey);
-      if (!hasPixel() || !action) return;
-      trackTikTokEvent(
-        action.pixelEvent,
-        {
-          content_id: action.id,
-          content_ids: [action.id],
-          content_name: options.pageName,
-          description: options.description ?? "",
-          url: window.location.href,
-        },
-        eventId,
-        options.analytics.pixelIds,
-      );
+      if (!hasPixel() || !action) {
+        recordTikTokDebug({
+          kind: "error",
+          eventName: action?.pixelEvent ?? "server_conversion",
+          eventId,
+          actionKey,
+          pixelDispatched: false,
+          detail: !hasPixel()
+            ? "No active Pixel configured"
+            : "Submission action not registered",
+        });
+        return;
+      }
+      const onceKey = `server-conversion:${actionKey}:${eventId}`;
+      if (reportedOnce.has(onceKey)) return;
+      try {
+        trackTikTokEvent(
+          action.pixelEvent,
+          {
+            content_id: action.id,
+            content_ids: [action.id],
+            content_name: options.pageName,
+            description: options.description ?? "",
+            url: window.location.href,
+          },
+          eventId,
+          options.analytics.pixelIds,
+        );
+      } catch {
+        // The response is already saved. A third-party SDK failure must not
+        // make the submission UI offer another attempt or hide its receipt.
+        recordTikTokDebug({
+          kind: "error",
+          eventName: action.pixelEvent,
+          eventId,
+          actionKey,
+          pixelDispatched: false,
+          detail: "Browser conversion dispatch failed; submission remains saved",
+        });
+        return;
+      }
+      reportedOnce.add(onceKey);
       recordTikTokDebug({
         kind: "pixel",
         eventName: action.pixelEvent,

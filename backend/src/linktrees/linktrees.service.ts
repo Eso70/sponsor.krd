@@ -1,4 +1,5 @@
 import { inspectLinktreeSponsor } from '@linktree/types/linktree-sponsor.cjs';
+import { pinOwnedPage } from '../common/pin-owned-page';
 import {
   updateLinktreeInTransaction,
   type LinktreeRow,
@@ -1168,15 +1169,13 @@ export class LinktreesService {
   }
 
   async pin(businessId: string, id: string, isPinned: boolean) {
-    const result = await this.databaseService.query<{
-      id: string;
-      isPinned: boolean;
-    }>(
-      'UPDATE linktrees SET is_pinned=$3 WHERE business_id=$1 AND id=$2 RETURNING id,is_pinned AS "isPinned"',
-      [businessId, id, isPinned],
+    return pinOwnedPage(
+      this.databaseService,
+      'linktrees',
+      businessId,
+      id,
+      isPinned,
     );
-    if (!result.rows[0]) throw new NotFoundException('Linktree page not found');
-    return result.rows[0];
   }
 
   async toggleArchive(id: string, businessId: string, isArchived: boolean) {

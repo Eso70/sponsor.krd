@@ -1,3 +1,4 @@
+import { TikTokPixelConfigService } from '../src/auth/tiktok-pixel-config.service';
 import { PublicService } from '../src/public/public.service';
 import type { RedisService } from '../src/redis/redis.service';
 import { PublicPageAnalyticsService } from '../src/analytics/public-page-analytics.service';
@@ -603,10 +604,10 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
       );
     const first = await forms.list(ownerB, 0, 'Paged item');
     expect(first.total).toBe(22);
-    expect(first.items).toHaveLength(20);
+    expect(first.items).toHaveLength(15);
     expect(first.items[0]).not.toHaveProperty('questions');
     expect(first.items[0].questionCount).toBe(1);
-    expect((await forms.list(ownerB, 1, 'Paged item')).items).toHaveLength(2);
+    expect((await forms.list(ownerB, 1, 'Paged item')).items).toHaveLength(7);
     await forms.archive(ownerB, entries[0].id, true);
     expect((await forms.list(ownerB, 0, 'Paged item')).total).toBe(21);
     expect((await forms.list(ownerB, 0, 'Paged item', true)).total).toBe(1);
@@ -1245,6 +1246,86 @@ describe('durable forms and shared analytics (PostgreSQL)', () => {
           context,
         ),
       ).rejects.toThrow('Invalid product quantity');
+    }
+  });
+  it('tests selected owner-scoped business and platform forms without creating submissions or analytics', async () => {
+    const service = new TikTokPixelConfigService(
+      { query: pool.query.bind(pool) } as unknown as DatabaseService,
+      { decryptJson: () => ({ events_token: 'fixture-token' }) } as never,
+      new ConfigService({ APP_BASE_URL: 'https://sponsor.krd' }),
+    );
+    const originalFetch = global.fetch;
+    const send = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ code: 0, message: 'OK' }),
+    });
+    global.fetch = send;
+    try {
+      for (const [owner, host] of [
+        [ownerA, 'forms-a'],
+        [platformOwner, ''],
+      ] as const) {
+        const form = await forms.create(owner, {
+          ...fixture(),
+          name: `Server test ${host || 'platform'}`,
+          status: 'active',
+        });
+        const pixelId = `TEST_${randomUUID().replace(/-/g, '')}`;
+        await pool.query(
+          'INSERT INTO business_tiktok_pixels(business_id,pixel_id,encrypted_events_token,token_last_four) VALUES($1,$2,$3,$4)',
+          [owner, pixelId, Buffer.from('fixture-token'), 'test'],
+        );
+        const pages = await service.listTestPages(owner);
+        const page = pages.items.find((item) =>
+          item.url.endsWith(`/form/${form.slug}`),
+        );
+        expect(page).toMatchObject({
+          pageType: 'form',
+          url: `https://${host ? host + '.' : ''}sponsor.krd/form/${form.slug}`,
+        });
+        const payload = {
+          pixel_id: pixelId,
+          page_id: page!.id,
+          test_event_code: 'TEST31402',
+          event_name: 'SubmitForm' as const,
+        };
+        expect(
+          (await service.testEventsApi(owner, payload, context)).success,
+        ).toBe(true);
+        expect((await forms.submissions(owner, form.id, 0)).total).toBe(0);
+        expect(
+          (
+            await pool.query<{ total: number }>(
+              'SELECT count(*)::int total FROM analytics_events WHERE public_page_id=$1',
+              [page!.id],
+            )
+          ).rows[0].total,
+        ).toBe(0);
+        const foreign = await forms.create(ownerB, {
+          ...fixture(),
+          name: `Foreign server ${host || 'platform'}`,
+          status: 'active',
+        });
+        const foreignPage = (
+          await pool.query<{ id: string }>(
+            'SELECT id FROM public_pages WHERE source_form_id=$1',
+            [foreign.id],
+          )
+        ).rows[0].id;
+        expect(pages.items.some((item) => item.id === foreignPage)).toBe(false);
+        const sends = send.mock.calls.length;
+        await expect(
+          service.testEventsApi(owner, { ...payload, page_id: foreignPage }),
+        ).rejects.toThrow('Select an active published');
+        await forms.status(owner, form.id, 'paused');
+        await expect(service.testEventsApi(owner, payload)).rejects.toThrow(
+          'Select an active published',
+        );
+        expect(send).toHaveBeenCalledTimes(sends);
+      }
+    } finally {
+      global.fetch = originalFetch;
     }
   });
 });

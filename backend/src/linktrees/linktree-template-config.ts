@@ -8,6 +8,7 @@ import { readWhatsappQuestionColor } from '@linktree/types/whatsapp-question.cjs
 import {
   inspectLinktreeSponsor,
   LINKTREE_SPONSOR_KEY,
+  readLinktreeSponsor,
 } from '@linktree/types/linktree-sponsor.cjs';
 import {
   BACKGROUND_IMAGE_CONFIG_KEY,
@@ -32,6 +33,7 @@ export function normalizeTemplateConfig(
   templateConfig: TemplateConfig | string | null | undefined,
   templateKey?: string | null,
   validateSeo = false,
+  mode: 'read' | 'write' = 'write',
 ): NormalizedTemplateConfig {
   const config: TemplateConfig =
     typeof templateConfig === 'string'
@@ -51,14 +53,22 @@ export function normalizeTemplateConfig(
   normalizeLinktreeSeoConfig(config, validateSeo);
   if (config[LINKTREE_SPONSOR_KEY] !== undefined) {
     const sponsor = inspectLinktreeSponsor(config[LINKTREE_SPONSOR_KEY]);
-    if (Object.keys(sponsor.errors).length)
+    if (mode === 'write' && Object.keys(sponsor.errors).length)
       throw new BadRequestException({
         message: 'Invalid sponsor settings',
         details: sponsor.errors,
       });
-    config[LINKTREE_SPONSOR_KEY] = sponsor.value;
+    config[LINKTREE_SPONSOR_KEY] =
+      mode === 'read'
+        ? readLinktreeSponsor(config[LINKTREE_SPONSOR_KEY])
+        : sponsor.value;
   }
-  config.whatsapp_modal = config.whatsapp_modal || {};
+  config.whatsapp_modal =
+    config.whatsapp_modal &&
+    typeof config.whatsapp_modal === 'object' &&
+    !Array.isArray(config.whatsapp_modal)
+      ? { ...config.whatsapp_modal }
+      : {};
   if (config.whatsapp_modal.backgroundColor !== undefined) {
     config.whatsapp_modal = {
       ...config.whatsapp_modal,
@@ -81,4 +91,12 @@ export function normalizeTemplateConfig(
   }
 
   return config as NormalizedTemplateConfig;
+}
+
+/** Public reads share all sanitization without throwing on invalid legacy sponsorship. */
+export function readTemplateConfig(
+  templateConfig: TemplateConfig | string | null | undefined,
+  templateKey?: string | null,
+) {
+  return normalizeTemplateConfig(templateConfig, templateKey, false, 'read');
 }

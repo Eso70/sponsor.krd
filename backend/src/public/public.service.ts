@@ -13,7 +13,10 @@ import {
   LINKTREE_BANNER_KEY,
 } from '@linktree/types/linktree-banner.cjs';
 import { indexableFormSql, indexableLinktreeSql } from '../common/page-seo';
-import { normalizeLinktreeSeoConfig } from '../common/linktree-seo';
+import {
+  readTemplateConfig,
+  type TemplateConfig,
+} from '../linktrees/linktree-template-config';
 import {
   Injectable,
   NotFoundException,
@@ -31,10 +34,6 @@ import {
 import { normalizeSponsorKrdAccent } from '../common/platform-brand';
 import { PublicPageAnalyticsService } from '../analytics/public-page-analytics.service';
 import { PlatformContentWorkspaceService } from '../platform-workspace/platform-content-workspace.service';
-import {
-  BACKGROUND_IMAGE_CONFIG_KEY,
-  isLinktreeBackgroundImage,
-} from '../common/linktree-background-image';
 import {
   ENTITLEMENT,
   allowedTemplateKeySql,
@@ -55,15 +54,6 @@ import type {
  * row generic to `QueryResultRow`, and only type aliases pick up the implicit
  * index signature that constraint needs.
  */
-type TemplateConfig = Record<string, unknown> & {
-  templateKey?: string;
-  type?: string;
-  buttonStyle?: string;
-  buttonGradient?: boolean;
-  whatsapp_modal?: Record<string, unknown>;
-  globalWidgets?: Record<string, unknown>;
-};
-
 type PublicLinktreeRow = {
   id: string;
   name: string;
@@ -327,38 +317,6 @@ export class PublicService {
     };
   }
 
-  private normalizeTemplateConfig(
-    templateConfig: TemplateConfig | string | null | undefined,
-    templateKey?: string | null,
-  ): TemplateConfig {
-    const parsed: TemplateConfig =
-      typeof templateConfig === 'string'
-        ? (JSON.parse(templateConfig || '{}') as TemplateConfig)
-        : { ...(templateConfig || {}) };
-
-    const config: TemplateConfig = { ...parsed };
-    config.templateKey = config.templateKey || templateKey || 'spectrum';
-    config.type = config.type || 'simple';
-    config.buttonStyle = config.buttonStyle || 'pill';
-    config.buttonGradient = config.buttonGradient !== false;
-    config.verification_badge = config.verification_badge === true;
-    if (config[LINKTREE_BANNER_KEY] !== undefined) {
-      config[LINKTREE_BANNER_KEY] = readLinktreeBanner(
-        config[LINKTREE_BANNER_KEY],
-      );
-    }
-    normalizeLinktreeSeoConfig(config);
-    config.whatsapp_modal = config.whatsapp_modal || {};
-
-    // A background image is painted into public page CSS, so anything that is
-    // not one of our own uploads never reaches an anonymous visitor.
-    if (!isLinktreeBackgroundImage(config[BACKGROUND_IMAGE_CONFIG_KEY])) {
-      delete config[BACKGROUND_IMAGE_CONFIG_KEY];
-    }
-
-    return config;
-  }
-
   private async mapLinktreeRow(
     row: PublicLinktreeRow,
   ): Promise<MappedPublicLinktree> {
@@ -369,10 +327,7 @@ export class PublicService {
       [row.id],
     );
 
-    const config = this.normalizeTemplateConfig(
-      row.template_config,
-      row.template_key,
-    );
+    const config = readTemplateConfig(row.template_config, row.template_key);
     const globalSettings = await this.databaseService.query<{
       widget_config: Record<string, unknown>;
     }>(

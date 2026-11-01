@@ -81,7 +81,7 @@ describe("shared Linktree banner", () => {
       );
       const banner = container.querySelector("[data-linktree-banner]");
       expect(banner).not.toBeNull();
-      expect(banner?.parentElement?.parentElement).toHaveAttribute(
+      expect(banner?.closest('[data-template-viewport-layout]')).toHaveAttribute(
         "data-template-viewport-layout",
       );
       expect(

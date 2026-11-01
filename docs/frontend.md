@@ -1,5 +1,17 @@
 # Frontend
 
+Business settings track Profile and Defaults independently. Saving one section
+merges only that section's response, preserves other tabs and newer in-flight
+edits, and updates server-managed identity/cooldown fields separately. Branding
+uploads require both upload permission and the profile permission needed to
+persist their URLs. Changed fields are never silently stripped from a save.
+
+BusinessDashboard and PlatformLinktreesPage use `useLinktreeEditorWorkflow` for
+edit loading/cancellation, create/close, save, approvals, status and archives.
+Typed adapters provide list updates, localized messages and session handling;
+there are no separate owner implementations of those lifecycles. Platform
+General settings sends one validated transactional request for profile/branding.
+
 Public Linktree business details show selected weekdays in Saturday–Friday
 order, shared with both dashboard editors, regardless of the saved selection
 order. Location summaries show country, city, then street/area, omitting missing

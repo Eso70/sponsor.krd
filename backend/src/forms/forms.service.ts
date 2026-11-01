@@ -1,4 +1,5 @@
 import { featurePlanSql } from '../billing/feature-plan-policy';
+import { pinOwnedPage } from '../common/pin-owned-page';
 import { createHash } from 'node:crypto';
 import {
   BadRequestException,
@@ -263,12 +264,7 @@ export class FormsService {
     });
   }
   async pin(owner: string, id: string, isPinned: boolean) {
-    const result = await this.db.query<{ id: string; isPinned: boolean }>(
-      'UPDATE forms SET is_pinned=$3 WHERE business_id=$1 AND id=$2 RETURNING id,is_pinned AS "isPinned"',
-      [owner, id, isPinned],
-    );
-    if (!result.rows[0]) throw new NotFoundException('Form not found');
-    return result.rows[0];
+    return pinOwnedPage(this.db, 'forms', owner, id, isPinned);
   }
 
   async archive(owner: string, id: string, isArchived: unknown) {

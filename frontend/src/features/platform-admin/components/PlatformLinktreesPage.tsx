@@ -1,4 +1,5 @@
 "use client";
+import { useLinktreeEditorWorkflow } from "@/features/link-editor/use-linktree-editor-workflow";
 import { clearSelectedAnalytics } from "@/features/shared/clear-selected-analytics";
 
 import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
@@ -12,10 +13,6 @@ import type { LinktreeListItem } from "@linktree/types";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { LinktreeSearchModal } from "@/components/shared/LinktreeSearchModal";
 import { PlatformLinktreeAnalyticsSkeleton } from "@/features/platform-admin/components/PlatformLinktreesModalSkeletons";
-import type {
-  EditLinkData,
-  LinktreeEditorSubmitData,
-} from "@/features/link-editor/editor-types";
 import { LinktreesManagementPage } from "@/features/link-editor/components/LinktreesManagementPage";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { apiRequest } from "@/lib/api/request";
@@ -80,9 +77,6 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
   const [query, setQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [view, setView] = useState<"grid" | "table">("grid");
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editData, setEditData] = useState<EditLinkData | null>(null);
-  const [loadingEdit, setLoadingEdit] = useState(false);
   const [analyticsPageId, setAnalyticsPageId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<LinktreeListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -173,94 +167,13 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
     items.find((item) => item.id === analyticsPageId) ?? null;
 
 
-  const editRequest = useRef<AbortController | null>(null);
-  useEffect(() => () => editRequest.current?.abort(), []);
-  const closeEditor = useCallback(() => {
-    editRequest.current?.abort();
-    setEditorOpen(false);
-    setLoadingEdit(false);
-    setEditData(null);
-  }, []);
-  const openEdit = useCallback(
-    async (id: string) => {
-      editRequest.current?.abort();
-      const controller = new AbortController();
-      editRequest.current = controller;
-      setEditorOpen(true);
-      setLoadingEdit(true);
-      setEditData(null);
-      try {
-        const data = await apiRequest<EditLinkData>(`${apiBase}/${id}/edit`, { signal: controller.signal });
-        if (!controller.signal.aborted) setEditData(data);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setEditorOpen(false);
-        console.error("Platform Linktree edit load failed:", error);
-        toast.error(copyRef.current.editLoadFailed);
-      } finally {
-        if (!controller.signal.aborted) setLoadingEdit(false);
-      }
-    },
-    [apiBase],
-  );
-
-  const save = useCallback(
-    async (data: LinktreeEditorSubmitData, editId?: string) => {
-      try {
-        const result = await mutations.save(data, editId);
-        if (result.outcome === "approval") {
-          toast.info(LINKTREE_APPROVAL_COPY[locale]);
-          closeEditor();
-          return;
-        }
-        setEditorOpen(false);
-        setEditData(null);
-        toast.success(editId ? copyRef.current.updated : copyRef.current.created);
-        await load(true);
-      } catch (error) {
-        console.error("Platform Linktree save failed:", error);
-        toast.error(copyRef.current.saveFailed);
-        throw error;
-      }
-    },
-    [mutations, locale, load, closeEditor],
-  );
-
-  const handleToggleArchive = useCallback(
-    async (id: string, value: boolean) => {
-      try {
-        const result = await mutations.archive(id, value);
-        if (result.outcome === "approval") {
-          toast.info(LINKTREE_APPROVAL_COPY[locale]);
-          return;
-        }
-        setItems((current) => current.map((item) => item.id === id ? { ...item, is_archived: value } : item));
-        toast.success(value ? copyRef.current.archived : copyRef.current.restored);
-      } catch (error) {
-        console.error("Platform Linktree state update failed:", error);
-        toast.error(copyRef.current.statusFailed);
-      }
-    },
-    [mutations, locale],
-  );
-
-  const handleToggleStatus = useCallback(
-    async (id: string, status: "active" | "inactive") => {
-      try {
-        const result = await mutations.status(id, status);
-        if (result.outcome === "approval") {
-          toast.info(LINKTREE_APPROVAL_COPY[locale]);
-          return;
-        }
-        setItems((current) => current.map((item) => item.id === id ? { ...item, status } : item));
-        toast.success(status === "active" ? copyRef.current.statusEnabled : copyRef.current.statusDisabled);
-      } catch (error) {
-        console.error("Platform Linktree status update failed:", error);
-        toast.error(copyRef.current.statusFailed);
-      }
-    },
-    [mutations, locale],
-  );
+  const editor = useLinktreeEditorWorkflow({
+    scope: "platform", locale,
+    copy: { created: copy.created, updated: copy.updated, archived: copy.archived, restored: copy.restored, enabled: copy.statusEnabled, disabled: copy.statusDisabled, loadFailed: copy.editLoadFailed, saveFailed: copy.saveFailed, archiveFailed: copy.statusFailed, statusFailed: copy.statusFailed },
+    onSaved: async () => { await load(true); },
+    onPageUpdated: (id, patch) => setItems(current => current.map(item => item.id === id ? { ...item, ...patch } : item)),
+  });
+  const { open: editorOpen, loading: loadingEdit, data: editData, openEdit, close: closeEditor, create: createEditor, save, archive: handleToggleArchive, status: handleToggleStatus } = editor;
 
   const clearSelected = useCallback(async (ids: readonly string[]) => {
     if (clearingSelectedAnalytics || !ids.length) return;
@@ -300,12 +213,7 @@ export function PlatformLinktreesPage({ headerControls }: { headerControls?: Rea
           query.trim() ? setQuery("") : setIsSearchModalOpen(true)
         }
         onViewModeChange={setView}
-        onCreate={() => {
-          editRequest.current?.abort();
-          setLoadingEdit(false);
-          setEditData(null);
-          setEditorOpen(true);
-        }}
+        onCreate={createEditor}
         onEdit={(id) => void openEdit(id)}
         
         onDelete={(id) =>

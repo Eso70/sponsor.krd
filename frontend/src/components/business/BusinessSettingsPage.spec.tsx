@@ -12,6 +12,41 @@ vi.mock("@/features/communications/BusinessMessagesPanel", () => ({ BusinessMess
 afterEach(() => vi.unstubAllGlobals());
 
 describe.each(["en", "ar", "ckb"] as const)("Business Settings shared layout (%s)", (locale) => {
+  it('does not allow branding uploads when profile saving is denied, but preserves username editing', async () => {
+    const copy = businessMessages[locale].SettingsPage;
+    const request = vi.fn(async (url: string) => new Response(JSON.stringify({ data: url.includes('effective-access') ? { permissions: {
+      'business:profile:update': { outcome: 'deny' }, 'business:profile-assets:upload': { outcome: 'allow' }, 'business:security:username-update': { outcome: 'allow' },
+    } } : url.includes('linktrees/default') ? null : { name: 'Business', username: 'original' } })));
+    vi.stubGlobal('fetch', request);
+    render(<BusinessLocaleProvider initialLocale={locale}><BusinessSettingsPage /></BusinessLocaleProvider>);
+    await screen.findByPlaceholderText(copy.businessName);
+    expect(screen.getByLabelText(copy.logo)).toBeDisabled();
+    expect(screen.getByLabelText(copy.avatar)).toBeDisabled();
+    expect(screen.getByLabelText(copy.favicon)).toBeDisabled();
+    const username = screen.getByDisplayValue('original');
+    expect(username).toBeEnabled();
+    fireEvent.change(username, { target: { value: 'new-username' } });
+    fireEvent.click(screen.getByRole('button', { name: copy.save }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/auth/settings', expect.objectContaining({ body: JSON.stringify({ section: 'profile', username: 'new-username' }) })));
+  });
+  it('preserves Profile edits while independently saving Defaults', async () => {
+    const copy = businessMessages[locale].SettingsPage;
+    let homepage = false;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH') homepage = JSON.parse(init.body as string).homepage_linktree;
+      return new Response(JSON.stringify({ data: url.includes('effective-access') ? { permissions: { 'business:profile:update': { outcome: 'allow' }, 'business:defaults:update': { outcome: 'allow' } } } : url.includes('linktrees/default') ? null : { name: 'Original business', homepage_linktree: homepage } }));
+    }));
+    render(<BusinessLocaleProvider initialLocale={locale}><BusinessSettingsPage /></BusinessLocaleProvider>);
+    fireEvent.change(await screen.findByPlaceholderText(copy.businessName), { target: { value: 'Unsaved business' } });
+    fireEvent.click(screen.getByRole('tab', { name: copy.defaultsTab }));
+    expect(screen.getByRole('button', { name: copy.savedButton })).toBeDisabled();
+    fireEvent.click(screen.getByRole('switch', { name: copy.homepageLinktree }));
+    fireEvent.click(screen.getByRole('button', { name: copy.save }));
+    await waitFor(() => expect(screen.getByRole('button', { name: copy.savedButton })).toBeDisabled());
+    fireEvent.click(screen.getByRole('tab', { name: copy.profileTab }));
+    expect(screen.getByPlaceholderText(copy.businessName)).toHaveValue('Unsaved business');
+    expect(screen.getByRole('button', { name: copy.save })).toBeEnabled();
+  });
   it("saves and reloads the reversible homepage choice", async () => {
     let saved = false;
     const request = vi.fn(async (url: string, init?: RequestInit) => {

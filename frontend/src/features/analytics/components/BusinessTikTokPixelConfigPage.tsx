@@ -10,7 +10,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { EffectiveAccessManifest } from "@linktree/types";
+import type { EffectiveAccessManifest, TikTokTestPage } from "@linktree/types";
 import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { SectionSaveActions } from "@/components/shared/SectionSaveActions";
@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SkeletonTikTokPixelConfig, SkeletonTikTokToolbar } from "@/components/shared/SkeletonPageLayouts";
 import { TikTokPixelGroupCard, type TikTokPixelGroupCopy } from "@/features/analytics/components/TikTokPixelGroupCard";
+import { getTikTokTestPages } from "../api";
 import { Tooltip } from "@/components/shared/Tooltip";
 
 import {
@@ -116,12 +117,14 @@ export function BusinessTikTokPixelConfigPage({
   }, [access, workspace.pixelLimit]);
 
   const canAdd = pixelLimit === -1 || configs.length < pixelLimit;
+  const [testPages, setTestPages] = useState<TikTokTestPage[]>([]);
+  const [testPagesUnavailable, setTestPagesUnavailable] = useState(false);
   const hasInvalidRows = configs.some((config) => !config.pixel_id.trim());
 
   const loadConfig = useCallback(
     async (rethrow = false) => {
       try {
-        const [settingsResponse, accessResponse] = await Promise.all([
+        const [settingsResponse, accessResponse, pages] = await Promise.all([
           fetch(workspace.settingsEndpoint, {
             credentials: "include",
             cache: "no-store",
@@ -134,7 +137,15 @@ export function BusinessTikTokPixelConfigPage({
             : Promise.resolve(
                 new Response(JSON.stringify({ data: null }), { status: 200 }),
               ),
+          getTikTokTestPages(workspace.testPagesEndpoint).then(pages => {
+            setTestPagesUnavailable(false);
+            return pages;
+          }, () => {
+            setTestPagesUnavailable(true);
+            return [];
+          }),
         ]);
+        setTestPages(pages);
         if (!settingsResponse.ok || !accessResponse.ok) {
           throw new Error(labels.loadFailed);
         }
@@ -310,6 +321,7 @@ export function BusinessTikTokPixelConfigPage({
               index={index}
               config={config}
               testEndpoint={workspace.testEndpoint}
+              testPages={testPages}
               secretEndpoint={workspace.secretEndpoint}
               copy={copy?.group}
               onUpdate={(patch) => updateConfig(index, patch)}
@@ -325,6 +337,7 @@ export function BusinessTikTokPixelConfigPage({
       )}
 
       {children}
+      {testPagesUnavailable && <RequestErrorNotice message={labels.loadFailed} />}
 
       {/* Save Action Footer */}
       <SectionSaveActions>

@@ -2,30 +2,22 @@
 
 import { useState } from "react";
 import {
-  AlertTriangle,
   Check,
-  CheckCircle2,
   Copy,
   Eye,
   EyeOff,
   Loader2,
-  Send,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { TikTokEventsApiTestResult } from "@linktree/types";
+import type { TikTokTestPage } from "@linktree/types";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
-import {
-  CustomSelect,
-  type CustomSelectOption,
-} from "@/components/shared/CustomSelect";
 import { SHARED_CONTROL_CLASS } from "@/components/shared/shared-control-styles";
 import { EditorField } from "@/components/shared/EditorField";
 import { IconActionButton } from "@/components/shared/IconActionButton";
-import { Tooltip } from "@/components/shared/Tooltip";
-import { testTikTokEventsApi } from "@/features/analytics/api";
+import { TikTokTestEventPanel } from "./TikTokTestEventPanel";
 import { copyToClipboard } from "@/lib/utils/clipboard";
 
 export interface PixelConfigRow {
@@ -41,6 +33,7 @@ interface TikTokPixelGroupCardProps {
   index: number;
   config: PixelConfigRow;
   testEndpoint: string;
+  testPages?: TikTokTestPage[];
   secretEndpoint?: (id: string) => string;
   onUpdate: (updates: Partial<PixelConfigRow>) => void;
   canDelete?: boolean;
@@ -61,9 +54,11 @@ export interface TikTokPixelGroupCopy {
   testTooltip: string; test: string; testSuccess: string; testFailed: string;
   resultBefore: string; resultAfter: string; resultCode: string; resultSaved: string;
   requestIdLabel: string;
+  pageType: string; page: string; linktree: string; form: string;
+  selectPage: string; noPages: string; submitForm: string; saveBeforeTest: string;
 }
 
-const KURDISH_COPY: TikTokPixelGroupCopy = {
+export const KURDISH_TIKTOK_PIXEL_GROUP_COPY: TikTokPixelGroupCopy = {
   viewContent: "ViewContent (بینینی پەڕە)", contact: "Contact (پەیوەندی)",
   clickButton: "ClickButton (کلیک لە بەستەر)",
   noPixel: "هیچ Pixel IDێک بۆ کۆپیکردن نییە", pixelCopied: "Pixel ID کۆپی کرا",
@@ -87,39 +82,29 @@ const KURDISH_COPY: TikTokPixelGroupCopy = {
   resultBefore: "ئێستا لە", resultAfter: "سەیری بکە، ڕووداوەکە بە جۆری",
   resultCode: "و کۆدی", resultSaved: "تۆمار کراوە.",
   requestIdLabel: "ناسنامەی داواکاری:",
+  pageType: "جۆری پەڕە", page: "پەڕە", linktree: "لینکتری", form: "فۆڕم",
+  selectPage: "پەڕەیەک هەڵبژێرە", noPages: "هیچ پەڕەیەکی چالاک نییە",
+  submitForm: "SubmitForm (ناردنی فۆڕم)",
+  saveBeforeTest: "گۆڕانکارییەکانی Pixel و Token پاشەکەوت بکە پێش تاقیکردنەوە. ئەمە تەنها تاقیکردنەوەیە و وەڵامی فۆڕم تۆمار ناکات.",
 };
-
-type TikTokTestEventName = "ViewContent" | "Contact" | "ClickButton";
 
 export function TikTokPixelGroupCard({
   index,
   config,
   testEndpoint,
+  testPages = [],
   secretEndpoint,
   onUpdate,
   canDelete = true,
   onDelete,
   copy,
 }: TikTokPixelGroupCardProps) {
-  const labels = { ...KURDISH_COPY, ...copy };
-  const testEvents: CustomSelectOption<TikTokTestEventName>[] = [
-    { value: "ViewContent", label: labels.viewContent },
-    { value: "Contact", label: labels.contact },
-    { value: "ClickButton", label: labels.clickButton },
-  ];
+  const labels = { ...KURDISH_TIKTOK_PIXEL_GROUP_COPY, ...copy };
   const [showToken, setShowToken] = useState(false);
   const [revealingToken, setRevealingToken] = useState(false);
   const [copyingToken, setCopyingToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedPixel, setCopiedPixel] = useState(false);
-  const [testCode, setTestCode] = useState("");
-  const [selectedEvent, setSelectedEvent] =
-    useState<TikTokTestEventName>("ViewContent");
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TikTokEventsApiTestResult | null>(
-    null,
-  );
-
   const inputClass = `${SHARED_CONTROL_CLASS} h-10 w-full px-3.5 text-xs`;
 
   const hasEventsToken =
@@ -228,38 +213,6 @@ export function TikTokPixelGroupCard({
     }
   };
 
-  const handleTest = async () => {
-    const cleanCode = testCode.trim().toUpperCase();
-    if (!cleanCode || !config.pixel_id.trim()) return;
-
-    setTesting(true);
-    setTestResult(null);
-
-    try {
-      const response = await testTikTokEventsApi(testEndpoint, {
-        test_event_code: cleanCode,
-        pixel_id: config.pixel_id.trim(),
-        event_name: selectedEvent,
-      });
-      setTestResult(response);
-    } catch (err: unknown) {
-      setTestResult({
-        success: false,
-        statusCode: 500,
-        tiktokCode: null,
-        message:
-          copy ? labels.connectionFailed : err instanceof Error ? err.message : labels.connectionFailed,
-        requestId: null,
-        pixelId: config.pixel_id,
-        testEventCode: cleanCode,
-        eventName: selectedEvent,
-        sentAt: new Date().toISOString(),
-      });
-    } finally {
-      setTesting(false);
-    }
-  };
-
   return (
     <div className="min-w-0 py-5 first:pt-0">
       {/* Group Card Header */}
@@ -308,7 +261,7 @@ export function TikTokPixelGroupCard({
       </div>
 
       {/* 4x Grid Continuous Line */}
-      <div className="mt-3.5 grid grid-cols-1 items-start gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3.5 grid grid-cols-1 items-start gap-3.5 sm:grid-cols-2 lg:grid-cols-2">
         {/* Col 1: Pixel ID */}
         <EditorField label="Pixel ID" required>
           <div className="relative">
@@ -434,119 +387,11 @@ export function TikTokPixelGroupCard({
           </div>
         </EditorField>
 
-        {/* Col 3: Test Event Code */}
-        <EditorField label={labels.testCode} hint={labels.fromTikTok}>
-          <input
-            type="text"
-            value={testCode}
-            onChange={(e) => setTestCode(e.target.value.toUpperCase().trim())}
-            placeholder="TEST77408"
-            className={`${inputClass} font-mono uppercase tracking-wider`}
-          />
-        </EditorField>
-
-        {/* Col 4: Event Selector + Test Action */}
-        <EditorField label={labels.eventAndTest}>
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <CustomSelect<TikTokTestEventName>
-                label={labels.eventType}
-                hideLabel
-                value={selectedEvent}
-                options={testEvents}
-                onChange={setSelectedEvent}
-                triggerClassName="h-10 text-xs rounded-xl"
-              />
-            </div>
-            <Tooltip
-              content={
-                !hasEventsToken
-                  ? labels.enterToken
-                  : !testCode.trim()
-                    ? labels.enterTestCode
-                    : !config.pixel_id.trim()
-                      ? labels.pixelRequired
-                      : labels.testTooltip
-              }
-              side="top"
-            >
-              <button
-                type="button"
-                onClick={() => void handleTest()}
-                disabled={
-                  testing ||
-                  !testCode.trim() ||
-                  !config.pixel_id.trim() ||
-                  !hasEventsToken
-                }
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 cursor-pointer"
-              >
-                {testing ? (
-                  <MotionSpinner>
-                    <Loader2 className="h-3.5 w-3.5" />
-                  </MotionSpinner>
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
-                <span>{labels.test}</span>
-              </button>
-            </Tooltip>
-          </div>
-        </EditorField>
       </div>
-
-      {/* Real-time Inline Result Feedback */}
-      {testResult && (
-        <div
-          className={`mt-3.5 py-3 text-xs ${
-            testResult.success
-              ? "text-emerald-700 dark:text-emerald-300"
-              : "text-red-700 dark:text-red-300"
-          }`}
-        >
-          <div className="flex items-start gap-2.5">
-            {testResult.success ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            ) : (
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`font-bold ${
-                    testResult.success
-                      ? "text-emerald-800 dark:text-emerald-200"
-                      : "text-red-800 dark:text-red-200"
-                  }`}
-                >
-                  {testResult.success
-                    ? labels.testSuccess
-                    : labels.testFailed}
-                </span>
-                <span className="rounded bg-white/80 px-1.5 py-0.5 font-mono text-[10px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
-                  HTTP {testResult.statusCode}
-                </span>
-              </div>
-
-              <p className="mt-1 text-slate-600 dark:text-slate-300 text-[11px]">
-                {testResult.message}
-              </p>
-
-              {testResult.success && (
-                <p className="mt-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                  {labels.resultBefore} <strong>TikTok Events Manager &gt; Test Events</strong> {labels.resultAfter} <strong>{testResult.eventName}</strong> {labels.resultCode} <strong>{testResult.testEventCode}</strong> {labels.resultSaved}
-                </p>
-              )}
-
-              {testResult.requestId && (
-                <p className="mt-1 font-mono text-[10px] text-slate-400">
-                  {labels.requestIdLabel} {testResult.requestId}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <TikTokTestEventPanel
+        pixelId={config.pixel_id} hasEventsToken={hasEventsToken}
+        endpoint={testEndpoint} pages={testPages} labels={labels}
+      />
     </div>
   );
 }

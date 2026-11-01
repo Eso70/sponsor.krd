@@ -1,9 +1,10 @@
-import { IsIn, IsOptional, IsString, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 
 export const TIKTOK_TEST_EVENTS = [
   'ViewContent',
   'Contact',
   'ClickButton',
+  'SubmitForm',
 ] as const;
 
 export type TikTokTestEventName = (typeof TIKTOK_TEST_EVENTS)[number];
@@ -27,7 +28,17 @@ export class TestTikTokEventsApiDto {
   @IsString()
   @IsIn(TIKTOK_TEST_EVENTS, {
     message:
-      'Invalid TikTok event name (allowed: ViewContent, Contact, ClickButton)',
+      'Invalid TikTok event name (allowed: ViewContent, Contact, ClickButton, SubmitForm)',
   })
   event_name?: TikTokTestEventName;
+
+  @IsOptional()
+  @IsUUID()
+  page_id?: string;
+}
+
+export class TikTokTestPagesQueryDto {
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
 }

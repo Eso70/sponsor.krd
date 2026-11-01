@@ -16,8 +16,21 @@ describe.each([
   ["business", "/api/auth/settings", "PATCH"],
   ["platform", "/api/platform/settings/tiktok", "PUT"],
 ] as const)("%s TikTok settings", (owner, endpoint, method) => {
+  it("loads the shared owner-scoped page picker once for all Pixel groups", async () => {
+    const pagesEndpoint = owner === "business" ? "/api/analytics/v2/tiktok/test-pages" : "/api/platform/settings/tiktok/test-pages";
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify({ data:
+      url === pagesEndpoint ? { items: [{ id: "page", name: "Published page", pageType: "linktree", url: "https://example.com/linktree/page" }], nextCursor: null }
+      : { tiktok_configs: originalGroups, entitlements: { "limit.tiktok_pixels": 3 } },
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<BusinessTikTokPixelConfigPage owner={owner} copy={businessMessages.en.TikTokPixel} />);
+    await screen.findByDisplayValue("PIXEL_ONE");
+    expect(fetchMock.mock.calls.filter(([url]) => url === pagesEndpoint)).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Page" })).toHaveLength(2);
+  });
+
   it("composes embedded content before one final Save action without a second page heading", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: { items: [], nextCursor: null,
       tiktok_configs: originalGroups,
       entitlements: { "limit.tiktok_pixels": 3 },
     } }), { status: 200 })));
@@ -33,6 +46,7 @@ describe.each([
   });
   it("shows and saves both Pixel groups without a primary selection", async () => {
     const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input.includes('/test-pages')) return new Response(JSON.stringify({ data: { items: [], nextCursor: null } }), { status: 200 });
       if (input === "/api/auth/effective-access") {
         return new Response(JSON.stringify({ data: { entitlements: { "limit.tiktok_pixels": 3 } } }), { status: 200 });
       }

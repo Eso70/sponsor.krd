@@ -2,6 +2,7 @@ import { StorageService } from './storage.service';
 import type { StorageDriver } from './storage.driver';
 import { DatabaseService } from '../database/database.service';
 import sharp from 'sharp';
+import { Logger } from '@nestjs/common';
 
 class MemoryStorageDriver implements StorageDriver {
   readonly objects = new Map<string, Buffer>();
@@ -25,6 +26,34 @@ class MemoryStorageDriver implements StorageDriver {
 }
 
 describe('StorageService', () => {
+  it('logs scheduled cleanup failures and retries on the next interval', async () => {
+    jest.useFakeTimers();
+    const managed = new StorageService(
+      new MemoryStorageDriver(),
+      {} as DatabaseService,
+    );
+    const cleanup = jest
+      .spyOn(managed, 'cleanupUnusedAssets')
+      .mockRejectedValueOnce(new Error('temporary outage'))
+      .mockResolvedValue({ deleted: 0, bytes_freed: 0 });
+    const log = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      managed.onModuleInit();
+      await jest.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
+      expect(log).toHaveBeenCalledWith(
+        'Scheduled asset cleanup failed',
+        expect.stringContaining('temporary outage'),
+      );
+      await jest.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
+      expect(cleanup).toHaveBeenCalledTimes(2);
+    } finally {
+      managed.onModuleDestroy();
+      log.mockRestore();
+      jest.useRealTimers();
+    }
+  });
   let driver: MemoryStorageDriver;
   let service: StorageService;
 

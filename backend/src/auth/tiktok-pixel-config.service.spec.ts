@@ -125,11 +125,9 @@ describe('TikTokPixelConfigService', () => {
       (mockSecrets.decryptJson as jest.Mock).mockReturnValue({
         events_token: 'valid-secret-token',
       });
-      const result = await testService.testEventsApi('owner-1', {
-        test_event_code: 'TEST77408',
-      });
-      expect(result.statusCode).toBe(400);
-      expect(result.message).toContain('Publish a Linktree');
+      await expect(
+        testService.testEventsApi('owner-1', { test_event_code: 'TEST77408' }),
+      ).rejects.toThrow('Select an active published');
     });
 
     it('successfully calls TikTok Events API with test_event_code and returns response', async () => {
@@ -147,7 +145,9 @@ describe('TikTokPixelConfigService', () => {
           rows: [
             {
               id: 'page-uuid',
-              seo_name: 'ismail-cs',
+              slug: 'ismail-cs',
+              name: 'Ismail',
+              page_type: 'linktree',
               subdomain: 'ismail',
               account_type: 'business',
             },
@@ -240,7 +240,9 @@ describe('TikTokPixelConfigService', () => {
           rows: [
             {
               id: 'platform-page',
-              seo_name: 'platform-page',
+              slug: 'platform-page',
+              name: 'Platform',
+              page_type: 'linktree',
               subdomain: null,
               account_type: 'platform',
             },

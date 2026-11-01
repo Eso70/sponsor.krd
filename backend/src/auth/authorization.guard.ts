@@ -1,4 +1,5 @@
 import { validateLinktreeUpdate } from '../linktrees/validate-linktree-update';
+import { PAGE_PIN_MUTATION, validatePagePin } from '../common/page-pin.dto';
 import {
   CanActivate,
   ExecutionContext,
@@ -59,8 +60,12 @@ export class AuthorizationGuard implements CanActivate {
     if (
       request.method === 'PATCH' &&
       required.includes('business:linktrees:update')
-    )
-      validateLinktreeUpdate(body);
+    ) {
+      const handler = context.getHandler();
+      if (handler && Reflect.getMetadata(PAGE_PIN_MUTATION, handler) === true)
+        validatePagePin(body);
+      else validateLinktreeUpdate(body);
+    }
     const permissions = [...required];
     const completeLinktreeEdit =
       request.method === 'PATCH' &&

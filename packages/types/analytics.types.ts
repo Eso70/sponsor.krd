@@ -170,7 +170,20 @@ export interface BusinessDashboardTikTokHealth {
 export interface TikTokEventsApiTestRequest {
   test_event_code: string;
   pixel_id?: string;
-  event_name?: "ViewContent" | "Contact" | "ClickButton";
+  event_name?: "ViewContent" | "Contact" | "ClickButton" | "SubmitForm";
+  page_id?: string;
+}
+
+export interface TikTokTestPage {
+  id: string;
+  name: string;
+  pageType: "linktree" | "form";
+  url: string;
+}
+
+export interface TikTokTestPages {
+  items: TikTokTestPage[];
+  nextCursor: string | null;
 }
 
 export interface TikTokEventsApiTestResult {

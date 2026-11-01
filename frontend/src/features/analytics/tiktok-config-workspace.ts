@@ -7,6 +7,7 @@ export interface TikTokConfigWorkspace {
   healthEndpoint?: string;
   errorsEndpoint?: string;
   testEndpoint: string;
+  testPagesEndpoint: string;
   secretEndpoint?: (id: string) => string;
   pixelLimit: number | null;
   description: string;
@@ -23,6 +24,7 @@ export const TIKTOK_CONFIG_WORKSPACES: Record<
     healthEndpoint: "/api/analytics/v2/tiktok/health",
     errorsEndpoint: "/api/analytics/v2/tiktok/errors",
     testEndpoint: "/api/analytics/v2/tiktok/test",
+    testPagesEndpoint: "/api/analytics/v2/tiktok/test-pages",
     secretEndpoint: (id: string) => `/api/auth/tiktok/${id}/secret`,
     pixelLimit: null,
     description:
@@ -35,6 +37,7 @@ export const TIKTOK_CONFIG_WORKSPACES: Record<
     healthEndpoint: "/api/platform/settings/tiktok/health",
     errorsEndpoint: "/api/platform/settings/tiktok/errors",
     testEndpoint: "/api/platform/settings/tiktok/test",
+    testPagesEndpoint: "/api/platform/settings/tiktok/test-pages",
     pixelLimit: 3,
     description:
       "Pixel و Events APIی تایبەت بە پەڕە گشتییەکانی Sponsor.krd. هیچ کاتێک بۆ پەڕەی بزنسەکان بەکار نایەت.",

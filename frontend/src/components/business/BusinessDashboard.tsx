@@ -1,4 +1,5 @@
 "use client";
+import { useLinktreeEditorWorkflow } from "@/features/link-editor/use-linktree-editor-workflow";
 import { clearSelectedAnalytics } from "@/features/shared/clear-selected-analytics";
 
 import {
@@ -8,7 +9,6 @@ import {
   useCallback,
   useRef,
   useMemo,
-  type ReactNode,
 } from "react";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import {
@@ -24,7 +24,6 @@ import dynamic from "next/dynamic";
 import { DrawerPresence } from "@/components/shared/DrawerPresence";
 import { LinktreeEditorDrawer } from "@/features/link-editor/components/LinktreeEditorDrawer";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { LinktreeEditorSubmitData } from "@/features/link-editor/editor-types";
 import { useLinktreeMutations, LINKTREE_APPROVAL_COPY } from "@/features/link-editor/use-linktree-mutations";
 import { toast } from "sonner";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
@@ -67,7 +66,7 @@ import {
   getBusinessDashboardState,
   logoutBusiness,
 } from "@/features/business/api";
-import { apiRequest, isApiRequestError } from "@/lib/api/request";
+import { isApiRequestError } from "@/lib/api/request";
 import { ErrorPage } from "@/components/error-pages/ErrorPage";
 import { businessErrorTheme } from "@/components/error-pages/error-theme";
 import { businessErrorPageCopy } from "@/features/business/i18n/error-copy";
@@ -175,29 +174,6 @@ function getBusinessPage(pathname: string): BusinessDashboardPage {
     : "linktrees";
 }
 
-function LockedBusinessContent({
-  locked,
-  title,
-  reason,
-  children,
-}: {
-  locked: boolean;
-  title: string;
-  reason: string;
-  children: ReactNode;
-}) {
-  return (
-    <LockedContent
-      locked={locked}
-      title={title}
-      description={reason}
-      className="min-h-0 flex-1"
-    >
-      {children}
-    </LockedContent>
-  );
-}
-
 export const BusinessDashboard = memo(function BusinessDashboard({
   initialLinktrees = [],
   currentUsername = "",
@@ -231,8 +207,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     prependLinktree,
   } = useLinktrees(initialLinktrees);
   const createDefaultFromUrl = searchParams.get("create") === "default";
-  const [isDrawerOpen, setIsDrawerOpen] = useState(createDefaultFromUrl);
-  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [linktreeToDelete, setLinktreeToDelete] = useState<{
     id: string;
@@ -548,19 +522,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     refresh: fetchAnalyticsTotals,
   } = useBusinessAnalyticsTotals("linktree", activeTab === "linktrees");
   const mutations = useLinktreeMutations("business");
-  const [editData, setEditData] = useState<{
-    linktree: Linktree;
-    links: Array<{
-      id: string;
-      platform: string;
-      url: string;
-      display_name?: string | null;
-      description?: string | null;
-      default_message?: string | null;
-      display_order: number;
-      metadata?: Record<string, unknown> | null;
-    }>;
-  } | null>(null);
+
 
   const handleRefresh = useCallback(
     async (rethrow = false) => {
@@ -623,61 +585,20 @@ export const BusinessDashboard = memo(function BusinessDashboard({
   }, [currentUsername]);
 
 
-  const editRequest = useRef<AbortController | null>(null);
-  useEffect(() => () => editRequest.current?.abort(), []);
-  const handleEdit = useCallback(
-    async (id: string) => {
-      editRequest.current?.abort();
-      const controller = new AbortController();
-      editRequest.current = controller;
-      // Keep the same drawer mounted while its data loads.
-      setIsDrawerOpen(true);
-      setIsLoadingEditData(true);
-      setEditData(null); // Clear previous data
-
-      try {
-        // apiRequest owns envelope parsing, so a failure arrives as an
-        // ApiRequestError carrying the server's message rather than a raw body.
-        const data = await apiRequest<{
-          linktree: Linktree;
-          links: NonNullable<typeof editData>["links"];
-        }>(`/api/linktrees/${id}/edit`, { signal: controller.signal });
-        if (controller.signal.aborted) return;
-
-        // Validate required fields
-        if (!data?.linktree?.id) {
-          throw new Error("Invalid response format: missing linktree data");
-        }
-
-        if (!Array.isArray(data.links)) {
-          throw new Error("Invalid response format: links must be an array");
-        }
-
-        setEditData({ linktree: data.linktree, links: data.links });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        // If unauthorized, suggest re-login and keep the modal open otherwise.
-        if (isApiRequestError(error, 401)) {
-          const shouldReload = window.confirm(actionT("sessionExpired"));
-          if (shouldReload) {
-            window.location.href = "/business/workspace-entry";
-          }
-          return;
-        }
-
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Failed to load linktree data";
-        console.error(`Failed to load linktree data: ${errorMessage}`);
-
-        setIsDrawerOpen(false); // Close modal on error
-      } finally {
-        if (!controller.signal.aborted) setIsLoadingEditData(false);
-      }
+  const editor = useLinktreeEditorWorkflow({
+    scope: "business", locale, initiallyOpen: createDefaultFromUrl,
+    copy: { created: actionT("created"), updated: actionT("updated"), archived: actionT("archived"), restored: actionT("restored"), enabled: actionT("pageActivated"), disabled: actionT("pageDeactivated"), loadFailed: actionT("pagesRefreshFailed"), saveFailed: actionT("updateFailed"), archiveFailed: actionT("archiveFailed"), statusFailed: actionT("statusFailed") },
+    onClose: () => setIsCreatingDefault(false),
+    onLoadError: (error) => {
+      if (!isApiRequestError(error, 401)) return;
+      if (window.confirm(actionT("sessionExpired"))) window.location.href = "/business/workspace-entry";
+      return false;
     },
-    [actionT],
-  );
+    notifySaveError: false,
+    onSaved: (page, editId) => { if (editId) mergeLinktree(editId, page); else prependLinktree(page); },
+    onPageUpdated: mergeLinktree,
+  });
+  const { open: isDrawerOpen, loading: isLoadingEditData, data: editData, openEdit: handleEdit, close: handleDrawerClose, create: handleCreateNew, save: handleSubmit, archive: handleToggleArchive, status: handleToggleStatus } = editor;
 
   const handleViewAnalytics = (id: string, name: string) => {
     setAnalyticsModalLinktree({ id, name });
@@ -722,54 +643,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     }
   }, [isDeleting]);
 
-  const handleToggleArchive = useCallback(
-    async (id: string, nextStatus: boolean) => {
-      try {
-        const result = await mutations.archive(id, nextStatus);
-        if (result.outcome === "approval") {
-          toast.info(LINKTREE_APPROVAL_COPY[locale]);
-          return;
-        }
-        mergeLinktree(id, { is_archived: nextStatus, archived_at: nextStatus ? new Date().toISOString() : null });
-        toast.success(actionT(nextStatus ? "archived" : "restored"));
-      } catch (error) {
-        console.error("Error archiving linktree:", error);
-        toast.error(actionT("archiveFailed"));
-      }
-    },
-    [mutations, mergeLinktree, actionT, locale],
-  );
-
-  const handleToggleStatus = useCallback(
-    async (id: string, nextStatus: "active" | "inactive") => {
-      try {
-        const result = await mutations.status(id, nextStatus);
-        if (result.outcome === "approval") {
-          toast.info(LINKTREE_APPROVAL_COPY[locale]);
-          return;
-        }
-        mergeLinktree(id, { status: nextStatus });
-        toast.success(actionT(nextStatus === "active" ? "pageActivated" : "pageDeactivated"));
-      } catch (error) {
-        console.error("Error changing linktree status:", error);
-        toast.error(actionT("statusFailed"));
-      }
-    },
-    [mutations, mergeLinktree, actionT, locale],
-  );
-
-  // Left unmemoised on purpose: React Compiler handles the memoisation here, and
-  // wrapping it in useCallback trips react-hooks/preserve-manual-memoization.
-  // It only calls state setters, so a fresh identity per render is harmless.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleDrawerClose = () => {
-    editRequest.current?.abort();
-    setIsLoadingEditData(false);
-    setIsDrawerOpen(false);
-    setEditData(null);
-    setIsCreatingDefault(false);
-  };
-
   // Handle ?edit=<id> URL param on initial mount (full page navigation)
   const editParam = searchParams.get("edit");
   useEffect(() => {
@@ -781,28 +654,6 @@ export const BusinessDashboard = memo(function BusinessDashboard({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editParam, handleEdit, router]);
-
-  const handleCreateNew = useCallback(() => {
-    editRequest.current?.abort();
-    setIsLoadingEditData(false);
-    setEditData(null);
-    setIsDrawerOpen(true);
-  }, []);
-
-  const handleSubmit = useCallback(
-    async (data: LinktreeEditorSubmitData, editId?: string) => {
-      const result = await mutations.save(data, editId);
-      if (result.outcome === "approval") {
-        toast.info(LINKTREE_APPROVAL_COPY[locale]);
-      } else {
-        if (editId) mergeLinktree(editId, result.page);
-        else prependLinktree(result.page);
-        toast.success(actionT(editId ? "updated" : "created"));
-      }
-      handleDrawerClose();
-    },
-    [mutations, handleDrawerClose, mergeLinktree, prependLinktree, actionT, locale],
-  );
 
   // Don't render anything if not authenticated (after all hooks)
   // This check happens after all hooks are declared to follow React rules
@@ -1012,10 +863,10 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                 className={`max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-6 md:py-8 lg:py-10 relative z-10 ${pageLocked ? "flex h-full flex-col overflow-hidden" : ""}`}
               >
                 <BusinessAnnouncementBanners />
-                <LockedBusinessContent
+                <LockedContent className="min-h-0 flex-1"
                   locked={pageLocked}
                   title={actionT("lockedTitle")}
-                  reason={pageLockReason}
+                  description={pageLockReason}
                 >
                   {/*
                   A locked page renders a placeholder, never the real feature.
@@ -1131,7 +982,7 @@ export const BusinessDashboard = memo(function BusinessDashboard({
                       </div>
                     </div>
                   )}
-                </LockedBusinessContent>
+                </LockedContent>
               </div>
             </main>
           </div>

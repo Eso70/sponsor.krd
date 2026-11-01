@@ -4,6 +4,12 @@ import type { PoolClient } from 'pg';
 import { buildTenantUrl } from '../common/root-domain';
 import { DatabaseService } from '../database/database.service';
 import { SecretCryptoService } from './secret-crypto.service';
+import type {
+  TikTokEventsApiTestRequest,
+  TikTokTestPages,
+} from '@linktree/types';
+import { TIKTOK_OWNER_ELIGIBLE_SQL } from '../analytics/tiktok-owner-eligibility';
+import { featurePlanSql } from '../billing/feature-plan-policy';
 
 export interface TikTokPixelConfigInput {
   id?: string;
@@ -233,13 +239,81 @@ export class TikTokPixelConfigService {
     );
   }
 
+  private async testPages(
+    ownerId: string,
+    pageId?: string,
+    cursor?: string,
+    eventName?: string,
+  ) {
+    return this.database.query<{
+      id: string;
+      name: string;
+      slug: string;
+      page_type: 'linktree' | 'form';
+      subdomain: string | null;
+      account_type: 'business' | 'platform';
+      action_id?: string;
+      action_name?: string;
+    }>(
+      `SELECT page.id::text, page.name, page.slug, page.page_type,
+              business.subdomain, business.account_type,
+              action.id::text AS action_id, action.label AS action_name
+       FROM public_pages page
+       JOIN businesses business ON business.id=page.business_id
+       LEFT JOIN linktrees linktree ON linktree.id=page.source_linktree_id AND linktree.business_id=page.business_id
+       LEFT JOIN forms form ON form.id=page.source_form_id AND form.business_id=page.business_id
+       LEFT JOIN LATERAL (
+         SELECT id,label FROM public_page_actions
+         WHERE public_page_id=page.id AND status='active' AND tiktok_event=$4
+         ORDER BY id LIMIT 1
+       ) action ON true
+       WHERE page.business_id=$1 AND page.status='published' AND business.status='active'
+         AND ${TIKTOK_OWNER_ELIGIBLE_SQL}
+         AND ((page.page_type='linktree' AND linktree.status='active')
+           OR (page.page_type='form' AND form.status='active'
+             AND (business.account_type='platform' OR ${featurePlanSql('forms', 'business')})))
+         AND ($2::uuid IS NULL OR page.id=$2::uuid)
+         AND ($3::uuid IS NULL OR page.id>$3::uuid)
+       ORDER BY page.id LIMIT 101`,
+      [ownerId, pageId ?? null, cursor ?? null, eventName ?? null],
+    );
+  }
+
+  private testPageUrl(page: {
+    page_type: string;
+    slug: string;
+    account_type: string;
+    subdomain: string | null;
+  }) {
+    const base = this.config.get<string>('APP_BASE_URL');
+    if (!base || (page.account_type !== 'platform' && !page.subdomain))
+      throw new BadRequestException('Public page address is not configured');
+    const path = `/${page.page_type}/${encodeURIComponent(page.slug)}`;
+    return page.account_type === 'platform'
+      ? new URL(path, base).toString()
+      : buildTenantUrl(base, page.subdomain!, path);
+  }
+
+  async listTestPages(
+    ownerId: string,
+    cursor?: string,
+  ): Promise<TikTokTestPages> {
+    const result = await this.testPages(ownerId, undefined, cursor);
+    const rows = result.rows.slice(0, 100);
+    return {
+      items: rows.map((page) => ({
+        id: page.id,
+        name: page.name,
+        pageType: page.page_type,
+        url: this.testPageUrl(page),
+      })),
+      nextCursor: result.rows.length > 100 ? rows[rows.length - 1].id : null,
+    };
+  }
+
   async testEventsApi(
     ownerId: string,
-    input: {
-      test_event_code: string;
-      pixel_id?: string;
-      event_name?: string;
-    },
+    input: TikTokEventsApiTestRequest,
     context?: { ip?: string; userAgent?: string },
   ): Promise<{
     success: boolean;
@@ -326,73 +400,28 @@ export class TikTokPixelConfigService {
       };
     }
 
-    const pageResult = await this.database.query<{
-      id: string;
-      seo_name: string;
-      subdomain: string | null;
-      account_type: 'platform' | 'business';
-    }>(
-      `SELECT page.id::text, linktree.seo_name, business.subdomain,
-              business.account_type
-         FROM public_pages page
-         JOIN linktrees linktree ON linktree.id = page.source_linktree_id
-         JOIN businesses business ON business.id = page.business_id
-        WHERE page.business_id = $1::uuid
-          AND page.page_type = 'linktree'
-          AND page.status = 'published'
-          AND linktree.status = 'active'
-          AND business.status = 'active'
-        ORDER BY linktree.is_default DESC, linktree.created_at, linktree.id
-        LIMIT 1`,
-      [ownerId],
+    const pageResult = await this.testPages(
+      ownerId,
+      input.page_id,
+      undefined,
+      eventName,
     );
     const page = pageResult.rows[0];
-    const applicationBaseUrl = this.config.get<string>('APP_BASE_URL');
-    if (
-      !page ||
-      !applicationBaseUrl ||
-      (page.account_type !== 'platform' && !page.subdomain)
-    ) {
-      return {
-        success: false,
-        statusCode: 400,
-        tiktokCode: null,
-        message:
-          'Publish a Linktree and configure APP_BASE_URL before testing TikTok events.',
-        requestId: null,
-        pixelId: targetPixel.pixel_id,
-        testEventCode,
-        eventName,
-        sentAt: new Date().toISOString(),
-      };
-    }
-    const path = `/linktree/${encodeURIComponent(page.seo_name)}`;
-    const pageUrl =
-      page.account_type === 'platform'
-        ? new URL(path, applicationBaseUrl).toString()
-        : buildTenantUrl(applicationBaseUrl, page.subdomain!, path);
-
+    if (!page)
+      throw new BadRequestException(
+        'Select an active published Linktree or form owned by this account',
+      );
+    if (eventName === 'SubmitForm' && page.page_type !== 'form')
+      throw new BadRequestException('SubmitForm requires a form page');
+    const pageUrl = this.testPageUrl(page);
     const eventTime = Math.floor(Date.now() / 1000);
     const eventId = crypto.randomUUID();
-
-    const properties =
-      eventName === 'Contact'
-        ? {
-            content_id: page.id,
-            content_ids: [page.id],
-            content_name: 'WhatsApp Contact',
-          }
-        : eventName === 'ClickButton'
-          ? {
-              content_id: page.id,
-              content_ids: [page.id],
-              content_name: 'Link Click',
-            }
-          : {
-              content_id: page.id,
-              content_ids: [page.id],
-              content_name: 'Public Page',
-            };
+    const contentId = page.action_id || page.id;
+    const properties = {
+      content_id: contentId,
+      content_ids: [contentId],
+      content_name: page.action_name || page.name,
+    };
 
     const requestBody = {
       event_source: 'web',
@@ -436,7 +465,9 @@ export class TikTokPixelConfigService {
         requestId?: string;
       } = {};
       try {
-        parsed = JSON.parse(text) as typeof parsed;
+        const decoded: unknown = JSON.parse(text);
+        if (decoded && typeof decoded === 'object' && !Array.isArray(decoded))
+          parsed = decoded;
       } catch {
         // non-JSON response from provider
       }
@@ -445,9 +476,10 @@ export class TikTokPixelConfigService {
       const requestId = parsed.request_id || parsed.requestId || null;
       const tiktokMessage =
         parsed.message ||
-        text.replace(/\s+/g, ' ').trim() ||
-        `HTTP ${response.status}`;
-      const success = response.ok && (tiktokCode === 0 || tiktokCode === null);
+        (tiktokCode === null
+          ? 'TikTok returned an invalid acknowledgement'
+          : `TikTok rejected the event (code ${tiktokCode})`);
+      const success = response.ok && tiktokCode === 0;
 
       return {
         success,

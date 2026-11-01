@@ -34,7 +34,10 @@ import {
 import { AnalyticsReadService } from './analytics-read.service';
 import { UnifiedAnalyticsService } from './unified-analytics.service';
 import { TikTokPixelConfigService } from '../auth/tiktok-pixel-config.service';
-import { TestTikTokEventsApiDto } from './dto/test-tiktok-events-api.dto';
+import {
+  TestTikTokEventsApiDto,
+  TikTokTestPagesQueryDto,
+} from './dto/test-tiktok-events-api.dto';
 
 function redirectQueryString(
   query: Record<string, unknown>,
@@ -368,6 +371,18 @@ export class BusinessUnifiedAnalyticsController {
       data: {
         retried: await this.reads.retryFailedTikTokEvents(business.id, pageId),
       },
+    };
+  }
+
+  @Get('tiktok/test-pages')
+  @RequireCapabilities(Capability.BusinessTikTokRead)
+  async tikTokTestPages(
+    @CurrentUser() business: SessionUser,
+    @Query() query: TikTokTestPagesQueryDto,
+  ) {
+    return {
+      success: true,
+      data: await this.tikTokPixels.listTestPages(business.id, query.cursor),
     };
   }
 

@@ -55,7 +55,13 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     if (!this.database) return;
     this.reconcilePromise = this.reconcileExistingAssets();
     this.cleanupTimer = setInterval(
-      () => void this.cleanupUnusedAssets(false),
+      () =>
+        void this.cleanupUnusedAssets(false).catch((error: unknown) => {
+          this.logger.error(
+            'Scheduled asset cleanup failed',
+            error instanceof Error ? error.stack : String(error),
+          );
+        }),
       6 * 60 * 60 * 1000,
     );
     this.cleanupTimer.unref();

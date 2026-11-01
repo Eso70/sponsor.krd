@@ -42,6 +42,59 @@ beforeEach(() => {
 });
 
 describe("accepted public form conversions", () => {
+  function formTracker(pixelIds = ["OWNER_PIXEL"], registered = true) {
+    return createPageTracker({
+      pageId: PAGE_ID,
+      pageName: "Contact",
+      contentType: "form",
+      analytics: {
+        pixelIds,
+        actions: registered
+          ? { "form:submit": { id: ACTION_ID, pixelEvent: "SubmitForm" } }
+          : {},
+      },
+    });
+  }
+
+  it("dispatches a confirmed submission once while allowing another submission ID", () => {
+    const tracker = formTracker();
+    tracker.trackServerConversion("form:submit", EVENT_ID);
+    tracker.trackServerConversion("form:submit", EVENT_ID);
+    tracker.trackServerConversion("form:submit", "44444444-4444-4444-8444-444444444444");
+    expect(mocks.trackTikTokEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.queueAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not turn a saved response into a failure when the browser SDK throws", () => {
+    const tracker = formTracker();
+    mocks.trackTikTokEvent.mockImplementationOnce(() => {
+      throw new Error("SDK unavailable");
+    });
+    expect(() => tracker.trackServerConversion("form:submit", EVENT_ID)).not.toThrow();
+    expect(mocks.recordTikTokDebug).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "error", eventName: "SubmitForm", eventId: EVENT_ID,
+      pixelDispatched: false,
+    }));
+    // An unsuccessful dispatch may be retried with the original server ID.
+    tracker.trackServerConversion("form:submit", EVENT_ID);
+    tracker.trackServerConversion("form:submit", EVENT_ID);
+    expect(mocks.trackTikTokEvent).toHaveBeenCalledTimes(2);
+    expect(mocks.queueAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { pixelIds: [], registered: true, detail: "No active Pixel configured" },
+    { pixelIds: ["OWNER_PIXEL"], registered: false, detail: "Submission action not registered" },
+  ])("diagnoses missing tracking configuration: $detail", ({ pixelIds, registered, detail }) => {
+    const tracker = formTracker(pixelIds, registered);
+    expect(() => tracker.trackServerConversion("form:submit", EVENT_ID)).not.toThrow();
+    expect(mocks.trackTikTokEvent).not.toHaveBeenCalled();
+    expect(mocks.recordTikTokDebug).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "error", eventId: EVENT_ID, actionKey: "form:submit",
+      pixelDispatched: false, detail,
+    }));
+  });
+
   it("uses the server receipt event ID without queuing a second conversion", () => {
     const tracker = createPageTracker({
       pageId: PAGE_ID,

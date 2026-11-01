@@ -3,8 +3,66 @@ import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthorizationGuard } from './authorization.guard';
 import { Capability } from './capabilities';
+import { PAGE_PIN_MUTATION } from '../common/page-pin.dto';
+import { LinktreesController } from '../linktrees/linktrees.controller';
 
 describe('AuthorizationGuard', () => {
+  it.each(['allow', 'approval'])(
+    'validates and authorizes pin requests for %s decisions',
+    async (outcome) => {
+      const reflector = {
+        getAllAndOverride: () => [Capability.BusinessLinktreesUpdate],
+      } as unknown as Reflector;
+      const authorize = jest.fn().mockResolvedValue({ outcome });
+      const approvals = {
+        create: jest.fn().mockResolvedValue({ id: 'pending' }),
+      };
+      const request = {
+        user: { id: 'owner', role: 'business' },
+        method: 'PATCH',
+        url: '/api/linktrees/page/pin',
+        params: { id: 'page' },
+        headers: {},
+        body: { isPinned: true },
+      };
+      const context = {
+        getHandler: () => LinktreesController.prototype.pin,
+        getClass: () => LinktreesController,
+        switchToHttp: () => ({ getRequest: () => request }),
+      } as unknown as ExecutionContext;
+      expect(
+        Reflect.getMetadata(
+          PAGE_PIN_MUTATION,
+          LinktreesController.prototype.pin,
+        ),
+      ).toBe(true);
+      const guard = new AuthorizationGuard(
+        reflector,
+        { authorize } as never,
+        approvals as never,
+      );
+      if (outcome === 'allow')
+        await expect(guard.canActivate(context)).resolves.toBe(true);
+      else {
+        await expect(guard.canActivate(context)).rejects.toMatchObject({
+          status: 202,
+        });
+        expect(approvals.create).toHaveBeenCalledWith(
+          expect.objectContaining({ changes: { isPinned: true } }),
+        );
+      }
+      expect(authorize).toHaveBeenCalledWith(
+        expect.objectContaining({
+          changedFields: ['isPinned'],
+          businessId: 'owner',
+        }),
+      );
+      request.body = { isPinned: 'true' } as never;
+      await expect(guard.canActivate(context)).rejects.toMatchObject({
+        status: 400,
+      });
+    },
+  );
   const authorization = {
     authorize: jest.fn(),
   };

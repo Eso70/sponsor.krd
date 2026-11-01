@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { settingsSectionFields, mergeSavedSection } from "@/features/business/settings-draft";
 import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -210,25 +211,11 @@ export function BusinessSettingsPage() {
           default_whatsapp_enabled: data.default_whatsapp_enabled,
           homepage_linktree: data.homepage_linktree,
         };
-      } else if (
-        effectiveAccess?.permissions["business:profile:update"]?.outcome ===
-        "deny"
-      ) {
-        body = { section: activeTab, username: data.username };
       } else {
         // Send only what actually changed. The backend authorizes the fields
-        // present in the payload, and the non-image profile fields are still
-        // approval-gated — submitting an untouched `name` alongside a new logo
-        // would push the whole save back into the approval queue.
-        const profileFields = [
-          "name",
-          "username",
-          "phone",
-          "logo",
-          "favicon",
-          "default_avatar",
-          "website_color",
-        ] as const;
+        // present in the payload. An untouched profile field must not turn an
+        // otherwise permitted username-only save into a profile update.
+        const profileFields = settingsSectionFields.profile;
         const changed = profileFields.filter(
           (field) => data[field] !== savedSnapshot[field],
         );
@@ -245,8 +232,10 @@ export function BusinessSettingsPage() {
       if (!response.ok) throw new Error(result?.message || "Save failed");
       if (result?.data) {
         const normalized = normalizeSettings(result.data);
-        setData(normalized);
-        setSavedSnapshot(normalized);
+        const fields = settingsSectionFields[activeTab];
+        const serverFields = ['email', 'ownerName', 'subdomain', 'profile_locked_until'] as const;
+        setData(current => ({ ...mergeSavedSection(current, data, normalized, fields), ...Object.fromEntries(serverFields.map(field => [field, normalized[field]])) }));
+        setSavedSnapshot(current => ({ ...current, ...Object.fromEntries([...fields, ...serverFields].map(field => [field, normalized[field]])) }));
         window.dispatchEvent(
           new CustomEvent("sponsor-krd:business-settings-updated", {
             detail: normalized,
@@ -291,24 +280,8 @@ export function BusinessSettingsPage() {
   // Only user-editable fields count — server-managed response fields would
   // otherwise keep the form permanently dirty after every save.
   const dirty = useMemo(() => {
-    return (
-      data.name !== savedSnapshot.name ||
-      data.username !== savedSnapshot.username ||
-      data.phone !== savedSnapshot.phone ||
-      data.email !== savedSnapshot.email ||
-      data.subdomain !== savedSnapshot.subdomain ||
-      data.logo !== savedSnapshot.logo ||
-      data.favicon !== savedSnapshot.favicon ||
-      data.default_avatar !== savedSnapshot.default_avatar ||
-      data.website_color !== savedSnapshot.website_color ||
-      data.default_template !== savedSnapshot.default_template ||
-      data.default_background_pattern !== savedSnapshot.default_background_pattern ||
-      data.default_background_color !==
-        savedSnapshot.default_background_color ||
-      data.default_whatsapp_enabled !== savedSnapshot.default_whatsapp_enabled ||
-      data.homepage_linktree !== savedSnapshot.homepage_linktree
-    );
-  }, [data, savedSnapshot]);
+    return settingsSectionFields[activeTab].some(field => data[field] !== savedSnapshot[field]);
+  }, [data, savedSnapshot, activeTab]);
   const profileEditingOutcome =
     effectiveAccess?.permissions["business:profile:update"]?.outcome;
   const profileEditingAllowed =
@@ -454,7 +427,7 @@ export function BusinessSettingsPage() {
                   <BusinessBrandingFields
                     data={data}
                     onUpload={uploadBrandAsset}
-                    enabled={brandingEditingAllowed && !cooldown}
+                    enabled={brandingEditingAllowed && profileEditingAllowed && !cooldown}
                   />
                   {brandAssetError && (
                     <InlineRequestError

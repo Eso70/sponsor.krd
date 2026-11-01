@@ -6,6 +6,66 @@ import { RedisService } from '../redis/redis.service';
 import { PlatformSettingsService } from './platform-settings.service';
 
 describe('PlatformSettingsService', () => {
+  it.each([false, true])(
+    'saves General settings atomically, with side effects after commit (branding failure=%s)',
+    async (failBranding) => {
+      let state = { id: 'admin', username: 'old', name: 'Old brand' };
+      let committed = false;
+      const query = jest.fn(async (sql: string) => {
+        if (sql.startsWith('SELECT id FROM'))
+          return { rows: [{ id: 'admin' }] };
+        if (sql.startsWith('SELECT 1 FROM')) return { rows: [] };
+        if (
+          sql.includes('UPDATE platform_admins') &&
+          sql.includes('username =')
+        )
+          state = { ...state, username: 'new' };
+        if (sql.includes('UPDATE platform_admins') && sql.includes('name =')) {
+          if (failBranding) throw new Error('branding write failed');
+          state = { ...state, name: 'New brand' };
+        }
+        return { rows: [state] };
+      });
+      const database = {
+        query,
+        transaction: async (
+          operation: (client: { query: typeof query }) => Promise<unknown>,
+        ) => {
+          const before = { ...state };
+          try {
+            const result = await operation({ query });
+            committed = true;
+            return result;
+          } catch (error) {
+            state = before;
+            throw error;
+          }
+        },
+      };
+      const clear = jest.fn(async () => {
+        expect(committed).toBe(true);
+      });
+      const service = new PlatformSettingsService(
+        database as never,
+        { deleteByPattern: clear } as never,
+      );
+      const save = service.updateGeneral('admin', {
+        profile: { username: 'new' },
+        branding: { name: 'New brand' },
+      });
+      if (failBranding) {
+        await expect(save).rejects.toThrow('branding write failed');
+        expect(state).toMatchObject({ username: 'old', name: 'Old brand' });
+        expect(clear).not.toHaveBeenCalled();
+      } else {
+        await expect(save).resolves.toMatchObject({
+          username: 'new',
+          name: 'New brand',
+        });
+        expect(clear).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
   const redis = {
     deleteByPattern: jest.fn().mockResolvedValue(1),
   } as unknown as RedisService;

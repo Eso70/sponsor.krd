@@ -110,6 +110,7 @@ describe("shared report and analytics drawer parity", () => {
     "matches every section and style from the %s drawer in all languages",
     async (dataSource) => {
       for (const locale of ["en", "ar", "ckb"] as const) {
+        request.mockImplementation(async (url: string) => url.includes('actions') ? actions : totals);
         vi.stubGlobal(
           "fetch",
           vi.fn(async (url: string) => ({
@@ -147,7 +148,7 @@ describe("shared report and analytics drawer parity", () => {
         const region = await screen.findByRole("region", {
           name: labels.title,
         });
-        expect(within(region).getByText("131")).toBeVisible();
+        expect(await within(region).findByText("131")).toBeVisible();
         const collapsed = appearance(region);
         expand();
         const expanded = appearance(region);

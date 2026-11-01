@@ -13,6 +13,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
@@ -23,6 +24,11 @@ import { StorageService } from '../storage/storage.service';
 import { PlatformContentWorkspaceService } from '../platform-workspace/platform-content-workspace.service';
 import { TikTokPixelConfigService } from '../auth/tiktok-pixel-config.service';
 import { AnalyticsReadService } from '../analytics/analytics-read.service';
+import type {
+  UpdatePlatformProfileDto,
+  UpdatePlatformBrandingDto,
+  UpdatePlatformGeneralDto,
+} from './dto/platform-settings.dto';
 
 export interface PlatformAdminProfile {
   id: string;
@@ -52,6 +58,7 @@ export interface PlatformAdminSession {
 
 @Injectable()
 export class PlatformSettingsService {
+  private readonly logger = new Logger(PlatformSettingsService.name);
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly redisService: RedisService,
@@ -111,16 +118,17 @@ export class PlatformSettingsService {
   }
 
   async testTikTokEvents(
-    input: {
-      test_event_code: string;
-      pixel_id?: string;
-      event_name?: string;
-    },
+    input: import('@linktree/types').TikTokEventsApiTestRequest,
     context?: { ip?: string; userAgent?: string },
   ) {
     const { workspace, pixels } = this.trackingDependencies();
     const ownerId = await workspace.getWorkspaceId();
     return pixels.testEventsApi(ownerId, input, context);
+  }
+
+  async getTikTokTestPages(cursor?: string) {
+    const { workspace, pixels } = this.trackingDependencies();
+    return pixels.listTestPages(await workspace.getWorkspaceId(), cursor);
   }
 
   private lookupEnv(name: string): string | undefined {
@@ -163,8 +171,11 @@ export class PlatformSettingsService {
     };
   }
 
-  async getProfile(id: string): Promise<PlatformAdminProfile> {
-    const result = await this.databaseService.query<PlatformAdminProfile>(
+  async getProfile(
+    id: string,
+    database: Pick<DatabaseService, 'query'> = this.databaseService,
+  ): Promise<PlatformAdminProfile> {
+    const result = await database.query<PlatformAdminProfile>(
       `SELECT id, username, name, email, phone, logo, avatar, favicon,
               accent_color, accent_ink_color, created_at
        FROM platform_admins WHERE id = $1`,
@@ -178,12 +189,22 @@ export class PlatformSettingsService {
 
   async updateProfile(
     id: string,
+    data: UpdatePlatformProfileDto,
+  ): Promise<PlatformAdminProfile> {
+    const result = await this.writeProfile(id, data, this.databaseService);
+    await this.redisService.deleteByPattern('cache:public:platform-theme');
+    return result;
+  }
+
+  private async writeProfile(
+    id: string,
     data: {
       name?: string;
       username?: string;
       email?: string | null;
       phone?: string | null;
     },
+    database: Pick<DatabaseService, 'query'>,
   ): Promise<PlatformAdminProfile> {
     const updates: string[] = [];
     const parameters: unknown[] = [];
@@ -194,7 +215,7 @@ export class PlatformSettingsService {
     }
     if (data.username !== undefined) {
       const username = data.username.trim().toLowerCase();
-      const duplicate = await this.databaseService.query(
+      const duplicate = await database.query(
         'SELECT 1 FROM platform_admins WHERE username = $1 AND id != $2',
         [username, id],
       );
@@ -219,10 +240,10 @@ export class PlatformSettingsService {
       updates.push(`phone = $${updates.length + 1}`);
       parameters.push(data.phone?.trim() || null);
     }
-    if (updates.length === 0) return this.getProfile(id);
+    if (updates.length === 0) return this.getProfile(id, database);
 
     parameters.push(id);
-    const result = await this.databaseService.query<PlatformAdminProfile>(
+    const result = await database.query<PlatformAdminProfile>(
       `UPDATE platform_admins
        SET ${updates.join(', ')}, updated_at = NOW()
        WHERE id = $${parameters.length}
@@ -230,7 +251,6 @@ export class PlatformSettingsService {
                  accent_color, accent_ink_color`,
       parameters,
     );
-    await this.redisService.deleteByPattern('cache:public:platform-theme');
     return this.resolveProfile(result.rows[0]);
   }
 
@@ -292,14 +312,49 @@ export class PlatformSettingsService {
 
   async updateBranding(
     id: string,
+    data: UpdatePlatformBrandingDto,
+  ): Promise<PlatformAdminProfile> {
+    const current = this.storageService ? await this.getProfile(id) : null;
+    const result = await this.writeBranding(id, data, this.databaseService);
+    await this.finishBranding(data, current);
+    return result;
+  }
+
+  async updateGeneral(
+    id: string,
+    data: UpdatePlatformGeneralDto,
+  ): Promise<PlatformAdminProfile> {
+    const { current, result } = await this.databaseService.transaction(
+      async (client) => {
+        const locked = await client.query(
+          'SELECT id FROM platform_admins WHERE id=$1 FOR UPDATE',
+          [id],
+        );
+        if (!locked.rows[0])
+          throw new NotFoundException('Platform administrator not found');
+        const current = this.storageService
+          ? await this.getProfile(id, client)
+          : null;
+        await this.writeProfile(id, data.profile, client);
+        const result = await this.writeBranding(id, data.branding, client);
+        return { current, result };
+      },
+    );
+    // Asset cleanup and cache invalidation must happen only after commit.
+    await this.finishBranding(data.branding, current);
+    return result;
+  }
+
+  private async writeBranding(
+    id: string,
     data: {
       name?: string;
       logo?: string | null;
       accent_color?: string;
       accent_ink_color?: string;
     },
+    database: Pick<DatabaseService, 'query'>,
   ): Promise<PlatformAdminProfile> {
-    const current = this.storageService ? await this.getProfile(id) : null;
     const allowedFields = [
       ['name', data.name?.trim()],
       ['logo', data.logo],
@@ -321,10 +376,10 @@ export class PlatformSettingsService {
         updates.push(`${field} = $${parameters.length}`);
       }
     }
-    if (updates.length === 0) return this.getProfile(id);
+    if (updates.length === 0) return this.getProfile(id, database);
 
     parameters.push(id);
-    const result = await this.databaseService.query<PlatformAdminProfile>(
+    const result = await database.query<PlatformAdminProfile>(
       `UPDATE platform_admins
        SET ${updates.join(', ')}, updated_at = NOW()
        WHERE id = $${parameters.length}
@@ -332,19 +387,32 @@ export class PlatformSettingsService {
                  accent_color, accent_ink_color`,
       parameters,
     );
-    await this.storageService?.deleteUnreferencedFromValues(
-      data.logo !== undefined && data.logo !== current?.logo
-        ? current?.logo
-        : null,
-      data.logo !== undefined && data.logo !== current?.avatar
-        ? current?.avatar
-        : null,
-      data.logo !== undefined && data.logo !== current?.favicon
-        ? current?.favicon
-        : null,
-    );
-    await this.redisService.deleteByPattern('cache:public:platform-theme');
     return this.resolveProfile(result.rows[0]);
+  }
+
+  private async finishBranding(
+    data: UpdatePlatformBrandingDto,
+    current: PlatformAdminProfile | null,
+  ) {
+    const effects = await Promise.allSettled([
+      this.storageService?.deleteUnreferencedFromValues(
+        data.logo !== undefined && data.logo !== current?.logo
+          ? current?.logo
+          : null,
+        data.logo !== undefined && data.logo !== current?.avatar
+          ? current?.avatar
+          : null,
+        data.logo !== undefined && data.logo !== current?.favicon
+          ? current?.favicon
+          : null,
+      ),
+      this.redisService.deleteByPattern('cache:public:platform-theme'),
+    ]);
+    for (const effect of effects)
+      if (effect.status === 'rejected')
+        this.logger.warn(
+          'Platform settings saved, but post-save cleanup or cache invalidation failed',
+        );
   }
 
   async getStats() {

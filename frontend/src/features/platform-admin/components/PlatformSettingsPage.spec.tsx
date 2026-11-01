@@ -164,15 +164,14 @@ describe("PlatformSettingsPage General tab", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "/api/platform/settings/profile",
+        "/api/platform/settings/general",
         expect.objectContaining({ method: "PUT" }),
       );
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/platform/settings/branding",
-        expect.objectContaining({ method: "PUT" }),
-      );
-      const brandingCall = fetchMock.mock.calls.find(([url]) => url === "/api/platform/settings/branding");
-      const branding = JSON.parse(String(brandingCall?.[1]?.body)) as Record<string, unknown>;
+      expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'PUT')).toHaveLength(1);
+      const generalCall = fetchMock.mock.calls.find(([url]) => url === "/api/platform/settings/general");
+      const general = JSON.parse(String(generalCall?.[1]?.body));
+      const branding = general.branding as Record<string, unknown>;
+      expect(general.profile.username).toBe('operator');
       expect(branding.logo).toBe(savedSettings.logo);
       expect(branding).not.toHaveProperty("avatar");
       expect(branding).not.toHaveProperty("favicon");

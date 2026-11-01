@@ -1,4 +1,5 @@
-import { PagePinDto } from '../common/page-pin.dto';
+import { PagePinDto, PAGE_PIN_MUTATION } from '../common/page-pin.dto';
+import { SetMetadata } from '@nestjs/common';
 import {
   Controller,
   Get,
@@ -192,6 +193,7 @@ export class LinktreesController {
   }
 
   @Patch(':id/pin')
+  @SetMetadata(PAGE_PIN_MUTATION, true)
   @RequireCapabilities(Capability.BusinessLinktreesUpdate)
   async pin(
     @CurrentUser() user: SessionUser,

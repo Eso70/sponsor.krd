@@ -1,5 +1,19 @@
 # Backend
 
+Platform General settings save through `PUT /api/platform/settings/general`,
+requiring both profile and branding update capabilities. Nested DTOs validate
+both sections before one database transaction locks and updates the admin row.
+The existing single-section endpoints reuse the same writers. Media cleanup
+and cache invalidation run after commit and log failures without misreporting
+the persisted save as failed.
+
+Business Linktree pin requests declare pin-specific validation before permission
+evaluation. Direct writes and approved requests share the owner-scoped page pin
+operation; general page edits still reject pin-only or mixed pin/edit payloads.
+Optional public tracking cookies with malformed encoding are treated as absent.
+The scheduled unused-media cleanup catches/logs failures and retries at its next
+interval instead of allowing an unhandled promise rejection.
+
 Linktree question appearance is stored in `template_config.whatsapp_modal.backgroundColor`
 through the existing owner-scoped page writes. The shared normalizer accepts
 solid three/six-digit hex colors, expands short values, and replaces unsupported

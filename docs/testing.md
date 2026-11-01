@@ -1,5 +1,16 @@
 # Testing and verification
 
+Audit-regression coverage includes scheduled cleanup failure/retry, malformed
+tracking cookies, pin validation and owner-scoped approval replay, settings-tab
+draft isolation and upload/save permission alignment. Platform General settings
+has unit and guarded PostgreSQL tests proving rollback of both sections when
+the branding write fails. Shared editor tests cover both owner adapters, stale
+reads, cancellation and approvals. Public/managed template normalization is
+checked against the same implementation with explicit safe-read behavior.
+Banner tests locate the viewport ancestor semantically; analytics parity mocks
+the shared request helper and waits for loaded totals. Forms pagination fixtures
+use the current 15-item contract.
+
 Public directory coverage includes the proxy's bare-route allowlist and malformed
 path rejection, shared Business/Platform directory rendering, empty states in
 three languages, same-context links, pagination and bounded campaign forwarding.

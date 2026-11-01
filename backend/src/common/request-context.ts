@@ -30,7 +30,13 @@ export function requestCookie(
       `(?:^|;\\s*)${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]+)`,
     ),
   );
-  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+  if (!match?.[1]) return undefined;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    // Optional tracking metadata must never prevent the public action itself.
+    return undefined;
+  }
 }
 
 /** The first of several header spellings that carries a value. */

@@ -565,32 +565,28 @@ export function PlatformSettingsPage() {
   const saveGeneralSettings = async () => {
     setIsGeneralSaving(true);
     try {
-      const [profileResponse, brandingResponse] = await Promise.all([
-        request("/api/platform/settings/profile", {
+      const response = await request("/api/platform/settings/general", {
           method: "PUT",
           body: JSON.stringify({
+            profile: {
             username: username.trim(),
             email: adminEmail.trim() || null,
             phone: phone.trim() || null,
-          }),
-        }),
-        request("/api/platform/settings/branding", {
-          method: "PUT",
-          body: JSON.stringify({
+            },
+            branding: {
             name: sponsorKrdName.trim(),
             logo,
             accent_color: accentColor,
+            },
           }),
-        }),
-      ]);
+        });
 
       applySettings({
-        ...brandingResponse.data,
-        ...profileResponse.data,
+        ...response.data,
       } as PlatformSettings);
       window.dispatchEvent(
         new CustomEvent("platform-settings-updated", {
-          detail: { ...brandingResponse.data, ...profileResponse.data },
+          detail: response.data,
         }),
       );
       toast.success(t("General settings saved"));

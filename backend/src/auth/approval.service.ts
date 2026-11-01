@@ -3,6 +3,8 @@ import { normalizeLinktreeContent } from '../linktrees/linktree-content';
 import { normalizeTemplateConfig } from '../linktrees/linktree-template-config';
 import { assertLinktreeMediaOwnership } from '../common/linktree-banner';
 import { validateLinktreeUpdate } from '../linktrees/validate-linktree-update';
+import { validatePagePin } from '../common/page-pin.dto';
+import { pinOwnedPage } from '../common/pin-owned-page';
 import { updateLinktreeInTransaction } from '../linktrees/linktree-write';
 import { syncLinksInTransaction } from '../links/sync-links';
 import type { SyncLinkInput } from '../links/link.types';
@@ -62,7 +64,9 @@ export class ApprovalService {
     reason?: string;
   }): Promise<{ id: string; status: 'pending' }> {
     if (input.permission === 'business:linktrees:update') {
-      validateLinktreeUpdate(input.changes);
+      if (Object.hasOwn(input.changes, 'isPinned'))
+        validatePagePin(input.changes);
+      else validateLinktreeUpdate(input.changes);
       const content = normalizeLinktreeContent<UpdateLinktreeDto>(
         input.changes,
       );
@@ -634,6 +638,17 @@ export class ApprovalService {
       return;
     }
     if (input.permission === 'business:linktrees:update' && input.resourceId) {
+      if (Object.hasOwn(input.changes, 'isPinned')) {
+        validatePagePin(input.changes);
+        await pinOwnedPage(
+          client,
+          'linktrees',
+          input.businessId,
+          input.resourceId,
+          input.changes.isPinned,
+        );
+        return;
+      }
       await updateLinktreeInTransaction(
         client,
         input.resourceId,

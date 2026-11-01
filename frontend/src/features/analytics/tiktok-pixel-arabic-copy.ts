@@ -61,5 +61,9 @@ export const arabicTikTokPixelCopy: TikTokPixelConfigCopy = {
     resultCode: "ورمز الاختبار",
     resultSaved: ".",
     requestIdLabel: "معرّف الطلب:",
+    pageType: "نوع الصفحة", page: "الصفحة", linktree: "لينكتري", form: "نموذج",
+    selectPage: "اختر صفحة", noPages: "لا توجد صفحات منشورة نشطة",
+    submitForm: "SubmitForm (إرسال النموذج)",
+    saveBeforeTest: "احفظ تغييرات Pixel والرمز قبل الاختبار. هذا يرسل حدث اختبار فقط ولا ينشئ إجابة للنموذج.",
   },
 };

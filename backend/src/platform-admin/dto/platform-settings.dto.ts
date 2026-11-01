@@ -15,7 +15,10 @@ import {
   ArrayMinSize,
   ArrayUnique,
   ValidateIf,
+  ValidateNested,
+  IsDefined,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { WEBSITE_COLOR_PATTERN } from '../../common/website-color';
 
 export class UpdatePlatformProfileDto {
@@ -129,4 +132,16 @@ export class UpdatePlatformBrandingDto {
   @IsOptional()
   @IsHexColor()
   accent_ink_color?: string;
+}
+
+export class UpdatePlatformGeneralDto {
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => UpdatePlatformProfileDto)
+  profile!: UpdatePlatformProfileDto;
+
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => UpdatePlatformBrandingDto)
+  branding!: UpdatePlatformBrandingDto;
 }
