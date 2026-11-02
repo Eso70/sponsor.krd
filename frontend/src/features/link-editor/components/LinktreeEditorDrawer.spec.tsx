@@ -1236,6 +1236,23 @@ describe("manual Linktree addresses", () => {
 
 
 describe("shared sponsor drawer integration", () => {
+  it.each([false, true])("offers sponsor fields when creating a page independently of Max SEO access (platform=%s)", (platformTheme) => {
+    render(<LinktreeEditorDrawer isOpen locale="ckb" platformTheme={platformTheme}
+      advancedSeoAllowed={platformTheme} businessIdentity={{ name: platformTheme ? "Sponsor.krd" : "Acme" }}
+      onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "سپۆنسەر" })).toBeVisible();
+    fireEvent.click(screen.getByRole("switch", { name: "پیشاندانی سپۆنسەر" }));
+    expect(screen.getByRole("textbox", { name: "دەقی پێشەکی" })).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "ناوی سپۆنسەر" })).toHaveValue(platformTheme ? "Sponsor.krd" : "Acme");
+    expect(screen.getByRole("button", { name: "ناوی نووسراو" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "لۆگۆی نووسراو" }));
+    expect(screen.getByRole("button", { name: "لۆگۆی نووسراو" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("textbox", { name: "ناوی سپۆنسەر" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ناوی نووسراو" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "ناوی سپۆنسەر" }), { target: { value: "New sponsor" } });
+    expect(screen.getByRole("textbox", { name: "ناوی سپۆنسەر" })).toHaveValue("New sponsor");
+  });
+
   const page = {
     linktree: { id: "sponsor-page", uid: "sponsor-page", name: "Sponsored page", background_color: "#ffffff", template_config: { templateKey: "spectrum" } },
     links: [{ id: "instagram", platform: "instagram", url: "https://instagram.com/example", display_order: 0 }],

@@ -230,6 +230,20 @@ Current configuration:
 
 The bundled configuration is currently specific to the production domain and should be updated if deploying under a different domain.
 
+On the shared production VPS, the active Caddyfile also serves other applications.
+Preserve their site blocks when applying changes. The systemd unit
+`sponsor-app-port-guard.service` loads `/etc/sponsor-app-port-guard.nft` at
+boot to restrict the two Sponsor application ports to loopback traffic. After
+a deployment or firewall change, verify that Caddy still reaches both services
+and that an external client cannot connect directly to ports 3011 or 4000.
+Keep the production environment file readable only by its service owner (mode
+`0600` on this host), including when a deployment replaces it.
+
+Cloudflare must respect the origin's `no-store` response for dynamic Linktree
+HTML. Verify consecutive GETs for a published page on each of two tenants,
+and verify that a tenant-specific slug on the wrong host returns 404. Versioned
+Next.js static assets can retain their public immutable cache policy.
+
 ---
 
 # Deployment Procedure

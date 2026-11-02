@@ -2069,6 +2069,10 @@ The public manifest is an explicit route handler, not the special root `app/mani
 
 ## Optional Linktree sponsorship
 
+The Sponsor section is available when creating or editing pages on Pro and Ultra
+as well as Max. It is independent of the Max-only advanced SEO controls; Business
+and Platform use the same sponsor editor and validation.
+
 Both dashboard editors expose one shared Sponsor section. It is off by default for new and existing pages. When enabling it, the sponsor name starts with the owning business/platform name and the optional destination starts as `/` (the current owner's homepage). Owners can edit the name, clear the destination for plain attribution, or choose a text label versus an uploaded JPEG/PNG wordmark. Wordmarks use the existing upload/crop controls, preserve their proportions, and are persisted through the same owner-scoped upload endpoint. Validation happens before uploads and submission.
 
 The configuration is stored at `template_config.sponsor`: `{enabled, style, name, logo, url, intro?}`. `style` is `text` or `wordmark`; text-mode name is required and at most 100 characters; wordmark mode hides the name field and saves no separate text name; `logo` is an owned managed upload or null; `url` is `/`, an absolute HTTP(S) URL without embedded credentials, a validated international `tel:+` number, or null. WhatsApp uses a canonical `https://wa.me/<number>` destination. Disabled settings can be retained without displaying attribution. Removing a wordmark requires returning to text or disabling attribution before saving.

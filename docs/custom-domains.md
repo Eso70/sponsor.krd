@@ -171,6 +171,13 @@ the stable CNAME target shown in the dashboard. Customer CDN proxies are not
 supported by this first version because verification checks the actual origin
 addresses, rather than a shared CDN network's addresses.
 
+Before recommending the CNAME option, resolve the target through both configured
+public resolvers and compare every returned A and AAAA address with the allowed
+origin addresses. If the target is proxied, use the direct address records and
+ownership TXT record shown in the domain panel for new setups. Leave working
+customer DNS alone. Switching the shared target to DNS-only publishes the origin
+address and should follow a review of the VPS's public listeners.
+
 Ownership and routing queries use explicit trusted recursive DNS servers rather
 than the host's default resolver. `CUSTOM_DOMAIN_DNS_SERVERS` accepts up to four
 comma-separated DNS-server IPs; the default uses Cloudflare and Google DNS.
