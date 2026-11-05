@@ -1,5 +1,10 @@
 # Frontend
 
+The unused `TikTokDeliveryStatusPanel` and its exclusive localization tests are
+removed. The active delivery view remains `BusinessTikTokDeliveryPage`; it retains
+the existing refresh, error/retry and localization behavior without a second
+unused delivery renderer.
+
 Business settings track Profile and Defaults independently. Saving one section
 merges only that section's response, preserves other tabs and newer in-flight
 edits, and updates server-managed identity/cooldown fields separately. Branding
@@ -19,7 +24,7 @@ parts. Stored details and structured address fields are unchanged.
 
 `/linktree` and `/form` are public directories, rendered by the shared
 `PublicDirectoryRoute` and `PublicDirectory` components. Each host lists only its
-own active, non-archived pages; the root domain lists the platform workspace,
+own active pages, including archived pages; the root domain lists the platform workspace,
 not all businesses. Empty collections retain navigation and an explanatory empty
 state. Cards open their canonical page in the same browser context, with no
 prefetch that would record page views before a visitor opens a page. Pagination
@@ -59,7 +64,7 @@ one card or an empty collection keeps the footer below the first viewport.
 Business Settings → Defaults includes **Use default Linktree as homepage**.
 The switch uses the normal Save action and defaults to off. When enabled, the
 business `/` renders the same `PublicLinktreeContent` as its current active,
-non-archived default Linktree; the canonical `/linktree/<slug>` URL still works,
+active default Linktree; the canonical `/linktree/<slug>` URL still works,
 and the root address does not redirect. Missing or inaccessible defaults fall
 back to BusinessLanding. Upstream failures retain an unavailable state.
 Metadata keeps the Linktree canonical URL and the root document uses that page's
@@ -1488,6 +1493,19 @@ user-created local campaigns are retained. Connection and existing add-on IDs
 are entered explicitly, without fictional account choices. This workspace remains
 frontend-only; cleanup does not add a TikTok campaign synchronization backend.
 Template preview data and automated test fixtures remain isolated from saved data.
+
+Account connection is explicitly unavailable until an authenticated backend
+integration exists. The Ads settings tab collects no credentials, ignores
+callback success parameters, and removes the retired browser account cache.
+The former Next.js verification/callback handlers return 410 without provider
+calls or credential echoes. Local campaign drafts remain available.
+
+Platform Login & Sessions uses `SessionManagementPanel`, shared with business
+session management contexts. It owns loading, refresh, device presentation,
+revocation confirmation and scope differences; platform settings receives only
+the session count for its summary. Settings numeric fields compose the shared
+`NumberInput`; toggle fields compose `VisibilitySwitch`. Business editing uses
+the existing `isWebsiteColor` validator rather than a separate gradient regex.
 
 ## Shared Linktree editor drawer
 

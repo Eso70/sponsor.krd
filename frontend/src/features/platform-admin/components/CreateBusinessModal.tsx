@@ -1,5 +1,7 @@
 "use client";
 
+import { isWebsiteColor } from "@/lib/utils/parse-website-color";
+
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { SkeletonBusinessInfoForm } from "@/components/shared/SkeletonModalLayouts";
 
@@ -78,8 +80,6 @@ interface CreateBusinessModalProps {
 }
 
 const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_-]{2,31}$/;
-const HEX_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-const GRADIENT_PATTERN = /^gradient:([\w-]+):(#[0-9a-fA-F]{3,6}):(#[0-9a-fA-F]{3,6})$/;
 
 function sanitizeHandle(value: string): string {
   return value
@@ -101,9 +101,6 @@ function sanitizeLocalPhone(value: string): string {
   return digits.slice(0, 15);
 }
 
-function isValidColorValue(value: string): boolean {
-  return HEX_PATTERN.test(value.trim()) || GRADIENT_PATTERN.test(value.trim());
-}
 
 export const CreateBusinessModal = memo(function CreateBusinessModal({
   isOpen,
@@ -164,7 +161,7 @@ export const CreateBusinessModal = memo(function CreateBusinessModal({
       HANDLE_PATTERN.test(sanitizeHandle(subdomain)) &&
       /^\d{7,15}$/.test(sanitizeLocalPhone(businessPhone)) &&
       !!subscriptionPlanId &&
-      isValidColorValue(websiteColor) &&
+      isWebsiteColor(websiteColor) &&
       tiktokConfigs.some((c) => c.pixel_id.trim())
     );
   }, [businessName, username, subdomain, businessPhone, subscriptionPlanId, websiteColor, tiktokConfigs, isEditMode]);
@@ -222,7 +219,7 @@ export const CreateBusinessModal = memo(function CreateBusinessModal({
   );
 
   const validateWebsiteColor = useCallback(
-    (value: string): string | undefined => isValidColorValue(value) ? undefined : copy.validation.colorInvalid,
+    (value: string): string | undefined => isWebsiteColor(value) ? undefined : copy.validation.colorInvalid,
     [copy],
   );
 

@@ -183,10 +183,9 @@ export class PublicService {
     const result = await this.databaseService.query<{
       status: string;
       owner_status: string;
-      is_archived: boolean;
       canonical_slug: string;
     }>(
-      `SELECT lt.status, a.status AS owner_status, lt.is_archived,
+      `SELECT lt.status, a.status AS owner_status,
               COALESCE(NULLIF(lt.seo_name, ''), lt.uid) AS canonical_slug
          FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
         WHERE (lt.uid = $1 OR lt.seo_name = $1) AND (
@@ -199,12 +198,7 @@ export class PublicService {
       [identifier, subdomain],
     );
     const page = result.rows[0];
-    if (
-      !page ||
-      page.status !== 'active' ||
-      page.owner_status !== 'active' ||
-      page.is_archived
-    ) {
+    if (!page || page.status !== 'active' || page.owner_status !== 'active') {
       throw new NotFoundException('Page not found');
     }
     return page.canonical_slug;
@@ -236,7 +230,7 @@ export class PublicService {
               )) AS "updatedAt"
          FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
         WHERE lt.business_id = $1::uuid AND a.status = 'active'
-          AND lt.status = 'active' AND NOT COALESCE(lt.is_archived, false)
+          AND lt.status = 'active'
           AND ${indexableLinktreeSql('lt', `(a.account_type = 'platform' OR ${featurePlanSql('linktree-seo', 'a')})`)}
           AND (a.account_type = 'business' OR EXISTS (
             SELECT 1 FROM root_public_slugs r WHERE r.linktree_id = lt.id
@@ -400,7 +394,6 @@ export class PublicService {
        INNER JOIN businesses a ON lt.business_id = a.id
        WHERE lt.status = 'active' AND a.subdomain = $1
          AND a.account_type = 'business' AND a.status = 'active'
-         AND NOT COALESCE(lt.is_archived, false)
        ORDER BY lt.headline`,
       [subdomain],
     );
@@ -457,7 +450,6 @@ export class PublicService {
         lt.is_default AS preferred
       FROM linktrees lt JOIN businesses a ON a.id=lt.business_id
       WHERE lt.business_id=$1::uuid AND a.status='active' AND lt.status='active'
-        AND NOT COALESCE(lt.is_archived, false)
         AND (a.account_type='business' OR EXISTS (
           SELECT 1 FROM root_public_slugs r WHERE r.linktree_id=lt.id
             AND r.business_id=a.id AND r.page_type='linktree'
@@ -477,7 +469,6 @@ export class PublicService {
         (SELECT COUNT(*)::int FROM jsonb_array_elements(CASE WHEN jsonb_typeof(f.definition->'questions')='array' THEN f.definition->'questions' ELSE '[]'::jsonb END) q WHERE q->>'required'='true') AS "requiredQuestionCount"
       FROM forms f JOIN businesses a ON a.id=f.business_id
       WHERE f.business_id=$1::uuid AND a.status='active' AND f.status='active'
-        AND NOT f.is_archived
         AND (a.account_type='platform' OR ${featurePlanSql('forms', 'a')})`;
     const result = await this.databaseService.query<
       PublicDirectoryItem & { total: string; bannerConfig: unknown }
@@ -580,7 +571,6 @@ export class PublicService {
         `SELECT lt.id FROM linktrees lt JOIN businesses a ON a.id = lt.business_id
           WHERE lt.id = $1 AND a.subdomain = $2 AND a.account_type = 'business'
             AND a.status = 'active' AND lt.status = 'active'
-            AND NOT COALESCE(lt.is_archived, false)
             AND (lt.uid = $3 OR lt.seo_name = $3)
             AND NOT EXISTS (SELECT 1 FROM linktrees canonical
               WHERE canonical.business_id = lt.business_id
@@ -603,8 +593,7 @@ export class PublicService {
     let ltRes = await this.databaseService.query<PublicLinktreeRow>(
       `${base}
        WHERE lt.seo_name = $1 AND a.subdomain = $2
-         AND a.account_type = 'business' AND a.status = 'active'
-         AND NOT COALESCE(lt.is_archived, false)`,
+         AND a.account_type = 'business' AND a.status = 'active'`,
       [uid, subdomain],
     );
 
@@ -612,8 +601,7 @@ export class PublicService {
       ltRes = await this.databaseService.query<PublicLinktreeRow>(
         `${base}
          WHERE lt.uid = $1 AND a.subdomain = $2
-           AND a.account_type = 'business' AND a.status = 'active'
-           AND NOT COALESCE(lt.is_archived, false)`,
+           AND a.account_type = 'business' AND a.status = 'active'`,
         [uid, subdomain],
       );
       if (!ltRes.rows || ltRes.rows.length === 0) {
@@ -689,7 +677,7 @@ export class PublicService {
           AND business.status = 'active'
           AND business.account_type = 'platform'
           AND EXISTS (SELECT 1 FROM linktrees live WHERE live.id = root_slug.linktree_id
-            AND live.status = 'active' AND NOT COALESCE(live.is_archived, false))
+            AND live.status = 'active')
         LIMIT 1`,
       [identifier],
     );
@@ -714,7 +702,7 @@ export class PublicService {
       `${base}
        WHERE (lt.uid = $1 OR lt.seo_name = $1)
          AND a.account_type = 'platform'
-         AND a.status = 'active' AND NOT COALESCE(lt.is_archived, false)
+         AND a.status = 'active'
          AND EXISTS (
            SELECT 1 FROM root_public_slugs root_slug
             WHERE root_slug.page_type = 'linktree'
@@ -817,7 +805,7 @@ export class PublicService {
          COALESCE(d.homepage_linktree, false) AS homepage_linktree,
          (SELECT COALESCE(NULLIF(lt.seo_name, ''), lt.uid) FROM linktrees lt
           WHERE lt.business_id = a.id AND lt.is_default = true
-            AND lt.status = 'active' AND lt.is_archived = false
+            AND lt.status = 'active'
           ORDER BY lt.id LIMIT 1) AS default_linktree_slug,
          -- No pixel ids here. The subdomain landing page is not one of the two
          -- surfaces allowed to load a business's pixel; see docs/tracking.md.

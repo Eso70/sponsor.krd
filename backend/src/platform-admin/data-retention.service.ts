@@ -7,6 +7,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { ScheduledTask } from '../common/scheduled-task';
 import type { UpdateDataRetentionDto } from './dto/platform-settings.dto';
 
 type RetentionPolicy = UpdateDataRetentionDto & {
@@ -21,18 +22,19 @@ type DeletedCounts = {
 @Injectable()
 export class DataRetentionService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DataRetentionService.name);
-  private timer?: NodeJS.Timeout;
+  private readonly scheduler = new ScheduledTask(
+    () => this.runScheduledIfDue(),
+    (error) => this.logger.error('Scheduled data retention failed', error),
+  );
 
   constructor(private readonly database: DatabaseService) {}
 
   onModuleInit(): void {
-    this.timer = setInterval(() => void this.runScheduledIfDue(), 15 * 60_000);
-    this.timer.unref();
-    setTimeout(() => void this.runScheduledIfDue(), 10_000).unref();
+    this.scheduler.start(15 * 60_000, 10_000);
   }
 
-  onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+  async onModuleDestroy(): Promise<void> {
+    await this.scheduler.stop();
   }
 
   async getStatus() {

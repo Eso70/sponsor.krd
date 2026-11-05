@@ -74,7 +74,7 @@ export class BusinessGuard implements CanActivate {
     if (user.impersonation) {
       const denial = impersonationDenialReason(
         request.method,
-        request.url || '',
+        request.routeOptions?.url || request.url || '',
       );
       if (denial) {
         throw new ForbiddenException(denial);

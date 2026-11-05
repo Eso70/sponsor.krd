@@ -1,6 +1,18 @@
 import { impersonationDenialReason } from './impersonation-policy';
 
 describe('impersonation restriction policy', () => {
+  it.each([
+    '/api/auth/%74iktok/abc/secret',
+    '/api/auth/tiktok/abc/se%63ret',
+    '/api/auth/%73essions',
+  ])('rejects encoded spellings of restricted paths: %s', (path) => {
+    expect(
+      impersonationDenialReason(
+        path.includes('essions') ? 'DELETE' : 'GET',
+        path,
+      ),
+    ).not.toBeNull();
+  });
   it('allows ordinary business work', () => {
     expect(impersonationDenialReason('GET', '/api/linktrees')).toBeNull();
     expect(impersonationDenialReason('PATCH', '/api/auth/settings')).toBeNull();

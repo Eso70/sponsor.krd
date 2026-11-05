@@ -11,9 +11,11 @@ import { Monitor, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/shared/ConfirmDeleteModal";
 import { Tooltip } from "@/components/shared/Tooltip";
+import { useLatestRequest } from "@/hooks/useLatestRequest";
+import { useRegisterDashboardRefresh } from "./dashboard-refresh";
 import { SkeletonSessionList } from "@/components/shared/SkeletonCommunicationLayouts";
 
-type Session = {
+export type ManagedSession = {
   id: string;
   ip_address: string | null;
   user_agent: string | null;
@@ -38,65 +40,53 @@ export function SessionManagementPanel({
   administratorMode = false,
   copy,
   dateLocale,
+  onCountChange,
 }: {
   endpoint: string;
   administratorMode?: boolean;
   copy?: SessionManagementCopy;
   dateLocale?: string;
+  onCountChange?: (count: number | null) => void;
 }) {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const startRequest = useLatestRequest();
+  const [sessions, setSessions] = useState<ManagedSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState(false);
-  const [pendingRevoke, setPendingRevoke] = useState<"all" | Session | null>(
+  const [pendingRevoke, setPendingRevoke] = useState<"all" | ManagedSession | null>(
     null,
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (rethrow = false) => {
+    const current = startRequest();
     setLoading(true);
     try {
       const response = await fetch(endpoint, {
-        credentials: "include",
-        cache: "no-store",
+        method: "GET", credentials: "include", cache: "no-store",
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok)
-        throw new Error(payload.message || "Unable to load sessions");
-      setSessions(payload.data?.sessions || []);
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.data?.sessions))
+        throw new Error("Unable to load sessions");
+      if (!current()) return;
+      setSessions(payload.data.sessions);
+      onCountChange?.(payload.data.sessions.length);
     } catch (error) {
-      toast.error(
-        copy ? copy.loadFailed ?? "Unable to load sessions" : error instanceof Error ? error.message : "Unable to load sessions",
-      );
+      if (!current()) return;
+      onCountChange?.(null);
+      toast.error(copy?.loadFailed ?? "Unable to load sessions");
+      if (rethrow) throw error;
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [endpoint, copy]);
+  }, [endpoint, copy, onCountChange, startRequest]);
+  const refreshing = useRegisterDashboardRefresh(`sessions:${endpoint}`, () => load(true));
 
   useEffect(() => {
-    let cancelled = false;
-    fetch(endpoint, { credentials: "include", cache: "no-store" })
-      .then(async (response) => {
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok)
-          throw new Error(payload.message || "Unable to load sessions");
-        return payload;
-      })
-      .then((payload) => {
-        if (cancelled) return;
-        setSessions(payload.data?.sessions || []);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled)
-          toast.error(
-            copy ? copy.loadFailed ?? "Unable to load sessions" : error instanceof Error ? error.message : "Unable to load sessions",
-          );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const timer = window.setTimeout(() => void load(), 0);
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
+      startRequest();
     };
-  }, [endpoint, copy]);
+  }, [load, startRequest]);
 
   const confirmRevoke = async () => {
     if (!pendingRevoke) return;
@@ -111,17 +101,11 @@ export function SessionManagementPanel({
       const payload = await response.json().catch(() => ({}));
       if (!response.ok)
         throw new Error(payload.message || "Unable to revoke session");
-      if (pendingRevoke === "all") {
-        setSessions((current) =>
-          administratorMode
-            ? []
-            : current.filter((session) => session.is_current),
-        );
-      } else {
-        setSessions((current) =>
-          current.filter((session) => session.id !== pendingRevoke.id),
-        );
-      }
+      const remaining = pendingRevoke === "all"
+        ? administratorMode ? [] : sessions.filter((session) => session.is_current)
+        : sessions.filter((session) => session.id !== pendingRevoke.id);
+      setSessions(remaining);
+      onCountChange?.(remaining.length);
       toast.success(copy?.revoked ?? "Session access revoked");
     } catch (error) {
       toast.error(
@@ -138,7 +122,7 @@ export function SessionManagementPanel({
   );
 
   return (
-    <div className="col-span-full space-y-5">
+    <div className="min-w-0 space-y-5">
       <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.04]">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -174,7 +158,7 @@ export function SessionManagementPanel({
         </div>
 
         <div className="space-y-3">
-          {loading && sessions.length === 0 ? (
+          {(loading || refreshing) && sessions.length === 0 ? (
             <SkeletonSessionList rows={3} loadingLabel={copy?.loading} />
           ) : sessions.length === 0 ? (
             <p className="py-8 text-center text-xs text-slate-400">

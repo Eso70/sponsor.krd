@@ -645,9 +645,10 @@ describe('BusinessOnboardingService invitations', () => {
           ) => work(client),
         ),
       };
+      const redis = { set: jest.fn().mockResolvedValue(true) };
       const service = new BusinessOnboardingService(
         database as never,
-        {} as never,
+        redis as never,
         {} as never,
         {} as never,
         {} as never,
@@ -674,10 +675,14 @@ describe('BusinessOnboardingService invitations', () => {
         return;
       }
 
-      await expect(resume('new-invite', 'owner@example.com')).resolves.toEqual({
-        applicationId: 'application-1',
-        userId: 'user-1',
-      });
+      await expect(resume('new-invite', 'owner@example.com')).resolves.toEqual(
+        expect.any(String),
+      );
+      expect(redis.set).toHaveBeenCalledWith(
+        expect.stringMatching(/^signup:session:[0-9a-f]{64}$/),
+        { applicationId: 'application-1', userId: 'user-1' },
+        7200,
+      );
       expect(
         client.query.mock.calls.some(([sql]) =>
           String(sql).includes(

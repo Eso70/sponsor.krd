@@ -83,7 +83,7 @@ describe("PlatformSettingsPage General tab", () => {
     expect(screen.getByRole("button", { name: "حفظ" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "تسجيل الدخول والجلسات" }));
     expect(await screen.findByRole("heading", { name: "تسجيل الدخول باستخدام Google" })).toBeInTheDocument();
-    expect(screen.getByText("لا توجد جلسات نشطة.")).toBeInTheDocument();
+    expect(await screen.findByText("لا توجد جلسات نشطة.")).toBeInTheDocument();
   });
 
   it("shows the returned session count instead of a fixed figure", async () => {
@@ -114,15 +114,14 @@ describe("PlatformSettingsPage General tab", () => {
     expect(screen.getByText("لا توجد مجموعات تيك توك")).toBeInTheDocument();
   });
 
-  it("localizes the TikTok ad-account empty state and connect modal", async () => {
+  it("explains the unavailable TikTok Ads integration without collecting credentials", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ success: true, data: savedSettings })));
     renderSettings("ar");
     await screen.findByDisplayValue("Saved SponsorKrd");
     fireEvent.click(screen.getByRole("tab", { name: "حساب إعلانات تيك توك" }));
-    expect(await screen.findByText("لا يوجد حساب إعلانات تيك توك مرتبط")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "الربط بتيك توك" }));
-    expect(screen.getByText("ربط حساب تيك توك (الإعلانات)")).toBeInTheDocument();
-    expect(screen.getByText("رمز ومعرّف مباشر")).toBeInTheDocument();
+    expect(await screen.findByText("ربط إعلانات تيك توك غير متاح")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "الربط بتيك توك" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Access Token/ })).not.toBeInTheDocument();
   });
 
   it("localizes retention and media controls and cleanup confirmations", async () => {
@@ -228,7 +227,7 @@ describe("PlatformSettingsPage General tab", () => {
         expect.objectContaining({ method: "GET" }),
       );
     });
-    expect(screen.getByText("هیچ دانیشتنێکی چالاک نەدۆزرایەوە.")).toBeInTheDocument();
+    expect(await screen.findByText("هیچ دانیشتنێکی چالاک نەدۆزرایەوە.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "نوێکردنەوەی دانیشتنەکان" })).toBeInTheDocument();
   });
 
@@ -348,33 +347,13 @@ describe("PlatformSettingsPage General tab", () => {
     );
   });
 
-  it("shows the TikTok Ads account tab with the shared ad account connection UI for platform admin", async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () => {
-      return jsonResponse({ success: true, data: savedSettings });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
+  it("shows the unavailable TikTok Ads account integration for platform administrators", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ data: savedSettings })));
     renderSettings();
     await screen.findByDisplayValue("Saved SponsorKrd");
-
-    fireEvent.click(
-      screen.getByRole("tab", { name: "هەژماری ڕیکلامی تیکتۆک" }),
-    );
-
-    expect(
-      await screen.findByRole("heading", {
-        name: "هەژماری ڕیکلامی تیکتۆک",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "بەستنەوە و بەڕێوەبردنی هەژماری ڕیکلامی تیکتۆک بۆ بەڕێوەبردنی کەمپەینەکانی پلاتفۆرم.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "تەنها ١ هەژماری ڕیکلامی تیکتۆک دەتوانرێت بۆ پلاتفۆرم ببەسترێتەوە.",
-      ),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "هەژماری ڕیکلامی تیکتۆک" }));
+    expect(await screen.findByText("پەیوەستکردنی TikTok Ads بەردەست نییە")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Access Token/ })).not.toBeInTheDocument();
   });
+
 });

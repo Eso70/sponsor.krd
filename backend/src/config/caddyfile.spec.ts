@@ -25,6 +25,26 @@ describe('Caddyfile Configuration Validation', () => {
     expect(caddyfileContent).toMatch(/\*\.sponsor\.krd/);
   });
 
+  it('forwards resolved visitor addresses on every frontend and backend route', () => {
+    expect(
+      caddyfileContent.match(/header_up X-Forwarded-For \{client_ip\}/g),
+    ).toHaveLength(6);
+    expect(
+      caddyfileContent.match(/header_up X-Real-IP \{client_ip\}/g),
+    ).toHaveLength(6);
+    expect(caddyfileContent).not.toMatch(
+      /header_up X-(?:Forwarded-For|Real-IP) \{remote_host\}/,
+    );
+    expect(caddyfileContent).toContain('client_ip_headers CF-Connecting-IP');
+    expect(caddyfileContent).toContain('trusted_proxies_strict');
+    expect(caddyfileContent).toMatch(
+      /trusted_proxies static 173\.245\.48\.0\/20/,
+    );
+    expect(caddyfileContent).not.toContain(
+      'trusted_proxies static private_ranges',
+    );
+  });
+
   it('should contain Host header preservation (header_up Host {host})', () => {
     expect(caddyfileContent).toMatch(/header_up\s+Host\s+\{host\}/);
   });

@@ -66,6 +66,21 @@ function data(response: { json(): unknown }): JsonRecord {
   return body(response).data as JsonRecord;
 }
 
+async function cleanupCommunicationFixtures(pool: Pool): Promise<void> {
+  await pool.query(
+    'DELETE FROM communication_notifications WHERE source_id IN (SELECT id FROM communication_conversations WHERE business_id = ANY($1::uuid[]) UNION SELECT id FROM communication_announcements WHERE created_by=$2)',
+    [[BUSINESS_A_ID, BUSINESS_B_ID], ADMIN_ID],
+  );
+  await pool.query(
+    'DELETE FROM communication_conversations WHERE business_id = ANY($1::uuid[])',
+    [[BUSINESS_A_ID, BUSINESS_B_ID]],
+  );
+  await pool.query(
+    'DELETE FROM communication_announcements WHERE created_by=$1',
+    [ADMIN_ID],
+  );
+}
+
 describe('critical architecture matrix (e2e)', () => {
   const redisPrefix = `e2e:architecture:${randomUUID()}:`;
   let app: NestFastifyApplication;
@@ -76,6 +91,7 @@ describe('critical architecture matrix (e2e)', () => {
   beforeAll(async () => {
     assertDisposableDatabase();
     fixturePool = new Pool(poolConfig());
+    await cleanupCommunicationFixtures(fixturePool);
     await fixturePool.query(
       'DELETE FROM businesses WHERE id = ANY($1::uuid[])',
       [[BUSINESS_A_ID, BUSINESS_B_ID]],
@@ -186,6 +202,7 @@ describe('critical architecture matrix (e2e)', () => {
       await app.close();
     }
     if (fixturePool) {
+      await cleanupCommunicationFixtures(fixturePool);
       await fixturePool.query(
         'DELETE FROM businesses WHERE id = ANY($1::uuid[])',
         [[BUSINESS_A_ID, BUSINESS_B_ID]],
@@ -198,6 +215,115 @@ describe('critical architecture matrix (e2e)', () => {
       ]);
       await fixturePool.end();
     }
+  });
+
+  it('communications smoke: publishes, delivers, replies and archives using real hashed sessions', async () => {
+    const sessions = app.get(SessionService);
+    const context = {
+      ipAddress: '127.0.0.1',
+      userAgent: 'communications-smoke',
+    };
+    const platform = await sessions.createPlatformAdminSession({
+      platformAdminId: ADMIN_ID,
+      username: 'h8-admin',
+      name: 'H8 Administrator',
+      ...context,
+    });
+    const business = await sessions.createBusinessSession({
+      businessId: BUSINESS_A_ID,
+      userId: USER_A_ID,
+      ...context,
+    });
+    const request = async (
+      method: 'GET' | 'POST' | 'DELETE',
+      url: string,
+      role: 'platform' | 'business',
+      payload?: JsonRecord,
+    ) => {
+      const host = role === 'platform' ? 'localhost' : 'h8-tenant-a.localhost';
+      const response = await app.inject({
+        method,
+        url,
+        headers: {
+          host,
+          origin: `http://${host}`,
+          cookie:
+            role === 'platform'
+              ? `platform_admin_session=${platform.sessionToken}`
+              : `business_session=${business.sessionToken}`,
+        },
+        ...(payload ? { payload } : {}),
+      });
+      expect(body(response)).toMatchObject({ success: true });
+      expect(response.statusCode).toBeLessThan(300);
+      return body(response).data;
+    };
+    const announcement = (await request(
+      'POST',
+      '/api/platform/communications/announcements',
+      'platform',
+      {
+        title: 'Communication smoke verification',
+        message: 'Scoped delivery verification',
+        announcementType: 'feature',
+        priority: 'important',
+        audienceType: 'businesses',
+        audienceValues: [BUSINESS_A_ID],
+        channels: ['business_bell', 'dashboard_banner', 'homepage'],
+        ctaLabel: 'Open dashboard',
+        ctaUrl: '/business',
+        homepagePlacement: 'top_banner',
+        homepagePriority: 50,
+        homepageDismissible: true,
+      },
+    )) as JsonRecord;
+    const announcementUrl = `/api/platform/communications/announcements/${String(announcement.id)}`;
+    await request('POST', `${announcementUrl}/publish`, 'platform', {});
+    const inbox = (await request(
+      'GET',
+      '/api/auth/communications/notifications',
+      'business',
+    )) as { items: JsonRecord[] };
+    expect(inbox.items.some((item) => item.sourceId === announcement.id)).toBe(
+      true,
+    );
+    const homepage = (await request(
+      'GET',
+      '/api/public/communications/homepage',
+      'platform',
+    )) as JsonRecord[];
+    expect(homepage.some((item) => item.id === announcement.id)).toBe(true);
+    const conversation = (await request(
+      'POST',
+      '/api/auth/communications/conversations',
+      'business',
+      {
+        subject: 'Communication smoke thread',
+        category: 'technical',
+        message: 'Business to platform verification',
+      },
+    )) as JsonRecord;
+    const threads = (await request(
+      'GET',
+      '/api/platform/communications/conversations',
+      'platform',
+    )) as JsonRecord[];
+    expect(threads.some((item) => item.id === conversation.id)).toBe(true);
+    await request(
+      'POST',
+      `/api/platform/communications/conversations/${String(conversation.id)}/messages`,
+      'platform',
+      { message: 'Platform reply verification' },
+    );
+    const finalInbox = (await request(
+      'GET',
+      '/api/auth/communications/notifications',
+      'business',
+    )) as { items: JsonRecord[] };
+    expect(
+      finalInbox.items.some((item) => item.sourceId === conversation.id),
+    ).toBe(true);
+    await request('DELETE', announcementUrl, 'platform');
   });
 
   it('boots the real module and exposes production liveness', async () => {

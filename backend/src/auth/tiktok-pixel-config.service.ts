@@ -1,5 +1,9 @@
 import { tiktokContentProperties } from '@linktree/types/tiktok-content.cjs';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { PoolClient } from 'pg';
 import { buildTenantUrl } from '../common/root-domain';
@@ -45,6 +49,14 @@ export class TikTokPixelConfigService {
     private readonly secrets: SecretCryptoService,
     private readonly config: ConfigService,
   ) {}
+
+  assertGroupLimit(
+    configs: readonly TikTokPixelConfigInput[],
+    limit: number,
+  ): void {
+    if (limit !== -1 && configs.length > limit)
+      throw new ForbiddenException('The TikTok pixel limit has been reached');
+  }
 
   normalize(
     value: unknown,
@@ -177,14 +189,22 @@ export class TikTokPixelConfigService {
       pixel_id: string;
       encrypted_events_token: Buffer | null;
       token_last_four: string | null;
+      status: string;
     }>(
-      `SELECT id::text, pixel_id, encrypted_events_token, token_last_four
+      `SELECT id::text, pixel_id, encrypted_events_token, token_last_four, status
          FROM business_tiktok_pixels
         WHERE business_id = $1::uuid
         FOR UPDATE`,
       [ownerId],
     );
     const byId = new Map(existingResult.rows.map((row) => [row.id, row]));
+    if (
+      configs.length === 0 &&
+      existingResult.rows.some((row) => row.status === 'active')
+    )
+      throw new BadRequestException(
+        'At least one TikTok pixel group must remain active',
+      );
     const byPixelId = new Map(
       existingResult.rows.map((row) => [row.pixel_id, row]),
     );

@@ -1,5 +1,12 @@
 # Database
 
+`2026-11-03_platform_session_hashes.sql` converts existing administrator session
+bearers to SHA-256 digests using the existing `session_token` text column. The
+column keeps its compatibility name; new application writes store only digests.
+The data migration leaves expiry, ownership and business sessions unchanged and
+is safe to rerun. Fresh installs already write digests and the migration has no
+rows to transform. Apply it with application processes stopped; see deployment.
+
 Form WhatsApp presentation uses `business_defaults.form_whatsapp_details`, a
 non-null JSON object keyed by language. Apply `2026-11-01_form_whatsapp_details.sql`
 before deploying these controls. The idempotent additive migration preserves all

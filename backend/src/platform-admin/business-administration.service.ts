@@ -933,6 +933,13 @@ export class BusinessAdministrationService {
     const ownedAssets = await this.storageService.getBusinessAssetUrls(id);
 
     await this.databaseService.transaction(async (client) => {
+      // Block new dependent rows while removing this tenant and its conversations.
+      const locked = await client.query(
+        "SELECT id FROM businesses WHERE id=$1 AND account_type='business' FOR UPDATE",
+        [id],
+      );
+      if (!locked.rows.length)
+        throw new NotFoundException('Business not found');
       await client.query(
         `WITH closed AS (
            UPDATE business_signup_applications
@@ -948,6 +955,16 @@ export class BusinessAdministrationService {
          SELECT id, 'platform-admin', $2, 'business_deleted', jsonb_build_object('businessId', $1::text)
          FROM closed`,
         [id, adminId],
+      );
+      // Remove conversations first: SET NULL on message senders conflicts with
+      // the sender check if the business deletion runs those FK actions first.
+      await client.query(
+        `WITH removed AS (
+           DELETE FROM communication_conversations WHERE business_id=$1 RETURNING id
+         )
+         DELETE FROM communication_notifications
+         WHERE source_type='conversation' AND source_id IN (SELECT id FROM removed)`,
+        [id],
       );
       const result = await client.query(
         `DELETE FROM businesses WHERE id = $1 AND account_type = 'business'`,

@@ -9,7 +9,7 @@
     "prestart": "pnpm run sync:env",
     "prestart:prod": "pnpm run sync:env",
     "dev": "next dev --webpack -p 3011",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start -p 3011",
     "start:prod": "cross-env NODE_ENV=production next start -p 3011",
     "lint": "eslint .",

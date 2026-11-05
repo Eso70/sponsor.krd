@@ -130,12 +130,12 @@ describe('Linktree question analytics and delivery reconciliation (PostgreSQL)',
       (
         await service.getPublicDirectory('analytics-fixture', 'linktree', 1)
       ).items.map((item) => item.slug),
-    ).not.toContain(own.slug);
+    ).toContain(own.slug);
     expect(
       (await service.getLinktreesBySubdomain('analytics-fixture')).map(
         (item) => item.uid,
       ),
-    ).not.toContain(own.slug);
+    ).toContain(own.slug);
     await pool.query(
       "UPDATE linktrees SET is_archived=false,status='inactive' WHERE id=$1",
       [own.treeId],
@@ -218,8 +218,10 @@ describe('Linktree question analytics and delivery reconciliation (PostgreSQL)',
       "UPDATE forms SET is_archived=true WHERE slug='directory-form-0'",
     );
     expect(
-      (await service.getPublicDirectory('analytics-fixture', 'form', 1)).items,
-    ).toEqual([]);
+      (
+        await service.getPublicDirectory('analytics-fixture', 'form', 1)
+      ).items.map((item) => item.slug),
+    ).toContain('directory-form-0');
     await pool.query(
       "UPDATE forms SET is_archived=false,status='paused' WHERE slug='directory-form-0'",
     );
@@ -325,7 +327,7 @@ describe('Linktree question analytics and delivery reconciliation (PostgreSQL)',
     expect(
       (await publicService.getBusinessBySubdomain(subdomain))
         .default_linktree_slug,
-    ).toBeNull();
+    ).toBe(ownPage.slug);
     await auth.updateBusinessSettings(owners[0], {
       section: 'defaults',
       homepage_linktree: false,
@@ -424,6 +426,51 @@ describe('Linktree question analytics and delivery reconciliation (PostgreSQL)',
         .id,
     };
   }
+
+  it.each([0, 1])(
+    'keeps archived active pages public in owner context %s',
+    async (ownerIndex) => {
+      const page = await pageFor(owners[ownerIndex]);
+      await pool.query('UPDATE linktrees SET is_archived=true WHERE id=$1', [
+        page.treeId,
+      ]);
+      const database = {
+        query: pool.query.bind(pool),
+      } as unknown as DatabaseService;
+      const cache = new Map<string, unknown>();
+      const service = new PublicService(
+        database,
+        {
+          get: async (key: string) => cache.get(key),
+          set: async (key: string, value: unknown) => {
+            cache.set(key, value);
+            return true;
+          },
+        } as unknown as RedisService,
+        { forSource: async () => ({}) } as never,
+        new PlatformContentWorkspaceService(database),
+      );
+      const subdomain = ownerIndex === 0 ? 'analytics-fixture' : '';
+      expect(
+        await service.assertPublicLinktreeAvailable(page.slug, subdomain),
+      ).toBe(page.slug);
+      const read = () =>
+        ownerIndex === 0
+          ? service.getPublicLinktreeByUidAndSubdomain(page.slug, subdomain)
+          : service.getPlatformPublicLinktree(page.slug);
+      expect((await read()).linktree.id).toBe(page.treeId);
+      expect((await read()).linktree.id).toBe(page.treeId);
+      await expect(
+        service.assertPublicLinktreeAvailable(page.slug, 'another-tenant'),
+      ).rejects.toMatchObject({ status: 404 });
+      await pool.query("UPDATE linktrees SET status='inactive' WHERE id=$1", [
+        page.treeId,
+      ]);
+      await expect(
+        service.assertPublicLinktreeAvailable(page.slug, subdomain),
+      ).rejects.toMatchObject({ status: 404 });
+    },
+  );
 
   it.each([0, 1])(
     'records the redirect-first question exactly once for owner context %s',

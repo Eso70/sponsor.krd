@@ -1,3 +1,10 @@
+## Archive semantics
+
+Archiving Linktrees or forms only moves them to the management Archive tab.
+Active archived pages remain available at their public URLs and in public
+directories and sitemaps. Pausing, deleting, or suspending the owner still
+prevents public access. Tenant ownership and tracking rules remain unchanged.
+
 # Backend
 
 Platform General settings save through `PUT /api/platform/settings/general`,
@@ -13,6 +20,22 @@ operation; general page edits still reject pin-only or mixed pin/edit payloads.
 Optional public tracking cookies with malformed encoding are treated as absent.
 The scheduled unused-media cleanup catches/logs failures and retries at its next
 interval instead of allowing an unhandled promise rejection.
+
+The retention scheduler owns both its ten-second startup timeout and its
+fifteen-minute interval. Shutdown cancels both, prevents new scheduled checks,
+and awaits an active scheduled run before Nest destroys the database dependency.
+Scheduled runs do not overlap within a process; cleanup rules and cross-process
+database coordination are unchanged. Scheduled failures remain logged and can
+retry at the next interval.
+
+Retention and communications use the shared `ScheduledTask` lifecycle owner.
+Communications keeps its immediate startup run and one-minute interval, cancels
+future ticks on shutdown, and drains its active run before the database closes.
+
+Business deletion locks the tenant row and removes its conversations and their
+notifications within the deletion transaction. This avoids message-sender foreign
+key actions violating sender checks. A failed deletion restores the dependent
+data and leaves sessions and files intact; other tenants are unaffected.
 
 Linktree question appearance is stored in `template_config.whatsapp_modal.backgroundColor`
 through the existing owner-scoped page writes. The shared normalizer accepts
@@ -67,7 +90,7 @@ TypeScript and ts-jest can otherwise hide.
 ## Public crawler projections
 
 `PublicService` owns the live public availability gate and owner-scoped,
-paginated sitemap projection. Active business/page and archive boundaries
+paginated sitemap projection. Active business/page and tenant boundaries
 apply before serving public content, including Redis cache hits. Sitemap
 indexing is derived from meaningful page content. Retired `template_config.seo`
 overrides are stripped during normalization and cannot control eligibility.

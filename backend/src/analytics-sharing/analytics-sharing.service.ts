@@ -62,6 +62,15 @@ type ShareRow = {
   can_reveal_code: boolean;
 };
 const rateScript = `local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n`;
+// Check and increment failure budgets atomically across all API processes.
+const codeAttemptScript = `
+local viewer=tonumber(redis.call('GET',KEYS[1]) or '0')
+local link=tonumber(redis.call('GET',KEYS[2]) or '0')
+if viewer>=5 or link>=50 then return 0 end
+if ARGV[1]=='1' then return 1 end
+local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],900) end
+n=redis.call('INCR',KEYS[2]); if n==1 then redis.call('EXPIRE',KEYS[2],86400) end
+return 0`;
 
 @Injectable()
 export class AnalyticsSharingService {
@@ -349,13 +358,31 @@ export class AnalyticsSharingService {
   async unlock(id: string, code: string, ip: string, subdomain = '') {
     const address = createHash('sha256').update(ip).digest('hex');
     await this.limit(`rl:analytics-share:ip:${address}`, 20, 900);
-    await this.limit(`rl:analytics-share:${id}:${address}`, 5, 900);
-    await this.limit(`rl:analytics-share:link:${id}`, 50, 86400);
+    const viewerFailures = `rl:analytics-share:failures:${id}:${address}`;
+    const linkFailures = `rl:analytics-share:failures:link:${id}`;
     const row = await this.live(id);
     this.assertScope(row, subdomain);
     const actual = Buffer.from(this.codeHash(id, code), 'hex');
     const expected = Buffer.from(row.code_hash, 'hex');
-    if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
+    const matches =
+      expected.length === actual.length && timingSafeEqual(expected, actual);
+    let allowed: number;
+    try {
+      allowed = Number(
+        await this.redis
+          .getClient()
+          .eval(
+            codeAttemptScript,
+            2,
+            viewerFailures,
+            linkFailures,
+            matches ? '1' : '0',
+          ),
+      );
+    } catch {
+      throw new ServiceUnavailableException('Sharing temporarily unavailable');
+    }
+    if (!matches || allowed !== 1)
       throw new UnauthorizedException('Link or access code unavailable');
     const token = randomBytes(32).toString('hex');
     const ttl = row.expires_at

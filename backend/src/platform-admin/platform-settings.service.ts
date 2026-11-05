@@ -1,3 +1,4 @@
+import { hashSessionToken } from '../auth/session-token';
 import {
   readPlatformAdminEnv,
   type PlatformAdminEnvKey,
@@ -262,7 +263,7 @@ export class PlatformSettingsService {
          FROM platform_admin_sessions
          WHERE platform_admin_id = $1 AND session_expires_at > NOW()
          ORDER BY is_current DESC, last_used_at DESC`,
-      [adminId, currentToken],
+      [adminId, hashSessionToken(currentToken)],
     );
 
     return { sessions: sessions.rows };
@@ -277,7 +278,7 @@ export class PlatformSettingsService {
       `DELETE FROM platform_admin_sessions
        WHERE id = $1 AND platform_admin_id = $2 AND session_token != $3
        RETURNING session_token`,
-      [sessionId, adminId, currentToken],
+      [sessionId, adminId, hashSessionToken(currentToken)],
     );
     const token = result.rows[0]?.session_token;
     if (!token) {
@@ -299,7 +300,7 @@ export class PlatformSettingsService {
       `DELETE FROM platform_admin_sessions
        WHERE platform_admin_id = $1 AND session_token != $2
        RETURNING session_token`,
-      [adminId, currentToken],
+      [adminId, hashSessionToken(currentToken)],
     );
     await Promise.all(
       result.rows.flatMap(({ session_token: token }) => [

@@ -7,8 +7,8 @@ import { BusinessAdministrationService } from './business-administration.service
 describe('BusinessAdministrationService', () => {
   it('closes the approved application and deletes its business atomically', async () => {
     const clientQuery = jest.fn(async (sql: string) =>
-      sql.includes('DELETE FROM businesses')
-        ? { rows: [], rowCount: 1 }
+      sql.includes('SELECT id FROM businesses')
+        ? { rows: [{ id: 'business-1' }], rowCount: 1 }
         : { rows: [], rowCount: 1 },
     );
     const database = {
@@ -54,22 +54,27 @@ describe('BusinessAdministrationService', () => {
     });
     expect(database.transaction).toHaveBeenCalledTimes(1);
     expect(clientQuery).toHaveBeenNthCalledWith(
-      1,
+      2,
       expect.stringContaining("SET status = 'deleted', business_id = NULL"),
       ['business-1', 'admin-1'],
     );
     expect(clientQuery).toHaveBeenNthCalledWith(
-      2,
+      4,
       expect.stringContaining('DELETE FROM businesses'),
       ['business-1'],
     );
-    expect(clientQuery.mock.calls[0][0]).toContain(
+    expect(clientQuery.mock.calls[1][0]).toContain(
       'requested_subdomain = NULL',
     );
-    expect(clientQuery.mock.calls[0][0]).toContain(
+    expect(clientQuery.mock.calls[1][0]).toContain(
       'business_name = NULL, phone = NULL',
     );
-    expect(clientQuery.mock.calls[0][0]).toContain("'business_deleted'");
+    expect(clientQuery.mock.calls[1][0]).toContain("'business_deleted'");
+    expect(clientQuery).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('DELETE FROM communication_conversations'),
+      ['business-1'],
+    );
     expect(database.transaction.mock.invocationCallOrder[0]).toBeLessThan(
       redis.clearBusinessSessions.mock.invocationCallOrder[0],
     );

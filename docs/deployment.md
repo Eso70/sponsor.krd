@@ -1,5 +1,21 @@
 # Deployment
 
+Before deploying the November 3 session hardening, stop all frontend/backend
+application processes and apply `2026-11-03_platform_session_hashes.sql` through
+`pnpm db:migrate`. Before applying forward migrations, the runner removes legacy
+administrator bearer cache keys and session-set members from the configured
+Redis prefix, preserving hashed sessions and unrelated data. Redis must be
+reachable when administrator rows exist; cleanup failure stops the upgrade.
+The cleanup runs again even when the SQL migration is already recorded, so a
+partially upgraded installation can be repaired by rerunning this command.
+It hashes existing administrator bearer tokens in place,
+preserving their cookies and expiry; business sessions and other application
+data are unchanged. Restart with the new frontend/backend together. Do not mix
+old and new session readers during the migration. The migration is idempotent
+and needs no reset. Rolling back to the old session reader requires a reviewed
+administrator-session invalidation and re-upgrade procedure; prefer rolling
+forward. No production migration runs automatically.
+
 For WhatsApp name/detail presentation controls, apply the additive
 `2026-11-01_form_whatsapp_details.sql` before deploying backend and frontend.
 Verify language-specific captions/order, fixed historical product values, owner
@@ -133,6 +149,12 @@ for complete command references.
 
 # Production Build
 
+Frontend development and production builds both use Next.js's supported
+Webpack bundler (`next build --webpack` for production). This keeps the normal
+workspace build reliable on Windows installations where the Turbopack PostCSS
+worker exits before its IPC connection is established. Type checking, static
+generation and production route verification remain part of the build.
+
 Build the entire workspace:
 
 ```bash
@@ -207,6 +229,25 @@ they always act on exactly the applications that file defines.
 ---
 
 # Reverse Proxy
+Public page rate limits require the actual visitor address. The Caddy template
+trusts `CF-Connecting-IP` only from Cloudflare's published IPv4/IPv6 ranges and
+forwards the resolved `{client_ip}` to both applications. Direct custom-domain
+connections use their peer address. Keep the static ranges aligned with
+https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6.
+Forwarding `{remote_host}` groups visitors behind Cloudflare into one rate-limit
+bucket and can make working pages intermittently unavailable.
+
+Before applying this change to the shared VPS, back up its active Caddyfile,
+merge the trusted-proxy settings and Sponsor forwarding lines into that file,
+validate with the installed Caddy binary and service environment, then reload.
+Preserve other hosted sites. Verify the content API and rendered page on at
+least two tenants, plus a direct custom domain. A direct client must not be able
+to choose its reported IP by supplying `CF-Connecting-IP`. Check actual visitor
+address separation from two clients and observe existing rate counters expiring.
+Rollback restores the saved active configuration after validation and reload.
+An HTTP 200 alone is insufficient: also check that the HTML contains the page
+content rather than the Unavailable fallback.
+
 Customer-owned domains use the added Caddy catch-all with an internal certificate
 allowlist. Activation requires environment values, DNS-only origin records, the
 additive migration and a validated Caddy reload. See the

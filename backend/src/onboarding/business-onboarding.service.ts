@@ -193,6 +193,18 @@ export class BusinessOnboardingService {
     }
   }
 
+  private async storeEmailChallenge(
+    key: string,
+    challenge:
+      BusinessEmailChallenge | AdminEmailChallenge | SignupEmailChallenge,
+  ): Promise<void> {
+    if (!(await this.redis.set(key, challenge, 10 * 60))) {
+      throw new ServiceUnavailableException(
+        'Authentication is temporarily unavailable',
+      );
+    }
+  }
+
   async assertRateLimit(key: string, limit: number, seconds: number) {
     if (
       await this.redis.isRateLimited(`rl:onboarding:${key}`, limit, seconds)
@@ -333,7 +345,7 @@ export class BusinessOnboardingService {
       businessName: membership?.business_name,
     };
     const key = `business:email-login:${this.hash(challengeId)}`;
-    await this.redis.set(key, challenge, 10 * 60);
+    await this.storeEmailChallenge(key, challenge);
     if (membership) {
       if (!this.mail) {
         await this.redis.del(key);
@@ -441,7 +453,7 @@ export class BusinessOnboardingService {
       authorized,
     };
     const key = `admin:email-login:${this.hash(challengeId)}`;
-    await this.redis.set(key, challenge, 10 * 60);
+    await this.storeEmailChallenge(key, challenge);
     if (authorized) {
       if (!this.mail) {
         await this.redis.del(key);
@@ -546,7 +558,7 @@ export class BusinessOnboardingService {
       authorized,
     };
     const key = `signup:email-login:${this.hash(challengeId)}`;
-    await this.redis.set(key, challenge, 10 * 60);
+    await this.storeEmailChallenge(key, challenge);
     if (authorized) {
       if (!this.mail) {
         await this.redis.del(key);
@@ -594,15 +606,9 @@ export class BusinessOnboardingService {
       }
       throw new UnauthorizedException('Verification code is invalid');
     }
-    const session = await this.finishEmailSignupIdentity(
+    const sessionToken = await this.finishEmailSignupIdentity(
       challenge.invitationId,
       challenge.email,
-    );
-    const sessionToken = this.randomToken();
-    await this.redis.set(
-      `signup:session:${this.hash(sessionToken)}`,
-      session satisfies SignupSession,
-      SIGNUP_SESSION_SECONDS,
     );
     return {
       sessionToken,
@@ -611,8 +617,33 @@ export class BusinessOnboardingService {
     };
   }
 
+  /** The invitation commits only after the browser session has been stored. */
+  private async createSignupSession(
+    work: (client: PoolClient) => Promise<SignupSession>,
+  ): Promise<string> {
+    const token = this.randomToken();
+    const key = `signup:session:${this.hash(token)}`;
+    let storageAttempted = false;
+    try {
+      await this.database.transaction(async (client) => {
+        const session = await work(client);
+        storageAttempted = true;
+        if (!(await this.redis.set(key, session, SIGNUP_SESSION_SECONDS))) {
+          throw new ServiceUnavailableException(
+            'Sign-up is temporarily unavailable. Try again with your invitation.',
+          );
+        }
+      });
+      return token;
+    } catch (error) {
+      // Also remove an ambiguous write or a session whose database commit failed.
+      if (storageAttempted) await this.redis.del(key);
+      throw error;
+    }
+  }
+
   private async finishEmailSignupIdentity(invitationId: string, email: string) {
-    return this.database.transaction(async (client) => {
+    return this.createSignupSession(async (client) => {
       const invite = await client.query<{ id: string; email: string | null }>(
         `SELECT id, email FROM business_signup_invitations
          WHERE id = $1 AND revoked_at IS NULL AND consumed_at IS NULL
@@ -837,7 +868,7 @@ export class BusinessOnboardingService {
     identity: VerifiedGoogleIdentity,
   ) {
     if (!oauth.invitationId) throw new UnauthorizedException('Invalid signup');
-    const result = await this.database.transaction(async (client) => {
+    const sessionToken = await this.createSignupSession(async (client) => {
       const invite = await client.query<{ id: string; email: string | null }>(
         `SELECT id, email FROM business_signup_invitations
          WHERE id = $1 AND revoked_at IS NULL AND consumed_at IS NULL
@@ -958,12 +989,6 @@ export class BusinessOnboardingService {
       );
       return { applicationId, userId };
     });
-    const sessionToken = this.randomToken();
-    await this.redis.set(
-      `signup:session:${this.hash(sessionToken)}`,
-      result satisfies SignupSession,
-      SIGNUP_SESSION_SECONDS,
-    );
     return {
       mode: 'signup' as const,
       sessionToken,

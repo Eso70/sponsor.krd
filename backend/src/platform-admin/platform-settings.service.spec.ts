@@ -1,3 +1,4 @@
+import { hashSessionToken } from '../auth/session-token';
 import { mockArg } from '../common/test-utils';
 import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -267,7 +268,7 @@ describe('PlatformSettingsService', () => {
     });
     expect(mockArg(database.query, 0, 1)).toEqual([
       'admin-id',
-      'current-token',
+      hashSessionToken('current-token'),
     ]);
   });
 
@@ -288,7 +289,7 @@ describe('PlatformSettingsService', () => {
     expect(mockArg(database.query, 0, 1)).toEqual([
       'session-id',
       'admin-id',
-      'current-token',
+      hashSessionToken('current-token'),
     ]);
     expect(sessionRedis.del as jest.Mock).toHaveBeenCalledWith(
       'session:other-token',

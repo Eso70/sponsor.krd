@@ -74,6 +74,17 @@ describe("CreateBusinessModal - single step", () => {
     expect(screen.getByText("زیادکردنی بزنسی نوێ")).toBeInTheDocument();
   });
 
+  it.each(['gradient:bogus:#123456:#abcdef', 'gradient:to-r:#1234:#abcde'])(
+    'rejects colors the shared renderer and backend cannot accept: %s', (website_color) => {
+      renderModal({ editData: {
+        id: 'business', username: 'valid-owner', name: 'Valid Business', subdomain: 'valid-owner',
+        phone: '7501234567', website_color, status: 'active', created_at: '', updated_at: '',
+      } });
+      fireEvent.click(screen.getByText('نوێکردنەوە'));
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    },
+  );
+
   it("renders edit title in edit mode", () => {
     renderModal({
       editData: {

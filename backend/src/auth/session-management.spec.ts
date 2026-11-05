@@ -1,3 +1,4 @@
+import { hashSessionToken } from './session-token';
 import { mockArg } from '../common/test-utils';
 import { BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
@@ -35,7 +36,7 @@ describe('SessionService business session management', () => {
       role: 'platform-admin',
     };
     const sessionRedis = {
-      get: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(cached),
+      get: jest.fn().mockResolvedValue(cached),
       del: jest.fn().mockResolvedValue(true),
     } as unknown as RedisService;
     const service = new SessionService(database, sessionRedis);
@@ -43,10 +44,10 @@ describe('SessionService business session management', () => {
       service.getSessionUser('revoked-platform-token'),
     ).resolves.toBeNull();
     expect(sessionRedis.del).toHaveBeenCalledWith(
-      'session:revoked-platform-token',
+      `session:${hashSessionToken('revoked-platform-token')}`,
     );
     expect(mockArg(database.query, 0, 1)).toEqual([
-      'revoked-platform-token',
+      hashSessionToken('revoked-platform-token'),
       'admin-id',
     ]);
   });
@@ -90,7 +91,14 @@ describe('SessionService business session management', () => {
 
   it('creates a short platform administrator session for Google OAuth', async () => {
     const database = {
-      query: jest.fn().mockResolvedValue({ rows: [] }),
+      query: jest.fn().mockImplementation(async (sql: string) => ({
+        rows: sql.startsWith('SELECT id FROM platform_admins')
+          ? [{ id: 'admin-id' }]
+          : [],
+      })),
+      transaction: async (
+        work: (client: { query: DatabaseService['query'] }) => Promise<unknown>,
+      ) => work({ query: database.query }),
     } as unknown as DatabaseService;
     const platformRedis = {
       set: jest.fn().mockResolvedValue(true),
@@ -108,8 +116,16 @@ describe('SessionService business session management', () => {
 
     expect(result.ttlSeconds).toBe(1800);
     expect(result.user.role).toBe('platform-admin');
+    expect(database.query).toHaveBeenNthCalledWith(
+      1,
+      'SELECT id FROM platform_admins WHERE id=$1 FOR UPDATE',
+      ['admin-id'],
+    );
+    expect(mockArg<unknown[]>(database.query, 2, 1)[1]).toBe(
+      hashSessionToken(result.sessionToken),
+    );
     expect(platformRedis.set).toHaveBeenCalledWith(
-      expect.stringMatching(/^session:/),
+      `session:${hashSessionToken(result.sessionToken)}`,
       result.user,
       1800,
     );
@@ -187,7 +203,14 @@ describe('SessionService business session management', () => {
 
   it('keeps a remembered platform device signed in for 7 days', async () => {
     const database = {
-      query: jest.fn().mockResolvedValue({ rows: [] }),
+      query: jest.fn().mockImplementation(async (sql: string) => ({
+        rows: sql.startsWith('SELECT id FROM platform_admins')
+          ? [{ id: 'admin-id' }]
+          : [],
+      })),
+      transaction: async (
+        work: (client: { query: DatabaseService['query'] }) => Promise<unknown>,
+      ) => work({ query: database.query }),
     } as unknown as DatabaseService;
     const platformRedis = {
       set: jest.fn().mockResolvedValue(true),

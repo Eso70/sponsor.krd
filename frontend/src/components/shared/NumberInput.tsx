@@ -24,6 +24,7 @@ interface NumberInputProps {
   decimalOnly?: boolean;
   onEmpty?: () => void;
   max?: number;
+  disabled?: boolean;
 }
 
 /**
@@ -43,6 +44,7 @@ export function NumberInput({
   decimalOnly = false,
   onEmpty,
   max,
+  disabled = false,
   "aria-label": ariaLabel,
 }: NumberInputProps) {
   // While focused the raw text is authoritative, so a half-typed or empty
@@ -58,6 +60,7 @@ export function NumberInput({
 
   return (
     <input
+      disabled={disabled}
       type={decimalOnly ? "text" : "number"}
       maxLength={decimalOnly ? 32 : undefined}
       inputMode={step && !Number.isInteger(step) ? "decimal" : "numeric"}

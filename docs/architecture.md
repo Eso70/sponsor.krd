@@ -107,6 +107,12 @@ Shared packages must contain transport contracts, not database access,
 framework services, or UI behavior. The frontend and backend may depend on
 shared packages; shared packages must not depend on either application.
 
+Framework-free runtime validation for shared request boundaries follows the
+existing CJS/declaration-file convention in `packages/types`. The request-origin
+module owns authenticated cookie names, safe methods, authority validation and
+Origin/Referer comparison; frontend and backend adapters only read their native
+request shapes. It imports neither application nor server infrastructure.
+
 Endpoint response shapes that cross the frontend/backend boundary are defined
 once in `@linktree/types`. Contracts use endpoint-specific names (for example,
 `PublicLinktree` and `PlatformBusinessSummary`) instead of generic database-row

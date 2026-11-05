@@ -1,24 +1,10 @@
-const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
-/**
- * Every cookie that authenticates a mutation.
- *
- * A surface missing here is not treated as authenticated, so the proxy skips
- * the same-origin check instead of failing it. Add the cookie when a new
- * session type is introduced; the backend keeps the matching list in
- * `common/request-origin.ts`.
- */
-const SESSION_COOKIE_NAMES = [
-  "business_session",
-  "platform_admin_session",
-  "signup_session",
-] as const;
+import { SESSION_COOKIE_NAMES, isSafeRequestMethod, browserOrigin, isSameOriginSource } from "@linktree/types/request-origin.cjs";
 
 export function isAuthenticatedMutation(
   method: string,
   cookieHeader: string | null,
 ): boolean {
-  if (SAFE_METHODS.has(method.toUpperCase())) return false;
+  if (isSafeRequestMethod(method)) return false;
   return hasAuthenticatedSessionCookie(cookieHeader);
 }
 
@@ -45,35 +31,15 @@ export function isSameOriginBrowserRequest(
   forwardedHostHeader?: string | null,
   forwardedProtoHeader?: string | null,
 ): boolean {
-  const source = originHeader ?? refererHeader;
-  if (source === null) return true;
-  if (source === "null") return false;
-
   try {
-    const sourceUrl = new URL(source);
-    if (sourceUrl.username || sourceUrl.password || sourceUrl.hash ||
-      !["http:", "https:"].includes(sourceUrl.protocol) ||
-      (originHeader !== null && sourceUrl.origin !== originHeader)) return false;
-    const internalUrl = new URL(requestUrl);
-    const publicHost =
-      hostHeader || forwardedHostHeader;
-    const publicProtocol = browserRequestProtocol(requestUrl, forwardedProtoHeader);
-    if (!publicProtocol) return false;
-
-    if (
-      publicHost &&
-      (publicProtocol === "http" || publicProtocol === "https")
-    ) {
-      return (
-        /^[a-z0-9.-]+(?::\d{1,5})?$/i.test(publicHost) &&
-        sourceUrl.origin ===
-        new URL(`${publicProtocol}://${publicHost}`).origin
-      );
-    }
-
-    return sourceUrl.origin === internalUrl.origin;
+    const publicHost = hostHeader || forwardedHostHeader;
+    const protocol = browserRequestProtocol(requestUrl, forwardedProtoHeader);
+    const expectedOrigin = publicHost
+      ? browserOrigin(publicHost, protocol || "")
+      : protocol ? new URL(requestUrl).origin : null;
+    return isSameOriginSource(originHeader, refererHeader, expectedOrigin);
   } catch {
-    return false;
+    return originHeader === null && refererHeader === null;
   }
 }
 

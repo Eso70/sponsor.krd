@@ -48,7 +48,7 @@ describe('tenant sitemap and cached publication boundaries', () => {
       );
       expect(query).toHaveBeenNthCalledWith(
         2,
-        expect.stringContaining('lt.is_archived'),
+        expect.not.stringContaining('lt.is_archived'),
         expect.any(Array),
       );
     },
@@ -112,7 +112,7 @@ describe('tenant sitemap and cached publication boundaries', () => {
         {
           status: 'active',
           owner_status: 'active',
-          is_archived: false,
+          is_archived: true,
           canonical_slug: 'same-slug',
         },
       ],

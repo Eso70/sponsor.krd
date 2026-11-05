@@ -1,8 +1,65 @@
 import { PATH_METADATA } from '@nestjs/common/constants';
+import {
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { PublicUnifiedAnalyticsController } from './unified-analytics.controller';
 
 describe('PublicUnifiedAnalyticsController', () => {
+  it.each([
+    new Error('database unavailable'),
+    new ServiceUnavailableException(),
+  ])('does not acknowledge temporary ingest failures: %s', async (failure) => {
+    const controller = new PublicUnifiedAnalyticsController(
+      { ingest: jest.fn().mockRejectedValue(failure) } as never,
+      { isRateLimited: jest.fn().mockResolvedValue(false) } as never,
+    );
+    await expect(
+      controller.events(
+        {
+          events: [
+            {
+              eventId: '11111111-1111-4111-8111-111111111111',
+              pageId: '22222222-2222-4222-8222-222222222222',
+              eventName: 'page_view',
+              visitorId: 'visitor-1',
+              sessionId: 'session-1',
+              occurredAt: new Date().toISOString(),
+            },
+          ],
+        },
+        { headers: {}, ip: '127.0.0.1' } as FastifyRequest,
+      ),
+    ).rejects.toBe(failure);
+  });
+
+  it('acknowledges permanent validation failures so they do not poison retries', async () => {
+    const controller = new PublicUnifiedAnalyticsController(
+      {
+        ingest: jest
+          .fn()
+          .mockRejectedValue(new BadRequestException('Invalid action')),
+      } as never,
+      { isRateLimited: jest.fn().mockResolvedValue(false) } as never,
+    );
+    const result = await controller.events(
+      {
+        events: [
+          {
+            eventId: '11111111-1111-4111-8111-111111111111',
+            pageId: '22222222-2222-4222-8222-222222222222',
+            eventName: 'page_view',
+            visitorId: 'visitor-1',
+            sessionId: 'session-1',
+            occurredAt: new Date().toISOString(),
+          },
+        ],
+      },
+      { headers: {}, ip: '127.0.0.1' } as FastifyRequest,
+    );
+    expect(result.data.events[0].accepted).toBe(false);
+  });
   afterEach(() => jest.useRealTimers());
 
   it('exposes only the canonical events endpoint', () => {

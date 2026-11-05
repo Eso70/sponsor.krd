@@ -121,7 +121,7 @@ function fixture() {
     }),
     get: jest.fn(async (key: string) => sessions.get(key)),
   };
-  const evaluate = jest.fn(async () => 1);
+  const evaluate = jest.fn(async (..._args: unknown[]) => 1);
   const analytics = {
     getSummary: jest.fn(async () => ({
       total_views: 10,
@@ -232,6 +232,57 @@ function fixture() {
 }
 
 describe('protected analytics sharing', () => {
+  function failureBudgets(evaluate: ReturnType<typeof fixture>['evaluate']) {
+    const counters = new Map<string, number>();
+    evaluate.mockImplementation(
+      async (_script, keys, firstKey, secondKey, matches) => {
+        const key = String(firstKey);
+        if (keys === 1) {
+          const next = (counters.get(key) ?? 0) + 1;
+          counters.set(key, next);
+          return next;
+        }
+        const globalKey = String(secondKey);
+        if (
+          (counters.get(key) ?? 0) >= 5 ||
+          (counters.get(globalKey) ?? 0) >= 50
+        )
+          return 0;
+        if (matches === '1') return 1;
+        counters.set(key, (counters.get(key) ?? 0) + 1);
+        counters.set(globalKey, (counters.get(globalKey) ?? 0) + 1);
+        return 0;
+      },
+    );
+  }
+
+  it('does not exhaust the daily guessing budget with successful viewers', async () => {
+    const { service, evaluate } = fixture();
+    failureBudgets(evaluate);
+    const link = await service.create('owner', 'linktree', 'source', {
+      locale: 'en',
+    });
+    for (let n = 0; n < 60; n++)
+      await expect(
+        service.unlock(link.id, link.code, `viewer-${n}`),
+      ).resolves.toHaveProperty('token');
+  });
+
+  it('still bounds incorrect guesses across viewers', async () => {
+    const { service, evaluate } = fixture();
+    failureBudgets(evaluate);
+    const link = await service.create('owner', 'linktree', 'source', {
+      locale: 'en',
+    });
+    const wrong = link.code === '000000' ? '111111' : '000000';
+    for (let n = 0; n < 50; n++)
+      await expect(
+        service.unlock(link.id, wrong, `attacker-${n}`),
+      ).rejects.toThrow(UnauthorizedException);
+    await expect(
+      service.unlock(link.id, link.code, 'new-viewer'),
+    ).rejects.toThrow(UnauthorizedException);
+  });
   it('allows exactly one encrypted code recovery, with an owner-scoped row lock', async () => {
     const { service, query } = fixture();
     const link = await service.create('owner', 'form', 'source', {
@@ -561,7 +612,7 @@ describe('protected analytics sharing', () => {
     await expect(
       service.report('another-share', session.token, 'ip'),
     ).rejects.toThrow(UnauthorizedException);
-    evaluate.mockResolvedValueOnce(1).mockResolvedValueOnce(6);
+    evaluate.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     await expect(service.unlock(link.id, link.code, 'ip')).rejects.toThrow(
       UnauthorizedException,
     );

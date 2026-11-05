@@ -3,6 +3,7 @@
   OnModuleInit,
   OnModuleDestroy,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
@@ -13,6 +14,14 @@ if value then
   redis.call('DEL', KEYS[1])
 end
 return value
+`;
+
+const RATE_LIMIT_SCRIPT = `
+local count = redis.call('INCR', KEYS[1])
+if redis.call('TTL', KEYS[1]) < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return count
 `;
 
 @Injectable()
@@ -78,8 +87,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const data = await this.redis.get(key);
       if (!data) return null;
       return JSON.parse(data) as T;
-    } catch (error) {
-      this.logger.warn(`⚠️ Redis cache get error for key "${key}":`, error);
+    } catch {
+      this.logger.warn('Redis cache get failed');
       return null;
     }
   }
@@ -90,8 +99,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const serialized = JSON.stringify(value);
       await this.redis.set(key, serialized, 'EX', ttlSeconds);
       return true;
-    } catch (error) {
-      this.logger.warn(`⚠️ Redis cache set error for key "${key}":`, error);
+    } catch {
+      this.logger.warn('Redis cache set failed');
       return false;
     }
   }
@@ -101,8 +110,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.redis.del(key);
       return true;
-    } catch (error) {
-      this.logger.warn(`⚠️ Redis cache delete error for key "${key}":`, error);
+    } catch {
+      this.logger.warn('Redis cache delete failed');
       return false;
     }
   }
@@ -113,8 +122,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const raw = await this.redis.eval(GET_AND_DELETE_SCRIPT, 1, key);
       if (typeof raw !== 'string') return null;
       return JSON.parse(raw) as T;
-    } catch (error) {
-      this.logger.warn(`Redis one-time consume error for key "${key}":`, error);
+    } catch {
+      this.logger.warn('Redis one-time consume failed');
       return null;
     }
   }
@@ -216,25 +225,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     key: string,
     limit = 60,
     windowSeconds = 60,
+    options: { failClosed?: boolean } = {},
   ): Promise<boolean> {
-    if (!this.isAvailable()) return false;
+    if (!this.isAvailable()) {
+      if (options.failClosed)
+        throw new ServiceUnavailableException(
+          'Request limiting is temporarily unavailable',
+        );
+      return false;
+    }
     try {
-      // Seed the window before counting, rather than counting and then
-      // attaching a TTL to the first hit. `INCR` followed by a conditional
-      // `EXPIRE` leaves a gap: a process that stops between the two — a crash,
-      // a deploy, a container eviction — leaves the counter behind with no
-      // expiry at all, and Redis never reclaims it. The identity behind that
-      // key is then rate limited permanently, which on the login limiter means
-      // an account locked out until someone deletes the key by hand.
-      //
-      // `SET ... NX EX` is a no-op when the window is already open, so it never
-      // extends one, and both orderings survive an interruption: a seeded key
-      // that never got incremented simply expires on schedule.
-      await this.redis.set(key, '0', 'EX', windowSeconds, 'NX');
-      const current = await this.redis.incr(key);
+      // Atomic expiry also repairs orphan counters without sliding live windows.
+      const current = Number(
+        await this.redis.eval(RATE_LIMIT_SCRIPT, 1, key, windowSeconds),
+      );
       return current > limit;
-    } catch (error) {
-      this.logger.warn(`⚠️ Redis rate limit error for key "${key}":`, error);
+    } catch {
+      this.logger.warn('Redis rate limit failed');
+      if (options.failClosed)
+        throw new ServiceUnavailableException(
+          'Request limiting is temporarily unavailable',
+        );
       return false;
     }
   }

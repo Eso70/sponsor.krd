@@ -16,26 +16,6 @@ export type CampaignOptimizationGoal =
 export type CampaignBidStrategy = "MAXIMIZE_DELIVERY";
 export type CampaignPlacement = "AUTOMATIC" | "TIKTOK_ONLY" | "SELECTED";
 
-export interface TikTokAdAccount {
-  id: string;
-  advertiserId: string;
-  advertiserName: string;
-  currency: string;
-  timezone: string;
-  balance?: number;
-  dailySpendCap?: number;
-  status: "connected" | "disconnected" | "action_required";
-  connectedPixelId?: string;
-  connectedPixelName?: string;
-  lastSyncedAt: string;
-  accountType?: "SANDBOX" | "AUCTION";
-  connectionMethod?: "direct_token" | "oauth";
-  accessToken?: string;
-  businessCenterId?: string;
-  companyName?: string;
-  appId?: string;
-}
-
 export interface TikTokApiPayloadBundle {
   campaign: {
     advertiser_id: string;

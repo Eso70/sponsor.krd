@@ -1,3 +1,4 @@
+import { ScheduledTask } from '../common/scheduled-task';
 import {
   BadRequestException,
   Injectable,
@@ -73,7 +74,13 @@ const ANNOUNCEMENT_SELECT = `
 @Injectable()
 export class CommunicationService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CommunicationService.name);
-  private scheduler?: ReturnType<typeof setInterval>;
+  private readonly scheduler = new ScheduledTask(
+    () => this.runScheduler(),
+    (error) =>
+      this.logger.warn(
+        `Communication scheduler failed: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+  );
 
   constructor(
     private readonly database: DatabaseService,
@@ -109,15 +116,11 @@ export class CommunicationService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     this.metrics.registerWorker('communication-scheduler', 180_000);
-    this.scheduler = setInterval(() => {
-      void this.runScheduler();
-    }, 60_000);
-    this.scheduler.unref?.();
-    void this.runScheduler();
+    this.scheduler.start(60_000);
   }
 
-  onModuleDestroy() {
-    if (this.scheduler) clearInterval(this.scheduler);
+  async onModuleDestroy(): Promise<void> {
+    await this.scheduler.stop();
   }
 
   private async runScheduler(): Promise<void> {

@@ -3,7 +3,8 @@ import { DatabaseService } from '../database/database.service';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { businessSessionPrincipalSql } from './business-session-principal';
 import { RedisService } from '../redis/redis.service';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
+import { hashSessionToken } from './session-token';
 import { isIP } from 'net';
 
 /**
@@ -51,10 +52,6 @@ export class SessionService {
     private readonly redisService: RedisService,
   ) {}
 
-  private businessTokenHash(token: string): string {
-    return createHash('sha256').update(token).digest('hex');
-  }
-
   async createBusinessSession(input: {
     businessId: string;
     userId: string | null;
@@ -74,7 +71,7 @@ export class SessionService {
     };
   }): Promise<{ sessionToken: string; ttlSeconds: number }> {
     const sessionToken = randomBytes(32).toString('base64url');
-    const tokenHash = this.businessTokenHash(sessionToken);
+    const tokenHash = hashSessionToken(sessionToken);
     // An impersonated session is never remembered: it is short by construction
     // so an administrator who walks away cannot leave a live tenant session
     // behind. Its lifetime is supplied by the caller.
@@ -192,39 +189,47 @@ export class SessionService {
       role: 'platform-admin',
     };
 
-    const revoked = await this.databaseService.query<{
-      session_token: string;
-    }>(
-      `DELETE FROM platform_admin_sessions
-       WHERE platform_admin_id = $1
-       RETURNING session_token`,
-      [input.platformAdminId],
-    );
+    const tokenHash = hashSessionToken(sessionToken);
+    const revoked = await this.databaseService.transaction(async (client) => {
+      // The account lock serializes replacement even when it has no sessions.
+      const admin = await client.query(
+        'SELECT id FROM platform_admins WHERE id=$1 FOR UPDATE',
+        [input.platformAdminId],
+      );
+      if (!admin.rows.length)
+        throw new UnauthorizedException('Administrator account unavailable');
+      const previous = await client.query<{ session_token: string }>(
+        `DELETE FROM platform_admin_sessions
+         WHERE platform_admin_id = $1 RETURNING session_token`,
+        [input.platformAdminId],
+      );
+      await client.query(
+        `INSERT INTO platform_admin_sessions
+          (platform_admin_id, session_token, session_expires_at,
+           ip_address, user_agent, remembered, last_used_at)
+         VALUES ($1, $2, NOW() + ($3::int * INTERVAL '1 second'),
+                 $4::inet, $5, $6, NOW())`,
+        [
+          input.platformAdminId,
+          tokenHash,
+          ttlSeconds,
+          ipAddress,
+          input.userAgent,
+          Boolean(input.rememberDevice),
+        ],
+      );
+      return previous.rows;
+    });
     await Promise.all(
-      revoked.rows.flatMap(({ session_token: token }) => [
-        this.redisService.del(`session:${token}`),
-        this.redisService.untrackBusinessSession(input.platformAdminId, token),
+      revoked.flatMap(({ session_token: hash }) => [
+        this.redisService.del(`session:${hash}`),
+        this.redisService.untrackBusinessSession(input.platformAdminId, hash),
       ]),
     );
-    await this.databaseService.query(
-      `INSERT INTO platform_admin_sessions
-        (platform_admin_id, session_token, session_expires_at,
-         ip_address, user_agent, remembered, last_used_at)
-       VALUES ($1, $2, NOW() + ($3::int * INTERVAL '1 second'),
-               $4::inet, $5, $6, NOW())`,
-      [
-        input.platformAdminId,
-        sessionToken,
-        ttlSeconds,
-        ipAddress,
-        input.userAgent,
-        Boolean(input.rememberDevice),
-      ],
-    );
-    await this.redisService.set(`session:${sessionToken}`, user, ttlSeconds);
+    await this.redisService.set(`session:${tokenHash}`, user, ttlSeconds);
     await this.redisService.trackBusinessSession(
       input.platformAdminId,
-      sessionToken,
+      tokenHash,
       ttlSeconds,
     );
     return { sessionToken, ttlSeconds, user };
@@ -232,14 +237,12 @@ export class SessionService {
 
   async getSessionUser(sessionToken: string): Promise<SessionUser | null> {
     if (!sessionToken) return null;
-    const businessTokenHash = this.businessTokenHash(sessionToken);
+    const tokenHash = hashSessionToken(sessionToken);
 
     // 1. Check Redis Cache
-    const [cachedBusiness, cachedPlatform] = await Promise.all([
-      this.redisService.get<SessionUser>(`session:${businessTokenHash}`),
-      this.redisService.get<SessionUser>(`session:${sessionToken}`),
-    ]);
-    const cachedUser = cachedBusiness || cachedPlatform;
+    const cachedUser = await this.redisService.get<SessionUser>(
+      `session:${tokenHash}`,
+    );
     if (cachedUser) {
       if (cachedUser.role === 'business') {
         // Redis is metadata, never the authority for a durable session or membership.
@@ -251,7 +254,7 @@ export class SessionService {
              AND s.session_expires_at>now() AND a.status='active' AND a.account_type='business'
              AND ${businessSessionPrincipalSql('s.user_id', 's.impersonated_by_platform_admin_id')}`,
           [
-            businessTokenHash,
+            tokenHash,
             cachedUser.id,
             cachedUser.subdomain || null,
             cachedUser.userId || null,
@@ -259,7 +262,7 @@ export class SessionService {
           ],
         );
         if (!live.rows.length) {
-          await this.redisService.del(`session:${businessTokenHash}`);
+          await this.redisService.del(`session:${tokenHash}`);
           return null;
         }
       } else {
@@ -267,10 +270,10 @@ export class SessionService {
           `SELECT s.id FROM platform_admin_sessions s
            JOIN platform_admins admin ON admin.id=s.platform_admin_id
            WHERE s.session_token=$1 AND admin.id=$2 AND s.session_expires_at>now()`,
-          [sessionToken, cachedUser.id],
+          [tokenHash, cachedUser.id],
         );
         if (!live.rows.length) {
-          await this.redisService.del(`session:${sessionToken}`);
+          await this.redisService.del(`session:${tokenHash}`);
           return null;
         }
       }
@@ -306,7 +309,7 @@ export class SessionService {
          AND s.session_expires_at > NOW()
          AND a.status = 'active' AND a.account_type='business'
          AND ${businessSessionPrincipalSql('s.user_id', 's.impersonated_by_platform_admin_id')}`,
-      [businessTokenHash],
+      [tokenHash],
     );
 
     if (businessResult.rows && businessResult.rows.length > 0) {
@@ -333,11 +336,7 @@ export class SessionService {
       };
 
       // Cache session in Redis
-      await this.cacheSession(
-        businessTokenHash,
-        user,
-        business.session_expires_at,
-      );
+      await this.cacheSession(tokenHash, user, business.session_expires_at);
       return user;
     }
 
@@ -353,7 +352,7 @@ export class SessionService {
        FROM platform_admin_sessions s
        INNER JOIN platform_admins sa ON s.platform_admin_id = sa.id
        WHERE s.session_token = $1 AND s.session_expires_at > NOW()`,
-      [sessionToken],
+      [tokenHash],
     );
 
     if (platformAdminResult.rows && platformAdminResult.rows.length > 0) {
@@ -368,7 +367,7 @@ export class SessionService {
 
       // Cache session in Redis
       await this.cacheSession(
-        sessionToken,
+        tokenHash,
         user,
         platformAdmin.session_expires_at,
       );
@@ -404,10 +403,7 @@ export class SessionService {
 
   async destroySession(sessionToken: string, user: SessionUser): Promise<void> {
     // 1. Delete from Redis
-    const sessionKey =
-      user.role === 'business'
-        ? this.businessTokenHash(sessionToken)
-        : sessionToken;
+    const sessionKey = hashSessionToken(sessionToken);
     await this.redisService.del(`session:${sessionKey}`);
     await this.redisService.untrackBusinessSession(user.id, sessionKey);
 
@@ -415,7 +411,7 @@ export class SessionService {
     if (user.role === 'platform-admin') {
       await this.databaseService.query(
         'DELETE FROM platform_admin_sessions WHERE session_token = $1',
-        [sessionToken],
+        [sessionKey],
       );
     } else {
       await this.databaseService.query(
@@ -430,9 +426,7 @@ export class SessionService {
   }
 
   private async getLoginSecurity(businessId: string, currentToken: string) {
-    const currentHash = currentToken
-      ? this.businessTokenHash(currentToken)
-      : '';
+    const currentHash = currentToken ? hashSessionToken(currentToken) : '';
     const sessions = await this.databaseService.query<ManagedSession>(
       // Administrator access is disclosed to the owner rather than hidden:
       // an impersonated session appears in the owner's own device list.
@@ -454,9 +448,7 @@ export class SessionService {
     sessionId: string,
     currentToken = '',
   ): Promise<void> {
-    const currentHash = currentToken
-      ? this.businessTokenHash(currentToken)
-      : '';
+    const currentHash = currentToken ? hashSessionToken(currentToken) : '';
     const result = await this.databaseService.query<{
       session_token_hash: string;
     }>(
@@ -482,9 +474,7 @@ export class SessionService {
     businessId: string,
     currentToken = '',
   ): Promise<number> {
-    const currentHash = currentToken
-      ? this.businessTokenHash(currentToken)
-      : '';
+    const currentHash = currentToken ? hashSessionToken(currentToken) : '';
     const result = await this.databaseService.query<{
       session_token_hash: string;
     }>(

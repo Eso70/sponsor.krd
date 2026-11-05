@@ -1,5 +1,17 @@
 # Security
 
+Public form reads, status checks and submissions require functioning Redis
+throttling: unavailable Redis or a failed limiter command returns 503 before
+form processing. Valid throttled requests retain their existing 429 response.
+The shared limiter increments and attaches expiry atomically and repairs legacy
+counters without expiry; requests never extend an existing window. Other callers
+retain their existing optional-cache behavior unless they require enforcement.
+
+Direct, onboarding, platform and approved TikTok updates share one configuration
+normalizer and transactional writer. Updates cannot clear the final active Pixel
+group. Business approvals recheck the current group limit before writing, while
+owner-scoped token preservation, encryption and redacted responses remain shared.
+
 ## Linktree display badges
 
 The optional blue badge is a page appearance setting, not an identity,
@@ -362,13 +374,44 @@ alone is a complete answer, and unusual non-browser clients replaying a stolen
 cookie are only covered by the `SameSite` cookie policy and standard session
 theft mitigations, not this header check.
 
-"Cookie-authenticated" is decided by a list of session cookie names kept in
-`backend/src/common/request-origin.ts` and mirrored in the proxy's
-`lib/security/request-origin.ts`: `business_session`,
+"Cookie-authenticated" is decided by the shared cookie catalog in
+`packages/types/request-origin.cjs`, used by both request adapters: `business_session`,
 `platform_admin_session` and `signup_session`. A session type missing from that list is not
 recognised as authenticated, so the check is **skipped rather than failed**
-and that surface silently loses this defence. Add the cookie to both lists
+and that surface silently loses this defence. Add the cookie to the shared catalog
 when a new session type is introduced.
+
+Administrator sessions store SHA-256 digests in the existing
+`platform_admin_sessions.session_token` column and Redis session keys, matching
+the business-session policy. Only browser cookies contain bearer tokens. Session
+validation always checks PostgreSQL, including cache hits. Administrator session
+replacement locks the administrator row and deletes/inserts within one transaction,
+so concurrent sign-ins leave one valid session. Redis cache/consume failures log
+the operation without keys or client error objects that can contain credentials.
+
+Impersonation restrictions use Fastify's matched route pattern, with defensive
+decoding for fallback paths. Encoded static path segments cannot bypass secret
+read or session-revocation restrictions.
+
+Email-code challenges must be accepted by Redis before any business,
+administrator, or signup email is sent. A failed write returns 503.
+
+Email and Google signup store the application session before committing identity,
+application and invitation changes. Failed or ambiguous session writes roll back
+the transaction and return an error; a failed database commit removes the cached
+session too. The invitation remains usable for a new email verification or OAuth
+flow. Consumed verification codes and OAuth states remain one-use.
+
+With application writers stopped, the migration runner removes legacy raw
+administrator session caches and tracking members before hashing database tokens.
+It includes administrators without a current session and reruns cleanup on
+already-hashed installations. Cleanup is prefix-scoped and never flushes Redis.
+
+Analytics-share unlocks keep the general request limit, but only incorrect codes
+consume the per-viewer and link-wide guessing budgets. One atomic Redis script
+checks both failure budgets and records incorrect attempts across API processes.
+Successful viewers do not exhaust the daily guessing allowance. Redis failure
+still denies access.
 
 ## Rate limiting
 

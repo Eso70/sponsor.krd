@@ -25,6 +25,7 @@ export class PublicFormsController {
         `rl:forms:${kind}:${requestIp(request)}`,
         max,
         60,
+        { failClosed: true },
       )
     )
       throw new HttpException(

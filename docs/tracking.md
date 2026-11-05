@@ -73,6 +73,12 @@ The tracker:
 
 Analytics failures must never break public navigation or rendering.
 
+The batch ingest endpoint acknowledges permanent client errors per event, but
+propagates infrastructure errors and rate limits as retryable HTTP failures.
+The browser retains that batch; committed siblings are safe to replay because
+their event IDs are idempotent. A database outage must never become a successful
+response that permanently removes unrecorded events from the retry queue.
+
 ## Registered actions
 
 Linktree banner changes and banner/logo image opens use `page:banner-change` and

@@ -1,4 +1,5 @@
-﻿import * as fc from 'fast-check';
+import { hashSessionToken } from './session-token';
+import * as fc from 'fast-check';
 import { SessionService, SessionUser } from './session.service';
 import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
@@ -95,11 +96,15 @@ describe('SessionService - Property Tests', () => {
         };
 
         // Act: cache the session (simulate what cacheSession does internally)
-        await mockRedisService.set!(`session:${token}`, user, 1800);
+        await mockRedisService.set!(
+          `session:${hashSessionToken(token)}`,
+          user,
+          1800,
+        );
 
         // Assert: retrieve from cache and verify subdomain is preserved
         const cached = await mockRedisService.get!<SessionUser>(
-          `session:${token}`,
+          `session:${hashSessionToken(token)}`,
         );
         expect(cached).not.toBeNull();
         expect(cached!.subdomain).toBe(subdomain);
@@ -120,7 +125,7 @@ describe('SessionService - Property Tests', () => {
           role: 'business',
           subdomain,
         };
-        redisStore.set(`session:${token}`, {
+        redisStore.set(`session:${hashSessionToken(token)}`, {
           value: JSON.stringify(user),
           ttl: 1800,
         });

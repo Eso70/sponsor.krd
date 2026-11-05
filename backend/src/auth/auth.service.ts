@@ -5,6 +5,7 @@ import {
   ConflictException,
   ForbiddenException,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   DEFAULT_LINKTREE_BACKGROUND_COLOR,
@@ -23,7 +24,6 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { RedisService } from '../redis/redis.service';
 import { EntitlementService } from '../billing/entitlement.service';
-import { SecretCryptoService } from './secret-crypto.service';
 import { TemplateAccessService } from '../billing/template-access.service';
 import { StorageService } from '../storage/storage.service';
 import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
@@ -34,7 +34,6 @@ export class AuthService {
     private readonly databaseService: DatabaseService,
     private readonly redisService: RedisService,
     @Optional() private readonly entitlementService?: EntitlementService,
-    @Optional() private readonly secretCrypto?: SecretCryptoService,
     @Optional() private readonly templateAccessService?: TemplateAccessService,
     @Optional() private readonly storageService?: StorageService,
     @Optional()
@@ -209,7 +208,8 @@ export class AuthService {
         [businessId, input.footerText ?? '', input.footerPhone ?? ''],
       );
       if (input.tiktokConfigs !== undefined) {
-        const configs = this.normalizeTikTokConfigs(input.tiktokConfigs);
+        const pixels = this.pixelConfigs();
+        const configs = pixels.normalize(input.tiktokConfigs);
         const allowedGroups = this.entitlementService
           ? await this.entitlementService.getInteger(
               businessId,
@@ -217,77 +217,9 @@ export class AuthService {
               0,
             )
           : 0;
-        if (allowedGroups !== -1 && configs.length > allowedGroups) {
-          throw new ForbiddenException(
-            'The TikTok pixel limit has been reached',
-          );
-        }
+        pixels.assertGroupLimit(configs, allowedGroups);
 
-        const retainedIds: string[] = [];
-        for (const [index, config] of configs.entries()) {
-          const existing = await client.query<{
-            id: string;
-            encrypted_events_token: Buffer | null;
-            token_last_four: string | null;
-          }>(
-            `SELECT id, encrypted_events_token, token_last_four
-                 FROM business_tiktok_pixels
-                 WHERE business_id = $2::uuid
-                   AND (($1::uuid IS NOT NULL AND id = $1::uuid) OR pixel_id = $3)
-                 FOR UPDATE`,
-            [config.id || null, businessId, config.pixel_id],
-          );
-          const existingRow = existing.rows[0];
-          const encryptedToken = config.events_token
-            ? this.requireSecretCrypto().encryptJson({
-                events_token: config.events_token,
-              })
-            : config.keep_events_token
-              ? existingRow?.encrypted_events_token || null
-              : null;
-          const tokenLastFour = config.events_token
-            ? config.events_token.slice(-4)
-            : config.keep_events_token
-              ? existingRow?.token_last_four || null
-              : null;
-          const saved = existingRow
-            ? await client.query<{ id: string }>(
-                `UPDATE business_tiktok_pixels
-                 SET pixel_id = $3, encrypted_events_token = $4,
-                     token_last_four = $5, display_order = $6,
-                     status = 'active', updated_at = NOW()
-                 WHERE id = $1::uuid AND business_id = $2::uuid
-                 RETURNING id`,
-                [
-                  existingRow.id,
-                  businessId,
-                  config.pixel_id,
-                  encryptedToken,
-                  tokenLastFour,
-                  index,
-                ],
-              )
-            : await client.query<{ id: string }>(
-                `INSERT INTO business_tiktok_pixels
-                  (business_id, pixel_id, encrypted_events_token, token_last_four, display_order, status)
-                 VALUES ($1::uuid, $2, $3, $4, $5, 'active')
-                 RETURNING id`,
-                [
-                  businessId,
-                  config.pixel_id,
-                  encryptedToken,
-                  tokenLastFour,
-                  index,
-                ],
-              );
-          retainedIds.push(saved.rows[0].id);
-        }
-        await client.query(
-          `UPDATE business_tiktok_pixels
-           SET status = 'inactive', updated_at = NOW()
-           WHERE business_id = $1::uuid AND NOT (id = ANY($2::uuid[]))`,
-          [businessId, retainedIds],
-        );
+        await pixels.replaceWithClient(client, businessId, configs);
       }
       await client.query(
         `UPDATE businesses
@@ -315,49 +247,6 @@ export class AuthService {
       throw new BadRequestException('Complete the setup steps first');
     }
     return { completed: true, completedAt: result.rows[0].completedAt };
-  }
-
-  private normalizeTikTokConfig(value: unknown): {
-    id?: string;
-    pixel_id: string;
-    events_token?: string;
-    keep_events_token: boolean;
-  } {
-    if (!value || typeof value !== 'object') {
-      return { pixel_id: '', keep_events_token: false };
-    }
-    const config = value as Record<string, unknown>;
-    const eventsToken = this.stringValue(config.events_token).trim();
-    const id = this.stringValue(config.id).trim();
-    return {
-      ...(id && /^[0-9a-f-]{36}$/i.test(id) ? { id } : {}),
-      pixel_id: this.stringValue(config.pixel_id).trim(),
-      ...(eventsToken && !eventsToken.startsWith('••••')
-        ? { events_token: eventsToken.slice(0, 4096) }
-        : {}),
-      keep_events_token:
-        config.keep_events_token === true || eventsToken.startsWith('••••'),
-    };
-  }
-
-  private normalizeTikTokConfigs(value: unknown): Array<{
-    id?: string;
-    pixel_id: string;
-    events_token?: string;
-    keep_events_token: boolean;
-  }> {
-    const source = Array.isArray(value) ? value : [];
-    const configs = source.map((item) => this.normalizeTikTokConfig(item));
-    if (configs.some((item) => !item.pixel_id)) {
-      throw new BadRequestException('Pixel ID is required');
-    }
-    if (configs.some((item) => !/^[A-Za-z0-9_-]{8,255}$/.test(item.pixel_id))) {
-      throw new BadRequestException('Invalid TikTok Pixel ID');
-    }
-    if (new Set(configs.map((item) => item.pixel_id)).size !== configs.length) {
-      throw new BadRequestException('TikTok Pixel IDs must be unique');
-    }
-    return configs;
   }
 
   private async clearBusinessPublicLinktreeCache(
@@ -808,31 +697,8 @@ export class AuthService {
         ],
       );
     } else {
-      if (this.tiktokPixelConfigs) {
-        const configs = this.tiktokPixelConfigs.normalize(body.tiktok_configs);
-        const allowedGroups = this.entitlementService
-          ? await this.entitlementService.getInteger(
-              businessId,
-              'limit.tiktok_pixels',
-              0,
-            )
-          : 0;
-        if (allowedGroups !== -1 && configs.length > allowedGroups) {
-          throw new ForbiddenException(
-            'The TikTok pixel limit has been reached',
-          );
-        }
-        await this.tiktokPixelConfigs.replace(businessId, configs);
-        const business = await this.databaseService.query<{
-          subdomain: string | null;
-        }>('SELECT subdomain FROM businesses WHERE id = $1', [businessId]);
-        await this.clearBusinessPublicLinktreeCache(
-          businessId,
-          business.rows[0]?.subdomain,
-        );
-        return this.getBusinessSettings(businessId);
-      }
-      const configs = this.normalizeTikTokConfigs(body.tiktok_configs);
+      const pixels = this.pixelConfigs();
+      const configs = pixels.normalize(body.tiktok_configs);
       const allowedGroups = this.entitlementService
         ? await this.entitlementService.getInteger(
             businessId,
@@ -840,105 +706,8 @@ export class AuthService {
             0,
           )
         : 0;
-      if (allowedGroups !== -1 && configs.length > allowedGroups) {
-        throw new ForbiddenException('The TikTok pixel limit has been reached');
-      }
-      await this.databaseService.transaction(async (client) => {
-        await client.query(
-          `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-          [`tiktok:${businessId}`],
-        );
-        const existingResult = await client.query<{
-          id: string;
-          pixel_id: string;
-          encrypted_events_token: Buffer | null;
-          token_last_four: string | null;
-          status: string;
-        }>(
-          `SELECT id, pixel_id, encrypted_events_token, token_last_four, status
-           FROM business_tiktok_pixels
-           WHERE business_id=$1::uuid
-           FOR UPDATE`,
-          [businessId],
-        );
-        const existingById = new Map(
-          existingResult.rows.map((row) => [row.id, row]),
-        );
-        const existingByPixelId = new Map(
-          existingResult.rows.map((row) => [row.pixel_id, row]),
-        );
-        const activeExistingCount = existingResult.rows.filter(
-          (row) => row.status === 'active',
-        ).length;
-        if (activeExistingCount > 0 && configs.length === 0) {
-          throw new BadRequestException(
-            'At least one TikTok pixel group must remain active',
-          );
-        }
-        const retainedIds: string[] = [];
-
-        for (const [index, config] of configs.entries()) {
-          const eventsToken = config.events_token || '';
-          const existing =
-            (config.id && existingById.get(config.id)) ||
-            existingByPixelId.get(config.pixel_id);
-          const preserveExistingToken =
-            config.keep_events_token && existing?.encrypted_events_token;
-          const encryptedToken = eventsToken
-            ? this.requireSecretCrypto().encryptJson({
-                events_token: eventsToken,
-              })
-            : preserveExistingToken || null;
-          const tokenLastFour = eventsToken
-            ? eventsToken.slice(-4)
-            : preserveExistingToken
-              ? existing?.token_last_four || null
-              : null;
-
-          const saved = existing
-            ? await client.query<{ id: string }>(
-                `UPDATE business_tiktok_pixels
-                 SET pixel_id=$3,
-                     encrypted_events_token=$4,
-                     token_last_four=$5,
-                     display_order=$6,
-                     status='active',
-                     updated_at=NOW()
-                 WHERE id=$1::uuid AND business_id=$2::uuid
-                 RETURNING id`,
-                [
-                  existing.id,
-                  businessId,
-                  config.pixel_id,
-                  encryptedToken,
-                  tokenLastFour,
-                  index,
-                ],
-              )
-            : await client.query<{ id: string }>(
-                `INSERT INTO business_tiktok_pixels
-                  (business_id,pixel_id,encrypted_events_token,token_last_four,display_order,status)
-                 VALUES ($1::uuid,$2,$3,$4,$5,'active')
-                 RETURNING id`,
-                [
-                  businessId,
-                  config.pixel_id,
-                  encryptedToken,
-                  tokenLastFour,
-                  index,
-                ],
-              );
-          retainedIds.push(saved.rows[0].id);
-        }
-
-        await client.query(
-          `UPDATE business_tiktok_pixels
-           SET status='inactive', updated_at=NOW()
-           WHERE business_id=$1::uuid
-             AND NOT (id = ANY($2::uuid[]))`,
-          [businessId, retainedIds],
-        );
-      });
+      pixels.assertGroupLimit(configs, allowedGroups);
+      await pixels.replace(businessId, configs);
       const business = await this.databaseService.query<{
         subdomain: string | null;
       }>('SELECT subdomain FROM businesses WHERE id = $1', [businessId]);
@@ -950,37 +719,16 @@ export class AuthService {
     return this.getBusinessSettings(businessId);
   }
 
-  private requireSecretCrypto(): SecretCryptoService {
-    if (!this.secretCrypto) {
-      throw new Error('Secret encryption service is unavailable');
-    }
-    return this.secretCrypto;
+  private pixelConfigs(): TikTokPixelConfigService {
+    if (!this.tiktokPixelConfigs)
+      throw new ServiceUnavailableException(
+        'TikTok settings are temporarily unavailable',
+      );
+    return this.tiktokPixelConfigs;
   }
 
   async getTikTokSecret(businessId: string, pixelId: string) {
-    const result = await this.databaseService.query<{
-      encrypted_events_token: Buffer;
-      token_last_four: string;
-    }>(
-      `SELECT encrypted_events_token, token_last_four
-       FROM business_tiktok_pixels
-       WHERE id=$1::uuid AND business_id=$2::uuid`,
-      [pixelId, businessId],
-    );
-    if (!result.rows[0]) {
-      throw new BadRequestException('TikTok pixel not found');
-    }
-    const decrypted = this.requireSecretCrypto().decryptJson(
-      result.rows[0].encrypted_events_token,
-    );
-    const token = decrypted.events_token;
-    if (typeof token !== 'string' || !token) {
-      throw new BadRequestException('TikTok token cannot be decrypted');
-    }
-    return {
-      events_token: token,
-      token_last_four: result.rows[0].token_last_four,
-    };
+    return this.pixelConfigs().getSecret(businessId, pixelId);
   }
 
   async getSubdomainTheme(subdomain: string): Promise<{

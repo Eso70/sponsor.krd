@@ -56,7 +56,12 @@ export function impersonationDenialReason(
   method: string,
   url: string,
 ): string | null {
-  const path = url.split('?')[0].split('#')[0];
+  let path: string;
+  try {
+    path = decodeURIComponent(url.split('?')[0].split('#')[0]);
+  } catch {
+    return 'Invalid request path';
+  }
   const normalizedMethod = method.toUpperCase();
   const restricted = IMPERSONATION_RESTRICTED_ROUTES.find(
     (route) =>

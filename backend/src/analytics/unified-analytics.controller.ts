@@ -157,6 +157,15 @@ export class PublicUnifiedAnalyticsController {
       try {
         results.push(await this.analytics.ingest(event, context));
       } catch (error) {
+        // A retry can safely replay committed siblings because event IDs are
+        // idempotent. Never acknowledge a transient failure as a permanent drop.
+        if (
+          !(error instanceof HttpException) ||
+          error.getStatus() >= 500 ||
+          error.getStatus() === 429
+        ) {
+          throw error;
+        }
         this.logger.warn(
           `Analytics event rejected (${event.eventId}): ${
             error instanceof Error ? error.message : String(error)

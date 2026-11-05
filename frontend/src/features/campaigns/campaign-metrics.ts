@@ -7,15 +7,6 @@ export function campaignReportedValue(value: string | number): string | number {
   return CAMPAIGN_REPORTING_CAPABILITIES.liveReporting ? value : "—";
 }
 
-export function formatAdAccountAmount(value: number | undefined, currency: string): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-  } catch {
-    return `${value.toFixed(2)} ${currency}`;
-  }
-}
-
 export function calculateCostPerConversion(
   campaign: Pick<TikTokCampaign, "totalSpent" | "conversions">,
 ): number | null {

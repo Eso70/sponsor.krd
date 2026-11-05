@@ -1,3 +1,5 @@
+import { TikTokPixelConfigService } from './tiktok-pixel-config.service';
+import { EntitlementService } from '../billing/entitlement.service';
 import type { UpdateLinktreeDto } from '../linktrees/dto/update-linktree.dto';
 import { normalizeLinktreeContent } from '../linktrees/linktree-content';
 import { normalizeTemplateConfig } from '../linktrees/linktree-template-config';
@@ -15,6 +17,8 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
+  ServiceUnavailableException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -49,6 +53,11 @@ export class ApprovalService {
     private readonly storage: StorageService,
     private readonly redis: RedisService,
     private readonly templateAccess: TemplateAccessService = new TemplateAccessService(
+      database,
+      redis,
+    ),
+    @Optional() private readonly pixelConfigs?: TikTokPixelConfigService,
+    private readonly entitlements: EntitlementService = new EntitlementService(
       database,
       redis,
     ),
@@ -477,132 +486,26 @@ export class ApprovalService {
       input.permission === 'business:tiktok:update' ||
       input.permission === 'business:tiktok:create'
     ) {
-      const rawConfigs = Array.isArray(input.changes.tiktok_configs)
-        ? input.changes.tiktok_configs
-        : [input.changes];
-      const configs = rawConfigs.map((item, index) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) {
-          throw new BadRequestException('Invalid TikTok configuration');
-        }
-        const row = item as Record<string, unknown>;
-        const id =
-          typeof row.id === 'string' && /^[0-9a-f-]{36}$/i.test(row.id)
-            ? row.id
-            : undefined;
-        const pixelId =
-          typeof row.pixel_id === 'string' ? row.pixel_id.trim() : '';
-        if (!pixelId) {
-          throw new BadRequestException('Pixel ID is required');
-        }
-        if (!/^[A-Za-z0-9_-]{8,255}$/.test(pixelId)) {
-          throw new BadRequestException('Invalid TikTok Pixel ID');
-        }
-        const token =
-          typeof row.events_token === 'string' ? row.events_token.trim() : '';
-        return {
-          id,
-          pixelId,
-          token: token.startsWith('••••') ? '' : token.slice(0, 4096),
-          keepToken: row.keep_events_token === true || token.startsWith('••••'),
-          displayOrder: index,
-        };
-      });
-      if (
-        new Set(configs.map((config) => config.pixelId)).size !== configs.length
-      ) {
-        throw new BadRequestException('TikTok Pixel IDs must be unique');
-      }
-      await client.query(
-        `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`,
-        [`tiktok:${input.businessId}`],
-      );
-      const existingResult = await client.query<{
-        id: string;
-        pixel_id: string;
-        encrypted_events_token: Buffer | null;
-        token_last_four: string | null;
-        status: string;
-      }>(
-        `SELECT id, pixel_id, encrypted_events_token, token_last_four, status
-         FROM business_tiktok_pixels
-         WHERE business_id=$1::uuid
-         FOR UPDATE`,
-        [input.businessId],
-      );
-      const existingById = new Map(
-        existingResult.rows.map((row) => [row.id, row]),
-      );
-      const existingByPixelId = new Map(
-        existingResult.rows.map((row) => [row.pixel_id, row]),
-      );
-      const activeExistingCount = existingResult.rows.filter(
-        (row) => row.status === 'active',
-      ).length;
-      if (activeExistingCount > 0 && configs.length === 0) {
-        throw new BadRequestException(
-          'At least one TikTok pixel group must remain active',
+      if (!this.pixelConfigs)
+        throw new ServiceUnavailableException(
+          'TikTok settings are temporarily unavailable',
         );
-      }
-      const retainedIds: string[] = [];
-
-      for (const config of configs) {
-        const token = config.token || '';
-        const existing =
-          (config.id && existingById.get(config.id)) ||
-          existingByPixelId.get(config.pixelId);
-        const preserveToken =
-          config.keepToken && existing?.encrypted_events_token;
-        const encryptedToken = token
-          ? this.crypto.encryptJson({ events_token: token })
-          : preserveToken || null;
-        const tokenLastFour = token
-          ? token.slice(-4)
-          : preserveToken
-            ? existing?.token_last_four || null
-            : null;
-        const saved = existing
-          ? await client.query<{ id: string }>(
-              `UPDATE business_tiktok_pixels
-               SET pixel_id=$3,
-                   encrypted_events_token=$4,
-                   token_last_four=$5,
-                   display_order=$6,
-                   status='active',
-                   updated_at=NOW()
-               WHERE id=$1::uuid AND business_id=$2::uuid
-               RETURNING id`,
-              [
-                existing.id,
-                input.businessId,
-                config.pixelId,
-                encryptedToken,
-                tokenLastFour,
-                config.displayOrder,
-              ],
-            )
-          : await client.query<{ id: string }>(
-              `INSERT INTO business_tiktok_pixels
-                (business_id,pixel_id,encrypted_events_token,token_last_four,display_order,status)
-               VALUES ($1::uuid,$2,$3,$4,$5,'active')
-               RETURNING id`,
-              [
-                input.businessId,
-                config.pixelId,
-                encryptedToken,
-                tokenLastFour,
-                config.displayOrder,
-              ],
-            );
-        retainedIds.push(saved.rows[0].id);
-      }
-      await client.query(
-        `UPDATE business_tiktok_pixels
-         SET status='inactive', updated_at=NOW()
-         WHERE business_id=$1::uuid
-           AND NOT (id = ANY($2::uuid[]))`,
-        [input.businessId, retainedIds],
+      const configs = this.pixelConfigs.normalize(
+        Array.isArray(input.changes.tiktok_configs)
+          ? input.changes.tiktok_configs
+          : [input.changes],
       );
-
+      const limit = await this.entitlements.getInteger(
+        input.businessId,
+        'limit.tiktok_pixels',
+        0,
+      );
+      this.pixelConfigs.assertGroupLimit(configs, limit);
+      await this.pixelConfigs.replaceWithClient(
+        client,
+        input.businessId,
+        configs,
+      );
       return;
     }
     if (input.permission === 'business:tiktok:delete' && input.resourceId) {

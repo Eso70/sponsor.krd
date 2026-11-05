@@ -1,9 +1,13 @@
 "use client";
 
-import { MotionSpinner } from "@/components/motion/MotionPrimitives";
+import { SessionManagementPanel } from "@/components/shared/SessionManagementPanel";
+import { platformSessionCopy } from "../i18n/session-copy";
+import { SettingsNumberField } from "@/components/shared/SettingsNumberField";
+import { SettingsToggleField as Toggle } from "@/components/shared/SettingsToggleField";
 
 import {
   useCallback,
+  useMemo,
   useEffect,
   useRef,
   useState,
@@ -22,7 +26,6 @@ import {
   HardDrive,
   ImageIcon,
   Lock,
-  Monitor,
   Palette,
   RefreshCw,
   ShieldCheck,
@@ -61,7 +64,6 @@ import { PlatformTikTokAdAccountTab } from "@/features/campaigns/components/Plat
 import { TbBrandTiktok } from "react-icons/tb";
 import { ThemeProvider } from "@/lib/contexts/ThemeProvider";
 import { DASHBOARD_PAGE_LABELS } from "@/components/shared/dashboard-page-labels";
-import { SkeletonSessionList } from "@/components/shared/SkeletonCommunicationLayouts";
 import {
   SkeletonMediaSettings,
   SkeletonRetentionSettings,
@@ -102,16 +104,6 @@ type PlatformSettings = {
 };
 
 type BrandingAsset = "logo";
-
-type AdminSession = {
-  id: string;
-  ip_address: string | null;
-  user_agent: string | null;
-  last_used_at: string;
-  created_at: string;
-  session_expires_at: string;
-  is_current: boolean;
-};
 
 type RetentionPolicy = {
   communication_history_days: number;
@@ -201,10 +193,13 @@ export function PlatformSettingsPage() {
   );
   const [assetUploadError, setAssetUploadError] =
     useState<InlineRequestErrorData | null>(null);
-  const [sessionsAvailable, setSessionsAvailable] = useState(false);
-  const [sessions, setSessions] = useState<AdminSession[]>([]);
-  const [isSecurityLoading, setIsSecurityLoading] = useState(false);
-  const [revokingSession, setRevokingSession] = useState<string | null>(null);
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
+  const sessionCopy = useMemo(() => ({
+    ...platformSessionCopy[locale].panel,
+    description: t("ئامێرەکانی چوونەژوورەوە ببینە و بەڕێوەیانببە."),
+    empty: t("No active sessions found."),
+    signOutOthers: t("Sign out all other sessions"),
+  }), [locale, t]);
   const [retention, setRetention] = useState<RetentionStatus | null>(null);
   const [isRetentionLoading, setIsRetentionLoading] = useState(false);
   const [isRetentionSaving, setIsRetentionSaving] = useState(false);
@@ -284,30 +279,6 @@ export function PlatformSettingsPage() {
     return payload;
   }, []);
 
-  const loadLoginSecurity = useCallback(async (rethrow = false) => {
-    setIsSecurityLoading(true);
-    try {
-      const payload = await request("/api/platform/settings/sessions", {
-        method: "GET",
-      });
-      if (!Array.isArray(payload.data?.sessions)) throw new Error("Invalid sessions response");
-      setSessionsAvailable(true);
-      setSessions(payload.data.sessions);
-    } catch (error) {
-      setSessionsAvailable(false);
-      toast.error(
-        platformRequestError(
-          error instanceof Error ? error.message : null,
-          tRef.current("Unable to load sessions"),
-          localeRef.current,
-        ),
-      );
-      if (rethrow) throw error;
-    } finally {
-      setIsSecurityLoading(false);
-    }
-  }, [request]);
-
   const loadRetention = useCallback(async (rethrow = false) => {
     setIsRetentionLoading(true);
     try {
@@ -355,7 +326,6 @@ export function PlatformSettingsPage() {
   const refreshing = useRegisterDashboardRefresh("platform-settings", async () => {
     const results = await Promise.allSettled([
       loadGeneralSettings(true),
-      ...(tab === "security" ? [loadLoginSecurity(true)] : []),
       ...(tab === "retention" ? [loadRetention(true)] : []),
       ...(tab === "media" ? [loadMedia(true)] : []),
     ]);
@@ -365,7 +335,6 @@ export function PlatformSettingsPage() {
 
   const changeTab = (nextTab: Tab) => {
     setTab(nextTab);
-    if (nextTab === "security") void loadLoginSecurity();
     if (nextTab === "retention" && !retention) void loadRetention();
     if (nextTab === "media" && !media) void loadMedia();
   };
@@ -607,48 +576,6 @@ export function PlatformSettingsPage() {
     }
   };
 
-  const revokeSession = async (sessionId: string) => {
-    setRevokingSession(sessionId);
-    try {
-      await request(`/api/platform/settings/sessions/${sessionId}`, {
-        method: "DELETE",
-      });
-      setSessions((current) =>
-        current.filter((session) => session.id !== sessionId),
-      );
-      toast.success(t("Session signed out"));
-    } catch (error) {
-      toast.error(
-        platformRequestError(
-          error instanceof Error ? error.message : null,
-          t("Unable to sign out session"),
-          locale,
-        ),
-      );
-    } finally {
-      setRevokingSession(null);
-    }
-  };
-
-  const revokeOtherSessions = async () => {
-    setRevokingSession("all");
-    try {
-      await request("/api/platform/settings/sessions", { method: "DELETE" });
-      setSessions((current) => current.filter((session) => session.is_current));
-      toast.success(t("All other sessions signed out"));
-    } catch (error) {
-      toast.error(
-        platformRequestError(
-          error instanceof Error ? error.message : null,
-          t("Unable to sign out sessions"),
-          locale,
-        ),
-      );
-    } finally {
-      setRevokingSession(null);
-    }
-  };
-
   const tabMeta: Record<
     Tab,
     {
@@ -724,11 +651,11 @@ export function PlatformSettingsPage() {
           color="blue"
         />
         <StatCard
-          loading={isSecurityLoading || refreshing}
+          loading={refreshing}
           loadingLabel={platformLoadingCopy[locale].loading}
           icon={Lock}
           label={t("Active sessions")}
-          value={sessionsAvailable ? sessions.length : "—"}
+          value={sessionCount ?? "—"}
           color="green"
         />
         <StatCard
@@ -944,95 +871,12 @@ export function PlatformSettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-white/10 sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                    {t("دانیشتنە چالاکەکان")}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {t("ئامێرەکانی چوونەژوورەوە ببینە و بەڕێوەیانببە.")}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void loadLoginSecurity()}
-                  disabled={isSecurityLoading}
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:hover:bg-white/5"
-                  aria-label={t("Refresh sessions")}
-                >
-                  <MotionSpinner active={isSecurityLoading}>
-                    <RefreshCw className="h-4 w-4" />
-                  </MotionSpinner>
-                </button>
-              </div>
-              <div className="space-y-3">
-                {isSecurityLoading || refreshing ? (
-                  <SkeletonSessionList
-                    rows={3}
-                    loadingLabel={
-                      locale === "ar"
-                        ? "جارٍ تحميل الجلسات"
-                        : locale === "en"
-                          ? "Loading sessions"
-                          : "دانیشتنەکان بار دەکرێن"
-                    }
-                  />
-                ) : sessions.length === 0 ? (
-                  <p className="py-8 text-center text-xs text-slate-400">
-                    {t("No active sessions found.")}
-                  </p>
-                ) : (
-                  sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-white/5"
-                    >
-                      <Monitor className="h-5 w-5 flex-shrink-0 text-slate-400" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
-                            {describeUserAgent(session.user_agent, t)}
-                          </p>
-                          {session.is_current && (
-                            <span className="sa-soft sa-soft-border rounded-full border px-2 py-0.5 text-[10px] font-bold">
-                              {t("Current")}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 truncate text-[11px] text-slate-400">
-                          {session.ip_address || t("Unknown IP")} ·{" "}
-                          {formatSecurityDate(session.created_at, locale, t)}
-                        </p>
-                      </div>
-                      {!session.is_current && (
-                        <button
-                          type="button"
-                          onClick={() => void revokeSession(session.id)}
-                          disabled={revokingSession !== null}
-                          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-500/10"
-                          aria-label={t("Sign out session")}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-              {sessions.some((session) => !session.is_current) && (
-                <button
-                  type="button"
-                  onClick={() => void revokeOtherSessions()}
-                  disabled={revokingSession !== null}
-                  className="mt-4 w-full cursor-pointer rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                >
-                  {revokingSession === "all"
-                    ? t("Signing out…")
-                    : t("Sign out all other sessions")}
-                </button>
-              )}
-            </div>
+            <SessionManagementPanel
+              endpoint="/api/platform/settings/sessions"
+              copy={sessionCopy}
+              dateLocale={locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ"}
+              onCountChange={setSessionCount}
+            />
           </div>
         </PageManagementSection>
       )}
@@ -1054,7 +898,7 @@ export function PlatformSettingsPage() {
                 </StatCardGrid>
 
                 <div className="grid gap-5">
-                  <RetentionDaysField
+                  <SettingsNumberField suffix={t("ڕۆژ")}
                     label={t("پەیام و ڕاگەیاندنی ئەرشیڤکراو")}
                     hint={t("30–3650 ڕۆژ")}
                     value={retention.policy.communication_history_days}
@@ -1219,7 +1063,7 @@ export function PlatformSettingsPage() {
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <MediaNumberField
+                  <SettingsNumberField
                     label={t("زۆرترین قەبارەی فایل")}
                     suffix="MB"
                     value={media.policy.max_upload_size_mb}
@@ -1229,7 +1073,7 @@ export function PlatformSettingsPage() {
                       updateMediaField("max_upload_size_mb", value)
                     }
                   />
-                  <MediaNumberField
+                  <SettingsNumberField
                     label={t("زۆرترین ڕەهەندی وێنە")}
                     suffix="px"
                     value={media.policy.max_image_dimension}
@@ -1240,7 +1084,7 @@ export function PlatformSettingsPage() {
                       updateMediaField("max_image_dimension", value)
                     }
                   />
-                  <MediaNumberField
+                  <SettingsNumberField
                     label={t("کوالێتی پەستاندن")}
                     suffix="%"
                     value={media.policy.image_quality}
@@ -1251,7 +1095,7 @@ export function PlatformSettingsPage() {
                     }
                     disabled={!media.policy.optimize_images}
                   />
-                  <MediaNumberField
+                  <SettingsNumberField
                     label={t("ماوەی پاراستنی فایلی بەکارنەهاتوو")}
                     suffix={t("کاتژمێر")}
                     value={media.policy.unused_grace_hours}
@@ -1384,135 +1228,12 @@ export function PlatformSettingsPage() {
   );
 }
 
-/* ─── Tab Forms ─── */
-
-function RetentionDaysField({
-  label,
-  hint,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (value: number) => void;
-}) {
-  const t = useSettingsText();
-  return (
-    <Field label={label}>
-      <div className="relative">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(event) =>
-            onChange(
-              Math.min(max, Math.max(min, Number(event.target.value) || min)),
-            )
-          }
-          className={`${inputClass} pr-14 tabular-nums`}
-          dir="ltr"
-        />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400">
-          {t("ڕۆژ")}
-        </span>
-      </div>
-      <p className="mt-1 text-[10px] text-slate-400">{hint}</p>
-    </Field>
-  );
-}
-
 function formatBytes(value: number): string {
   if (value < 1024) return `${value.toLocaleString("en-US")} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 * 1024 * 1024)
     return `${(value / 1024 / 1024).toFixed(1)} MB`;
   return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
-
-function MediaNumberField({
-  label,
-  suffix,
-  value,
-  min,
-  max,
-  step = 1,
-  disabled = false,
-  onChange,
-}: {
-  label: string;
-  suffix: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  disabled?: boolean;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <Field label={label}>
-      <div className="relative">
-        <input
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          disabled={disabled}
-          onChange={(event) =>
-            onChange(
-              Math.min(max, Math.max(min, Number(event.target.value) || min)),
-            )
-          }
-          className={`${inputClass} pr-20 tabular-nums disabled:cursor-not-allowed disabled:opacity-50`}
-          dir="ltr"
-        />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-400">
-          {suffix}
-        </span>
-      </div>
-      <p className="mt-1 text-[10px] text-slate-400">
-        {min.toLocaleString("en-US")}–{max.toLocaleString("en-US")}
-      </p>
-    </Field>
-  );
-}
-
-/* ─── Shared UI ─── */
-
-function describeUserAgent(
-  userAgent: string | null,
-  t: (source: string) => string,
-): string {
-  if (!userAgent) return t("Unknown device");
-  const browser = userAgent.includes("Edg/")
-    ? "Edge"
-    : userAgent.includes("Chrome/")
-      ? "Chrome"
-      : userAgent.includes("Firefox/")
-        ? "Firefox"
-        : userAgent.includes("Safari/")
-          ? "Safari"
-          : "Browser";
-  const platform = userAgent.includes("Windows")
-    ? "Windows"
-    : userAgent.includes("Android")
-      ? "Android"
-      : userAgent.includes("iPhone") || userAgent.includes("iPad")
-        ? "iOS"
-        : userAgent.includes("Mac OS")
-          ? "macOS"
-          : userAgent.includes("Linux")
-            ? "Linux"
-            : t("Unknown device");
-  return `${browser} ${t("on")} ${platform}`;
 }
 
 function formatSecurityDate(
@@ -1526,31 +1247,4 @@ function formatSecurityDate(
     : date.toLocaleString(
         locale === "ar" ? "ar-IQ" : locale === "en" ? "en-IQ" : "ckb-IQ",
       );
-}
-
-function Toggle({
-  enabled,
-  onChange,
-  label,
-}: {
-  enabled: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-        {label}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(!enabled)}
-        className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors duration-200 ${enabled ? "sa-gradient" : "bg-slate-200 dark:bg-slate-700"}`}
-      >
-        <div
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${enabled ? "translate-x-4.5" : "translate-x-0.5"}`}
-        />
-      </button>
-    </div>
-  );
 }

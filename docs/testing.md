@@ -1,5 +1,57 @@
 # Testing and verification
 
+`test/six-fixes.e2e-spec.ts` creates/drops only its guarded
+`sponsor_krd_six_fixes_test_<pid>` PostgreSQL database and uses a unique Redis
+prefix. It verifies counter concurrency, window expiry and orphan repair; HTTP
+429/503 submission boundaries; direct/approved/onboarding/platform TikTok policy,
+encryption and owner isolation; and rollback/retry of deletion with business-authored
+messages without removing another tenant's data. Unit lifecycle tests exercise
+both scheduler consumers and Nest's dependent-provider shutdown ordering.
+
+Retention lifecycle regressions use fake timers and a real Nest module teardown
+to verify cancellation before startup, unchanged scheduling cadence, waiting for
+an active check before the database closes, completion of an active cleanup,
+and failure logging/retry. The complete backend integration suite must finish
+without delayed `Scheduled data retention failed` errors after application close.
+
+Security-hardening regressions cover encoded Fastify impersonation routes,
+temporary versus permanent analytics failures, Redis write failures before
+email delivery, credential-free Redis diagnostics, successful analytics-share
+unlocks and bounded incorrect guesses. Shared origin rules have package tests
+plus frontend/backend adapter coverage. Session UI tests cover owner and
+administrator scopes and confirmation behavior; Ads tests reject forged
+callbacks and ensure retired routes never contact TikTok.
+
+`test/platform-session-security.e2e-spec.ts` creates only its own
+`sponsor_krd_sessions_test_<pid>` database. It proves session-hash migration
+reruns, preserved old cookies, digest replay rejection, logout, and concurrent
+administrator sign-ins leaving one valid session. It never migrates or resets
+the configured application database.
+
+That suite also exercises real Redis cleanup before and after database token
+hashing, stale tracking sets, scoped preservation, idempotence and unavailable
+Redis. `signup-session-transaction.e2e-spec.ts` uses its own guarded PostgreSQL
+database to verify email/Google rollback and retry after failed writes, ambiguous
+writes and commit failures.
+
+The communications smoke command runs the maintained `communications smoke`
+case in `app.e2e-spec.ts`, using real session creation and the same HTTP guards.
+It overrides `DB_NAME` with `sponsor_krd_communications_test`; initialize that
+dedicated disposable database with the normal migration command first. Optional
+`COMMUNICATION_SMOKE_DB_NAME` must match `sponsor_krd_communications_test` with an
+optional lowercase alphanumeric suffix. It never uses the configured application
+database name. The fixture sends no email and cleans its scoped Redis keys.
+
+`test/analytics-sharing-limits.e2e-spec.ts` exercises the real Redis Lua limiter
+with more than fifty successful viewers and concurrent incorrect guesses. Its
+unique key prefix is deleted at teardown without flushing shared Redis data.
+
+The November 3 hardening was checked with frontend/backend/shared TypeScript,
+lint, the complete unit/component suites, and disposable PostgreSQL/Redis E2E
+fixtures. The frontend production build uses the documented Webpack command;
+the default Turbopack worker crashed on this Windows host with both Node 24 and
+26. Framework worker failures must not be mistaken for application test passes.
+
 Audit-regression coverage includes scheduled cleanup failure/retry, malformed
 tracking cookies, pin validation and owner-scoped approval replay, settings-tab
 draft isolation and upload/save permission alignment. Platform General settings
@@ -15,7 +67,7 @@ Public directory coverage includes the proxy's bare-route allowlist and malforme
 path rejection, shared Business/Platform directory rendering, empty states in
 three languages, same-context links, pagination and bounded campaign forwarding.
 The PostgreSQL fixture in `linktree-analytics.e2e-spec.ts` verifies cross-owner
-isolation, active/archive filters, live Forms plan gating, public-only summaries,
+isolation, publication status and archive-independent public access, live Forms plan gating, public-only summaries,
 missing/suspended businesses and disjoint paginated results.
 
 Default-Linktree homepage coverage:
@@ -26,7 +78,7 @@ Default-Linktree homepage coverage:
 - `PublicLinktreeContent.spec.tsx` verifies shared rendering with the explicit
   homepage marketing exclusion; pixel placement still constrains mounts.
 - `linktree-analytics.e2e-spec.ts` checks real PostgreSQL persistence, partial
-  updates, cross-owner isolation, and inactive/archived default exclusion.
+  updates, cross-owner isolation, and inactive default exclusion and archive-independent public access.
 
 Linktree tracking regression coverage includes a real PostgreSQL fixture:
 `pnpm --filter backend exec jest --config test/jest-e2e.json --runInBand linktree-analytics`.

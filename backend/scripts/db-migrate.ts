@@ -16,6 +16,7 @@ import { ensurePlatformMedia } from './ensure-platform-media';
 import { seedPlatformAdmin } from './seed-platform-admin';
 import { assertSupportedSchema } from '../src/database/migration-compatibility';
 import { applyForwardMigrations } from '../src/database/forward-migrations';
+import { cleanupPlatformSessionCache } from './cleanup-platform-session-cache';
 import {
   applyBaseline,
   baselineDir,
@@ -166,6 +167,7 @@ async function migrate() {
       }
     }
 
+    await cleanupPlatformSessionCache(client);
     const forwardMigrations = await applyForwardMigrations(
       client,
       migrationsDir,
