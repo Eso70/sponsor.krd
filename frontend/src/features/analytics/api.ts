@@ -10,6 +10,7 @@ import type {
 export type TikTokDeliverySeverity = "permanent" | "retrying";
 
 export interface TikTokDeliveryError {
+  dismissThrough: string;
   pixelId: string | null;
   destinationId: string;
   statusCode: number | null;

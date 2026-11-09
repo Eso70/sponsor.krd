@@ -375,3 +375,14 @@ or missing acknowledgements retry instead of being marked delivered.
 ## Linktree sponsor attribution
 
 Optional sponsor links use registered action key `page:sponsor-click`. The migration and fresh baseline register/update it from the owning public page's sponsor configuration and hide it when disabled or destination-free. Metadata marks it `engagement_only=true`. Public clicks call the shared page tracker's `trackEngagement("action_open", ...)` with immediate navigation delivery; they are never browser Pixel or Events API conversions. Drawer previews and the untracked default-Linktree homepage do not report sponsor actions. Sponsor logos are presentation, not image-open actions.
+
+
+TikTok delivery notices show only the latest failed attempt for unresolved deliveries.
+Successful deliveries disappear automatically; the view refreshes every 30 seconds
+while visible. Dismiss notices acknowledges observed attempts for the authenticated
+owner across sessions without deleting history, stopping retries, or changing health
+and reconciliation totals. New failed attempts appear again. Provider details are
+collapsed behind readable, localized error explanations.
+Apply `2026-11-09_tiktok_delivery_dismissals.sql` through `pnpm db:migrate` before
+running the updated diagnostics API. The additive nullable column preserves old
+application compatibility; leave it in place on application rollback.

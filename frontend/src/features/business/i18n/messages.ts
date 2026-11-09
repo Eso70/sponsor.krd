@@ -1,3 +1,4 @@
+import { tikTokDeliveryCopy } from "@/features/analytics/tiktok-delivery-copy";
 import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 import { englishBusinessMessages } from "./english-messages";
 import { sharedArabicLinktreeCopy } from "@/features/link-editor/shared-arabic-copy";
@@ -277,6 +278,7 @@ export const businessMessages = {
       localConfirmed: "پشتڕاستکراوەی ناوخۆ", tiktokReceived: "وەرگیراو لەلایەن TikTok",
     },
     TikTokDelivery: {
+      ...tikTokDeliveryCopy.ckb,
       loadingDelivery: "دۆخی گەیاندنی تیکتۆک بار دەکرێت",
       permanentFailure: "شکستی کۆتایی", retrying: "هەوڵی دووبارە",
       events: "ڕووداو", attempts: "هەوڵ", lastSeen: "دواین بینین لە",
@@ -544,6 +546,7 @@ export const businessMessages = {
       localConfirmed: "مؤكد محليًا", tiktokReceived: "تلقاه تيك توك",
     },
     TikTokDelivery: {
+      ...tikTokDeliveryCopy.ar,
       loadingDelivery: "جارٍ تحميل حالة تسليم أحداث تيك توك",
       permanentFailure: "فشل نهائي", retrying: "جارٍ إعادة المحاولة",
       events: "أحداث", attempts: "محاولات", lastSeen: "آخر ظهور",

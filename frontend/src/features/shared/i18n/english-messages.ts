@@ -1,3 +1,4 @@
+import { tikTokDeliveryCopy } from "@/features/analytics/tiktok-delivery-copy";
 import { pageActionCopy } from "@/features/shared/i18n/page-action-copy";
 import { conversationCategoryCopy } from "@/features/communications/conversation-categories";
 
@@ -219,6 +220,7 @@ export const englishBusinessMessages = {
     localConfirmed: "Confirmed locally", tiktokReceived: "Received by TikTok",
   },
   TikTokDelivery: {
+    ...tikTokDeliveryCopy.en,
     loadingDelivery: "Loading TikTok delivery status", permanentFailure: "Permanent failure",
     retrying: "Retrying", events: "Events", attempts: "Attempts", lastSeen: "Last seen",
     refreshFailed: "Couldn't refresh TikTok event status", refreshed: "Delivery status refreshed",

@@ -1,3 +1,4 @@
+import { DismissTikTokErrorsDto } from './dto/dismiss-tiktok-errors.dto';
 import {
   Body,
   Controller,
@@ -365,6 +366,21 @@ export class BusinessUnifiedAnalyticsController {
       data: await this.reads.getTikTokDeliveryErrors(
         business.id,
         Number(limit) || 20,
+      ),
+    };
+  }
+
+  @Post('tiktok/errors/dismiss')
+  @RequireCapabilities(Capability.BusinessAnalyticsTikTokHealthRead)
+  async dismissTikTokErrors(
+    @CurrentUser() business: SessionUser,
+    @Body() body: DismissTikTokErrorsDto,
+  ) {
+    return {
+      success: true,
+      data: await this.reads.dismissTikTokDeliveryErrors(
+        business.id,
+        body.throughAttemptId,
       ),
     };
   }

@@ -546,3 +546,14 @@ when the installation is missing or broken. Keep dependency installation before
 build in every release; building does not automatically install packages. Reload
 PM2 only after a successful build. This repair requires no schema reset or data
 migration.
+
+
+TikTok delivery notices show only the latest failed attempt for unresolved deliveries.
+Successful deliveries disappear automatically; the view refreshes every 30 seconds
+while visible. Dismiss notices acknowledges observed attempts for the authenticated
+owner across sessions without deleting history, stopping retries, or changing health
+and reconciliation totals. New failed attempts appear again. Provider details are
+collapsed behind readable, localized error explanations.
+Apply `2026-11-09_tiktok_delivery_dismissals.sql` through `pnpm db:migrate` before
+running the updated diagnostics API. The additive nullable column preserves old
+application compatibility; leave it in place on application rollback.

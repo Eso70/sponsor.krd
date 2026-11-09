@@ -13,6 +13,8 @@ import {
   Target,
 } from "lucide-react";
 import { RequestErrorNotice } from "@/components/shared/RequestErrorNotice";
+import { TikTokDeliveryErrorRow } from "./TikTokDeliveryErrorRow";
+import type { TikTokConfigOwner } from "../tiktok-config-workspace";
 import { toast } from "sonner";
 import { MotionSpinner } from "@/components/motion/MotionPrimitives";
 import { StatCard } from "@/components/shared/StatCard";
@@ -24,7 +26,7 @@ import { SkeletonTikTokDelivery } from "@/components/shared/SkeletonPageLayouts"
 import { Tooltip } from "@/components/shared/Tooltip";
 import { useRegisterDashboardRefresh } from "@/components/shared/dashboard-refresh";
 import type { TikTokDeliveryError } from "@/features/analytics/api";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 
 interface TikTokHealth {
   connections: number;
@@ -84,62 +86,9 @@ function formatNumber(value: number): string {
   return value.toLocaleString("en-US");
 }
 
-function formatWhen(value: string, locale: string): string {
-  const at = new Date(value);
-  return Number.isNaN(at.getTime()) ? "—" : at.toLocaleString(locale === "ar" ? "ar-IQ" : locale === "en" ? "en-US" : "ckb-IQ", { timeZone: "Asia/Baghdad" });
-}
-
-function ErrorRow({ item, flat = false }: { item: TikTokDeliveryError; flat?: boolean }) {
+export function BusinessTikTokDeliveryPage({ embedded = false, owner = "business", canManage = true }: { embedded?: boolean; owner?: TikTokConfigOwner; canManage?: boolean } = {}) {
   const t = useTranslations("TikTokDelivery");
-  const locale = useLocale();
-  const permanent = item.severity === "permanent";
-  return (
-    <li
-      className={flat ? "py-3 text-xs" : `rounded-xl border p-3.5 transition ${
-        permanent
-          ? "border-red-200 bg-red-50/70 dark:border-red-500/25 dark:bg-red-500/10"
-          : "border-amber-200 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10"
-      }`}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        {permanent ? (
-          <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-        ) : (
-          <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-        )}
-        <span
-          className={`text-xs font-bold ${
-            permanent
-              ? "text-red-700 dark:text-red-300"
-              : "text-amber-700 dark:text-amber-300"
-          }`}
-        >
-          {permanent ? t("permanentFailure") : t("retrying")}
-        </span>
-        {item.pixelId && (
-          <span className="rounded-md bg-white/80 px-2 py-0.5 font-mono text-[11px] text-slate-600 shadow-2xs dark:bg-white/10 dark:text-slate-300">
-            {item.pixelId}
-          </span>
-        )}
-        {item.statusCode !== null && (
-          <span className="rounded-md bg-white/80 px-2 py-0.5 font-mono text-[11px] text-slate-600 shadow-2xs dark:bg-white/10 dark:text-slate-300">
-            HTTP {item.statusCode}
-          </span>
-        )}
-      </div>
-      <p className="mt-2 break-words text-xs text-slate-700 dark:text-slate-200">
-        {item.message}
-      </p>
-      <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-        {item.events} {t("events")} · {item.attempts} {t("attempts")} · {t("lastSeen")}{" "}
-        {formatWhen(item.lastSeenAt, locale)}
-      </p>
-    </li>
-  );
-}
-
-export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: boolean } = {}) {
-  const t = useTranslations("TikTokDelivery");
+  const endpoint = owner === "platform" ? "/api/platform/settings/tiktok" : "/api/analytics/v2/tiktok";
   const requestId = useRef(0);
   const [health, setHealth] = useState<TikTokHealth>(EMPTY_HEALTH);
   const [errors, setErrors] = useState<TikTokDeliveryError[]>([]);
@@ -152,9 +101,9 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
     const currentRequest = ++requestId.current;
     try {
       const [nextHealth, errorPayload] = await Promise.all([
-        requestData<TikTokHealth>("/api/analytics/v2/tiktok/health"),
+        requestData<TikTokHealth>(`${endpoint}/health`),
         requestData<{ items: TikTokDeliveryError[] }>(
-          "/api/analytics/v2/tiktok/errors",
+          `${endpoint}/errors`,
         ),
       ]);
       if (currentRequest !== requestId.current) return;
@@ -174,7 +123,7 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
       if (showError) toast.error(t("refreshFailed"));
       throw error;
     }
-  }, [t]);
+  }, [t, endpoint]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -206,11 +155,30 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
     };
   }, [load]);
 
+  const dismissErrors = async () => {
+    const throughAttemptId = errors.reduce((max, item) => BigInt(item.dismissThrough) > BigInt(max) ? item.dismissThrough : max, "0");
+    setRefreshing(true);
+    try {
+      await requestData(`${endpoint}/errors/dismiss`, { method: "POST", body: JSON.stringify({ throughAttemptId }) });
+      await load();
+      toast.success(t("dismissed"));
+    } catch { toast.error(t("dismissFailed")); }
+    finally { setRefreshing(false); }
+  };
+
+  useEffect(() => {
+    const requests = requestId;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load().catch(() => undefined);
+    }, 30_000);
+    return () => { window.clearInterval(timer); requests.current++; };
+  }, [load]);
+
   const retryFailed = async () => {
     setRefreshing(true);
     try {
       const result = await requestData<{ retried: number }>(
-        "/api/analytics/v2/tiktok/retry-failed",
+        `${endpoint}/retry-failed`,
         { method: "POST" },
       );
       toast.success(`${formatNumber(result.retried)} ${t("retriedSuccess")}`);
@@ -285,7 +253,7 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
                 <button
                   type="button"
                   onClick={() => void retryFailed()}
-                  disabled={refreshing}
+                  disabled={refreshing || !canManage}
                   className="inline-flex h-9 items-center gap-2 rounded-xl bg-red-600 px-3.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50 cursor-pointer"
                 >
                   <RotateCw className="h-3.5 w-3.5" />
@@ -355,11 +323,15 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
 
           {/* Diagnostics & Error Logs Section */}
           <div className={embedded ? "min-w-0" : "rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-slate-900/30 sm:p-6"}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">{t("noticeHint")}</p>
+              {errors.length > 0 && canManage && <button type="button" disabled={refreshing} onClick={() => void dismissErrors()} className="rounded-xl border px-3 py-2 text-xs font-semibold disabled:opacity-50">{t("dismissNotices")}</button>}
               {errors.length > 0 && (
                 <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-500/20 dark:text-red-300">
                   {errors.length} {t("errors")}
                 </span>
               )}
+              </div>
             <div className={errors.length > 0 ? "mt-4" : undefined}>
               {pixelSilent && (
                 <div className={embedded ? "mb-3 py-3" : "mb-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-500/25 dark:bg-amber-500/10"}>
@@ -380,7 +352,7 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
               {errors.length > 0 ? (
                 <ul className="space-y-2.5">
                   {errors.map((item) => (
-                    <ErrorRow
+                    <TikTokDeliveryErrorRow
                       flat={embedded}
                       key={`${item.destinationId}:${item.statusCode ?? "none"}:${item.message}`}
                       item={item}
@@ -394,10 +366,10 @@ export function BusinessTikTokDeliveryPage({ embedded = false }: { embedded?: bo
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      {t("healthy")}
+                      {health.failed > 0 || health.retrying > 0 ? t("noNotices") : t("healthy")}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      {t("healthyDescription")}
+                      {health.failed > 0 || health.retrying > 0 ? t("noticeHint") : t("healthyDescription")}
                     </p>
                   </div>
                 </div>

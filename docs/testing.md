@@ -462,3 +462,9 @@ Manifest, metadata, launch-handler and proxy tests cover both dashboard scopes, 
 Shared runtime and backend tests cover defaults, strict config validation, safe URLs, image formats, foreign assets, baseline registration and Business/Platform save paths. The guarded PostgreSQL mutation fixture checks sponsor save/reload, action identity preservation, destination changes, hiding/re-enabling, migration rerun and cross-owner rollback. Frontend tests exercise localized editor toggles/name/wordmark/link controls, all template renderers, attribution ordering above legal links, preview exclusion, and engagement-only click tracking. Run the sponsor, Linktree drawer, media ownership, public tracking and pixel-placement tests plus the existing Linktree mutation PostgreSQL fixture.
 
 Sponsor refinements test editable/empty introductory text, hidden wordmark names, destination selection, international WhatsApp/phone normalization and incomplete-number rejection. The PostgreSQL mutation fixture verifies nameless-wordmark/contact persistence in both scopes and rerunning the contact migration without replacing analytics action IDs.
+
+TikTok delivery notice tests use `tiktok-notices.e2e-spec.ts` with its guarded
+`sponsor_krd_notices_test_<pid>` PostgreSQL database. They verify migration reruns,
+latest-attempt projection, recovery, durable dismissal, concurrent new attempts,
+tenant isolation and preserved history. Shared frontend tests cover Business and
+Platform endpoints and avoid reporting healthy delivery after notice dismissal.

@@ -378,6 +378,22 @@ export class AnalyticsReadService {
     };
   }
 
+  async dismissTikTokDeliveryErrors(
+    businessId: string,
+    throughAttemptId: string,
+  ) {
+    const result = await this.database.query(
+      `UPDATE marketing_delivery_attempts attempt SET dismissed_at = now()
+       FROM marketing_event_outbox outbox
+       WHERE outbox.id = attempt.outbox_id AND outbox.business_id = $1
+         AND attempt.id <= $2::numeric AND attempt.outcome <> 'success'
+         AND attempt.dismissed_at IS NULL
+       RETURNING attempt.id`,
+      [businessId, throughAttemptId],
+    );
+    return { dismissed: result.rows.length };
+  }
+
   /**
    * The errors behind a failing TikTok connection, grouped so an owner sees
    * problems rather than a log.
@@ -398,6 +414,7 @@ export class AnalyticsReadService {
    */
   async getTikTokDeliveryErrors(businessId: string, limit = 20) {
     const result = await this.database.query<{
+      dismiss_through: string;
       pixel_id: string | null;
       destination_id: string;
       status_code: number | null;
@@ -409,12 +426,13 @@ export class AnalyticsReadService {
       last_seen_at: Date;
       permanently_failed: string;
     }>(
-      `SELECT destination.pixel_id,
+      `SELECT MAX(attempt.id)::text AS dismiss_through,
+              destination.pixel_id,
               outbox.destination_id,
               attempt.status_code,
               attempt.response_summary,
               attempt.outcome,
-              COUNT(*)::bigint AS attempts,
+              SUM(attempt.attempt_number)::bigint AS attempts,
               COUNT(DISTINCT outbox.id)::bigint AS events,
               MIN(attempt.created_at) AS first_seen_at,
               MAX(attempt.created_at) AS last_seen_at,
@@ -426,7 +444,14 @@ export class AnalyticsReadService {
          LEFT JOIN business_tiktok_pixels destination
            ON destination.id = outbox.destination_id
         WHERE outbox.business_id = $1
+          AND outbox.status IN ('retry_scheduled', 'processing', 'failed_permanently')
           AND attempt.outcome <> 'success'
+          AND attempt.dismissed_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM marketing_delivery_attempts newer
+            WHERE newer.outbox_id = attempt.outbox_id
+              AND newer.attempt_number > attempt.attempt_number
+          )
         GROUP BY destination.pixel_id, outbox.destination_id,
                  attempt.status_code, attempt.response_summary, attempt.outcome
         ORDER BY MAX(attempt.created_at) DESC
@@ -436,6 +461,7 @@ export class AnalyticsReadService {
 
     return {
       items: result.rows.map((row) => ({
+        dismissThrough: row.dismiss_through,
         pixelId: row.pixel_id,
         destinationId: row.destination_id,
         statusCode: row.status_code,

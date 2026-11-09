@@ -409,7 +409,10 @@ export class TikTokOutboxProcessor implements OnModuleInit, OnModuleDestroy {
           `INSERT INTO marketing_delivery_attempts (
              outbox_id, attempt_number, outcome, status_code, duration_ms,
              provider_request_id, response_summary
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+           ) VALUES ($1, GREATEST($2::integer, (
+             SELECT COALESCE(MAX(previous.attempt_number), 0) + 1
+             FROM marketing_delivery_attempts previous WHERE previous.outbox_id = $1
+           )), $3,$4,$5,$6,$7)
            ON CONFLICT (outbox_id, attempt_number) DO NOTHING`,
           [
             job.id,

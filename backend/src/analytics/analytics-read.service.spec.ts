@@ -2,6 +2,49 @@ import { DatabaseService } from '../database/database.service';
 import { AnalyticsReadService } from './analytics-read.service';
 
 describe('AnalyticsReadService', () => {
+  it('only projects latest unresolved, undismissed delivery failures', async () => {
+    const query = jest.fn().mockResolvedValue({
+      rows: [
+        {
+          dismiss_through: '123',
+          pixel_id: 'pixel',
+          outcome: 'retry',
+          attempts: '1',
+          events: '1',
+          permanently_failed: '0',
+        },
+      ],
+    });
+    const service = new AnalyticsReadService({
+      query,
+    } as unknown as DatabaseService);
+    const result = await service.getTikTokDeliveryErrors('owner');
+    const [sql, values] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain(
+      "outbox.status IN ('retry_scheduled', 'processing', 'failed_permanently')",
+    );
+    expect(sql).toContain('attempt.dismissed_at IS NULL');
+    expect(sql).toContain('newer.attempt_number > attempt.attempt_number');
+    expect(values).toEqual(['owner', 20]);
+    expect(result.items[0].dismissThrough).toBe('123');
+  });
+
+  it('dismisses only the authenticated owner’s observed attempts without deleting history or changing delivery state', async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [{ id: '123' }] });
+    const service = new AnalyticsReadService({
+      query,
+    } as unknown as DatabaseService);
+    expect(await service.dismissTikTokDeliveryErrors('owner', '123')).toEqual({
+      dismissed: 1,
+    });
+    const [sql, values] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('outbox.business_id = $1');
+    expect(sql).toContain('attempt.id <= $2::numeric');
+    expect(sql).not.toContain('DELETE');
+    expect(sql).not.toContain('SET status');
+    expect(values).toEqual(['owner', '123']);
+  });
+
   it('counts one accepted conversion across multiple Pixel destinations while retaining delivery counts', async () => {
     const query = jest.fn((_sql: string, _values?: unknown[]) =>
       Promise.resolve({

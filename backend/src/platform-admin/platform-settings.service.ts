@@ -112,6 +112,14 @@ export class PlatformSettingsService {
     return analytics.getTikTokDeliveryErrors(ownerId, limit);
   }
 
+  async dismissTikTokErrors(throughAttemptId: string) {
+    const { workspace, analytics } = this.trackingDependencies();
+    return analytics.dismissTikTokDeliveryErrors(
+      await workspace.getWorkspaceId(),
+      throughAttemptId,
+    );
+  }
+
   async retryFailedTikTokEvents() {
     const { workspace, analytics } = this.trackingDependencies();
     const ownerId = await workspace.getWorkspaceId();

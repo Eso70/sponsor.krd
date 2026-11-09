@@ -1,3 +1,4 @@
+import { DismissTikTokErrorsDto } from '../analytics/dto/dismiss-tiktok-errors.dto';
 import {
   Controller,
   Delete,
@@ -120,6 +121,17 @@ export class PlatformSettingsController {
     return {
       success: true,
       data: await this.platformSettingsService.getTikTokErrors(),
+    };
+  }
+
+  @Post('tiktok/errors/dismiss')
+  @RequireCapabilities(Capability.PlatformSettingsTikTokUpdate)
+  async dismissTikTokErrors(@Body() body: DismissTikTokErrorsDto) {
+    return {
+      success: true,
+      data: await this.platformSettingsService.dismissTikTokErrors(
+        body.throughAttemptId,
+      ),
     };
   }
 
